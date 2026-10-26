@@ -1,0 +1,41 @@
+# Hackathon Task 001 — First fresh end-to-end experiment
+
+Approved by user on 2026-10-27, incorporating the reviewed plan and three adjustments.
+This is the new hackathon Task 001; the numeric filename 003 avoids overwriting historical tasks.
+
+## Objective and approved implementation
+Build fresh Python modules for a twenty-product local storefront, seeded feasible
+shopping tasks, Browser Use reference adapter, independent evaluator, inspectable
+run records, credential-free browser smoke, tests and CI. Do not reuse prototype
+source, tests, configuration, artifacts or success claims.
+
+Listings expose name, brand, category, price and opaque detail links only. IDs and
+availability appear on accessible detail pages. Preserve realistic search,
+filtering, navigation and accessibility. Test HTML, DOM, accessibility, payloads,
+and actual framework observations for leakage. Keep private evaluator truth out
+of agent inputs and HTTP routes; grade correctness independently from navigation.
+
+Implement one versioned DOM + screenshot natural-shopping profile. Configure
+provider, model, endpoint, task, URL and limits. Record effective configuration,
+versions, actions, observations, pages, screenshots, final answer, independent
+outcome, failures, timestamps and reported usage. Start each trial fresh.
+
+Validate Meta official API requirements and Browser Use compatibility early,
+without paid calls. Authenticated validation and live trial success remain pending
+explicit spending approval. Offline synthetic model responses and scripted smoke
+are wiring tests, never successful live agent measurements.
+
+## Increments and acceptance
+1. Storefront + deterministic generator + evaluator; unit and HTTP checks pass.
+2. DOM/screenshot reference adapter + runner/artifacts; offline adapter checks pass.
+3. Real Chromium smoke + actual observation boundary checks + CI; all pass.
+4. README, current STATUS, new evidence report, reviewable commits.
+
+Task generation must include unique feasible discovery and both availability cases.
+Boundary checks cover initial and filtered listings, hidden content, URLs and
+exposed endpoints. Tests cover malformed/wrong answers, independent constraint
+checks, repeatability, failures/timeouts, missing credentials and separate trials.
+
+No dashboard, registry, score, accessible-label intervention, purchases, arbitrary
+site crawling, extra profiles or paid calls. User authorized the complete
+credential-free vertical slice, tests, CI, STATUS updates and commits.

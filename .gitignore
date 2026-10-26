@@ -8,3 +8,6 @@ __pycache__/
 runs/
 artifacts/
 *.log
+*.egg-info/
+build/
+dist/

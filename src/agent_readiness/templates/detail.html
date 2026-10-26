@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }} — Field & Home{% endblock %}
+{% block content %}
+<a href="/">Back to all products</a>
+<article><h1>{{ product.name }}</h1><p>{{ product.brand }} · {{ product.category }}</p>
+<dl><dt>Product ID</dt><dd id="product-id">{{ product.product_id }}</dd>
+<dt>Price (AUD)</dt><dd id="price">${{ '%.2f'|format(product.price_cents / 100) }}</dd>
+<dt>Availability</dt><dd id="availability">{% if product.available %}In stock{% else %}Out of stock{% endif %}</dd></dl></article>
+{% endblock %}
