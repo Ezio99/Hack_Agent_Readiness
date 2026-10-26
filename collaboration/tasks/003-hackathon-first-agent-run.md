@@ -39,3 +39,18 @@ checks, repeatability, failures/timeouts, missing credentials and separate trial
 No dashboard, registry, score, accessible-label intervention, purchases, arbitrary
 site crawling, extra profiles or paid calls. User authorized the complete
 credential-free vertical slice, tests, CI, STATUS updates and commits.
+
+## Current acceptance status — 2026-10-27
+
+- [x] Fresh implementation, dependency pins and setup documentation.
+- [x] Generator/evaluator/HTTP behavior and boundary tests pass.
+- [x] DOM + screenshot adapter/profile and offline Meta wire/schema checks pass.
+- [x] Trace/failure/usage recording and credential-free CI are implemented.
+- [ ] Real browser information-boundary checks and smoke pass (sandbox EPERM).
+- [ ] Credential-free CI passes (workflow has not run).
+- [ ] Hosted Meta compatibility/live trials (not authorized or verified).
+
+Evidence: [new hackathon report](../reports/003-hackathon-first-agent-run.md).
+Review commits are preserved in a portable Git bundle because the original
+checkout's Git metadata is read-only. No paid calls were made. This task remains
+in validation; no historical acceptance checklist is claimed complete.

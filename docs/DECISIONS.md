@@ -1,5 +1,9 @@
 # Decisions
 
+> **Historical context:** The 2026-10-26 prototype checkpoints below refer to
+> `Ezio99/Agent_Readiness`, not this fresh hackathon implementation. Current
+> evidence and limitations are in [STATUS.md](../STATUS.md).
+
 > **Implementation checkpoint — 2026-10-26:** This log preserves decisions and
 > uncertainties as recorded. Statements below about pending initial framework,
 > model, profile and artifact choices describe the earlier planning state.
@@ -75,3 +79,15 @@ Treat automatic task generation as a core architectural capability rather than r
 Separate website/capability exploration, task generation, task feasibility validation, reference-agent execution, and independent outcome evaluation. Generated tasks are candidates until validated. Do not confuse plausible LLM-generated tasks with feasible, independently verifiable ones; avoid leaking ground truth or evaluator state to the tested agent.
 
 For the initial MVP, a constrained generator using a controlled storefront and known fixtures is acceptable as a first implementation step, but should not become a shopping-specific architectural assumption. Scope, validation oracles, and support for real websites remain open for discussion.
+
+## D007 — Fresh hackathon vertical slice
+
+Status: user approved on 2026-10-27.
+
+Implement a minimal Python/FastAPI storefront, deterministic feasible shopping
+tasks, Browser Use adapter, local artifacts and independent grading. The single
+versioned reference profile uses DOM + screenshot observations with ordinary
+accessible search/filter/detail navigation. IDs and stock are detail-only fields.
+Validate Meta API contracts early; do not claim hosted compatibility until an
+approved authenticated trial verifies it. No paid calls are currently authorized.
+No dashboard, registry, score or accessible-label experiment is in scope.
