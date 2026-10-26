@@ -4,6 +4,8 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.templating import Jinja2Templates
 from .inventory import PRODUCTS
 
+VARIANT_ID = "baseline-detail-v1"
+
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
