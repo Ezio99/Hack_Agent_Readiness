@@ -9,9 +9,9 @@ KEY = "sk-probe-test-not-real-0123456789"
 
 def run_probe(tmp_path, monkeypatch, handler, key=KEY):
     if key:
-        monkeypatch.setenv("MODEL_API_KEY", key)
+        monkeypatch.setenv("META_MODEL_API_KEY", key)
     else:
-        monkeypatch.delenv("MODEL_API_KEY", raising=False)
+        monkeypatch.delenv("META_MODEL_API_KEY", raising=False)
     calls = []
     def counted(request):
         calls.append(request)
@@ -62,7 +62,7 @@ def test_missing_key_makes_no_request(tmp_path, monkeypatch):
 
 
 def test_insecure_or_credentialed_endpoint_rejected(tmp_path, monkeypatch):
-    monkeypatch.setenv("MODEL_API_KEY", KEY)
+    monkeypatch.setenv("META_MODEL_API_KEY", KEY)
     for url in ["http://api.meta.ai/v1", "https://user:pw@api.meta.ai/v1", "https://api.meta.ai/v1?key=x"]:
         with pytest.raises(ValueError):
             probe.stage_a(ModelConfig(base_url=url), tmp_path, transport=httpx.MockTransport(lambda r: httpx.Response(200)))

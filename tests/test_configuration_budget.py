@@ -71,7 +71,7 @@ async def test_one_effective_configuration_reaches_sdk_browser_agent_and_artifac
             "model": "muse-spark-1.3", "choices": [{"index": 0, "finish_reason": "stop",
             "message": {"role": "assistant", "content": json.dumps(final)}}]})
 
-    monkeypatch.setenv("MODEL_API_KEY", "offline-fixture-key")
+    monkeypatch.setenv("META_MODEL_API_KEY", "offline-fixture-key")
     monkeypatch.setattr(runner, "profile", load_once)
     monkeypatch.setattr(adapter, "profile", no_defaults)
     monkeypatch.setattr(browser_use, "Browser", FakeBrowser)
@@ -228,7 +228,7 @@ async def test_provider_failure_is_redacted_in_every_run_artifact(tmp_path, monk
     inner = FakeModel(fail=True)
     async def fail(public, url, model, recorder, effective):
         await RecordingModel(model, recorder, effective).ainvoke([])
-    monkeypatch.setenv("MODEL_API_KEY", inner.api_key)
+    monkeypatch.setenv("META_MODEL_API_KEY", inner.api_key)
     monkeypatch.setattr(runner, "target", fake_target)
     monkeypatch.setattr(runner, "create_model", lambda config, effective: inner)
     monkeypatch.setattr(runner, "attempt", fail)

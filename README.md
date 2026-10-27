@@ -101,10 +101,10 @@ After separate explicit spending approval, provide a key through the environment
 and run the following candidate configuration. The command can incur charges:
 
 ```bash
-# Provide MODEL_API_KEY via the process environment or an untracked repository-root .env
+# Provide META_MODEL_API_KEY via the process environment or an untracked repository-root .env
 # (copy .env.example; chmod 600). Process variables take precedence. Never commit credentials.
 readiness run --provider meta --model muse-spark-1.3 \
-  --base-url https://api.meta.ai/v1 --key-env MODEL_API_KEY \
+  --base-url https://api.meta.ai/v1 --key-env META_MODEL_API_KEY \
   --kind discovery --seed 0 --max-steps 5 --timeout 60 \
   --max-model-requests 5 --allow-model-calls
 ```

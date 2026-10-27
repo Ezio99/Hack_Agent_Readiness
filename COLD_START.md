@@ -56,7 +56,7 @@ Our immediate technical priorities are a reliable experimental harness and verif
 
 The current state of the hackathon implementation is recorded in `STATUS.md`. Do not infer completion from this document.
 
-As of 2026-10-27 the credential-free foundation is merged (PR #1, task `003-hackathon-first-agent-run.md`). The active milestone is authenticated Meta compatibility validation followed by one independently evaluated trial, specified in `collaboration/tasks/004-first-live-meta-trial.md` (proposed; **no model call is authorized until the user approves model, endpoint, test sequence and limits**). Tasks 001 and 002 are historical pre-event specifications. Credentials come from `MODEL_API_KEY` in the environment or a repository-root `.env`; never expose the value.
+As of 2026-10-27 the credential-free foundation is merged (PR #1, task `003-hackathon-first-agent-run.md`). The active milestone is authenticated Meta compatibility validation followed by one independently evaluated trial, specified in `collaboration/tasks/004-first-live-meta-trial.md` (proposed; **no model call is authorized until the user approves model, endpoint, test sequence and limits**). Tasks 001 and 002 are historical pre-event specifications. Credentials come from `META_MODEL_API_KEY` in the environment or a repository-root `.env`; never expose the value.
 
 ## 4. Where to find information
 

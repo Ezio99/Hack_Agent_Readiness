@@ -18,7 +18,7 @@ def main():
     probe.add_argument("--stage", choices=["a"], required=True)
     probe.add_argument("--model", default="muse-spark-1.3")
     probe.add_argument("--base-url", default="https://api.meta.ai/v1")
-    probe.add_argument("--key-env", default="MODEL_API_KEY")
+    probe.add_argument("--key-env", default="META_MODEL_API_KEY")
     probe.add_argument("--output", type=Path, default=Path("runs"))
     probe.add_argument("--allow-model-calls", action="store_true", help="Use only after explicit spending approval")
     for name in ["generate", "smoke", "run", "evaluate"]:
@@ -38,7 +38,7 @@ def main():
             cmd.add_argument("--provider", choices=["meta", "openai-compatible"], default="meta")
             cmd.add_argument("--model", default="muse-spark-1.3")
             cmd.add_argument("--base-url", default="https://api.meta.ai/v1")
-            cmd.add_argument("--key-env", default="MODEL_API_KEY")
+            cmd.add_argument("--key-env", default="META_MODEL_API_KEY")
             cmd.add_argument("--allow-model-calls", action="store_true", help="Use only after explicit spending approval")
     args = parser.parse_args()
     if args.command in {"run", "probe"}:

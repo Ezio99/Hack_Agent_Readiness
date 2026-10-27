@@ -12,7 +12,7 @@ stages is not evidence of agent capability; only the independent evaluator grade
 ## Candidate configuration (to be confirmed by the user)
 - Provider/endpoint: Meta, `https://api.meta.ai/v1` (Chat Completions). Unverified for this account.
 - Model: `muse-spark-1.3` — candidate only; availability and compatibility unverified. No silent fallback.
-- Credential: `MODEL_API_KEY` from the process environment or repository-root `.env`; never logged.
+- Credential: `META_MODEL_API_KEY` from the process environment or repository-root `.env`; never logged.
 - Budget: provisional overall A$30 (not authorization). Pricing unverified → no dollar estimate
   until the user supplies verified pricing. Limits below are not a monetary ceiling.
 

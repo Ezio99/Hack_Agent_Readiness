@@ -12,7 +12,7 @@
   tasks, independent evaluator, Browser Use adapter with the single `natural-shopping-v2` profile,
   recorder with redaction, per-run model-request cap, CI.
 - Preparation branch (this PR), 2026-10-27:
-  - `MODEL_API_KEY` is the single credential name. A repository-root `.env` is loaded with
+  - `META_MODEL_API_KEY` is the credential name for the Meta provider (decided 2026-10-27, replacing the earlier `MODEL_API_KEY` standardization so other providers can use distinct names; override with `--key-env`). A repository-root `.env` is loaded with
     `python-dotenv` (`override=False`, explicit path, no upward search; process env wins;
     `run` command only). `.env.example` corrected. Pinned `python-dotenv==1.2.4` was already in
     `requirements.lock` transitively and is now declared directly in `pyproject.toml`.

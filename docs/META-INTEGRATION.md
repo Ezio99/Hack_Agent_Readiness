@@ -6,7 +6,7 @@ or paid calls were made. Synthetic responses are test fixtures, not model output
 
 ## Official requirements checked
 
-- Base URL `https://api.meta.ai/v1`, bearer token read from the `MODEL_API_KEY` environment variable (or repository-root `.env`), and Muse Spark model IDs
+- Base URL `https://api.meta.ai/v1`, bearer token read from the `META_MODEL_API_KEY` environment variable (or repository-root `.env`), and Muse Spark model IDs
   are documented in the [official overview](https://dev.meta.ai/docs/overview).
   The default candidate here is `muse-spark-1.3`. Access and billing require the
   participant's own account/key; availability has not been checked for this user.

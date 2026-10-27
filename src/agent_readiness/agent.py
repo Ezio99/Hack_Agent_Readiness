@@ -30,7 +30,7 @@ class ModelConfig:
     provider: str = "meta"
     model: str = "muse-spark-1.3"
     base_url: str = "https://api.meta.ai/v1"
-    key_env: str = "MODEL_API_KEY"
+    key_env: str = "META_MODEL_API_KEY"
 
 
 def create_model(config: ModelConfig, effective: dict, *, http_client=None, api_key=None):

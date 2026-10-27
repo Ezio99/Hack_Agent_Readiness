@@ -17,7 +17,7 @@ async def test_paid_calls_disabled_and_missing_credentials(tmp_path, monkeypatch
     assert "disabled" in record["errors"][0]
     assert (path / "trace.jsonl").exists()
     monkeypatch.undo()
-    monkeypatch.delenv("MODEL_API_KEY", raising=False)
+    monkeypatch.delenv("META_MODEL_API_KEY", raising=False)
     _, record = await runner.run(mode="live", allow_model_calls=True, output=tmp_path)
     assert record["status"] == "setup_error"
     assert "Missing credential" in record["errors"][0]

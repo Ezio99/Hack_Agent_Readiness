@@ -75,7 +75,7 @@ def test_profile_and_tools_are_fixed_and_truth_is_not_in_prompt(tmp_path):
 
 
 def test_missing_credential(monkeypatch):
-    monkeypatch.delenv("MODEL_API_KEY", raising=False)
+    monkeypatch.delenv("META_MODEL_API_KEY", raising=False)
     with pytest.raises(ValueError, match="Missing credential"):
         create_model(ModelConfig(), profile())
 
