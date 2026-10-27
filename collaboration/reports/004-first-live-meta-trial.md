@@ -1,7 +1,7 @@
 # Report 004 — Meta compatibility validation and first live trial
 
-**Status: Stage A executed twice under two separate authorizations (2026-10-27); Stages B–D NOT executed.** Specification: [Task 004](../tasks/004-first-live-meta-trial.md) (proposed, unapproved).
-Two authorized authenticated requests (Stage A, attempts 1 and 2) were made; no other paid call or live agent trial has been made.
+**Status: Stage A executed three times under three separate authorizations (2026-10-27); Stages B–D NOT executed.** Specification: [Task 004](../tasks/004-first-live-meta-trial.md) (proposed, unapproved).
+Three authorized authenticated requests (Stage A, attempts 1–3) were made; no other paid call or live agent trial has been made.
 
 ## Completed preparation (2026-10-27)
 Credential-free only; see `STATUS.md` for details.
@@ -76,3 +76,28 @@ Result: probe `failed` again by its criterion (no visible text). The trivial req
 
 Implications, unverified: (1) the agent profile's 2,048-token cap could also be consumed by reasoning, risking empty or truncated action JSON in Stage D; (2) the API may offer a reasoning-effort/budget control or a non-reasoning model setting — not tested; check Meta's documentation before another paid request; (3) Stages B–D remain unrun. Cumulative live usage so far: 31 + 143 = 174 tokens over two requests; cost unknown (pricing unverified, none reported).
 Both Stage A attempts are retained; no further request was made.
+
+## Stage A attempt 3 (separately authorized, 1 request) — visible text returned
+Configuration (per authorization, informed by the official docs: [chat-completions](https://dev.meta.ai/docs/protocols/chat-completions), [reasoning](https://dev.meta.ai/docs/reasoning), [pricing](https://dev.meta.ai/docs/pricing-rate-limits)): `POST https://api.meta.ai/v1/chat/completions`, body `{"model":"muse-spark-1.3","reasoning_effort":"low","max_completion_tokens":512,"messages":[{"role":"user","content":"Reply with exactly the text: OK"}]}`; one attempt, no retries, 30 s timeout, redirects off. Artifact `runs/20261027T034519-f308b00b94c5/probe.json` (untracked, sanitized; key absent). Request id `41d8bb5f-0fec-4ed0-b0e2-0f67be80c6c6`.
+
+| Field | Attempt 1 | Attempt 2 | **Attempt 3** |
+|---|---|---|---|
+| `reasoning_effort` | omitted | omitted | **low** |
+| `max_completion_tokens` | 16 | 128 | **512** |
+| HTTP status | 200 | 200 | **200** |
+| `finish_reason` | length | length | **stop** |
+| Visible `content` | null | null | **`OK`** |
+| Prompt tokens | 15 | 15 | 15 |
+| Completion tokens | 16 | 128 | **120** |
+| Reasoning tokens | 14 | 126 | **110** |
+| Total tokens | 31 | 143 | 135 |
+| Elapsed | 1.47 s | 1.35 s | 1.41 s |
+| Provider-reported cost | none | none | none |
+
+Result: probe `completed`. Authentication, model access, `reasoning_effort` acceptance, `max_completion_tokens`, usage reporting, and visible-text return are confirmed for this account. Observations (three data points, not general laws):
+- Even at `low`, a trivial prompt used 110 reasoning tokens (91.7% of completion tokens) for 2 visible tokens' worth of output; the 16- and 128-token caps were therefore too small, consistent with the docs' statement that reasoning counts toward the cap. Reasoning cost appears roughly fixed near 110–126 here rather than scaling with the cap (attempt 1 hit its cap at 14), which weakens the earlier "expands to fill the cap" hypothesis.
+- Implication for Stage D (hypothesis): the profile's 2,048 cap likely leaves room for reasoning plus action JSON, but harder prompts will reason more; `reasoning_effort` is not yet set by our agent adapter and Browser Use's default is unchecked.
+
+Estimated cost (calculated from published rates, assuming "$" is USD and reasoning billed as output — **not provider-reported**): attempt 3 ≈ US$0.00053; all three attempts (45 input, 264 output tokens) ≈ US$0.0012 cumulative.
+
+No further requests were made. Stages B, C and D remain unrun and need separate approval.

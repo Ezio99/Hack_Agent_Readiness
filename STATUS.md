@@ -37,10 +37,11 @@
   model request. No authenticated Meta request, live agent trial or paid call has been made.
 - **Stage A live probe (authorized, 1 request, 2026-10-27):** HTTP 200, model `muse-spark-1.3`, 31 total tokens (14 reasoning), no cost reported, but `content` was null at `finish_reason: length` (16-token cap consumed by reasoning). Auth/model access verified; visible-text check not met. See report 004. Stages B–D not started.
 - **Stage A retry (separately authorized, 1 request):** 128-token cap, prompt `OK` → HTTP 200, `content` still null, `finish_reason: length`, 143 tokens of which 126 reasoning. Two attempts total; no further requests made. See report 004.
+- **Stage A attempt 3 (separately authorized, 1 request):** `reasoning_effort: low`, 512-token cap → HTTP 200, `finish_reason: stop`, visible content `OK`, 15 prompt / 120 completion (110 reasoning) tokens, 1.41 s. Stage A objective met after three attempts; est. cumulative cost ≈ US$0.0012 (calculated, not provider-reported). Stages B–D not started.
 - Not re-run here: GitHub Actions on this branch (see PR checks).
 
 ## Next (requires explicit user approval — nothing paid is authorized)
-Task 004: minimal authenticated request → structured-output probe → screenshot probe → one
+Task 004 (Stage A done; B–D pending approval): minimal authenticated request → structured-output probe → screenshot probe → one
 browser-agent run (proposed limits 5 steps / 5 model requests / 60 s, no automatic retries) with
 `muse-spark-1.3` as an unverified candidate. Pricing is unverified, so no dollar estimate exists;
 the user's provisional A$30 overall budget is **not** authorization to spend.
