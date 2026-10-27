@@ -49,6 +49,12 @@ def provenance():
                 packages={name: version(name) for name in ["agent-readiness", "browser-use", "playwright", "pydantic", "fastapi"]})
 
 
+def provenance_without_key(*names):
+    """Version lookup spawns git; do not hand it the model credential."""
+    with scrubbed_environment(*names):
+        return provenance()
+
+
 async def run(*, mode="smoke", seed=0, kind="discovery", available=None,
               url=None, model_config=None, allow_model_calls=False,
               output=Path("runs"), max_steps=None, timeout_seconds=None,
@@ -83,7 +89,7 @@ async def run(*, mode="smoke", seed=0, kind="discovery", available=None,
                                     "max_completion_tokens": effective["max_completion_tokens"],
                                     "reasoning_effort": effective.get("reasoning_effort") if config.provider == "meta" else None,
                                     } if mode == "live" else None,
-                  provenance=provenance(), started_at=utcnow(), status="running", usage=None,
+                  provenance=provenance_without_key(config.key_env), started_at=utcnow(), status="running", usage=None,
                   action_count=None, steps=None, answer=None, evaluation=None)
     recorder.write("run.json", record)
     recorder.event("run_started", mode=mode, task=task.public.model_dump(mode="json"))

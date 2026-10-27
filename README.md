@@ -138,6 +138,14 @@ Each attempt creates a unique ignored `runs/<timestamp>-<id>/` directory:
 - `trace.jsonl`: timestamped observations, model messages/responses, proposed
   actions, executed step results, navigation, reported usage and errors.
 - PNG screenshots, framework history for agent trials, and `summary.md`.
+- `model-response-NN.json` and `http_captures` (live runs): the sanitized, bounded model HTTP response captured
+  *before* Browser Use parses it (raw content up to 20,000 characters, `finish_reason`, request id, usage including
+  reasoning tokens, and an analysis of whether the text is JSON), plus `model_http_request` trace events (parameters,
+  response-format SHA-256, message structure; no message text or credentials). This survives adapter parse errors.
+  A 200 response that cannot become the output model ends the run as `model_output_error`
+  (subtypes: `malformed_json`, `null_content`, `length_without_content`, `schema_validation`), distinct from
+  `infrastructure_error` (HTTP/timeouts/other) and from task outcomes. `browser_version` is recorded from the
+  Chromium executable before the first model request.
 
 Model screenshots are separate PNG files referenced from recorded messages.
 Reported token usage is retained per response; unavailable usage is `null`,

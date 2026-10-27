@@ -3,9 +3,11 @@ import asyncio
 from dataclasses import dataclass
 import json
 import os
+import subprocess
 from pathlib import Path
 from urllib.parse import urlsplit
 from .contracts import Answer, PublicTask
+from .capture import attach_capture
 from .recorder import Recorder
 
 PROFILE_DIR = Path(__file__).parent / "profiles"
@@ -78,8 +80,11 @@ class ModelCallError(RuntimeError):
 
 
 class RecordingModel:
-    def __init__(self, inner, recorder: Recorder, effective: dict):
+    def __init__(self, inner, recorder: Recorder, effective: dict, capture=None):
         self.inner = inner
+        self.capture = capture
+        self.output_errors = []
+        self.last_error_class = None
         self.recorder = recorder
         self.model = inner.model
         self._verified_api_keys = True
@@ -104,6 +109,21 @@ class RecordingModel:
     def model_name(self):
         return self.model
 
+    def _classify_captured_responses(self, output_format):
+        """After an adapter exception: use the response captured before parsing, if any."""
+        from .capture import classify_output
+        for record in (self.capture.take() if self.capture else []):
+            outcome = classify_output(record, output_format)
+            record["output_error"] = outcome
+            usage = record.get("usage")
+            if usage:  # the adapter discarded this usage when it raised
+                self.usages.append({**usage, "source": "http_capture_after_error"})
+            if outcome:
+                self.last_error_class = "model_output_error"
+                self.output_errors.append({"request_count": self.request_count, **outcome})
+                self.recorder.event("model_output_error", request_count=self.request_count, **outcome)
+            self.recorder.write(f"model-response-{record['index']:02d}.json", record)
+
     async def ainvoke(self, messages, output_format=None, **kwargs):
         if self.request_count >= self.max_requests:
             self.limit_reached = True
@@ -116,15 +136,43 @@ class RecordingModel:
             result = await self.inner.ainvoke(messages, output_format=output_format, **kwargs)
         except Exception as exc:
             self.last_error = type(exc).__name__
+            self.last_error_class = "infrastructure_error"
+            self._classify_captured_responses(output_format)
             message = self.recorder.clean(str(exc))
-            self.recorder.event("model_error", error_type=type(exc).__name__, error=message)
+            self.recorder.event("model_error", error_type=type(exc).__name__, error=message,
+                                error_class=self.last_error_class)
             raise ModelCallError(message) from None
+        if self.capture:
+            self.capture.take()  # keep the per-invocation pointer aligned on success
         usage = result.usage.model_dump(mode="json") if result.usage else None
         if usage:
             self.usages.append(usage)
         self.recorder.event("model_response", completion=result.completion,
                             usage=usage, stop_reason=result.stop_reason)
         return result
+
+
+def classify_outcome(wrapped, done: bool, steps: int, max_steps: int):
+    """(status, stop_reason). Model-output failures are distinct from infrastructure and task failures."""
+    if wrapped.limit_reached:
+        return "request_limit", "model_request_limit"
+    if done:
+        return "completed", "agent_done"
+    if wrapped.last_error:
+        if wrapped.last_error_class == "model_output_error":
+            return "model_output_error", f"model_output_error:{wrapped.output_errors[-1]['subtype']}"
+        return "infrastructure_error", wrapped.last_error
+    status = "step_limit" if steps >= max_steps else "agent_failure"
+    return status, status
+
+
+def executable_version(path: str):
+    """Version string of the Chromium that will be launched, without extra dependencies or network."""
+    try:
+        out = subprocess.run([path, "--version"], capture_output=True, text=True, timeout=10)
+        return out.stdout.strip() or None
+    except Exception:
+        return None
 
 
 def browser_options(url: str, executable: str, effective: dict):
@@ -177,7 +225,9 @@ async def attempt(task: PublicTask, url: str, llm, recorder: Recorder, effective
     from playwright.async_api import async_playwright
     async with async_playwright() as pw:
         browser = Browser(**browser_options(url, pw.chromium.executable_path, effective))
-        wrapped = RecordingModel(llm, recorder, effective)
+        recorder.event("browser_version", version=executable_version(pw.chromium.executable_path), source="executable --version")
+        capture = attach_capture(llm, recorder)
+        wrapped = RecordingModel(llm, recorder, effective, capture=capture)
         agent = create_agent(task, url, wrapped, browser, recorder, effective)
         try:
             async def completed_step(current):
@@ -191,12 +241,12 @@ async def attempt(task: PublicTask, url: str, llm, recorder: Recorder, effective
                     final = json.loads(final)
                 except (ValueError, TypeError):
                     pass  # Independent evaluator will reject malformed output.
-            status = ("request_limit" if wrapped.limit_reached else "completed" if history.is_done() else "infrastructure_error" if wrapped.last_error
-                      else "step_limit" if len(history.history) >= effective["max_steps"] else "agent_failure")
-            return dict(answer=final, status=status,
-                        stop_reason="model_request_limit" if wrapped.limit_reached else "agent_done" if history.is_done() else wrapped.last_error or status,
+            status, stop_reason = classify_outcome(wrapped, history.is_done(), len(history.history), effective["max_steps"])
+            return dict(answer=final, status=status, stop_reason=stop_reason,
                         steps=len(history.history), action_count=sum(len(h.result) for h in history.history),
-                        usage=wrapped.usages or None, model_request_count=wrapped.request_count, errors=[e for e in history.errors() if e])
+                        usage=wrapped.usages or None, model_request_count=wrapped.request_count, errors=[e for e in history.errors() if e],
+                        http_captures=capture.summary() if capture else None,
+                        model_output_errors=wrapped.output_errors or None)
         finally:
             recorder.write("history.json", agent.history.model_dump())
             try:

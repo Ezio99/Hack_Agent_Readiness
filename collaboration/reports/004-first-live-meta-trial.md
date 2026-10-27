@@ -210,3 +210,42 @@ Input ≈ 8.3–10.5k tokens × 2 requests ≈ 17–21k tokens ≈ US$0.021–0.
 
 ### Status
 Stage D was a single bounded run and failed; it must not be retried without new authorization. No further authenticated requests were made.
+
+## Stage D diagnostic hardening (offline only; no authenticated or billable requests)
+Approved after the failed Stage D trial (an integration failure, not a website-readiness result). The schema, system prompt, storefront, evaluator, `natural-shopping-v3` configuration and token limits were **not** changed.
+
+### Changes
+1. **Response capture before parsing** (`src/agent_readiness/capture.py`): httpx event hooks on the model client write `model_http_request` / `model_http_response` trace events and `model-response-NN.json` (raw content ≤ 20,000 chars, finish reason, request id, usage with reasoning tokens, body size, elapsed time, and a content analysis: null / JSON / non-JSON, whether it starts or ends with a brace, and whether a valid JSON object is embedded after a prose prefix). Non-200 bodies are kept (≤ 2,000 chars). Everything passes through the existing redactor; request events record structure (parameters, response-format SHA-256, message part types and sizes), never message text or the credential.
+2. **Works when the adapter raises:** after an exception `RecordingModel` classifies the captured response, appends its usage (marked `http_capture_after_error`, so run-level usage is no longer null), re-writes the response file with the classification, and emits `model_output_error`. Regression tests (`tests/test_capture.py`, real `ChatOpenAI` + real `AgentOutput` schema + mock transport): prose followed by JSON (Stage D-like), null content with `length` and with `stop`, valid JSON failing `AgentOutput` validation (error summary holds locations/types, not input values), HTTP 500 (one call, no SDK retry, stays infrastructure), success path, bounded size, request-event contents, credential redaction.
+3. **`model_output_error` status** (`classify_outcome`): a 200 response that cannot become the output model ends as `model_output_error` with `stop_reason: model_output_error:<subtype>`; HTTP errors/timeouts remain `infrastructure_error`; task outcomes are unchanged. A later successful `done` still wins.
+4. **Browser version** is recorded from `<chromium> --version` before the first model request (no new dependencies); the CDP product string still overrides it after the first observation. Offline run: `Google Chrome for Testing 145.0.7632.6` / `Chrome/145.0.7632.6`.
+5. **Provenance** (`git` lookup) no longer inherits the model credential.
+
+### Request-construction comparison (offline interception of the real runner, Chromium and storefront; mock transport)
+| Field | Stage B (success) | Stage D wire request |
+|---|---|---|
+| Top-level keys | `model, messages, response_format, reasoning_effort, max_completion_tokens` | identical set; no extra parameters, no `temperature`/penalties/`stream` |
+| `model`, `reasoning_effort` | `muse-spark-1.3`, `low` | identical |
+| `response_format` | `json_schema`, name `agent_output`, `strict: true`, schema SHA-256 `c80ef8b813abef0b2afd79c83a6f31e857c0101ea8730952ee78d61e65f9a194` (7,915 B) | **byte-identical** (also identical across requests) |
+| `max_completion_tokens` | 1,024 | **4,096** (v3) |
+| Messages | one user text (253 chars) | `system` (23,590 chars) + `user` [text 3,233 chars (history + DOM), text 19 chars, `image_url` data URL, `detail: high`] |
+| Middleware effects | — | none beyond the above; SDK `max_retries=0`; request timeout 30 s; endpoint `https://api.meta.ai/v1/chat/completions` |
+Regression test: `tests/test_request_construction.py` (browser-marked). **Verified:** the only differences between the passing Stage B request and the Stage D request are the v3 token cap and the message content.
+
+### Credential propagation review
+Root cause of the earlier gap (recorded above): Browser Use runs `load_dotenv()` at import time and finds the repository `.env` from inside `.venv`; lazily imported modules re-added the key after the scrub. The fix keeps `dotenv.load_dotenv` inert while the scrub is active. Added: (a) a hermetic test replicating the lookup with a fake module (mutation-checked: fails without the fix); (b) a browser-marked test spying on **every** `subprocess.Popen` during a real mocked live run with a sentinel key (asserts Chromium, the Playwright `node` driver and `git` all ran and none received the key name or value; mutation-checked: fails if the scrub is removed); (c) a manual run with the **real** `.env` key loaded as the CLI does: 7 spawned processes (`chrome`, `node`, `git`, `ldconfig`), **0** with the key name in their environment, **0** with its value; the key was restored for the caller afterwards. Limits: process-global and single-run only (documented); it addresses subprocess environments, not other ways code in the same process could read `os.environ` (none are exposed as agent tools).
+
+### Test results
+122 offline tests passed (6.13 s) and 6 browser tests passed (32.07 s); CLI smoke passed (independent evaluation passed, 0 model requests). No authenticated requests were made in this phase.
+
+### What the Stage D evidence does and does not show
+**Verified facts:** the Stage D and Stage B requests differ only in token cap and messages; the strict schema reached the provider unchanged; two of two live responses were not parseable JSON (they began with prose and ended `…"}`); the adapter parses the raw `message.content` directly (`model_validate_json`), with no client-side transformation; the model's visible text identified the correct listing; the run ended by Browser Use's two-consecutive-failure rule at 2 of 5 requests/steps. **Not recorded in Stage D (now fixable):** raw content, finish reason, request id and token usage.
+
+**Hypotheses, most likely first** (none verified):
+1. *Prose preamble before an otherwise valid JSON object.* Both visible fragments end with `…"}`, and Stage B's JSON ends with the final string key (`"thinking": "…"}`); a response that is narration/reasoning-like text followed by the JSON object would fit both the beginning and the ending. If the provider emits reasoning-like text in `content` for long agentic prompts, that would be a provider/model-behaviour issue rather than a schema issue. The new capture records `embedded_json.offset` and `trailing_chars`, which would confirm or refute this directly.
+2. *Structured-output enforcement not applied (or only partially) under this context size / reasoning combination,* producing free text.
+3. *Non-deterministic, context-dependent failure* (Stage B passed on a trivial prompt; two failures on the real prompt do not establish a rate).
+Ruled out by the offline comparison: schema mutation, response-format differences, a client-side transformation, SDK retries.
+
+### Proposed next experiment (needs separate approval; not executed)
+**One live request, no retries:** run the exact Stage D first step with capture enabled — `readiness run --kind discovery --seed 0 --max-steps 1 --max-model-requests 1 --timeout 120 --allow-model-calls` (profile v3, same prompt, DOM, screenshot, schema, `reasoning_effort: low`, 4,096 cap). Estimated cost ≈ 8–10.5k input tokens (≈US$0.010–0.013) plus ≤ 4,096 output tokens (≤ US$0.0174), so < US$0.03 worst case (calculated, not provider-reported). Record: raw content, finish reason, request id, prompt/completion/reasoning tokens, content analysis. Decision rule: (a) pure valid JSON → Stage D's failure is intermittent; plan a small repeated-request characterization; (b) prose then valid embedded JSON (`offset > 0`) → provider/model preamble leak, which would require a deliberate, approved decision on output handling (any tolerance would change what is being measured); (c) prose only → enforcement not applied, examine reasoning tokens vs cap; (d) null content/`length` → cap exhaustion. Hypothesis 1 predicts (b).
