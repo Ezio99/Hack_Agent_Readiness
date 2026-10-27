@@ -15,7 +15,8 @@ from .agent import ModelConfig
 from .recorder import Recorder, utcnow
 
 STAGE_A_PROMPT = "Reply with exactly the text: OK"
-STAGE_A_MAX_COMPLETION_TOKENS = 128
+STAGE_A_MAX_COMPLETION_TOKENS = 512
+STAGE_A_REASONING_EFFORT = "low"
 STAGE_A_TIMEOUT_SECONDS = 30.0
 SAFE_HEADERS = {"content-type", "date", "x-request-id", "request-id", "retry-after"}
 
@@ -42,7 +43,8 @@ def stage_a(config: ModelConfig, output: Path = Path("runs"), *, transport=None)
     record = dict(schema_version="probe-v1", stage="A", started_at=utcnow(),
                   provider=config.provider, endpoint=config.base_url, requested_model=config.model,
                   limits=dict(max_attempts=1, retries=0, timeout_seconds=STAGE_A_TIMEOUT_SECONDS,
-                              max_completion_tokens=STAGE_A_MAX_COMPLETION_TOKENS),
+                              max_completion_tokens=STAGE_A_MAX_COMPLETION_TOKENS,
+                              reasoning_effort=STAGE_A_REASONING_EFFORT),
                   python=platform.python_version(), httpx=httpx.__version__,
                   request_attempts=0, http_status=None, success=False, response_model=None,
                   completion=None, finish_reason=None, usage=None, provider_reported_cost=None,
@@ -51,7 +53,8 @@ def stage_a(config: ModelConfig, output: Path = Path("runs"), *, transport=None)
         record["error"] = f"Missing credential: set {config.key_env}"
         record["status"] = "setup_error"
     else:
-        body = {"model": config.model, "max_completion_tokens": STAGE_A_MAX_COMPLETION_TOKENS,
+        body = {"model": config.model, "reasoning_effort": STAGE_A_REASONING_EFFORT,
+                "max_completion_tokens": STAGE_A_MAX_COMPLETION_TOKENS,
                 "messages": [{"role": "user", "content": STAGE_A_PROMPT}]}
         record["request_body"] = body
         started = time.monotonic()
