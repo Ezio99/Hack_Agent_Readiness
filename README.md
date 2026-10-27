@@ -11,9 +11,13 @@ only. There is no checkout, account system, dashboard or composite score.
 **PR review revision:** the local full suite passes **57 tests**, including four
 real-browser cases. Standalone boundary checks and credential-free CLI smoke also
 pass. [PR CI passed](https://github.com/Ezio99/Hack_Agent_Readiness/actions/runs/40430691859)
-for this revision; previous CI evidence is retained in the report. No authenticated or paid model trial has been performed. See
+for this revision; previous CI evidence is retained in the report. Authenticated Meta probes and bounded live trials have occurred on the Task 004 branch; see STATUS.md and Report 004. No end-to-end task success is established. See
 [STATUS](STATUS.md), [PR #1](https://github.com/Ezio99/Hack_Agent_Readiness/pull/1),
 and the [fresh task](collaboration/tasks/003-hackathon-first-agent-run.md).
+
+## New agent / current milestone
+
+Start with [COLD_START.md](COLD_START.md), then [STATUS.md](STATUS.md) and [Report 004](collaboration/reports/004-first-live-meta-trial.md). The current open work is PR #3 on `hackathon/task004-stage-a`. The strict Stage D run failed on prose-prefixed output; the opt-in compatibility profile executed one recovered click but did not finish the task. A full compatibility run is proposed in draft Task 005 and requires separate spending approval.
 
 ## Install
 
@@ -94,7 +98,7 @@ inventing a cost estimate. Separate approval of model, provider, limits and poss
 API expenditure remains necessary before any authenticated or paid trial.
 
 Meta's official protocol and the Browser Use adapter have been checked offline;
-**authenticated Meta support is not yet verified**. Read
+**authenticated Meta access, strict schema and image probes have been verified; end-to-end agent success has not**. Read
 [Meta integration evidence](docs/META-INTEGRATION.md) before planning live trials.
 
 After separate explicit spending approval, provide a key through the environment
