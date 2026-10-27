@@ -12,6 +12,7 @@ import platform
 import subprocess
 import time
 from urllib.parse import urlsplit
+from .env import scrubbed_environment
 from .agent import ModelConfig, attempt, create_model, profile, ModelRequestLimitReached
 from .evaluator import evaluate
 from .inventory import INVENTORY_HASH, INVENTORY_VERSION
@@ -123,7 +124,9 @@ async def run(*, mode="smoke", seed=0, kind="discovery", available=None,
                 if mode == "smoke":
                     result = await smoke(task.public, actual_url, recorder, effective)
                 else:
-                    result = await attempt(task.public, actual_url, llm, recorder, effective)
+                    # The model client already holds the key; browser/Playwright children must not inherit it.
+                    with scrubbed_environment(config.key_env):
+                        result = await attempt(task.public, actual_url, llm, recorder, effective)
                 record.update(result)
                 record["evaluation"] = evaluate(record["answer"], task).model_dump()
     except ModelRequestLimitReached as exc:
