@@ -165,3 +165,19 @@ def test_classify_outcome_precedence(limit, done, error_class, expected):
         output_errors = [{"subtype": "null_content"}]
     status, reason = classify_outcome(W, done, 5, 5)
     assert status == expected
+
+
+async def test_request_gate_stays_effective_when_parsing_raises(tmp_path):
+    """After a parse failure the next invocation is blocked before the provider (limit 1 => exactly one HTTP call)."""
+    from agent_readiness.agent import ModelRequestLimitReached
+    from browser_use.llm.messages import UserMessage
+    effective = {**profile(), "max_model_requests": 1}
+    wrapped, capture, recorder, _, error, calls = await invoke(tmp_path, lambda r: chat(STAGE_D_LIKE))
+    wrapped.max_requests = effective["max_model_requests"]
+    assert error is not None and len(calls) == 1 and wrapped.request_count == 1
+    from agent_readiness.probe import build_agent_output_schema
+    _, output_model = build_agent_output_schema()
+    with pytest.raises(ModelRequestLimitReached):
+        await wrapped.ainvoke([UserMessage(content="again")], output_format=output_model)
+    assert len(calls) == 1 and wrapped.limit_reached and len(capture.records) == 1
+    assert classify_outcome(wrapped, False, 1, 1)[0] == "request_limit"

@@ -91,3 +91,40 @@ async def test_model_credential_never_reaches_any_spawned_process(tmp_path, monk
     assert "git" in names  # provenance lookup also ran
     assert [n for n, has_key in spawned if has_key] == [], spawned
     assert os.environ["META_MODEL_API_KEY"] == SENTINEL  # restored for the caller
+
+
+async def test_one_step_one_request_replay_with_unparseable_output_makes_exactly_one_call(tmp_path, monkeypatch):
+    """The diagnostic replay configuration: nothing is extracted or executed from a malformed response."""
+    monkeypatch.setenv("META_MODEL_API_KEY", SENTINEL)
+    calls = []
+    prose = ("Found the Fern Home item, so I will open it " + SENTINEL + '. {"evaluation_previous_goal": "", "memory": "", '
+             '"next_goal": "click index 174", "action": [{"click": {"index": 174}}]}')
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(200, headers={"x-request-id": "mock-r"}, json={
+            "id": "m", "object": "chat.completion", "created": 0, "model": "muse-spark-1.3",
+            "choices": [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": prose}}],
+            "usage": {"prompt_tokens": 9000, "completion_tokens": 500, "total_tokens": 9500,
+                      "completion_tokens_details": {"reasoning_tokens": 400}}})
+    original = runner.create_model
+    def make(config, effective):
+        model = original(config, effective)
+        model.http_client = DefaultAsyncHttpxClient(transport=httpx.MockTransport(handler))
+        sdk = model.get_client()
+        sdk._platform = "Linux"
+        model.get_client = lambda: sdk
+        return model
+    monkeypatch.setattr(runner, "create_model", make)
+    path, record = await runner.run(mode="live", allow_model_calls=True, output=tmp_path, seed=0, kind="discovery",
+                                    max_steps=1, timeout_seconds=120, max_model_requests=1)
+    assert len(calls) == 1 and record["model_request_count"] == 1
+    assert record["status"] == "model_output_error" and record["stop_reason"] == "model_output_error:malformed_json"
+    assert record["action_count"] == 1 and record["answer"] is None and record["evaluation"]["passed"] is False
+    trace = [json.loads(l) for l in (path / "trace.jsonl").read_text().splitlines()]
+    executed = [e for e in trace if e["kind"] == "step_result"]
+    assert all(r["model_output"] is None for r in (e["result"] for e in executed))  # nothing was parsed or executed
+    saved = json.loads((path / "model-response-01.json").read_text())
+    assert saved["finish_reason"] == "stop" and saved["request_id"] == "mock-r" and saved["reasoning_tokens"] == 400
+    assert saved["content_analysis"]["embedded_json"]["offset"] > 0 and saved["output_error"]["subtype"] == "malformed_json"
+    assert record["usage"][0]["completion_tokens_details"]["reasoning_tokens"] == 400
+    assert SENTINEL not in "".join(p.read_text() for p in path.glob("*.json*"))
