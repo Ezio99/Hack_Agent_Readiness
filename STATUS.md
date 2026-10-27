@@ -1,9 +1,18 @@
 # Hackathon Agent Readiness — status
 
+## Current handoff — 2026-10-28 (documentation reconciliation)
+
+- **Source of truth for execution state:** this file, cross-checked against the active PR, task report, code and local artifacts. Current work is on `hackathon/task004-stage-a`, [PR #3](https://github.com/Ezio99/Hack_Agent_Readiness/pull/3), **open and unmerged**. The foundation is merged; Task 004 changes are not.
+- **Verified live compatibility:** Meta Muse Spark 1.3 Stages A–C passed. The original Stage D strict-profile run failed: two non-JSON model outputs, no shopping action, evaluator FAIL. A faithful full-schema diagnostic reproduced a prose prefix followed by valid action JSON. The opt-in `natural-shopping-v3-compat1` parser recovered a valid click in a separately authorized one-request live trial, and Chromium reached a product detail page. The request gate then stopped further requests. Across four observed full-schema first-step responses, all four had a prose prefix. **This is neither end-to-end task completion nor evidence of website readiness.** Strict `natural-shopping-v3` remains the baseline; do not pool strict and compatibility results. See Report 004 for evidence and limitations.
+- **Latest recorded verification:** 188 offline and 15 browser tests passed for the compatibility work; these are reported historical results, not newly executed by this documentation change. No tests or paid calls were run for this handoff update.
+- **Next proposed milestone (not approved):** design and review a bounded end-to-end discovery run using `natural-shopping-v3-compat1`, frozen configuration, independent evaluator, trace review, explicit request/time/cost bounds, and separate reporting of raw protocol compliance versus recovered action/task success. A draft Task 005 documents the proposal; it is **not authorization**. Obtain explicit user approval before any paid API call. No automatic retries or merges.
+- **Known cautions:** request limits are not monetary guarantees; artifacts may contain sensitive text; never publish raw traces without inspection. Historical text below retains earlier dated checkpoints and should not override this handoff.
+
+
 **Date:** 2026-10-27 (Australia/Sydney)
 **Repository:** `Ezio99/Hack_Agent_Readiness`
-**Branch / PR:** `hackathon/task004-prep` (preparation PR, open for review — do not merge automatically)
-**Phase:** Foundation merged; next milestone prepared and **awaiting approval of paid-API testing**
+**Branch / PR:** `hackathon/task004-stage-a` / PR #3 (open, unmerged)
+**Phase:** Task 004 diagnostic and one-request compatibility validation complete; end-to-end compatibility trial proposed, not authorized
 
 ## Completed (verified)
 - The credential-free foundation is merged to `main` via [PR #1](https://github.com/Ezio99/Hack_Agent_Readiness/pull/1)
