@@ -101,7 +101,8 @@ After separate explicit spending approval, provide a key through the environment
 and run the following candidate configuration. The command can incur charges:
 
 ```bash
-# Set MODEL_API_KEY outside repository files; never commit credentials.
+# Provide MODEL_API_KEY via the process environment or an untracked repository-root .env
+# (copy .env.example; chmod 600). Process variables take precedence. Never commit credentials.
 readiness run --provider meta --model muse-spark-1.3 \
   --base-url https://api.meta.ai/v1 --key-env MODEL_API_KEY \
   --kind discovery --seed 0 --max-steps 5 --timeout 60 \
@@ -155,7 +156,8 @@ or query parameters. JSON, JSONL and the readable summary use the same redactor.
 Useful observations and PNG screenshots are retained. This is not a general PII
 filter or an image/OCR redactor: screenshots and arbitrary page/model content may
 still contain private information unrelated to the configured credential. Browser
-tools never receive the model API key. Do not automatically publish live or private run artifacts or treat redaction
+tools never receive the model API key: the runner removes the key variable from the process
+environment while Playwright/Chromium start and run, and restores it afterwards (regression-tested). Do not automatically publish live or private run artifacts or treat redaction
 tests as a blanket guarantee that arbitrary artifacts are safe. CI uploads only
 credential-free evidence from the controlled synthetic storefront; this does not
 establish that live/custom run artifacts are safe to share.

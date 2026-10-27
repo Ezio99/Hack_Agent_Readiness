@@ -25,4 +25,8 @@ Read `AGENTS.md`, `STATUS.md`, `docs/PROJECT.md`, `docs/DECISIONS.md`, relevant 
 Discuss → propose → approve → task → implement → report → review. Tasks saved as historical references are not automatically approved to execute. Codex can make routine technical choices but must escalate experiment-design changes. Commit work in reviewable units, record checks actually run and limitations, update `STATUS.md`, and link the relevant task/report. No unapproved spending on model calls or external actions.
 
 ## Current state
-See `STATUS.md`. This repository begins as a hackathon planning scaffold without inherited implementation.
+See `STATUS.md`. The fresh credential-free foundation (storefront, seeded tasks, Browser Use adapter, independent evaluator, recorder, CI) was implemented in this repository and merged via PR #1. No authenticated Meta request or live agent trial has been made.
+
+Task status: `001-first-agent-run.md` and `002-interaction-dependent-benchmark.md` are **historical pre-event specifications** (not approved to execute). `003-hackathon-first-agent-run.md` is the **completed foundation** (hosted Meta validation still pending). `004-first-live-meta-trial.md` is the **active proposed task, awaiting explicit approval** before any model call.
+
+Credentials: set `MODEL_API_KEY` in the process environment or a repository-root `.env` (ignored by Git; `.env.example` is the template). Process variables take precedence. Never print, log or commit its value.
