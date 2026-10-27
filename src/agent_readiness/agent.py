@@ -137,6 +137,8 @@ class RecordingModel:
         except Exception as exc:
             self.last_error = type(exc).__name__
             self.last_error_class = "infrastructure_error"
+            if self.capture and self.capture.violations:
+                self.last_error_class = "diagnostic_fidelity_violation"
             self._classify_captured_responses(output_format)
             message = self.recorder.clean(str(exc))
             self.recorder.event("model_error", error_type=type(exc).__name__, error=message,
@@ -154,11 +156,16 @@ class RecordingModel:
 
 def classify_outcome(wrapped, done: bool, steps: int, max_steps: int):
     """(status, stop_reason). Model-output failures are distinct from infrastructure and task failures."""
+    if getattr(wrapped, "capture", None) and wrapped.capture.violations:
+        # A diagnostic request was blocked before the network; later retries hitting the gate must not mask it.
+        return "diagnostic_fidelity_violation", "request blocked before the network"
     if wrapped.limit_reached:
         return "request_limit", "model_request_limit"
     if done:
         return "completed", "agent_done"
     if wrapped.last_error:
+        if wrapped.last_error_class == "diagnostic_fidelity_violation":
+            return "diagnostic_fidelity_violation", "request blocked before the network"
         if wrapped.last_error_class == "model_output_error":
             return "model_output_error", f"model_output_error:{wrapped.output_errors[-1]['subtype']}"
         return "infrastructure_error", wrapped.last_error
@@ -246,6 +253,8 @@ async def attempt(task: PublicTask, url: str, llm, recorder: Recorder, effective
                         steps=len(history.history), action_count=sum(len(h.result) for h in history.history),
                         usage=wrapped.usages or None, model_request_count=wrapped.request_count, errors=[e for e in history.errors() if e],
                         http_captures=capture.summary() if capture else None,
+                        fidelity_violations=(capture.violations or None) if capture else None,
+                        schema_narrowing_detected=any(r.get("schema_narrowed") for r in capture.requests) if capture else None,
                         model_output_errors=wrapped.output_errors or None)
         finally:
             recorder.write("history.json", agent.history.model_dump())

@@ -181,3 +181,62 @@ async def test_request_gate_stays_effective_when_parsing_raises(tmp_path):
         await wrapped.ainvoke([UserMessage(content="again")], output_format=output_model)
     assert len(calls) == 1 and wrapped.limit_reached and len(capture.records) == 1
     assert classify_outcome(wrapped, False, 1, 1)[0] == "request_limit"
+
+
+# ---- schema-fidelity regression (diagnostic experiments) ----------------------------------------------------
+
+def faithful_body():
+    from agent_readiness.probe import build_agent_output_schema
+    schema, _ = build_agent_output_schema()
+    user = [{"type": "text", "text": "<agent_history>\nAgent initialized\n</agent_history>\n<browser_state>\nTASK-PROMPT\n</browser_state>"},
+            {"type": "text", "text": "Current screenshot:"},
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,AAAA", "detail": "high"}}]
+    return {"model": "muse-spark-1.3", "reasoning_effort": "low", "max_completion_tokens": 4096,
+            "response_format": {"type": "json_schema", "json_schema": {"name": "agent_output", "strict": True, "schema": schema}},
+            "messages": [{"role": "system", "content": "s" * 23_590}, {"role": "user", "content": user}]}
+
+
+EXPECT = {"schema_sha256": "c80ef8b813abef0b2afd79c83a6f31e857c0101ea8730952ee78d61e65f9a194", "task_prompt": "TASK-PROMPT",
+          "max_estimated_cost_usd": 0.03,
+          "parameters": {"model": "muse-spark-1.3", "reasoning_effort": "low", "max_completion_tokens": 4096}}
+
+
+def test_reference_full_schema_hash_is_pinned_to_the_live_agent_schema():
+    from agent_readiness.capture import FULL_AGENT_SCHEMA_SHA256
+    from agent_readiness.probe import _schema_digest, build_agent_output_schema
+    assert FULL_AGENT_SCHEMA_SHA256 == EXPECT["schema_sha256"]
+    assert _schema_digest(build_agent_output_schema()[0])[0] == FULL_AGENT_SCHEMA_SHA256  # dependency/tool drift fails here
+
+
+def test_faithful_request_has_no_violations_and_costs_under_three_cents():
+    from agent_readiness.capture import check_fidelity, estimate_cost_usd
+    body = faithful_body()
+    assert check_fidelity(body, EXPECT) == []
+    estimate = estimate_cost_usd(body)
+    assert estimate["output_tokens_cap"] == 4096 and 0.015 < estimate["usd"] < 0.03
+
+
+def mutate(body, change):
+    import copy
+    body = copy.deepcopy(body)
+    change(body)
+    return body
+
+
+@pytest.mark.parametrize("change,fragment", [
+    (lambda b: b["response_format"]["json_schema"].__setitem__("schema", {"type": "object", "properties": {}}), "schema sha256"),
+    (lambda b: b["response_format"]["json_schema"].__setitem__("strict", False), "strict json_schema"),
+    (lambda b: b.__setitem__("reasoning_effort", "high"), "reasoning_effort"),
+    (lambda b: b.__setitem__("max_completion_tokens", 1024), "max_completion_tokens"),
+    (lambda b: b["messages"][0].__setitem__("content", "short"), "system prompt"),
+    (lambda b: b["messages"][1]["content"].pop(), "screenshot"),
+    (lambda b: b["messages"][1]["content"][0].__setitem__("text", "no state here"), "DOM state"),
+    (lambda b: b["messages"][1]["content"][0].__setitem__("text", "<browser_state>TASK-PROMPT</browser_state>"), "first-step history"),
+    (lambda b: b["messages"][1]["content"][0].__setitem__("text", b["messages"][1]["content"][0]["text"].replace("TASK-PROMPT", "other task")), "task prompt"),
+    (lambda b: b["messages"][1]["content"].append({"type": "text", "text": "You reached max_steps - this is your last step. Your only tool available is the \"done\" tool."}), "last-step"),
+    (lambda b: b.__setitem__("max_completion_tokens", 4096) or b["messages"][1]["content"][0].__setitem__("text", b["messages"][1]["content"][0]["text"] + "x" * 400_000), "estimated worst-case cost"),
+])
+def test_each_departure_from_the_experiment_definition_is_detected(change, fragment):
+    from agent_readiness.capture import check_fidelity
+    problems = check_fidelity(mutate(faithful_body(), change), EXPECT)
+    assert any(fragment in p for p in problems), problems

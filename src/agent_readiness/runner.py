@@ -58,7 +58,8 @@ def provenance_without_key(*names):
 async def run(*, mode="smoke", seed=0, kind="discovery", available=None,
               url=None, model_config=None, allow_model_calls=False,
               output=Path("runs"), max_steps=None, timeout_seconds=None,
-              max_model_requests=None, profile_overrides=None, profile_id=None):
+              max_model_requests=None, profile_overrides=None, profile_id=None,
+              expect_schema_sha256=None, max_estimated_cost_usd=None):
     config = model_config or ModelConfig()
     recorder = Recorder(Path(output), (os.environ.get(config.key_env, ""),))
     started = time.monotonic()
@@ -117,6 +118,15 @@ async def run(*, mode="smoke", seed=0, kind="discovery", available=None,
             "profile": effective, "model": record["model"], "model_parameters": record["model_parameters"]
         }), sort_keys=True).encode()).hexdigest()
         recorder.write("run.json", record)
+        if expect_schema_sha256 or max_estimated_cost_usd is not None:
+            # Diagnostic experiments: block any outgoing request that departs from the experiment definition.
+            recorder.expectations = {
+                "schema_sha256": expect_schema_sha256, "task_prompt": task.public.prompt,
+                "max_estimated_cost_usd": max_estimated_cost_usd,
+                "parameters": {k: effective[k] for k in ("max_completion_tokens", "reasoning_effort") if k in effective}
+                              | {"model": config.model}}
+            record["diagnostic_expectations"] = {k: v for k, v in recorder.expectations.items() if k != "task_prompt"}
+            recorder.write("run.json", record)
         llm = None
         if mode == "live":
             if not allow_model_calls:
@@ -155,7 +165,10 @@ async def run(*, mode="smoke", seed=0, kind="discovery", available=None,
         # Retain partial evidence/usage even when the model or infrastructure fails.
         events = [json.loads(line) for line in (recorder.path / "trace.jsonl").read_text().splitlines()]
         record["model_request_count"] = sum(e["kind"] == "model_request" for e in events)
-        if any(e["kind"] == "model_request_limit" for e in events):
+        if any(e["kind"] == "fidelity_violation" for e in events):
+            # A blocked diagnostic request outranks later retries that merely hit the request gate.
+            record.update(status="diagnostic_fidelity_violation", stop_reason="request blocked before the network")
+        elif any(e["kind"] == "model_request_limit" for e in events):
             record.update(status="request_limit", stop_reason="model_request_limit")
         usages = [e["usage"] for e in events if e["kind"] == "model_response" and e.get("usage")]
         if usages:

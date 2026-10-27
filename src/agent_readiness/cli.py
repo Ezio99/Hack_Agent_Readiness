@@ -40,6 +40,8 @@ def main():
             cmd.add_argument("--base-url", default="https://api.meta.ai/v1")
             cmd.add_argument("--key-env", default="META_MODEL_API_KEY")
             cmd.add_argument("--allow-model-calls", action="store_true", help="Use only after explicit spending approval")
+            cmd.add_argument("--expect-schema-sha256", help="Diagnostic: block any request whose response schema differs")
+            cmd.add_argument("--max-estimated-cost-usd", type=float, help="Diagnostic: block a request whose worst-case estimate reaches this")
     args = parser.parse_args()
     if args.command in {"run", "probe"}:
         load_repo_env()
@@ -66,7 +68,9 @@ def main():
         path, record = asyncio.run(run(mode="live" if args.command == "run" else "smoke",
             seed=args.seed, kind=args.kind, available=available, url=args.url, output=args.output,
             max_steps=args.max_steps, timeout_seconds=args.timeout, max_model_requests=args.max_model_requests, model_config=config,
-            allow_model_calls=getattr(args, "allow_model_calls", False)))
+            allow_model_calls=getattr(args, "allow_model_calls", False),
+            expect_schema_sha256=getattr(args, "expect_schema_sha256", None),
+            max_estimated_cost_usd=getattr(args, "max_estimated_cost_usd", None)))
         print(json.dumps({"artifact_path": str(path), "status": record["status"],
                           "evaluation": record["evaluation"], "errors": record.get("errors", [])}, indent=2))
         raise SystemExit(0 if record["evaluation"] and record["evaluation"]["passed"] and record["status"] == "completed" else 1)

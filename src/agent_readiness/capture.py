@@ -13,6 +13,18 @@ from .recorder import Recorder, utcnow
 MAX_CONTENT_CHARS = 20_000       # raw model content kept per response
 MAX_ERROR_BODY_CHARS = 2_000     # non-200 bodies
 MAX_JSON_PROBES = 20             # '{' positions tried when looking for embedded JSON
+# Complete strict AgentOutput schema for the reference tool set under browser-use 0.11.13 (pinned by a test).
+FULL_AGENT_SCHEMA_SHA256 = "c80ef8b813abef0b2afd79c83a6f31e857c0101ea8730952ee78d61e65f9a194"
+LAST_STEP_MARKERS = ("this is your last step", 'only tool available is the "done" tool')
+MIN_SYSTEM_PROMPT_CHARS = 20_000
+# Published muse-spark-1.3 pay-as-you-go prices, USD per 1M tokens (currency not named by the provider).
+PRICE_INPUT_PER_M, PRICE_OUTPUT_PER_M = 1.25, 4.25
+IMAGE_TOKENS_ESTIMATE = 1_430    # calibrated: 8,128 measured prompt tokens vs ~26.8k text chars + one 1280x960 PNG
+CHARS_PER_TOKEN = 4
+
+
+class FidelityViolation(RuntimeError):
+    """A diagnostic request does not match the experiment definition; it is blocked before the network."""
 
 
 def _sha(value) -> str:
@@ -53,6 +65,66 @@ def request_summary(body: dict) -> dict:
             "response_format": schema_info, "messages": messages}
 
 
+def message_texts(body: dict) -> tuple[str, str, int]:
+    """(system text, user text, image count) of a chat-completions body."""
+    system, user, images = [], [], 0
+    for message in body.get("messages") or []:
+        content = message.get("content")
+        parts = [{"type": "text", "text": content}] if isinstance(content, str) else (content or [])
+        for part in parts:
+            if part.get("type") == "text":
+                (system if message.get("role") == "system" else user).append(part.get("text", ""))
+            elif part.get("type") == "image_url":
+                images += 1
+    return "\n".join(system), "\n".join(user), images
+
+
+def estimate_cost_usd(body: dict) -> dict:
+    """Upper-bound cost of one request: estimated input tokens plus the full completion cap (calculated)."""
+    system, user, images = message_texts(body)
+    input_tokens = round((len(system) + len(user)) / CHARS_PER_TOKEN) + images * IMAGE_TOKENS_ESTIMATE
+    output_tokens = body.get("max_completion_tokens") or 0
+    usd = input_tokens * PRICE_INPUT_PER_M / 1e6 + output_tokens * PRICE_OUTPUT_PER_M / 1e6
+    return {"input_tokens_estimate": input_tokens, "output_tokens_cap": output_tokens, "usd": round(usd, 5)}
+
+
+def check_fidelity(body: dict, expectations: dict) -> list[str]:
+    """Violations of the experiment definition in an outgoing request (empty list = faithful)."""
+    problems = []
+    fmt = body.get("response_format") or {}
+    spec = fmt.get("json_schema") or {}
+    sha = _sha(spec.get("schema")) if spec.get("schema") is not None else None
+    if expectations.get("schema_sha256") and sha != expectations["schema_sha256"]:
+        problems.append(f"response_format schema sha256 {sha} != expected {expectations['schema_sha256']} "
+                        "(schema narrowed or changed)")
+    if fmt.get("type") != "json_schema" or spec.get("strict") is not True or spec.get("name") != "agent_output":
+        problems.append("response_format is not the strict json_schema agent_output")
+    for key, expected in (expectations.get("parameters") or {}).items():
+        if body.get(key) != expected:
+            problems.append(f"parameter {key}={body.get(key)!r}, expected {expected!r}")
+    system, user, images = message_texts(body)
+    if len(system) < MIN_SYSTEM_PROMPT_CHARS:
+        problems.append(f"system prompt has {len(system)} chars (< {MIN_SYSTEM_PROMPT_CHARS})")
+    if images != 1:
+        problems.append(f"expected exactly one screenshot, found {images}")
+    for marker, label in (("<browser_state>", "DOM state"), ("Agent initialized", "first-step history")):
+        if marker not in user:
+            problems.append(f"user context lacks {label} ({marker!r})")
+    task_prompt = expectations.get("task_prompt")
+    if task_prompt and task_prompt not in user:
+        problems.append("public task prompt not present in the user context")
+    lowered = (system + "\n" + user).lower()
+    for marker in LAST_STEP_MARKERS:
+        if marker in lowered:
+            problems.append(f"last-step instruction present ({marker!r})")
+    ceiling = expectations.get("max_estimated_cost_usd")
+    if ceiling is not None:
+        estimate = estimate_cost_usd(body)
+        if estimate["usd"] >= ceiling:
+            problems.append(f"estimated worst-case cost US${estimate['usd']} >= US${ceiling}")
+    return problems
+
+
 def analyze_content(content) -> dict:
     """Facts about the returned text, independent of any output model."""
     if content is None:
@@ -87,8 +159,11 @@ def analyze_content(content) -> dict:
 class ResponseCapture:
     """httpx event hooks writing ``model_http_request``/``model_http_response`` events and a response file."""
 
-    def __init__(self, recorder: Recorder):
+    def __init__(self, recorder: Recorder, expectations: dict | None = None):
         self.recorder = recorder
+        self.expectations = expectations
+        self.violations: list[str] = []
+        self.requests: list[dict] = []
         self.records: list[dict] = []
         self._started: list[float] = []
         self._claimed = 0
@@ -104,9 +179,21 @@ class ResponseCapture:
             body = json.loads(request.content)
         except ValueError:
             body = {}
+        summary = request_summary(body)
+        schema_sha = (summary["response_format"] or {}).get("schema_sha256")
+        fidelity = {"schema_sha256": schema_sha, "schema_narrowed": schema_sha != FULL_AGENT_SCHEMA_SHA256}
+        problems = check_fidelity(body, self.expectations) if self.expectations else []
+        if self.expectations:
+            fidelity["estimate"] = estimate_cost_usd(body)
+            fidelity["violations"] = problems
+        self.requests.append(fidelity)
         self.recorder.event("model_http_request", index=len(self._started), method=request.method,
                             url=str(request.url.copy_with(query=None)),
-                            timeout=dict(request.extensions.get("timeout") or {}), **request_summary(body))
+                            timeout=dict(request.extensions.get("timeout") or {}), fidelity=fidelity, **summary)
+        if problems:  # raised before the transport: nothing reaches the network
+            self.violations.extend(problems)
+            self.recorder.event("fidelity_violation", index=len(self._started), violations=problems)
+            raise FidelityViolation("; ".join(problems))
 
     async def on_response(self, response):
         index = len(self.records) + 1
@@ -151,17 +238,23 @@ class ResponseCapture:
     def summary(self) -> list[dict]:
         keys = ("index", "http_status", "request_id", "finish_reason", "prompt_tokens", "completion_tokens",
                 "reasoning_tokens", "elapsed_seconds", "content_analysis", "output_error")
-        return [{k: r.get(k) for k in keys if k in r} for r in self.records]
+        rows = [{k: r.get(k) for k in keys if k in r} for r in self.records]
+        for row in rows:  # merge the outgoing-request facts (schema hash, narrowing flag) by index
+            if row["index"] - 1 < len(self.requests):
+                row.update({k: v for k, v in self.requests[row["index"] - 1].items() if k in ("schema_sha256", "schema_narrowed")})
+        return rows
 
 
 def attach_capture(llm, recorder: Recorder):
-    """Add capture hooks to the model's httpx client; return None for models without one."""
+    """Add capture hooks to the model's httpx client; return None for models without one.
+
+    ``recorder.expectations`` (set by the runner for diagnostic runs) turns on pre-send fidelity checks."""
     if not hasattr(llm, "http_client"):
         return None
     if llm.http_client is None:
         from openai import DefaultAsyncHttpxClient  # same defaults the SDK would have used
         llm.http_client = DefaultAsyncHttpxClient()
-    capture = ResponseCapture(recorder)
+    capture = ResponseCapture(recorder, getattr(recorder, "expectations", None))
     capture.attach(llm.http_client)
     return capture
 

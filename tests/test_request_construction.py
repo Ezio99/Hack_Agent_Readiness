@@ -134,3 +134,101 @@ async def test_one_step_one_request_replay_with_unparseable_output_makes_exactly
     assert saved["content_analysis"]["embedded_json"]["offset"] > 0 and saved["output_error"]["subtype"] == "malformed_json"
     assert record["usage"][0]["completion_tokens_details"]["reasoning_tokens"] == 400
     assert SENTINEL not in "".join(p.read_text() for p in path.glob("*.json*"))
+
+
+async def fidelity_run(tmp_path, monkeypatch, **kwargs):
+    monkeypatch.setenv("META_MODEL_API_KEY", SENTINEL)
+    calls = []
+    def handler(request):
+        calls.append(request)
+        return done_reply(len(calls))
+    original = runner.create_model
+    def make(config, effective):
+        model = original(config, effective)
+        model.http_client = DefaultAsyncHttpxClient(transport=httpx.MockTransport(handler))
+        sdk = model.get_client()
+        sdk._platform = "Linux"
+        model.get_client = lambda: sdk
+        return model
+    monkeypatch.setattr(runner, "create_model", make)
+    path, record = await runner.run(mode="live", allow_model_calls=True, output=tmp_path, seed=0, kind="discovery",
+                                    timeout_seconds=120, **kwargs)
+    return path, record, calls
+
+
+FULL_SHA = "c80ef8b813abef0b2afd79c83a6f31e857c0101ea8730952ee78d61e65f9a194"
+
+
+async def test_full_schema_replay_configuration_passes_every_pre_send_check(tmp_path, monkeypatch):
+    """--max-steps 5 --max-model-requests 1 with the schema/cost expectations: one faithful request goes out."""
+    path, record, calls = await fidelity_run(tmp_path, monkeypatch, max_steps=5, max_model_requests=1,
+                                             expect_schema_sha256=FULL_SHA, max_estimated_cost_usd=0.03)
+    assert len(calls) == 1 and record["model_request_count"] == 1 and record["status"] == "completed"
+    assert record["schema_narrowing_detected"] is False and record["fidelity_violations"] is None
+    assert record["http_captures"][0]["schema_sha256"] == FULL_SHA and record["http_captures"][0]["schema_narrowed"] is False
+    event = next(json.loads(l) for l in (path / "trace.jsonl").read_text().splitlines() if '"model_http_request"' in l)
+    assert event["fidelity"]["violations"] == [] and event["fidelity"]["estimate"]["usd"] < 0.03
+    assert record["diagnostic_expectations"]["schema_sha256"] == FULL_SHA
+    body = json.loads(calls[0].content)
+    assert (body["max_completion_tokens"], body["reasoning_effort"], body["model"]) == (4096, "low", "muse-spark-1.3")
+    from agent_readiness.capture import LAST_STEP_MARKERS
+    text = json.dumps(body["messages"]).lower().replace('\\"', '"')
+    assert not any(marker in text for marker in LAST_STEP_MARKERS)
+
+
+async def test_one_step_budget_is_blocked_before_the_network_when_the_full_schema_is_required(tmp_path, monkeypatch):
+    path, record, calls = await fidelity_run(tmp_path, monkeypatch, max_steps=1, max_model_requests=1,
+                                             expect_schema_sha256=FULL_SHA, max_estimated_cost_usd=0.03)
+    assert calls == []  # nothing reached the transport
+    assert record["status"] == "diagnostic_fidelity_violation" and record["model_request_count"] == 1
+    joined = " | ".join(record["fidelity_violations"])
+    assert "schema narrowed or changed" in joined and "last-step instruction" in joined
+    assert record["schema_narrowing_detected"] is True
+
+
+async def test_schema_narrowing_is_flagged_even_without_expectations(tmp_path, monkeypatch):
+    _, record, calls = await fidelity_run(tmp_path, monkeypatch, max_steps=1, max_model_requests=1)
+    assert len(calls) == 1 and record["schema_narrowing_detected"] is True
+    assert record["http_captures"][0]["schema_narrowed"] is True
+
+
+async def test_cost_ceiling_blocks_the_request(tmp_path, monkeypatch):
+    _, record, calls = await fidelity_run(tmp_path, monkeypatch, max_steps=5, max_model_requests=1,
+                                          expect_schema_sha256=FULL_SHA, max_estimated_cost_usd=0.001)
+    assert calls == [] and record["status"] == "diagnostic_fidelity_violation"
+    assert any("estimated worst-case cost" in v for v in record["fidelity_violations"])
+
+
+async def test_valid_first_action_executes_then_the_gate_blocks_any_second_request(tmp_path, monkeypatch):
+    """Replay semantics: a valid response is executed normally; no second model request can reach the provider."""
+    monkeypatch.setenv("META_MODEL_API_KEY", SENTINEL)
+    calls = []
+    action = {"evaluation_previous_goal": "n/a", "memory": "", "next_goal": "look further down", "thinking": "t",
+              "current_plan_item": 0, "plan_update": None, "action": [{"scroll": {"down": True, "pages": 0.5, "index": None}}]}
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(200, headers={"x-request-id": f"mock-{len(calls)}"}, json={
+            "id": "m", "object": "chat.completion", "created": 0, "model": "muse-spark-1.3",
+            "choices": [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": json.dumps(action)}}],
+            "usage": {"prompt_tokens": 8100, "completion_tokens": 400, "total_tokens": 8500,
+                      "completion_tokens_details": {"reasoning_tokens": 300}}})
+    original = runner.create_model
+    def make(config, effective):
+        model = original(config, effective)
+        model.http_client = DefaultAsyncHttpxClient(transport=httpx.MockTransport(handler))
+        sdk = model.get_client()
+        sdk._platform = "Linux"
+        model.get_client = lambda: sdk
+        return model
+    monkeypatch.setattr(runner, "create_model", make)
+    path, record = await runner.run(mode="live", allow_model_calls=True, output=tmp_path, seed=0, kind="discovery",
+                                    max_steps=5, timeout_seconds=120, max_model_requests=1,
+                                    expect_schema_sha256=FULL_SHA, max_estimated_cost_usd=0.03)
+    assert len(calls) == 1 and record["model_request_count"] == 1  # the second request never reached the transport
+    assert record["status"] == "request_limit" and record["schema_narrowing_detected"] is False
+    trace = [json.loads(l) for l in (path / "trace.jsonl").read_text().splitlines()]
+    kinds = [e["kind"] for e in trace]
+    assert "model_request_limit" in kinds and kinds.count("model_http_request") == 1
+    step = next(e for e in trace if e["kind"] == "step_result")
+    assert step["result"]["model_output"] is not None and not step["result"]["result"][0].get("error")  # executed normally
+    assert record["answer"] is None and record["evaluation"]["passed"] is False  # incomplete task, not a readiness result
