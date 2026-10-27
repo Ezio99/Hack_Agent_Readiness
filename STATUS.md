@@ -38,6 +38,7 @@
 - **Stage A live probe (authorized, 1 request, 2026-10-27):** HTTP 200, model `muse-spark-1.3`, 31 total tokens (14 reasoning), no cost reported, but `content` was null at `finish_reason: length` (16-token cap consumed by reasoning). Auth/model access verified; visible-text check not met. See report 004. Stages B–D not started.
 - **Stage A retry (separately authorized, 1 request):** 128-token cap, prompt `OK` → HTTP 200, `content` still null, `finish_reason: length`, 143 tokens of which 126 reasoning. Two attempts total; no further requests made. See report 004.
 - **Stage A attempt 3 (separately authorized, 1 request):** `reasoning_effort: low`, 512-token cap → HTTP 200, `finish_reason: stop`, visible content `OK`, 15 prompt / 120 completion (110 reasoning) tokens, 1.41 s. Stage A objective met after three attempts; est. cumulative cost ≈ US$0.0012 (calculated, not provider-reported). Stages B–D not started.
+- **Stage B (separately authorized, 1 request):** exact strict `AgentOutput` schema (SHA-256 `c80ef8b8…9a194`, 7,915 bytes) accepted; HTTP 200, `stop`, output valid and values exact. Usage 63 prompt / 994 completion (906 reasoning) — only ~3% headroom under the 1,024 cap, a risk for Stage D. Est. cumulative cost ≈ US$0.0055 (calculated). Stages C–D not started.
 - Not re-run here: GitHub Actions on this branch (see PR checks).
 
 ## Next (requires explicit user approval — nothing paid is authorized)

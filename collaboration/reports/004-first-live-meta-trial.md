@@ -1,7 +1,7 @@
 # Report 004 — Meta compatibility validation and first live trial
 
-**Status: Stage A executed three times under three separate authorizations (2026-10-27); Stages B–D NOT executed.** Specification: [Task 004](../tasks/004-first-live-meta-trial.md) (proposed, unapproved).
-Three authorized authenticated requests (Stage A, attempts 1–3) were made; no other paid call or live agent trial has been made.
+**Status: Stage A executed three times and Stage B once, each under separate authorization (2026-10-27); Stages C–D NOT executed.** Specification: [Task 004](../tasks/004-first-live-meta-trial.md) (proposed, unapproved).
+Four authorized authenticated requests (Stage A attempts 1–3, Stage B once) were made; no other paid call or live agent trial has been made.
 
 ## Completed preparation (2026-10-27)
 Credential-free only; see `STATUS.md` for details.
@@ -101,3 +101,30 @@ Result: probe `completed`. Authentication, model access, `reasoning_effort` acce
 Estimated cost (calculated from published rates, assuming "$" is USD and reasoning billed as output — **not provider-reported**): attempt 3 ≈ US$0.00053; all three attempts (45 input, 264 output tokens) ≈ US$0.0012 cumulative.
 
 No further requests were made. Stages B, C and D remain unrun and need separate approval.
+
+## Stage B — structured-output compatibility (separately authorized, 1 request)
+Probe: `readiness probe --stage b --allow-model-calls` (`src/agent_readiness/probe.py`, independent of the agent request gate; frozen `natural-shopping-v2` profile and Browser Use adapter unmodified). Artifact `runs/20261027T035443-dfa0683d5382/` (`probe.json`, `schema.json`; untracked, sanitized, key absent).
+
+Request: `POST https://api.meta.ai/v1/chat/completions`; `reasoning_effort: low`; `max_completion_tokens: 1024`; `response_format = {type: json_schema, json_schema: {name: agent_output, strict: true, schema: <exact real AgentOutput schema from SchemaOptimizer, unmodified>}}`; the authorized synthetic prompt (one `done` action, product_id `PROBE-0`, price_cents 100, available false). One attempt, no retries, 45 s timeout, redirects off. An offline test confirms the `response_format` equals what `ChatOpenAI.ainvoke` emits for the same model class.
+
+| Evidence | Observed |
+|---|---|
+| Schema SHA-256 (canonical JSON, sorted keys) | `c80ef8b813abef0b2afd79c83a6f31e857c0101ea8730952ee78d61e65f9a194` |
+| Schema size | 7,915 bytes canonical; 15 action variants; browser-use 0.11.13 |
+| HTTP status / request id | **200** / `c3d3dd2e-8ec9-43ce-867d-21a039346481` |
+| `finish_reason` | **stop** |
+| Usage | prompt **63**, completion **994**, **reasoning 906**, total 1,057 |
+| Elapsed | 4.69 s |
+| Provider-reported cost | none (null) |
+| Parse / validation | JSON parsed ✔; `AgentOutput.model_validate_json` ✔; exactly one `done` action ✔; values exactly `PROBE-0` / `100` (int) / `false` ✔ |
+| Content (synthetic) | `{"action":[{"done":{"data":{"available":false,"price_cents":100,"product_id":"PROBE-0"}}}],"current_plan_item":0,"evaluation_previous_goal":"schema test","memory":"probe","next_goal":"complete","plan_update":null,"thinking":"return schema compliant done"}` |
+
+**Result: all pre-stated success criteria met.** The hosted API accepted the exact strict schema (the documented depth-10 concern and the undocumented `default`/`minLength`/`minimum` keywords did not cause a rejection for this schema), and the response validated against the real Browser Use model.
+
+Observations and caveats (single request; hypotheses are marked):
+- **Reasoning budget risk (important):** reasoning used **906 of 994** completion tokens for a trivial request, against 110 in Stage A attempt 3 at the same `reasoning_effort: low`. The request finished at 994 of the 1,024 cap, i.e. **~3% headroom**. Structured output with this schema appears to induce much more reasoning (hypothesis; not isolated from prompt wording). The profile's 2,048-token cap may be insufficient for real, larger observations; a cap-exhausted response would return null content, as in Stage A attempts 1–2.
+- Prompt tokens were 63 although the schema is ~2,000 tokens by size, so the schema appears not to be counted (or not billed) as input (hypothesis; billing not verified).
+- This proves schema acceptance and conformance for one `done` action only. It does not show the model chooses correct browser actions from real DOM/screenshot context, handles the ~23.6k-character system prompt, or works across multiple steps; those need Stages C/D.
+- Estimated cost (calculated from published rates, not provider-reported; assumes USD and reasoning billed as output): Stage B ≈ US$0.0043; all four requests (108 input, 1,258 output tokens) ≈ US$0.0055 cumulative.
+
+No further requests were made. Stages C and D remain unrun and need separate approval. Open item for review: whether to raise the agent profile's completion cap / set `reasoning_effort` (would require a new profile version, `natural-shopping-v3`, and approval).
