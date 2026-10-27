@@ -1,5 +1,7 @@
 # Codex collaboration — Hackathon Agent Readiness
 
+Read COLD_START.md first
+
 ## Purpose and responsibilities
 User + ChatGPT own product direction, experiment design, and major architectural decisions. Codex implements explicitly approved tasks, tests its changes, and reports evidence. Discuss changes to scope or validity before implementing them. Favor small working increments and direct communication.
 
