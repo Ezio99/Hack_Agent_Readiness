@@ -109,3 +109,29 @@ async def test_runner_hides_key_during_smoke_too(tmp_path, monkeypatch):
     monkeypatch.setattr(runner, "smoke", spy_smoke)
     await runner.run(mode="smoke", output=tmp_path)
     assert seen["during"] is None and os.environ["META_MODEL_API_KEY"] == SECRET
+
+
+def test_scrub_keeps_lazy_load_dotenv_imports_from_restoring_the_key(tmp_path):
+    """Replicates Browser Use: a module calling load_dotenv() at import finds a .env above its own directory."""
+    (tmp_path / ".env").write_text("META_MODEL_API_KEY=file-value\n")
+    pkg = tmp_path / "venv" / "site"
+    pkg.mkdir(parents=True)
+    (pkg / "lazy_mod.py").write_text("from dotenv import load_dotenv\nload_dotenv()\n")
+    (pkg / "lazy_mod2.py").write_text("from dotenv import load_dotenv\nload_dotenv()\n")
+    code = (
+        "import os, sys\n"
+        f"sys.path.insert(0, {str(pkg)!r})\n"
+        "from agent_readiness.env import scrubbed_environment\n"
+        "os.environ.pop('META_MODEL_API_KEY', None)\n"
+        "import lazy_mod2  # control: outside the scrub the .env IS loaded\n"
+        "control = 'META_MODEL_API_KEY' in os.environ\n"
+        "os.environ['META_MODEL_API_KEY'] = 'process-value'\n"
+        "with scrubbed_environment('META_MODEL_API_KEY'):\n"
+        "    import lazy_mod\n"
+        "    inside = 'META_MODEL_API_KEY' in os.environ\n"
+        "import dotenv\n"
+        "print(control, inside, os.environ['META_MODEL_API_KEY'], dotenv.load_dotenv.__name__)\n")
+    out = subprocess.run([sys.executable, "-I", "-c", code], capture_output=True, text=True,
+                         env={"PYTHONPATH": str(env.REPO_ROOT / "src"), "PATH": os.environ.get("PATH", "")})
+    assert out.returncode == 0, out.stderr
+    assert out.stdout.split() == ["True", "False", "process-value", "load_dotenv"]
