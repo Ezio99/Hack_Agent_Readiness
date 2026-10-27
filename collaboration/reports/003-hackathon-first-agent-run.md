@@ -3,6 +3,10 @@
 Date: 2026-10-27 Australia/Sydney. Approved specification:
 [003-hackathon-first-agent-run.md](../tasks/003-hackathon-first-agent-run.md).
 
+**Current result:** credential-free CI passed for the startup fix: 23 offline
+tests, three real-browser cases, CLI smoke and artifact upload. See the remote
+validation section below. Live Meta compatibility remains unverified.
+
 ## Delivered architecture
 
 One newly authored Python package implements twenty synthetic products, a
@@ -153,7 +157,6 @@ permission-update revalidation above subsequently restored the three commits to
 the original checkout and switched it to `hackathon/task001`.
 
 ## Acceptance still pending
-- A successful credential-free CI run and inspection of its navigation evidence.
 - Separately approved authenticated Meta validation, then live agent trials and
   independent evaluation; preserve every attempt, including failures.
 - Participant-specific event-rule verification.
@@ -186,4 +189,10 @@ the same required launch flags. Another ensures an internal operation timeout is
 classified as infrastructure failure, rather than incorrectly labeled as the
 experiment's wall-clock deadline. After the fix, all **26 local tests passed in 10.94s**, including all three
 real-browser cases (`artifacts/verification/pytest-ci-fix.xml`). Remote
-revalidation is pending this commit.
+[revalidation passed in run 40426022852](https://github.com/Ezio99/Hack_Agent_Readiness/actions/runs/40426022852)
+for commit `b278a7e9a64aa7c176ca24884cfd39c0e1e45a0f`. GitHub's runner passed
+23 offline tests in 2.69s, three browser cases in 6.13s, the CLI smoke with an
+independent passing grade, and artifact upload. The smoke artifact path is
+`runs/20261027T003126-d62bafa307a4/` within the downloadable evidence archive.
+The earlier failed CI run is retained, not discarded. No provider calls or
+paid model trials were made.

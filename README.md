@@ -8,10 +8,11 @@ filters and accessible detail pages. Listings show names, brands, categories,
 prices and opaque links. Product IDs and stock availability appear on details
 only. There is no checkout, account system, dashboard or composite score.
 
-**Validation:** all **24 tests pass**, including the three real-browser cases.
+**Validation:** all **26 tests pass**, including the three real-browser cases.
 The credential-free CLI smoke navigates to a detail page and passes independent
 evaluation. In this development environment those checks require approval-reviewed
-execution outside the restricted sandbox. The first CI run exposed a browser-startup difference; a fix is being validated.
+execution outside the restricted sandbox. [Credential-free CI passed](https://github.com/Ezio99/Hack_Agent_Readiness/actions/runs/40426022852),
+including all browser checks and CLI smoke.
 No live model trial has been performed. See [STATUS](STATUS.md) and the
 [fresh task](collaboration/tasks/003-hackathon-first-agent-run.md).
 

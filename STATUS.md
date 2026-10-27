@@ -44,7 +44,9 @@ use local storefront/CDP sockets and update Git metadata.
   Ubuntu 24.04. An internal browser timeout is now recorded as infrastructure
   failure, separately from the wall-clock run limit. Two regression tests were added.
 - Local regression checks: **26 tests passed in 10.94s**, including all three
-  real-browser cases. A fresh CI run is pending. No live model trial or paid call was made.
+  real-browser cases. [CI run 40426022852](https://github.com/Ezio99/Hack_Agent_Readiness/actions/runs/40426022852)
+  **passed** for commit `b278a7e`: 23 offline tests, three real-browser cases,
+  CLI smoke with independent evaluation, and evidence artifact upload. No live model trial or paid call was made.
 
 Initial restricted execution produced 21 passing offline tests and three EPERM
 browser failures. Those attempts remain preserved; the successful revalidation
@@ -70,8 +72,9 @@ The original checkout now holds the review branch and its commit history. The
 temporary clone and bundle were the initial fallback, not the current blocker.
 Status/report updates are committed directly on the restored review branch.
 The user authorized pushing and PR creation after CI passes. The review branch is
-now pushed; CI failures are being resolved before opening the PR.
+now pushed; the initial CI failure was fixed and the subsequent run passed.
+The final documentation head is being verified before PR creation.
 
-Remaining: successful credential-free CI, separately approved authenticated Meta
+Remaining: PR review and separately approved authenticated Meta
 compatibility/live agent trials, and participant-specific event-rule verification.
 Executable work was authored fresh without prototype assets.

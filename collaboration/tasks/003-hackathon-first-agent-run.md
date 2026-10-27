@@ -47,12 +47,12 @@ credential-free vertical slice, tests, CI, STATUS updates and commits.
 - [x] DOM + screenshot adapter/profile and offline Meta wire/schema checks pass.
 - [x] Trace/failure/usage recording and credential-free CI are implemented.
 - [x] Real browser information-boundary checks and smoke pass (approval-reviewed execution).
-- [ ] Credential-free CI passes (workflow has not run).
+- [x] Credential-free CI passes ([run 40426022852](https://github.com/Ezio99/Hack_Agent_Readiness/actions/runs/40426022852)).
 - [ ] Hosted Meta compatibility/live trials (not authorized or verified).
 
 Evidence: [new hackathon report](../reports/003-hackathon-first-agent-run.md).
 The initial Git bundle's three commits are now restored on `hackathon/task001` in
 the original checkout. Approval-reviewed execution resolved the Git/socket blockers:
-all 24 tests pass and CLI smoke passes independent evaluation. No paid calls were
-made. CI and live-model validation remain pending; no historical acceptance
+all 26 tests pass locally and on CI, and CLI smoke passes independent evaluation.
+No paid calls were made. Live-model validation remains pending; no historical acceptance
 checklist is claimed complete.
