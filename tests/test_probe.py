@@ -76,3 +76,126 @@ def test_cli_probe_requires_explicit_flag(monkeypatch, capsys):
     with pytest.raises(SystemExit) as exc:
         cli.main()
     assert "disabled" in str(exc.value)
+
+
+# ---- Stage B ----------------------------------------------------------------
+
+def good_content(**over):
+    data = {"product_id": "PROBE-0", "price_cents": 100, "available": False}
+    data.update(over)
+    return json.dumps({"evaluation_previous_goal": "n/a", "memory": "", "next_goal": "finish",
+                       "action": [{"done": {"data": data}}]})
+
+
+def b_reply(content, finish="stop", usage=None):
+    return httpx.Response(200, headers={"x-request-id": "req-b"}, json={
+        "model": "muse-spark-1.3", "choices": [{"finish_reason": finish, "message": {"role": "assistant", "content": content}}],
+        "usage": usage or {"prompt_tokens": 2100, "completion_tokens": 150, "total_tokens": 2250,
+                           "completion_tokens_details": {"reasoning_tokens": 100}}})
+
+
+def run_b(tmp_path, monkeypatch, handler, key=KEY):
+    if key:
+        monkeypatch.setenv("META_MODEL_API_KEY", key)
+    else:
+        monkeypatch.delenv("META_MODEL_API_KEY", raising=False)
+    calls = []
+    def counted(request):
+        calls.append(request)
+        return handler(request)
+    path, record = probe.stage_b(ModelConfig(), tmp_path, transport=httpx.MockTransport(counted))
+    return path, record, calls
+
+
+def test_stage_b_success_sends_exact_real_schema_and_records_evidence(tmp_path, monkeypatch):
+    seen = {}
+    def handler(request):
+        seen["body"] = json.loads(request.content)
+        return b_reply(good_content())
+    path, record, calls = run_b(tmp_path, monkeypatch, handler)
+    body = seen["body"]
+    assert len(calls) == 1 and record["request_attempts"] == 1
+    assert body["reasoning_effort"] == "low" and body["max_completion_tokens"] == 1024
+    assert body["response_format"]["json_schema"]["strict"] is True and body["model"] == "muse-spark-1.3"
+    assert body["messages"][0]["content"] == probe.STAGE_B_PROMPT
+    schema, _ = probe.build_agent_output_schema()
+    assert body["response_format"]["json_schema"]["schema"] == schema  # unmodified
+    digest, size = probe._schema_digest(schema)
+    assert record["schema_sha256"] == digest and record["schema_canonical_bytes"] == size
+    assert record["success"] and record["http_status"] == 200 and record["request_id"] == "req-b"
+    g = record["grading"]
+    assert g["json_parsed"] and g["agent_output_valid"] and g["single_done_action"] and g["values_match"]
+    assert record["usage"]["completion_tokens_details"]["reasoning_tokens"] == 100
+    assert (path / "schema.json").exists() and KEY not in (path / "probe.json").read_text()
+
+
+def test_stage_b_request_matches_what_the_browser_use_adapter_emits(tmp_path):
+    """Same response_format as ChatOpenAI.ainvoke; only messages/reasoning_effort differ."""
+    import asyncio
+    from browser_use.llm.messages import UserMessage
+    from agent_readiness.agent import create_model, profile
+    from agent_readiness.probe import build_agent_output_schema
+    schema, output_model = build_agent_output_schema()
+    model = create_model(ModelConfig(), profile(), api_key="synthetic-key")
+    captured = {}
+    async def go():
+        async def handle(request):
+            captured["body"] = json.loads(request.content)
+            return httpx.Response(200, json={"id": "x", "object": "chat.completion", "created": 0, "model": "m",
+                "choices": [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": good_content()}}]})
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+            model.http_client = client
+            sdk = model.get_client()
+            sdk._platform = "Linux"
+            model.get_client = lambda: sdk
+            await model.ainvoke([UserMessage(content="x")], output_format=output_model)
+    asyncio.run(go())
+    ours = probe.stage_b_body(ModelConfig(), schema)
+    assert captured["body"]["response_format"] == ours["response_format"]
+    assert captured["body"]["max_completion_tokens"] == 2048 and "reasoning_effort" not in captured["body"]
+
+
+def test_stage_b_schema_rejection_is_recorded_verbatim_and_not_retried(tmp_path, monkeypatch):
+    err = {"error": {"message": f"Invalid schema: nesting depth exceeds 10 (key {KEY})", "type": "invalid_request_error"}}
+    path, record, calls = run_b(tmp_path, monkeypatch, lambda r: httpx.Response(400, headers={"x-request-id": "req-400"}, json=err))
+    assert len(calls) == 1 and not record["success"] and record["http_status"] == 400
+    assert record["failure_class"] == "schema_or_request_rejected" and record["request_id"] == "req-400"
+    assert "nesting depth exceeds 10" in json.dumps(record["error"]) and KEY not in (path / "probe.json").read_text()
+
+
+@pytest.mark.parametrize("content,finish,klass", [
+    (None, "length", "cap_exhausted"),
+    ("{not json", "stop", "unparsable_or_invalid"),
+    (json.dumps({"action": "wrong"}), "stop", "unparsable_or_invalid"),
+    (good_content(price_cents=101), "stop", "accepted_but_values_mismatch"),
+    (good_content(available=True), "stop", "accepted_but_values_mismatch"),
+    (good_content(product_id="probe-0"), "stop", "accepted_but_values_mismatch"),
+    (good_content(), "length", "not_stopped"),
+])
+def test_stage_b_failure_classes(tmp_path, monkeypatch, content, finish, klass):
+    _, record, calls = run_b(tmp_path, monkeypatch, lambda r: b_reply(content, finish))
+    assert len(calls) == 1 and not record["success"] and record["failure_class"] == klass
+
+
+def test_stage_b_rejects_bool_for_integer_and_extra_actions(tmp_path, monkeypatch):
+    _, record, _ = run_b(tmp_path, monkeypatch, lambda r: b_reply(good_content(price_cents=True)))
+    assert not record["success"]
+    two = json.loads(good_content()); two["action"].append({"wait": {"seconds": 1}})
+    _, record, _ = run_b(tmp_path, monkeypatch, lambda r: b_reply(json.dumps(two)))
+    assert record["failure_class"] == "accepted_but_values_mismatch"
+
+
+def test_stage_b_timeout_missing_key_and_cli(tmp_path, monkeypatch):
+    def boom(request):
+        raise httpx.ReadTimeout("slow", request=request)
+    _, record, calls = run_b(tmp_path, monkeypatch, boom)
+    assert len(calls) == 1 and record["failure_class"] == "timeout" and not record["success"]
+    _, record, calls = run_b(tmp_path, monkeypatch, lambda r: b_reply(good_content()), key=None)
+    assert calls == [] and record["request_attempts"] == 0 and record["status"] == "setup_error"
+    import sys
+    from agent_readiness import cli
+    monkeypatch.setattr(sys, "argv", ["readiness", "probe", "--stage", "b"])
+    monkeypatch.setattr(cli, "load_repo_env", lambda: None)
+    with pytest.raises(SystemExit) as exc:
+        cli.main()
+    assert "disabled" in str(exc.value)
