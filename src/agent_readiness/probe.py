@@ -234,3 +234,140 @@ def stage_b(config: ModelConfig, output: Path = Path("runs"), *, transport=None)
     record["finished_at"] = utcnow()
     recorder.write("probe.json", record)
     return recorder.path, json.loads((recorder.path / "probe.json").read_text())
+
+
+STAGE_C_MAX_COMPLETION_TOKENS = 512
+STAGE_C_TIMEOUT_SECONDS = 30.0
+STAGE_C_REASONING_EFFORT = "low"
+STAGE_C_PROMPT = ("This is a synthetic product swatch. What color is the square and what digit is printed on it? "
+                  "Reply with exactly: color=<color>; digit=<digit>")
+STAGE_C_EXPECTED = "color=red; digit=7"
+STAGE_C_IMAGE_SHA256 = "932e9a8a2edb608826de0be0c85c2351d512a25bc454a75fc0d95fabc7f2998d"
+_SEVEN = ["#####", "....#", "...#.", "..#..", ".#...", ".#...", ".#..."]  # 5x7 bitmap
+
+
+def stage_c_png() -> bytes:
+    """Deterministic synthetic 160x160 PNG: red square with a white 7. Stdlib only, no metadata chunks."""
+    import struct
+    import zlib
+    size, red, white = 160, (255, 0, 0), (255, 255, 255)
+    rows = []
+    for y in range(size):
+        row = bytearray([0])  # PNG filter type 0
+        for x in range(size):
+            color = white
+            if 24 <= x < 136 and 24 <= y < 136:
+                color = red
+                gx, gy = (x - 50) // 12, (y - 38) // 12
+                if 0 <= gx < 5 and 0 <= gy < 7 and _SEVEN[gy][gx] == "#":
+                    color = white
+            row += bytes(color)
+        rows.append(bytes(row))
+
+    def chunk(kind, data):
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", size, size, 8, 2, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(b"".join(rows), 9)) + chunk(b"IEND", b""))
+
+
+def stage_c_body(config: ModelConfig, png: bytes) -> dict:
+    import base64
+    url = "data:image/png;base64," + base64.b64encode(png).decode()
+    return {"model": config.model, "reasoning_effort": STAGE_C_REASONING_EFFORT,
+            "max_completion_tokens": STAGE_C_MAX_COMPLETION_TOKENS,
+            "messages": [{"role": "user", "content": [
+                {"type": "text", "text": STAGE_C_PROMPT},
+                {"type": "image_url", "image_url": {"url": url, "detail": "high"}}]}]}
+
+
+def stage_c(config: ModelConfig, output: Path = Path("runs"), *, transport=None) -> tuple[Path, dict]:
+    import hashlib
+    api_key = os.environ.get(config.key_env, "")
+    recorder = Recorder(Path(output), (api_key,))
+    endpoint = urlsplit(config.base_url)
+    if endpoint.scheme != "https" or not endpoint.hostname or endpoint.username or endpoint.password \
+            or endpoint.query or endpoint.fragment:
+        raise ValueError("Probe endpoint must be an https URL without credentials, query or fragment")
+    png = stage_c_png()
+    digest = hashlib.sha256(png).hexdigest()
+    if digest != STAGE_C_IMAGE_SHA256:
+        raise ValueError(f"Synthetic image hash {digest} does not match the approved {STAGE_C_IMAGE_SHA256}")
+    (recorder.path / "stage-c-input.png").write_bytes(png)
+    body = stage_c_body(config, png)
+    shown = {**body, "messages": [{"role": "user", "content": [
+        body["messages"][0]["content"][0],
+        {"type": "image_url", "image_url": {"url": f"[data:image/png;base64, see stage-c-input.png sha256={digest}]",
+                                            "detail": "high"}}]}]}
+    record = dict(schema_version="probe-v1", stage="C", started_at=utcnow(),
+                  provider=config.provider, endpoint=config.base_url, requested_model=config.model,
+                  limits=dict(max_attempts=1, retries=0, timeout_seconds=STAGE_C_TIMEOUT_SECONDS,
+                              max_completion_tokens=STAGE_C_MAX_COMPLETION_TOKENS,
+                              reasoning_effort=STAGE_C_REASONING_EFFORT),
+                  image=dict(width=160, height=160, media_type="image/png", bytes=len(png), sha256=digest,
+                             detail="high", base64_chars=len(body["messages"][0]["content"][1]["image_url"]["url"]) - 22,
+                             synthetic=True),
+                  expected=STAGE_C_EXPECTED, python=platform.python_version(), httpx=httpx.__version__,
+                  request_body=shown, request_attempts=0, http_status=None, request_id=None, success=False,
+                  failure_class=None, response_model=None, completion=None, finish_reason=None, usage=None,
+                  reasoning_token_share=None, low_reasoning_headroom=None, provider_reported_cost=None,
+                  grading=None, response_headers=None, error=None)
+    if not api_key:
+        record.update(error=f"Missing credential: set {config.key_env}", status="setup_error",
+                      failure_class="setup_error")
+    else:
+        started = time.monotonic()
+        client = httpx.Client(timeout=STAGE_C_TIMEOUT_SECONDS, follow_redirects=False, transport=transport)
+        record["request_attempts"] = 1
+        try:
+            with client:
+                response = client.post(config.base_url.rstrip("/") + "/chat/completions", json=body,
+                                       headers={"Authorization": f"Bearer {api_key}"})
+            record["http_status"] = response.status_code
+            record["response_headers"] = {k: v for k, v in response.headers.items() if k.lower() in SAFE_HEADERS}
+            record["request_id"] = response.headers.get("x-request-id")
+            try:
+                payload = response.json()
+            except ValueError:
+                payload = None
+                record["error"] = "Non-JSON response body: " + response.text[:500]
+            if response.status_code != 200:
+                record["error"] = payload if payload is not None else record["error"]
+                record["failure_class"] = "image_or_param_rejected" if response.status_code == 400 else "http_error"
+            elif isinstance(payload, dict):
+                choice = (payload.get("choices") or [{}])[0]
+                content = (choice.get("message") or {}).get("content")
+                usage = payload.get("usage")
+                record.update(response_model=payload.get("model"), completion=content,
+                              finish_reason=choice.get("finish_reason"), usage=usage,
+                              provider_reported_cost=_find_cost(usage or {}) or _find_cost(payload) or None)
+                reasoning = ((usage or {}).get("completion_tokens_details") or {}).get("reasoning_tokens")
+                completion = (usage or {}).get("completion_tokens")
+                if isinstance(reasoning, int) and isinstance(completion, int) and completion:
+                    record["reasoning_token_share"] = round(reasoning / completion, 3)
+                    record["low_reasoning_headroom"] = reasoning >= 0.9 * STAGE_C_MAX_COMPLETION_TOKENS
+                if content is None:
+                    record["failure_class"] = "cap_exhausted" if record["finish_reason"] == "length" else "null_content"
+                    record["response_body"] = payload
+                else:
+                    strict = content.strip().lower() == STAGE_C_EXPECTED
+                    lenient = "red" in content.lower() and "7" in content
+                    record["grading"] = dict(strict_match=strict, lenient_match=lenient)
+                    if record["finish_reason"] != "stop":
+                        record["failure_class"] = "not_stopped"
+                    elif strict:
+                        record["success"] = True
+                    elif lenient:
+                        record["failure_class"] = "accepted_but_format_mismatch"
+                    else:
+                        record["failure_class"] = "wrong_answer"
+            else:
+                record["failure_class"] = "unexpected_response"
+        except httpx.TimeoutException as exc:
+            record.update(error=f"{type(exc).__name__}: {exc}", failure_class="timeout")
+        except httpx.HTTPError as exc:
+            record.update(error=f"{type(exc).__name__}: {exc}", failure_class="network_error")
+        record["elapsed_seconds"] = round(time.monotonic() - started, 3)
+        record["status"] = "completed" if record["success"] else "failed"
+    record["finished_at"] = utcnow()
+    recorder.write("probe.json", record)
+    return recorder.path, json.loads((recorder.path / "probe.json").read_text())

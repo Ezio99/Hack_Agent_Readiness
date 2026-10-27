@@ -199,3 +199,118 @@ def test_stage_b_timeout_missing_key_and_cli(tmp_path, monkeypatch):
     with pytest.raises(SystemExit) as exc:
         cli.main()
     assert "disabled" in str(exc.value)
+
+
+# ---- Stage C ----------------------------------------------------------------
+
+def c_reply(content, finish="stop", usage=None):
+    return httpx.Response(200, headers={"x-request-id": "req-c"}, json={
+        "model": "muse-spark-1.3", "choices": [{"finish_reason": finish, "message": {"role": "assistant", "content": content}}],
+        "usage": usage or {"prompt_tokens": 120, "completion_tokens": 140, "total_tokens": 260,
+                           "completion_tokens_details": {"reasoning_tokens": 120}}})
+
+
+def run_c(tmp_path, monkeypatch, handler, key=KEY):
+    if key:
+        monkeypatch.setenv("META_MODEL_API_KEY", key)
+    else:
+        monkeypatch.delenv("META_MODEL_API_KEY", raising=False)
+    calls = []
+    def counted(request):
+        calls.append(request)
+        return handler(request)
+    path, record = probe.stage_c(ModelConfig(), tmp_path, transport=httpx.MockTransport(counted))
+    return path, record, calls
+
+
+def test_stage_c_image_is_deterministic_synthetic_and_metadata_free():
+    import hashlib
+    png = probe.stage_c_png()
+    assert hashlib.sha256(png).hexdigest() == probe.STAGE_C_IMAGE_SHA256 and len(png) == 410
+    assert png == probe.stage_c_png()
+    assert png[:8] == b"\x89PNG\r\n\x1a\n"
+    assert [png[i + 4:i + 8] for i in (8, 8 + 12 + 13, 8 + 12 + 13 + 8 + int.from_bytes(png[8 + 12 + 13:8 + 12 + 13 + 4], "big") + 4)] == [b"IHDR", b"IDAT", b"IEND"]
+    for marker in (b"tEXt", b"iTXt", b"zTXt", b"eXIf", b"pHYs", b"tIME"):
+        assert marker not in png
+
+
+def test_stage_c_success_request_shape_and_evidence(tmp_path, monkeypatch):
+    seen = {}
+    def handler(request):
+        seen["body"] = json.loads(request.content)
+        return c_reply("color=red; digit=7")
+    path, record, calls = run_c(tmp_path, monkeypatch, handler)
+    body = seen["body"]
+    assert len(calls) == 1 and record["request_attempts"] == 1 and record["success"]
+    assert body["reasoning_effort"] == "low" and body["max_completion_tokens"] == 512 and body["model"] == "muse-spark-1.3"
+    text, image = body["messages"][0]["content"]
+    assert text == {"type": "text", "text": probe.STAGE_C_PROMPT}
+    assert image["type"] == "image_url" and image["image_url"]["detail"] == "high"
+    assert image["image_url"]["url"].startswith("data:image/png;base64,")
+    import base64, hashlib
+    assert hashlib.sha256(base64.b64decode(image["image_url"]["url"].split(",", 1)[1])).hexdigest() == probe.STAGE_C_IMAGE_SHA256
+    assert record["reasoning_token_share"] == round(120 / 140, 3) and record["low_reasoning_headroom"] is False
+    assert record["image"]["sha256"] == probe.STAGE_C_IMAGE_SHA256 and record["image"]["synthetic"] is True
+    assert (path / "stage-c-input.png").read_bytes() == probe.stage_c_png()
+    text = (path / "probe.json").read_text()
+    assert KEY not in text and "iVBORw0KGgo" not in text  # no inline base64 in artifact
+
+
+def test_stage_c_request_matches_browser_use_message_format(tmp_path):
+    import asyncio, base64
+    from browser_use.llm.messages import UserMessage, ContentPartTextParam, ContentPartImageParam, ImageURL
+    from agent_readiness.agent import create_model, profile
+    png = probe.stage_c_png()
+    msg = UserMessage(content=[ContentPartTextParam(text=probe.STAGE_C_PROMPT), ContentPartImageParam(
+        image_url=ImageURL(url="data:image/png;base64," + base64.b64encode(png).decode(), media_type="image/png", detail="high"))])
+    model = create_model(ModelConfig(), profile(), api_key="synthetic-key")
+    captured = {}
+    async def go():
+        async def handle(request):
+            captured["body"] = json.loads(request.content)
+            return httpx.Response(200, json={"id": "x", "object": "chat.completion", "created": 0, "model": "m",
+                "choices": [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": "ok"}}]})
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+            model.http_client = client
+            sdk = model.get_client()
+            sdk._platform = "Linux"
+            model.get_client = lambda: sdk
+            await model.ainvoke([msg])
+    asyncio.run(go())
+    assert captured["body"]["messages"] == probe.stage_c_body(ModelConfig(), png)["messages"]
+
+
+@pytest.mark.parametrize("content,finish,klass", [
+    (None, "length", "cap_exhausted"),
+    ("color=red; digit=7", "length", "not_stopped"),
+    ("The square is red and the digit is 7.", "stop", "accepted_but_format_mismatch"),
+    ("color=blue; digit=3", "stop", "wrong_answer"),
+])
+def test_stage_c_failure_classes(tmp_path, monkeypatch, content, finish, klass):
+    _, record, calls = run_c(tmp_path, monkeypatch, lambda r: c_reply(content, finish))
+    assert len(calls) == 1 and not record["success"] and record["failure_class"] == klass
+
+
+def test_stage_c_case_and_whitespace_normalized_and_headroom_flag(tmp_path, monkeypatch):
+    usage = {"prompt_tokens": 100, "completion_tokens": 500, "completion_tokens_details": {"reasoning_tokens": 480}}
+    _, record, _ = run_c(tmp_path, monkeypatch, lambda r: c_reply("  Color=Red; Digit=7\n", usage=usage))
+    assert record["success"] and record["low_reasoning_headroom"] is True
+
+
+def test_stage_c_rejection_timeout_missing_key_and_cli(tmp_path, monkeypatch):
+    err = {"error": {"message": f"unsupported field image_url.detail {KEY}"}}
+    path, record, calls = run_c(tmp_path, monkeypatch, lambda r: httpx.Response(400, json=err))
+    assert len(calls) == 1 and record["failure_class"] == "image_or_param_rejected" and KEY not in (path / "probe.json").read_text()
+    def boom(request):
+        raise httpx.ReadTimeout("slow", request=request)
+    _, record, calls = run_c(tmp_path, monkeypatch, boom)
+    assert len(calls) == 1 and record["failure_class"] == "timeout"
+    _, record, calls = run_c(tmp_path, monkeypatch, lambda r: c_reply("x"), key=None)
+    assert calls == [] and record["status"] == "setup_error"
+    import sys
+    from agent_readiness import cli
+    monkeypatch.setattr(sys, "argv", ["readiness", "probe", "--stage", "c"])
+    monkeypatch.setattr(cli, "load_repo_env", lambda: None)
+    with pytest.raises(SystemExit) as exc:
+        cli.main()
+    assert "disabled" in str(exc.value)
