@@ -1,7 +1,7 @@
 # Report 004 — Meta compatibility validation and first live trial
 
-**Status: Stage A executed three times, Stages B, C and D once each, all under separate authorizations (2026-10-27). Stage D FAILED (model output not parseable); no retry was made.** Specification: [Task 004](../tasks/004-first-live-meta-trial.md) (proposed, unapproved).
-Seven authorized authenticated requests (Stage A attempts 1–3, Stage B once, Stage C once, Stage D two requests within one run) were made; no other paid call or live agent trial has been made.
+**Status: Stage A executed three times, Stages B, C and D once each, plus one diagnostic replay, all under separate authorizations (2026-10-27). Stage D FAILED (model output not parseable); no retry was made. The diagnostic replay returned valid JSON but did **not** faithfully reproduce Stage D's first request (see below).** Specification: [Task 004](../tasks/004-first-live-meta-trial.md) (proposed, unapproved).
+Eight authorized authenticated requests (Stage A attempts 1–3, Stage B once, Stage C once, Stage D two requests within one run, diagnostic replay once) were made; no other paid call or live agent trial has been made.
 
 ## Completed preparation (2026-10-27)
 Credential-free only; see `STATUS.md` for details.
@@ -249,3 +249,40 @@ Ruled out by the offline comparison: schema mutation, response-format difference
 
 ### Proposed next experiment (needs separate approval; not executed)
 **One live request, no retries:** run the exact Stage D first step with capture enabled — `readiness run --kind discovery --seed 0 --max-steps 1 --max-model-requests 1 --timeout 120 --allow-model-calls` (profile v3, same prompt, DOM, screenshot, schema, `reasoning_effort: low`, 4,096 cap). Estimated cost ≈ 8–10.5k input tokens (≈US$0.010–0.013) plus ≤ 4,096 output tokens (≤ US$0.0174), so < US$0.03 worst case (calculated, not provider-reported). Record: raw content, finish reason, request id, prompt/completion/reasoning tokens, content analysis. Decision rule: (a) pure valid JSON → Stage D's failure is intermittent; plan a small repeated-request characterization; (b) prose then valid embedded JSON (`offset > 0`) → provider/model preamble leak, which would require a deliberate, approved decision on output handling (any tolerance would change what is being measured); (c) prose only → enforcement not applied, examine reasoning tokens vs cap; (d) null content/`length` → cap exhaustion. Hypothesis 1 predicts (b).
+
+## Diagnostic replay (separately authorized, exactly 1 request) — valid JSON, but NOT a faithful replay
+Command: `readiness run --kind discovery --seed 0 --max-steps 1 --max-model-requests 1 --timeout 120 --allow-model-calls` (profile v3; capture enabled). Artifact `runs/20261027T044331-4dce974fdee2/` (untracked, sanitized; key absent). Git clean at HEAD `b4ff408d`.
+
+**Preflight (offline, passed before the request):** capture and redaction tests (credential in content and errors redacted); the gate stays effective when parsing raises (limit 1: the first call raises a parse error, the next invocation is blocked before the transport — exactly one HTTP call, `request_limit`); a mocked run with this exact command line made exactly 1 call, executed nothing from a malformed response, and recorded the response file; 123 offline + 7 browser tests passed.
+
+### Result
+| Item | Observed |
+|---|---|
+| Model requests / steps / elapsed | **1** of 1 / 1 / 8.73 s total run |
+| HTTP status / request id | **200** / `c9c795d5-0a1c-46e0-8ad2-a9824178bfe9` |
+| `finish_reason` | **stop** |
+| Request latency | 4.96 s |
+| Usage (provider-reported, captured) | prompt **8,128**, completion **519**, **reasoning 341** (65.7% of completion), cached 0 |
+| Provider-reported cost | none |
+| **Parse classification** | **(1) Valid JSON from the beginning** (655 chars, `kind: json`); passed `AgentOutput` validation; no `model_output_error` |
+| Answer produced | `{"product_id": "linen-cushion", "price_cents": 2900, "available": true}` |
+| Independent evaluator | **FAIL** — "Unknown product ID" |
+| Sanitized raw response | `model-response-01.json` (content, finish reason, request id, usage, analysis) |
+
+Content (verbatim fields): a single `done` action with the answer above; `thinking`: "Need product detail for ID and availability but max_steps reached. Candidate is Linen Cushion at $29.00 = 2900c. Provide guess ID and mark incomplete."; `memory`: "…product_id and availability not verified due to step limit."
+
+Classes 2–5 (prose + JSON, prose only, null/truncated, other) were **not** observed.
+
+### Why this is not a faithful replay (my design error, now verified)
+With `--max-steps 1` the single step is Browser Use's **last** step: `_force_done_after_last_step` narrows the response schema to the `done` action only and adds a last-step instruction to the context. Evidence from this run's own capture: wire `response_format` schema SHA-256 `7964acb55bed223f00dc3de611c026b455f264a00c21cabf5e127b8e10025dc1`, **1,274 bytes**, versus the Stage D / Stage B schema `c80ef8b813abef0b2afd79c83a6f31e857c0101ea8730952ee78d61e65f9a194`, **7,915 bytes** (15 action variants); the recorded output schema lists only `DoneActionModel`; the model said it was at the step limit. I proposed `--max-steps 1` without checking this, so the request differed from Stage D's step 1 in schema and in context. (Prompt was 8,128 tokens, consistent with my 8–10.5k estimate.) A regression test now asserts the narrowing.
+
+### What this does and does not show
+**Verified:** a done-only-schema request with the same prompt, DOM, screenshot, model and v3 settings returned valid JSON immediately; the capture/classification/gate machinery works against the live API; the model, forced to finish, fabricated a plausible product ID (`linen-cushion`) instead of reading it from a detail page (IDs are detail-only), which the independent evaluator correctly rejected. This is **not** a shopping-trial result (the step budget forbade navigation) and says nothing about website readiness.
+**Not verified:** why Stage D's two full-schema responses were non-JSON. The replay does not test hypotheses 1–3: it used a different, much smaller schema. Evidence is consistent with — but does not show — the failure being related to the full 15-variant schema or to the earlier steps' context; it is equally consistent with intermittency.
+**Latency note:** 519 completion tokens took 4.96 s at an 8.1k-token prompt (~9.5 ms/token including prefill), slower per token than my Stage A–B extrapolation (~3.75 ms/token); a full 4,096-token completion could therefore take ~15–40 s against the 30 s model timeout. The earlier "~1.8× margin" statement should be treated as optimistic.
+
+### Estimated cost (calculated, NOT provider-reported)
+8,128 input × $1.25/M + 519 output × $4.25/M ≈ **US$0.0124**. Cumulative estimated live spend across all requests ≈ US$0.05–0.06 (assumes published USD pricing; the provider reports no cost).
+
+### Smallest justified next change
+Replay at the **same step budget as the failed trial**, bounding cost with the request gate instead of the step cap: `--max-steps 5 --max-model-requests 1` (same profile, same full schema at step 1, same prompt/DOM/screenshot, one request; the gate then blocks any second request before the provider, ending as `request_limit`). If the response is valid JSON the adapter will execute that one action as it normally would (nothing is extracted or altered). Expected cost < US$0.03 worst case. This needs separate authorization. As a harness change (offline, no approval needed beyond review): flag in `run.json` when a request's response-format schema hash differs from the profile's full-schema hash, so a last-step narrowing cannot silently confound a diagnostic again.

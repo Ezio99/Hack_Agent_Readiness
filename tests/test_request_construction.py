@@ -123,6 +123,12 @@ async def test_one_step_one_request_replay_with_unparseable_output_makes_exactly
     trace = [json.loads(l) for l in (path / "trace.jsonl").read_text().splitlines()]
     executed = [e for e in trace if e["kind"] == "step_result"]
     assert all(r["model_output"] is None for r in (e["result"] for e in executed))  # nothing was parsed or executed
+    # Pitfall found by the live replay: with max_steps=1 the only step is the LAST step, so Browser Use narrows the
+    # response schema to the `done` action alone -- a different request from step 1 of a longer run.
+    request_event = next(e for e in trace if e["kind"] == "model_http_request")
+    full_sha = _schema_digest(build_agent_output_schema()[0])[0]
+    assert request_event["response_format"]["schema_sha256"] != full_sha
+    assert request_event["response_format"]["schema_canonical_bytes"] < 2_000
     saved = json.loads((path / "model-response-01.json").read_text())
     assert saved["finish_reason"] == "stop" and saved["request_id"] == "mock-r" and saved["reasoning_tokens"] == 400
     assert saved["content_analysis"]["embedded_json"]["offset"] > 0 and saved["output_error"]["subtype"] == "malformed_json"
