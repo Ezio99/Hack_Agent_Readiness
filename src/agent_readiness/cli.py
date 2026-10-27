@@ -14,6 +14,13 @@ def main():
     sub = parser.add_subparsers(dest="command", required=True)
     serve = sub.add_parser("serve")
     serve.add_argument("--port", type=int, default=8000)
+    probe = sub.add_parser("probe", help="Independently bounded Meta API compatibility probe")
+    probe.add_argument("--stage", choices=["a"], required=True)
+    probe.add_argument("--model", default="muse-spark-1.3")
+    probe.add_argument("--base-url", default="https://api.meta.ai/v1")
+    probe.add_argument("--key-env", default="MODEL_API_KEY")
+    probe.add_argument("--output", type=Path, default=Path("runs"))
+    probe.add_argument("--allow-model-calls", action="store_true", help="Use only after explicit spending approval")
     for name in ["generate", "smoke", "run", "evaluate"]:
         cmd = sub.add_parser(name)
         cmd.add_argument("--seed", type=int, default=0)
@@ -34,8 +41,15 @@ def main():
             cmd.add_argument("--key-env", default="MODEL_API_KEY")
             cmd.add_argument("--allow-model-calls", action="store_true", help="Use only after explicit spending approval")
     args = parser.parse_args()
-    if args.command == "run":
+    if args.command in {"run", "probe"}:
         load_repo_env()
+    if args.command == "probe":
+        if not args.allow_model_calls:
+            raise SystemExit("Model calls disabled; explicit spending approval is required before using --allow-model-calls")
+        from .probe import stage_a
+        path, record = stage_a(ModelConfig("meta", args.model, args.base_url, args.key_env), args.output)
+        print(json.dumps({"artifact_path": str(path), "status": record["status"], "http_status": record["http_status"]}, indent=2))
+        raise SystemExit(0 if record["success"] else 1)
     if args.command == "serve":
         import uvicorn
         uvicorn.run("agent_readiness.storefront:app", host="127.0.0.1", port=args.port)
