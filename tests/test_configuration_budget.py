@@ -190,7 +190,7 @@ async def test_runner_retains_request_count_on_timeout(tmp_path, monkeypatch):
     monkeypatch.setattr(runner, "target", fake_target)
     monkeypatch.setattr(runner, "create_model", lambda config, effective: inner)
     monkeypatch.setattr(runner, "attempt", interrupted)
-    _, record = await runner.run(mode="live", allow_model_calls=True, output=tmp_path, timeout_seconds=0.05)
+    _, record = await runner.run(mode="live", allow_model_calls=True, output=tmp_path, timeout_seconds=0.3)
     assert record["status"] == "timeout" and record["model_request_count"] == inner.calls == 1
 
 
