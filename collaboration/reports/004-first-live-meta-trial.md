@@ -1,7 +1,7 @@
 # Report 004 — Meta compatibility validation and first live trial
 
 **Status: Stage A executed three times, Stages B, C and D once each, plus two diagnostic replays, all under separate authorizations (2026-10-27). Stage D FAILED (model output not parseable); no retry was made. The first replay (`--max-steps 1`) was not faithful; the second (full-schema, `--max-steps 5 --max-model-requests 1`) **reproduced the Stage D failure mode** (prose followed by a valid JSON object).** Specification: [Task 004](../tasks/004-first-live-meta-trial.md) (proposed, unapproved).
-Nine authorized authenticated requests (Stage A attempts 1–3, Stage B once, Stage C once, Stage D two requests within one run, diagnostic replay 1, full-schema replay 2) were made; no other paid call or live agent trial has been made.
+Ten authorized authenticated requests (Stage A attempts 1–3, Stage B once, Stage C once, Stage D two requests within one run, diagnostic replay 1, full-schema replay 2, compat-profile validation 1) were made; no other paid call or live agent trial has been made.
 
 ## Completed preparation (2026-10-27)
 Credential-free only; see `STATUS.md` for details.
@@ -373,3 +373,43 @@ The recovered object validates against the unchanged `AgentOutput` (one `click` 
 
 ### Proposal: one bounded live validation (needs separate approval; not executed)
 One request, no retry: `readiness run --profile natural-shopping-v3-compat1 --kind discovery --seed 0 --max-steps 5 --max-model-requests 1 --timeout 120 --allow-model-calls --expect-schema-sha256 c80ef8b813abef0b2afd79c83a6f31e857c0101ea8730952ee78d61e65f9a194 --max-estimated-cost-usd 0.035`. Same profile settings, schema, prompt, DOM and screenshot as the replay; estimated worst case US$0.0313 (calculated); expected actual ≈ US$0.013. Success criteria: the wire schema hash matches; the request is single; if the response is prose + valid JSON, `protocol_compliance` shows 1 non-compliant / 1 recovered-valid and the first action executes in the browser, then the gate stops the run (`request_limit`, no task claim); if the response is pure JSON, the run records it as raw-compliant and nothing is recovered (an informative negative for the preamble rate); any rejected form is recorded with its reason. It validates the parser and plumbing only, not the shopping task or website readiness.
+
+## Live Muse compatibility validation (separately authorized, exactly 1 request) — recovered and executed
+Command: `readiness run --profile natural-shopping-v3-compat1 --kind discovery --seed 0 --max-steps 5 --max-model-requests 1 --timeout 120 --allow-model-calls --expect-schema-sha256 c80ef8b8…9a194 --max-estimated-cost-usd 0.035`. Artifact `runs/20261027T052619-a609583ee92d/` (untracked, sanitized; key absent). Git clean at HEAD `c27f5c59`.
+
+### Preflight (all passed before sending)
+188 offline + 15 browser tests and CLI smoke passed. The pre-send guard (schema SHA-256, parameters, ≥20,000-char system prompt, one screenshot, DOM and first-step history, seed-0 task prompt, no last-step text, estimate < US$0.035) passed on the real request: estimate US$0.03132, no violations. The strict parse runs first and recovery only fires on its failure and only for one unambiguous schema-valid object (parser and integration tests); the gate blocks every second request, including after a successful action (test: valid first action executes, then exactly one transport call). A real-`.env` check with this profile and flags: 7 spawned processes (`chrome`, `node`, `git`, `ldconfig`), 0 with the key name or value; redaction tests passed; `.env` mode 600.
+
+### Result
+| Item | Observed |
+|---|---|
+| Wire schema / parameters | `c80ef8b813abef0b2afd79c83a6f31e857c0101ea8730952ee78d61e65f9a194`, not narrowed; `muse-spark-1.3`, `reasoning_effort: low`, 4,096 cap, 30 s model timeout; guard: no violations |
+| Requests reaching the provider | **1** of 1 |
+| HTTP status / request id / finish | **200** / `c5af4313-1e76-446e-80d5-f93b9c523074` / **stop** |
+| Request latency / run elapsed | 2.56 s / 7.52 s |
+| Usage (provider-reported) | prompt **9,443**, completion **257**, **reasoning 64**, total 9,700, cached 0 |
+| Provider-reported cost | none |
+| **Raw protocol** | **non-compliant** (`raw_protocol_compliant: false`): `non_json`, JSON object preceded by prose |
+| **Recovery classification** | **`recovered` / `prose_prefix_single_json_object`**, parser `muse-prose-prefix-json-v1`: prefix 102 chars, object at offset 102, 591 chars, 0 trailing, `validated: true`, `validation_errors: null`; `recovered_action_valid: true`; `protocol_compliance` = 1 non-compliant, 1 recovery attempted, 1 recovered-valid, 0 rejected |
+| Normalized text | byte-identical to `content[102:]` (checked); sha256 `62debeea…0ce659`; original sha256 `41872592…b4b578` |
+| Prefix (prose) | "Found the Fern Home item under $29 — now I'll open its details to get the product ID and availability." |
+| Validated action | `[{"click": {"index": 174}}]` (the correct Linen Cushion link; exactly what the model sent) |
+
+### Did the validated action execute? Yes
+Browser Use executed it normally: step 1 result `Clicked a "Linen Cushion"` with no error, and the next step's browser state was the storefront **detail page** (`/products/2814f9f6b1a1…`), i.e. the click navigated as intended.
+
+### Did the gate block continuation? Yes
+Steps 2 and 3 each tried to call the model; both were blocked **before the provider** (`model_request_limit`, "Model request limit reached (1)"), `model_request_count` stayed 1, and Browser Use stopped at its two-consecutive-failure rule (3 steps total). Final status `request_limit` (expected; not an error of the parser). The incomplete task (no answer, evaluator "Malformed answer") is a consequence of the one-request limit and is **not** a website-readiness result.
+
+### Cost (calculated, NOT provider-reported)
+9,443 × $1.25/M + 257 × $4.25/M ≈ **US$0.0129** (the guard's worst case was US$0.0313). Cumulative estimated live spend across all requests ≈ **US$0.078–0.088** (published USD pricing assumed; the provider reports no cost).
+
+### Findings and remaining integration issues
+1. **The prose-prefix behaviour is the norm for full-schema step-1 requests so far:** 4 of 4 observed (Stage D ×2, replay 2, this run), with a different sentence each time but always one sentence followed by one complete, schema-valid object. The strict profile therefore cannot complete a first step with this model; the compat parser handled this instance with full provenance.
+2. **Later steps are unobserved:** only step 1 was sampled. Whether subsequent steps (detail page, `done`) are also prose-prefixed, how often other shapes (multi-line, fenced, trailing text) occur, and whether the model can finish the task are unknown; the rejection counters will show this in a multi-step run.
+3. **Trace reading hazard:** for gate-blocked steps Browser Use's `step_result.model_output` still shows the previous response's action (`click` 174) next to an error result; the click was **not** executed again (the results are the gate error only). A harness annotation would prevent misreading.
+4. Browser Use's `max_failures=2` makes a gate-blocked run consume 3 steps; harmless but worth knowing when counting steps.
+5. Estimator and parser behaved as calibrated: the estimate (11,131 input tokens) exceeded the measured 9,443 by 18%.
+
+### Next step proposal (needs separate approval; nothing executed)
+One bounded multi-step trial with the compat profile on seed 0 to see whether the task can be completed and how often the parser recovers or rejects: `readiness run --profile natural-shopping-v3-compat1 --kind discovery --seed 0 --max-steps 5 --max-model-requests 5 --timeout 120 --allow-model-calls` with the guard flags. Calculated worst case ≈ 5 × US$0.031 ≈ US$0.16 (expected ≈ US$0.07–0.10 if input stays ~9.4–10k tokens/request); results reported separately from any strict-profile baseline, with raw compliance beside task success.
