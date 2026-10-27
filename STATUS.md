@@ -3,7 +3,7 @@
 **Date:** 2026-10-27 (Australia/Sydney)
 **Repository:** `Ezio99/Hack_Agent_Readiness`
 **Branch / PR:** `hackathon/task001` / [PR #1](https://github.com/Ezio99/Hack_Agent_Readiness/pull/1)
-**Phase:** Requested review changes implemented; final CI validation pending
+**Phase:** Requested review changes verified; awaiting final user review — do not merge
 
 ## Active approved work
 The user approved the foundation subject to configuration propagation, model-call
@@ -44,7 +44,12 @@ the active specification. Do not merge PR #1; final user review is required.
 
 ## CI and remaining work
 Prior foundation CI passed, including [PR run 40427456658](https://github.com/Ezio99/Hack_Agent_Readiness/actions/runs/40427456658).
-GitHub Actions for the review revision is pending. The original runner-startup
+Both review-revision runs **passed** for `f253561815674efe3a4b80738e74786aa46f242b`:
+[push CI](https://github.com/Ezio99/Hack_Agent_Readiness/actions/runs/40430687968)
+and [PR CI](https://github.com/Ezio99/Hack_Agent_Readiness/actions/runs/40430691859).
+PR CI passed 53 offline tests in 2.72s, four browser checks in 10.18s, CLI smoke
+with independent evaluation, and artifact upload. The subsequent documentation
+update records these results; its checks are linked from PR #1. The original runner-startup
 failure and sandbox limitations remain documented in the
 [evidence report](collaboration/reports/003-hackathon-first-agent-run.md).
 

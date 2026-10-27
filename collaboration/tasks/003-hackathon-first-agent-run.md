@@ -47,13 +47,13 @@ credential-free vertical slice, tests, CI, STATUS updates and commits.
 - [x] DOM + screenshot adapter/profile and offline Meta wire/schema checks pass.
 - [x] Trace/failure/usage recording and credential-free CI are implemented.
 - [x] Real browser information-boundary checks and smoke pass (approval-reviewed execution).
-- [x] Credential-free CI passes ([run 40426022852](https://github.com/Ezio99/Hack_Agent_Readiness/actions/runs/40426022852)).
+- [x] Credential-free CI passes ([PR review run 40430691859](https://github.com/Ezio99/Hack_Agent_Readiness/actions/runs/40430691859)).
 - [ ] Hosted Meta compatibility/live trials (not authorized or verified).
 
 Evidence: [new hackathon report](../reports/003-hackathon-first-agent-run.md).
 The initial Git bundle's three commits are now restored on `hackathon/task001` in
 the original checkout. Approval-reviewed execution resolved the Git/socket blockers:
-all 26 tests pass locally and on CI, and CLI smoke passes independent evaluation.
+all 57 tests pass locally and on CI, and CLI smoke passes independent evaluation.
 No paid calls were made. Live-model validation remains pending; no historical acceptance
 checklist is claimed complete.
 
@@ -65,3 +65,7 @@ limits, strengthening credential redaction and verifying all offline/browser/CI
 checks. The sole reference profile advances to v2 with conservative defaults; this
 is not an additional benchmark variant. No live/paid trials or PR merge are
 authorized. Preserve the existing branch and submit the revised PR for review.
+
+Review revision verified: 57 local tests, four standalone browser checks and CLI
+smoke passed. Push and PR CI passed for `f253561`; the evidence report records
+the run links and exact results. PR #1 remains open and unmerged for final review.

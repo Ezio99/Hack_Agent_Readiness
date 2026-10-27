@@ -3,8 +3,8 @@
 Date: 2026-10-27 Australia/Sydney. Approved specification:
 [003-hackathon-first-agent-run.md](../tasks/003-hackathon-first-agent-run.md).
 
-**PR review revision:** 57 local tests and credential-free smoke pass; remote
-CI for this revision is pending. The earlier foundation/startup-fix results below
+**PR review revision:** 57 local tests and credential-free smoke pass; both
+push and PR CI passed for `f253561`. The earlier foundation/startup-fix results below
 are retained as history. See the final review-revision section for current evidence.
 Live Meta compatibility remains unverified.
 
@@ -252,11 +252,11 @@ the model API key. No generated private/run artifacts are committed.
 
 | Check | Result |
 |---|---|
-| Full suite, `pr1-review-final.xml` | **57 passed in 12.92s** |
-| Standalone real-browser suite, `pr1-review-browser.xml` | **4 passed, 53 deselected in 10.07s** |
+| `python -m pytest -q`, `pr1-review-final.xml` | **57 passed in 12.92s** |
+| `python -m pytest -m browser -q`, `pr1-review-browser.xml` | **4 passed, 53 deselected in 10.07s** |
 | `readiness smoke --output runs` | **Completed; independent evaluation passed; 0 model requests** |
 | Git diff whitespace check | Passed |
-| GitHub Actions for this revision | Pending push/revalidation |
+| GitHub Actions for `f253561` | **Push and PR runs passed** |
 
 The successful smoke is preserved at `runs/20261027T010440-8c0e0676c0bc/` with
 configuration, limits/hashes/counts, observations, screenshots, trace and grade.
@@ -268,3 +268,20 @@ No live/authenticated or paid model calls occurred.
 
 User-created local onboarding changes in AGENTS.md and COLD_START.md were read
 and preserved separately; they are not staged into this review revision.
+
+### Remote verification of the requested review changes
+
+Both [push run 40430687968](https://github.com/Ezio99/Hack_Agent_Readiness/actions/runs/40430687968)
+and [PR run 40430691859](https://github.com/Ezio99/Hack_Agent_Readiness/actions/runs/40430691859)
+passed for commit `f253561815674efe3a4b80738e74786aa46f242b`. PR job
+121947328953 reports **53 offline tests passed in 2.72s**, **four browser checks
+passed in 10.18s**, and a successful CLI smoke with an independent passing grade,
+no errors, and successful artifact upload. Its smoke directory within the
+credential-free archive is `runs/20261027T010833-89b123b3b7e6/`. These are offline
+adapter fixtures and scripted browser evidence, not live Meta model experiments.
+
+The requested implementation, limits, redaction tests and local/remote verification
+are complete. A documentation-only follow-up records these results. PR #1 remains
+open; do not merge without the user's final approval. The next authenticated Meta
+compatibility check and controlled model trial remain separately scoped and
+unapproved. No live or paid model calls were made during this revision.

@@ -10,8 +10,8 @@ only. There is no checkout, account system, dashboard or composite score.
 
 **PR review revision:** the local full suite passes **57 tests**, including four
 real-browser cases. Standalone boundary checks and credential-free CLI smoke also
-pass. GitHub Actions for this revision is pending; previous CI evidence is retained
-in the report. No authenticated or paid model trial has been performed. See
+pass. [PR CI passed](https://github.com/Ezio99/Hack_Agent_Readiness/actions/runs/40430691859)
+for this revision; previous CI evidence is retained in the report. No authenticated or paid model trial has been performed. See
 [STATUS](STATUS.md), [PR #1](https://github.com/Ezio99/Hack_Agent_Readiness/pull/1),
 and the [fresh task](collaboration/tasks/003-hackathon-first-agent-run.md).
 
@@ -155,8 +155,10 @@ or query parameters. JSON, JSONL and the readable summary use the same redactor.
 Useful observations and PNG screenshots are retained. This is not a general PII
 filter or an image/OCR redactor: screenshots and arbitrary page/model content may
 still contain private information unrelated to the configured credential. Browser
-tools never receive the model API key. Never publish raw artifacts automatically
-or treat redaction tests as a blanket guarantee that arbitrary artifacts are safe.
+tools never receive the model API key. Do not automatically publish live or private run artifacts or treat redaction
+tests as a blanket guarantee that arbitrary artifacts are safe. CI uploads only
+credential-free evidence from the controlled synthetic storefront; this does not
+establish that live/custom run artifacts are safe to share.
 
 ## Architecture and provenance
 
