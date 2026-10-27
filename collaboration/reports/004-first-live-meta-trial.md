@@ -1,7 +1,7 @@
 # Report 004 — Meta compatibility validation and first live trial
 
-**Status: Stage A executed once (2026-10-27); Stages B–D NOT executed.** Specification: [Task 004](../tasks/004-first-live-meta-trial.md) (proposed, unapproved).
-One authorized authenticated request (Stage A) was made; no other paid call or live agent trial has been made.
+**Status: Stage A executed twice under two separate authorizations (2026-10-27); Stages B–D NOT executed.** Specification: [Task 004](../tasks/004-first-live-meta-trial.md) (proposed, unapproved).
+Two authorized authenticated requests (Stage A, attempts 1 and 2) were made; no other paid call or live agent trial has been made.
 
 ## Completed preparation (2026-10-27)
 Credential-free only; see `STATUS.md` for details.
@@ -57,3 +57,22 @@ Interpretation (evidence-based):
 ## Limitations / unverified
 Meta account access, model availability, schema/image acceptance, pricing, event reuse rules,
 and agent capability are all unverified. Request/time/token caps are not a dollar ceiling.
+
+## Stage A retry (attempt 2, separately authorized, 1 request)
+Changes from attempt 1: `max_completion_tokens` 128 (was 16); prompt `Reply with exactly the text: OK`. Everything else unchanged (one attempt, no retries, 30 s timeout, redirects off, same endpoint/model, no fallback). Artifact `runs/20261027T033754-9c3008fec96f/probe.json` (untracked, sanitized).
+
+| Field | Observed |
+|---|---|
+| HTTP status | **200** |
+| Model identifier returned | `muse-spark-1.3` |
+| Request id | `87482414-8ba2-429b-9b7f-cb355072d8ef` |
+| Elapsed | 1.35 s |
+| `finish_reason` | `length` |
+| `choices[0].message.content` | **`null`** (no visible text) |
+| Usage | prompt 15, completion 128 (**126 reasoning tokens**), total 143 |
+| Provider-reported cost | none (null) |
+
+Result: probe `failed` again by its criterion (no visible text). The trivial request consumed almost the entire completion allowance as reasoning in both attempts (14/16, then 126/128), leaving ~2 tokens for visible output — both below what `OK` needs given the stop. So raising the cap 8× did not change the outcome; reasoning appears to expand to fill the cap rather than being fixed-size (two data points; not a proven law).
+
+Implications, unverified: (1) the agent profile's 2,048-token cap could also be consumed by reasoning, risking empty or truncated action JSON in Stage D; (2) the API may offer a reasoning-effort/budget control or a non-reasoning model setting — not tested; check Meta's documentation before another paid request; (3) Stages B–D remain unrun. Cumulative live usage so far: 31 + 143 = 174 tokens over two requests; cost unknown (pricing unverified, none reported).
+Both Stage A attempts are retained; no further request was made.
