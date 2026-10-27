@@ -8,11 +8,24 @@ from urllib.parse import urlsplit
 from .contracts import Answer, PublicTask
 from .recorder import Recorder
 
-PROFILE_PATH = Path(__file__).parent / "profiles" / "natural-v2.json"
+PROFILE_DIR = Path(__file__).parent / "profiles"
+PROFILE_FILES = {"natural-shopping-v2": "natural-v2.json", "natural-shopping-v3": "natural-v3.json"}
+DEFAULT_PROFILE_ID = "natural-shopping-v3"
+# Documented Meta levels; "none" returns HTTP 400 on Muse Spark. "xhigh"/"max" are excluded by this project.
+REASONING_EFFORTS = ("minimal", "low", "medium", "high")
 
 
-def profile():
-    return json.loads(PROFILE_PATH.read_text())
+def profile(profile_id: str | None = None):
+    """Load one frozen profile snapshot. v2 is preserved for reproducing earlier runs."""
+    name = PROFILE_FILES.get(profile_id or DEFAULT_PROFILE_ID)
+    if name is None:
+        raise ValueError(f"Unknown profile: {profile_id}")
+    return json.loads((PROFILE_DIR / name).read_text())
+
+
+def validate_reasoning_effort(effective: dict):
+    if "reasoning_effort" in effective and effective["reasoning_effort"] not in REASONING_EFFORTS:
+        raise ValueError(f"reasoning_effort must be one of {', '.join(REASONING_EFFORTS)}")
 
 
 def prepare_browser_environment():
@@ -42,12 +55,18 @@ def create_model(config: ModelConfig, effective: dict, *, http_client=None, api_
     endpoint = urlsplit(config.base_url)
     if endpoint.scheme not in {"http", "https"} or not endpoint.hostname or endpoint.username or endpoint.password or endpoint.query or endpoint.fragment:
         raise ValueError("Model endpoint must not contain credentials, query parameters or fragments")
+    validate_reasoning_effort(effective)
     prepare_browser_environment()
     from browser_use import ChatOpenAI
+    options = {}
+    if config.provider == "meta" and "reasoning_effort" in effective:
+        # Browser Use sends reasoning_effort only for model names in `reasoning_models`; match Muse Spark
+        # explicitly so the profile's value reaches the wire (it also drops temperature/penalties).
+        options = dict(reasoning_models=["muse-spark"], reasoning_effort=effective["reasoning_effort"])
     return ChatOpenAI(model=config.model, base_url=config.base_url, api_key=key,
                       http_client=http_client, temperature=None, frequency_penalty=None,
                       max_retries=0, timeout=effective["model_timeout_seconds"], remove_min_items_from_schema=True,
-                      max_completion_tokens=effective["max_completion_tokens"])
+                      max_completion_tokens=effective["max_completion_tokens"], **options)
 
 
 class ModelRequestLimitReached(RuntimeError):

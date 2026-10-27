@@ -13,7 +13,7 @@ import subprocess
 import time
 from urllib.parse import urlsplit
 from .env import scrubbed_environment
-from .agent import ModelConfig, attempt, create_model, profile, ModelRequestLimitReached
+from .agent import ModelConfig, attempt, create_model, profile, validate_reasoning_effort, ModelRequestLimitReached
 from .evaluator import evaluate
 from .inventory import INVENTORY_HASH, INVENTORY_VERSION
 from .recorder import Recorder, utcnow
@@ -52,12 +52,12 @@ def provenance():
 async def run(*, mode="smoke", seed=0, kind="discovery", available=None,
               url=None, model_config=None, allow_model_calls=False,
               output=Path("runs"), max_steps=None, timeout_seconds=None,
-              max_model_requests=None, profile_overrides=None):
+              max_model_requests=None, profile_overrides=None, profile_id=None):
     config = model_config or ModelConfig()
     recorder = Recorder(Path(output), (os.environ.get(config.key_env, ""),))
     started = time.monotonic()
     task = generate(seed, kind, available)
-    effective = profile()
+    effective = profile(profile_id)
     overrides = deepcopy(profile_overrides or {})
     unknown_settings = set(overrides) - set(effective)
     effective.update(overrides)
@@ -80,7 +80,9 @@ async def run(*, mode="smoke", seed=0, kind="discovery", available=None,
                   model_parameters={"temperature": None, "frequency_penalty": None,
                                     "sampling": "provider defaults", "max_retries": 0,
                                     "timeout_seconds": effective["model_timeout_seconds"],
-                                    "max_completion_tokens": effective["max_completion_tokens"]} if mode == "live" else None,
+                                    "max_completion_tokens": effective["max_completion_tokens"],
+                                    "reasoning_effort": effective.get("reasoning_effort") if config.provider == "meta" else None,
+                                    } if mode == "live" else None,
                   provenance=provenance(), started_at=utcnow(), status="running", usage=None,
                   action_count=None, steps=None, answer=None, evaluation=None)
     recorder.write("run.json", record)
@@ -95,6 +97,7 @@ async def run(*, mode="smoke", seed=0, kind="discovery", available=None,
                      "model_timeout_seconds", "step_timeout_seconds"):
             if type(effective[name]) is not int or effective[name] < 1:
                 raise ValueError(f"{name} must be a positive integer")
+        validate_reasoning_effort(effective)
         seconds = effective["timeout_seconds"]
         if type(seconds) not in {int, float} or not math.isfinite(seconds) or seconds <= 0:
             raise ValueError("timeout_seconds must be positive and finite")

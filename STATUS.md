@@ -39,10 +39,12 @@
 - **Stage A retry (separately authorized, 1 request):** 128-token cap, prompt `OK` → HTTP 200, `content` still null, `finish_reason: length`, 143 tokens of which 126 reasoning. Two attempts total; no further requests made. See report 004.
 - **Stage A attempt 3 (separately authorized, 1 request):** `reasoning_effort: low`, 512-token cap → HTTP 200, `finish_reason: stop`, visible content `OK`, 15 prompt / 120 completion (110 reasoning) tokens, 1.41 s. Stage A objective met after three attempts; est. cumulative cost ≈ US$0.0012 (calculated, not provider-reported). Stages B–D not started.
 - **Stage B (separately authorized, 1 request):** exact strict `AgentOutput` schema (SHA-256 `c80ef8b8…9a194`, 7,915 bytes) accepted; HTTP 200, `stop`, output valid and values exact. Usage 63 prompt / 994 completion (906 reasoning) — only ~3% headroom under the 1,024 cap, a risk for Stage D. Est. cumulative cost ≈ US$0.0055 (calculated). Stages C–D not started.
+- **Stage C (separately authorized, 1 request):** deterministic 160×160 PNG (red square, white 7; SHA-256 `932e9a8a…2998d`) via `image_url` data URL with `detail: high`: HTTP 200, `stop`, content `color=red; digit=7` (strict match), 79 prompt / 261 completion (245 reasoning) tokens, 2.55 s. Est. cumulative live cost ≈ US$0.0067 (calculated). Stage D not started.
+- **`natural-shopping-v3` implemented offline (approved):** `reasoning_effort: low` (Meta provider only) and 4,096 completion tokens; v2 file unchanged (byte-pinned by test). 107 offline + 4 browser tests passed; CLI smoke passed on v3 with 0 model requests. No authenticated call was made to test v3.
 - Not re-run here: GitHub Actions on this branch (see PR checks).
 
 ## Next (requires explicit user approval — nothing paid is authorized)
-Task 004 (Stage A done; B–D pending approval): minimal authenticated request → structured-output probe → screenshot probe → one
+Task 004 (Stages A–C done; D pending approval): minimal authenticated request → structured-output probe → screenshot probe → one
 browser-agent run (proposed limits 5 steps / 5 model requests / 60 s, no automatic retries) with
 `muse-spark-1.3` as an unverified candidate. Pricing is unverified, so no dollar estimate exists;
 the user's provisional A$30 overall budget is **not** authorization to spend.

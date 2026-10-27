@@ -152,7 +152,7 @@ def test_stage_b_request_matches_what_the_browser_use_adapter_emits(tmp_path):
     asyncio.run(go())
     ours = probe.stage_b_body(ModelConfig(), schema)
     assert captured["body"]["response_format"] == ours["response_format"]
-    assert captured["body"]["max_completion_tokens"] == 2048 and "reasoning_effort" not in captured["body"]
+    assert captured["body"]["max_completion_tokens"] == 4096 and captured["body"]["reasoning_effort"] == "low"  # v3 default
 
 
 def test_stage_b_schema_rejection_is_recorded_verbatim_and_not_retried(tmp_path, monkeypatch):

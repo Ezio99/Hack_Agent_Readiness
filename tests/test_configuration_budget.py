@@ -30,7 +30,7 @@ async def test_one_effective_configuration_reaches_sdk_browser_agent_and_artifac
     expected = {**defaults, **deepcopy(overrides), "max_steps": 2,
                 "timeout_seconds": 12, "max_model_requests": 3}
 
-    def load_once():
+    def load_once(*args):
         seen["profile_loads"] += 1
         return deepcopy(defaults)
 
@@ -111,7 +111,7 @@ async def test_one_effective_configuration_reaches_sdk_browser_agent_and_artifac
     assert saved["limits"] == {"max_steps": 2, "timeout_seconds": 12, "max_model_requests": 3}
     assert saved["model_request_count"] == 1 and saved["usage"] is None
     assert "offline-fixture-key" not in (path / "trace.jsonl").read_text()
-    assert defaults == adapter.json.loads(adapter.PROFILE_PATH.read_text())
+    assert defaults == adapter.json.loads((adapter.PROFILE_DIR / "natural-v3.json").read_text())
 
 
 class FakeModel:

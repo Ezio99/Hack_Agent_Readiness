@@ -54,7 +54,7 @@ no prototype assets or results were imported.
 
 ## PR #1 review safeguards
 
-The reference profile is now `natural-shopping-v2`. One effective snapshot feeds
+The reference profile was `natural-shopping-v2`; it is now `natural-shopping-v3` (explicit `reasoning_effort: low`, 4,096 completion tokens; see Task 004 report) with v2 preserved. One effective snapshot feeds
 the model adapter and browser agent; model request timeout and completion-token
 limit come from that snapshot. A per-run gate blocks calls beyond the configured
 request-attempt cap before the provider adapter, including framework retries. SDK

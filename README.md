@@ -60,9 +60,9 @@ API credentials, preserving credential-free artifacts even on failures.
 
 ## Reference agent and model configuration
 
-The single versioned `natural-shopping-v2` profile uses **DOM + screenshots**,
+The default `natural-shopping-v3` profile (v2 is preserved unchanged for reproducing earlier runs) uses **DOM + screenshots**,
 a 1280×960 viewport, at most **10 agent steps, 120 seconds and 10 model request
-attempts**, with three actions per step and 2,048 completion tokens per response.
+attempts**, with three actions per step, an explicit `reasoning_effort: low` (sent only to the `meta` provider; Muse Spark always reasons and rejects `none`) and 4,096 completion tokens per response (reasoning tokens count toward this cap).
 The model request timeout is 30 seconds and the agent step timeout is 60 seconds.
 Cleanup may take up to another 15 seconds. Provider sampling defaults are retained;
 SDK retries, extra failure-finalization calls, cloud sync and model judging are off.
@@ -78,7 +78,7 @@ win over those overrides. There is one reference profile, with no new site varia
 Artifacts retain the effective profile and `profile_hash`, plus a
 `configuration_hash` covering the redacted profile/model/wire-parameter snapshot.
 Limit changes produce distinct configurations; freeze one configuration within an
-experiment. Profile v2 supersedes v1 for future runs; old run artifacts are kept.
+experiment. Profile v3 supersedes v2 for future runs (changes: `reasoning_effort` and the completion cap only); old run artifacts are kept.
 
 Every model-adapter invocation consumes one request attempt, including failed or
 cancelled invocations and framework retries. The guard blocks attempt N+1 before
