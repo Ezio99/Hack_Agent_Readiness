@@ -4,6 +4,10 @@
 >
 > Read this before proposing changes, writing code, or making architectural decisions. This document provides orientation, not a complete specification. Always inspect the current repository and relevant task documents.
 
+## Current execution handoff
+
+For a new Claude/Codex agent: **read [STATUS.md](STATUS.md) first for the latest verified state**, then [AGENTS.md](AGENTS.md), [Report 004](collaboration/reports/004-first-live-meta-trial.md), and the active task. The working branch is `hackathon/task004-stage-a` (PR #3, unmerged). Meta A–C probes passed; the strict Stage D trial failed on non-JSON output. An opt-in compatibility profile recovered and executed one live click, but the request gate prevented completion. No end-to-end live success is established. Draft Task 005 is a proposal only; do not spend, retry, or merge without user approval. Verify current GitHub state on startup; this paragraph is a dated 2026-10-28 snapshot.
+
 ## 1. Our intention
 
 **Agent Readiness** investigates how effectively AI agents can interact with websites.
