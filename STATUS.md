@@ -35,6 +35,7 @@
   JUnit: `artifacts/verification/task004-*.xml` (untracked).
 - `readiness run` with a dummy key and **without** `--allow-model-calls` stopped at setup with no
   model request. No authenticated Meta request, live agent trial or paid call has been made.
+- **Stage A live probe (authorized, 1 request, 2026-10-27):** HTTP 200, model `muse-spark-1.3`, 31 total tokens (14 reasoning), no cost reported, but `content` was null at `finish_reason: length` (16-token cap consumed by reasoning). Auth/model access verified; visible-text check not met. See report 004. Stages B–D not started.
 - Not re-run here: GitHub Actions on this branch (see PR checks).
 
 ## Next (requires explicit user approval — nothing paid is authorized)
