@@ -89,7 +89,8 @@ def browser_options(url: str, executable: str):
     parsed = urlsplit(url)
     return dict(headless=True, executable_path=executable, enable_default_extensions=False, use_cloud=False,
                 allowed_domains=[f"{parsed.scheme}://{parsed.netloc}"],
-                viewport=profile()["viewport"], user_data_dir=None, keep_alive=True)
+                viewport=profile()["viewport"], chromium_sandbox=profile()["chromium_sandbox"],
+                user_data_dir=None, keep_alive=True)
 
 
 def create_agent(task: PublicTask, url: str, llm, browser, recorder: Recorder):

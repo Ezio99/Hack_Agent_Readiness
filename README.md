@@ -11,8 +11,8 @@ only. There is no checkout, account system, dashboard or composite score.
 **Validation:** all **24 tests pass**, including the three real-browser cases.
 The credential-free CLI smoke navigates to a detail page and passes independent
 evaluation. In this development environment those checks require approval-reviewed
-execution outside the restricted sandbox. CI is configured but has not run. No live
-model trial has been performed. See [STATUS](STATUS.md) and the
+execution outside the restricted sandbox. The first CI run exposed a browser-startup difference; a fix is being validated.
+No live model trial has been performed. See [STATUS](STATUS.md) and the
 [fresh task](collaboration/tasks/003-hackathon-first-agent-run.md).
 
 ## Install
@@ -63,7 +63,9 @@ API credentials, preserving credential-free artifacts even on failures.
 The single versioned `natural-shopping-v1` profile uses **DOM + screenshots**,
 a 1280×960 viewport, at most 30 agent steps, three actions per step, a 180-second
 wall-clock budget and 4096 completion tokens per model response. Cleanup may take
-up to another 15 seconds. The model's sampling defaults are retained and recorded.
+up to another 15 seconds. The model's sampling defaults are retained and recorded. Chromium sandboxing is
+explicitly disabled for this isolated loopback benchmark, matching the verified
+local-container launch flags instead of relying on environment-dependent defaults.
 Limit overrides are recorded in the effective configuration and its hash; do not
 mix configurations within an experiment. Fresh sessions are created per trial.
 

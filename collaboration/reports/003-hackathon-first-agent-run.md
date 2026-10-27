@@ -163,3 +163,27 @@ hashes. Prototype run/task formats and measurements are not backward-compatible
 baselines. No dashboard, registry, readiness score, additional behavior profile
 or accessible-label intervention was implemented. The complete historical Task
 002 acceptance checklist must not be marked complete from these offline checks.
+
+## First remote CI attempt and startup fix
+
+The user authorized pushing `hackathon/task001`, monitoring CI, and opening a PR
+only after CI passes. [Run 40425362650](https://github.com/Ezio99/Hack_Agent_Readiness/actions/runs/40425362650)
+installed all locked dependencies and passed 21 offline tests, but all three
+browser cases failed during Chromium startup before any storefront interaction.
+The artifacts and full log are preserved in ignored `artifacts/ci-first-failure/`
+and `artifacts/verification/ci-first-failure.log`.
+
+Inspection found Browser Use defaults Chromium sandboxing off inside a container
+and on outside one. Local verification had used the container default; GitHub's
+Ubuntu 24.04 VM used the other launch path. The profile now records the same
+explicit sandbox-off setting in both environments, and CI pins Ubuntu 24.04
+instead of following a migrating runner label. DOM/screenshot settings, task
+truth and evaluator rules are unchanged. No live model trials existed before
+this profile-setting correction; code/profile hashes distinguish the wiring runs.
+
+An additional regression test checks both container-detection outcomes produce
+the same required launch flags. Another ensures an internal operation timeout is
+classified as infrastructure failure, rather than incorrectly labeled as the
+experiment's wall-clock deadline. After the fix, all **26 local tests passed in 10.94s**, including all three
+real-browser cases (`artifacts/verification/pytest-ci-fix.xml`). Remote
+revalidation is pending this commit.

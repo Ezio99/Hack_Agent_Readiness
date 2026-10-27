@@ -73,6 +73,7 @@ async def run(*, mode="smoke", seed=0, kind="discovery", available=None,
                   action_count=None, steps=None, answer=None, evaluation=None)
     recorder.write("run.json", record)
     recorder.event("run_started", mode=mode, task=task.public.model_dump(mode="json"))
+    deadline = None
     try:
         if mode not in {"smoke", "live"}:
             raise ValueError("Mode must be smoke or live")
@@ -83,7 +84,8 @@ async def run(*, mode="smoke", seed=0, kind="discovery", available=None,
             if not allow_model_calls:
                 raise ValueError("Model calls disabled; explicit spending approval is required before using --allow-model-calls")
             llm = create_model(config)
-        async with asyncio.timeout(effective["timeout_seconds"]):
+        deadline = asyncio.timeout(effective["timeout_seconds"])
+        async with deadline:
             async with target(url) as actual_url:
                 record["storefront_url"] = actual_url
                 recorder.write("run.json", record)
@@ -93,8 +95,12 @@ async def run(*, mode="smoke", seed=0, kind="discovery", available=None,
                     result = await attempt(task.public, actual_url, llm, recorder, effective["max_steps"])
                 record.update(result)
                 record["evaluation"] = evaluate(record["answer"], task).model_dump()
-    except TimeoutError:
-        record.update(status="timeout", stop_reason="wall_clock_limit", errors=["Run exceeded timeout"])
+    except TimeoutError as exc:
+        if deadline is not None and deadline.expired():
+            record.update(status="timeout", stop_reason="wall_clock_limit", errors=["Run exceeded timeout"])
+        else:
+            record.update(status="infrastructure_error", stop_reason="operation_timeout",
+                          errors=[f"Infrastructure operation timed out before the wall-clock deadline: {exc}"])
     except ValueError as exc:
         record.update(status="setup_error", stop_reason="invalid_configuration", errors=[str(exc)])
     except Exception as exc:

@@ -88,3 +88,14 @@ async def test_timeout_retains_reported_usage_and_executed_steps(tmp_path, monke
     assert record["steps"] == 1 and record["action_count"] == 2
     assert record["navigation"][0]["url"].startswith("http://127.0.0.1")
     assert record["browser_version"] == "Synthetic Chromium"
+
+
+async def test_internal_operation_timeout_is_not_a_wall_clock_limit(tmp_path, monkeypatch):
+    async def startup_timeout(*args):
+        raise TimeoutError("browser startup")
+    monkeypatch.setattr(runner, "target", synthetic_target)
+    monkeypatch.setattr(runner, "smoke", startup_timeout)
+    _, record = await runner.run(output=tmp_path, timeout_seconds=30)
+    assert record["status"] == "infrastructure_error"
+    assert record["stop_reason"] == "operation_timeout"
+    assert "browser startup" in record["errors"][0]

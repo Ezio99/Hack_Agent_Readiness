@@ -35,7 +35,16 @@ use local storefront/CDP sockets and update Git metadata.
 - Dependency consistency: **117 installed packages checked, passed**.
 - Compile checks and wheel build/template/profile inclusion: **passed**.
 - CLI generation, help and default model-call spending gate: **verified**.
-- CI: **configured, not executed**. No live model trial or paid call was made.
+- CI: [first push run](https://github.com/Ezio99/Hack_Agent_Readiness/actions/runs/40425362650)
+  installed dependencies and passed all 21 original offline tests; all three
+  browser cases timed out during Chromium startup. Failure logs/artifacts are
+  preserved locally under `artifacts/ci-first-failure/` and on GitHub.
+- The launch profile now fixes Chromium sandboxing explicitly (off for the isolated
+  loopback benchmark), removing Browser Use's Docker-dependent default. CI pins
+  Ubuntu 24.04. An internal browser timeout is now recorded as infrastructure
+  failure, separately from the wall-clock run limit. Two regression tests were added.
+- Local regression checks: **26 tests passed in 10.94s**, including all three
+  real-browser cases. A fresh CI run is pending. No live model trial or paid call was made.
 
 Initial restricted execution produced 21 passing offline tests and three EPERM
 browser failures. Those attempts remain preserved; the successful revalidation
@@ -60,8 +69,9 @@ The three prepared commits were imported from the verified local bundle onto
 The original checkout now holds the review branch and its commit history. The
 temporary clone and bundle were the initial fallback, not the current blocker.
 Status/report updates are committed directly on the restored review branch.
-No branch was pushed and no remote CI run was initiated.
+The user authorized pushing and PR creation after CI passes. The review branch is
+now pushed; CI failures are being resolved before opening the PR.
 
-Remaining: credential-free CI execution, separately approved authenticated Meta
+Remaining: successful credential-free CI, separately approved authenticated Meta
 compatibility/live agent trials, and participant-specific event-rule verification.
 Executable work was authored fresh without prototype assets.

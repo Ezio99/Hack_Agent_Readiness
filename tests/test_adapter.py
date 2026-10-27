@@ -120,3 +120,19 @@ async def test_full_agent_schema_matches_documented_meta_strict_subset(tmp_path)
         result = await model.ainvoke([UserMessage(content="Synthetic schema contract test")], output_format=agent.AgentOutput)
         assert result.completion.action[0].model_dump()["done"]["data"]["product_id"] == "FAKE"
         assert result.usage is None
+
+
+def test_browser_launch_flags_do_not_depend_on_container_detection(tmp_path, monkeypatch):
+    prepare_browser_environment()
+    import browser_use.config as config_module
+    from browser_use.browser.profile import BrowserProfile
+    from agent_readiness.agent import browser_options
+    monkeypatch.delenv("IN_DOCKER", raising=False)
+    for in_container in [True, False]:
+        monkeypatch.setattr(config_module, "is_running_in_docker", lambda: in_container)
+        options = browser_options("http://127.0.0.1:8000/", "/unused/chromium")
+        options["user_data_dir"] = str(tmp_path / "profile")
+        launch = BrowserProfile(**options)
+        assert launch.chromium_sandbox is False
+        assert "--no-sandbox" in launch.get_args()
+        assert launch.use_cloud is False
