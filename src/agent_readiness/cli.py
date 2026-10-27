@@ -3,6 +3,7 @@ import asyncio
 import json
 from pathlib import Path
 from .agent import ModelConfig
+from .env import load_repo_env
 from .evaluator import evaluate
 from .runner import run
 from .tasks import generate
@@ -33,6 +34,8 @@ def main():
             cmd.add_argument("--key-env", default="MODEL_API_KEY")
             cmd.add_argument("--allow-model-calls", action="store_true", help="Use only after explicit spending approval")
     args = parser.parse_args()
+    if args.command == "run":
+        load_repo_env()
     if args.command == "serve":
         import uvicorn
         uvicorn.run("agent_readiness.storefront:app", host="127.0.0.1", port=args.port)

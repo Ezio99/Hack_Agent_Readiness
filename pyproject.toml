@@ -3,7 +3,7 @@ name = "agent-readiness"
 version = "0.1.0"
 description = "Interaction-dependent shopping benchmark"
 requires-python = ">=3.12,<3.13"
-dependencies = ["fastapi>=0.115", "uvicorn>=0.30", "jinja2>=3.1", "pydantic>=2.10", "pydantic-settings>=2.10", "browser-use==0.11.13", "playwright==1.58.0", "httpx>=0.28"]
+dependencies = ["fastapi>=0.115", "uvicorn>=0.30", "jinja2>=3.1", "pydantic>=2.10", "pydantic-settings>=2.10", "browser-use==0.11.13", "playwright==1.58.0", "httpx>=0.28", "python-dotenv==1.2.4"]
 
 [project.scripts]
 readiness = "agent_readiness.cli:main"
