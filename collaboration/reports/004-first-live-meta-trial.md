@@ -1,7 +1,7 @@
 # Report 004 — Meta compatibility validation and first live trial
 
-**Status: Stage A executed three times, Stages B and C once each, all under separate authorizations (2026-10-27); Stage D NOT executed.** Specification: [Task 004](../tasks/004-first-live-meta-trial.md) (proposed, unapproved).
-Five authorized authenticated requests (Stage A attempts 1–3, Stage B once, Stage C once) were made; no other paid call or live agent trial has been made.
+**Status: Stage A executed three times, Stages B, C and D once each, all under separate authorizations (2026-10-27). Stage D FAILED (model output not parseable); no retry was made.** Specification: [Task 004](../tasks/004-first-live-meta-trial.md) (proposed, unapproved).
+Seven authorized authenticated requests (Stage A attempts 1–3, Stage B once, Stage C once, Stage D two requests within one run) were made; no other paid call or live agent trial has been made.
 
 ## Completed preparation (2026-10-27)
 Credential-free only; see `STATUS.md` for details.
@@ -168,3 +168,45 @@ Verification (offline only): new `tests/test_profile_v3.py` (14 cases): v2 byte-
 
 ### Readiness for Stage D
 Technically ready pending your decisions: (1) approve v3 for the trial, (2) choose `--timeout` (60 s as proposed vs 120 s default) and whether to raise `model_timeout_seconds`, (3) confirm limits (5 steps / 5 requests) and a spend authorization. No Stage D request has been made.
+
+## Stage D — first live shopping-agent trial (separately authorized, 1 run) — FAILED
+Command: `readiness run --kind discovery --seed 0 --max-steps 5 --max-model-requests 5 --timeout 120 --allow-model-calls` (defaults: provider `meta`, model `muse-spark-1.3`, profile `natural-shopping-v3`). One run, no retry, no further requests afterwards. Artifact `runs/20261027T041445-e323c1ab6cae/` (untracked; `run.json`, `trace.jsonl`, `history.json`, two screenshots, `summary.md`; sanitized; key absent).
+
+### Offline preflight (all passed before the run; no model calls)
+1. **Wire values:** `create_model` for v3 yields `reasoning_effort="low"`, `max_completion_tokens=4096` (adapter attributes + wire tests); recorded `model_parameters` confirm. The HTTP body of the live request was not separately captured; this rests on the wire tests.
+2. **Limits:** a real-runner/real-Chromium/real-storefront run with a fake model hit exactly 5 steps and 5 model requests and stopped (gate + step cap); timeout and request-gate tests pass (108 offline + 4 browser tests, CLI smoke).
+3. **Hidden retries:** OpenAI SDK `max_retries=0` (checked on the live client object, timeout 30 s); no fallback LLM; Browser Use message compaction triggers every 15 steps (not reachable in 5); empty-action re-asks and any extra LLM call go through the wrapped model and the request gate. Browser Use's own per-step failure handling can re-ask, bounded by the gate. Residual: a request the gate allows can still be billed if the provider processes it and the client times out.
+4. **Cost:** real first-call request size measured: system prompt 23,590 chars + user state 3,627 chars + one ~83 KB 1280×960 PNG ≈ 8–10.5k input tokens/request (chars/3–4 plus ~1.5k image, per docs). Bound used: 15k input + 4,096 output per request → ≈ US$0.036 × 5 ≈ US$0.18 < US$0.25 authorized.
+5. **Ground truth:** the preflight's captured prompts/DOM do not contain the private expected product id; listings show names/brands/categories/prices only (IDs and stock are detail-only). (The phrase "GROUND TRUTH" in the prompt is Browser Use's own wording about screenshots.)
+
+**Preflight found and fixed a credential leak (committed before the run):** importing `browser_use` calls `load_dotenv()` and finds this repository's `.env` from inside `.venv`; modules imported lazily *during* the run re-loaded the key after the scrub had removed it, so Chromium could have inherited it. `scrubbed_environment` now also makes `dotenv.load_dotenv` inert while active; verified `key_in_env == false` on every agent-side call in the preflight, with a regression test replicating the lookup. This was a risk to credential hygiene, not an observed exfiltration (Chromium has no tool access to its environment).
+
+### Result
+| Item | Observed |
+|---|---|
+| Task | `synthetic-v1-discovery-0-8ba7403199`: "Find the Fern product in Home costing at most $29.00 AUD. Return its product ID, price in integer cents, and whether it is available." |
+| Hashes | inventory `e61614b81af8ed6f6c445e650a7d4beae942735e4ffbbf5df7cd67f5517c78b9`; profile `1bffb722f8b5a7ffee6f7f8f7d952a341c47bc2571e9352790be45610b267c45`; configuration `b363b22fdda7698887f6dc4aa1de47dacb12a56c6a26f65f8dda988ca016f66b`; code `650753cfda5a2f7fa1f32e1ed2396d0a49b7f22e8f0ab3b8dc6f6ee6a09d9eb0`; git `42a5cfdf…` (clean tree) |
+| Independent evaluator | **FAIL** — "Malformed answer" (no answer was produced) |
+| Recorded status | `infrastructure_error`, `stop_reason: ModelProviderError` (see misclassification note) |
+| Model requests / steps / elapsed | **2** of 5 / **2** of 5 / **9.14 s** of 120 s |
+| Request timings (model_request→model_error) | request 1: 2.64 s; request 2: 3.01 s |
+| Browser actions executed | **none** beyond the harness's initial `navigate` to the storefront; the page never changed (the two model-input screenshots are byte-identical, 83,161 bytes) |
+| Per-request tokens / finish reason | **not recorded** (see gap) |
+| Provider-reported cost | none available |
+
+What happened: both responses returned HTTP success but the adapter's `AgentOutput.model_validate_json` rejected the content as **not JSON**: it began with prose (`Found the Fern Home item…` and `Found the match — open…`) and ended with `…click its link."}` / `…link index 174."}`. Browser Use counted two consecutive failures (`max_failures=2`) and stopped; the 5-step/5-request caps were not reached. The raw content was not retained (see gap), so the exact malformed text and whether `response_format` was ignored, wrapped, or the model leaked reasoning into `content` **cannot be determined from this artifact** (hypotheses only).
+
+Evidence the model did read the page correctly: the visible fragments say it found the Fern Home item and to "click its link index 174"; in the DOM sent to the model, `[174]` is the `Linen Cushion · Fern · Home · $29.00` listing — the correct target for this task. So the observation (DOM + screenshot) appears sufficient to identify the product; the failure was in output conformance, not in understanding the page. The agent never reached a detail page, so ID/availability retrieval and grading of a real answer remain unobserved.
+
+### Findings / friction
+1. **Structured-output conformance failed under real conditions** although Stage B (same strict schema, trivial prompt) passed: with the full ~27k-character prompt + screenshot, `reasoning_effort: low`, the content was not schema-valid JSON in 2/2 requests. Cause unverified.
+2. **Instrumentation gap:** when the adapter raises while parsing, `RecordingModel` loses the HTTP response (raw content, `usage`, `finish_reason`). Per-request token usage required by the authorization therefore could not be recorded, and `run.json.usage` is null. The harness needs a lower-level capture (e.g. HTTP response hook) that saves the sanitized raw response before parsing.
+3. **Misclassification:** a model-output-format failure is labelled `infrastructure_error`; it should be a distinct class (e.g. `model_output_invalid`).
+4. Browser Use's `max_failures=2` ended the run after two failed requests; we cannot tell whether a later request would have conformed.
+5. Chromium version was not recorded (`browser_version: null`) because the observation callback never ran.
+
+### Estimated cost (calculated, NOT provider-reported)
+Input ≈ 8.3–10.5k tokens × 2 requests ≈ 17–21k tokens ≈ US$0.021–0.026. Output unknown; inferred from latency at the observed ~3.75 ms/token (+1.4 s base) as roughly 300–450 tokens per request, so ≈ US$0.003–0.004 (even if both used the full 4,096-token cap: ≤ US$0.035). **Stage D estimate ≈ US$0.025–0.035, bounded < US$0.065**, well under the US$0.25 authorization. Cumulative estimated live spend across all stages ≈ US$0.035–0.045. Assumes published USD pricing; provider reports no cost.
+
+### Status
+Stage D was a single bounded run and failed; it must not be retried without new authorization. No further authenticated requests were made.
