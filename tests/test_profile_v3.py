@@ -126,3 +126,72 @@ def test_timeout_budget_invariants_and_documented_latency_risk():
     assert 30 / estimated_full_generation_seconds > 1.5
     # Whole-run budget must exceed one worst-case model call plus the step overhead for at least 2 steps.
     assert p["timeout_seconds"] >= 2 * estimated_full_generation_seconds
+
+
+# ---- compatibility profile: separate, versioned, opt-in -------------------------------------------------------
+
+V3_FILE_SHA256 = "a279d0f5ea757394738c5f4d06e57da90f5dc7384b979e62657b46fbc32e5244"
+COMPAT_ID = "natural-shopping-v3-compat1"
+
+
+def test_strict_profiles_are_preserved_byte_for_byte_and_remain_the_defaults():
+    assert hashlib.sha256((PROFILE_DIR / "natural-v3.json").read_bytes()).hexdigest() == V3_FILE_SHA256
+    assert hashlib.sha256((PROFILE_DIR / "natural-v2.json").read_bytes()).hexdigest() == V2_FILE_SHA256
+    assert profile() == profile(V3) and "output_parser" not in profile(V3) and "output_parser" not in profile(V2)
+
+
+def test_compat_profile_differs_from_strict_v3_only_in_id_and_parser():
+    v3, compat = profile(V3), profile(COMPAT_ID)
+    changed = {k for k in v3.keys() | compat.keys() if v3.get(k, "<absent>") != compat.get(k, "<absent>")}
+    assert changed == {"id", "output_parser"} and compat["output_parser"] == "muse-prose-prefix-json-v1"
+    assert compat["max_completion_tokens"] == 4096 and compat["reasoning_effort"] == "low"
+    for key in ("max_steps", "timeout_seconds", "max_model_requests", "model_timeout_seconds", "allowed_tools", "instructions"):
+        assert compat[key] == v3[key]
+
+
+def test_unknown_output_parser_is_rejected_before_a_model_is_built(tmp_path, monkeypatch):
+    with pytest.raises(ValueError, match="output_parser"):
+        create_model(ModelConfig(), {**profile(COMPAT_ID), "output_parser": "lenient-anything"}, api_key="k")
+    def must_not_build(*args, **kwargs):
+        raise AssertionError("model constructed despite an unknown parser")
+    monkeypatch.setattr(runner, "create_model", must_not_build)
+    import asyncio
+    _, record = asyncio.run(runner.run(mode="live", allow_model_calls=True, output=tmp_path, profile_id=COMPAT_ID,
+                                       profile_overrides={"output_parser": "lenient-anything"}))
+    assert record["status"] == "setup_error" and "output_parser" in record["errors"][0]
+    # the strict profile cannot be given a parser through overrides either (not a known setting there)
+    _, strict = asyncio.run(runner.run(mode="live", allow_model_calls=True, output=tmp_path,
+                                       profile_overrides={"output_parser": "muse-prose-prefix-json-v1"}))
+    assert strict["status"] == "setup_error"
+
+
+async def test_runner_records_parser_in_model_parameters_and_hashes_differ(tmp_path, monkeypatch):
+    async def stop(*args, **kwargs):
+        raise RuntimeError("stop after setup")
+    monkeypatch.setattr(runner, "target", _fake_target)
+    monkeypatch.setattr(runner, "attempt", stop)
+    monkeypatch.setattr(runner, "create_model", lambda config, effective: object())
+    out = {}
+    for pid in (V3, COMPAT_ID):
+        _, out[pid] = await runner.run(mode="live", allow_model_calls=True, output=tmp_path, profile_id=pid)
+    assert out[V3]["model_parameters"]["output_parser"] is None
+    assert out[COMPAT_ID]["model_parameters"]["output_parser"] == "muse-prose-prefix-json-v1"
+    assert out[COMPAT_ID]["profile"]["id"] == COMPAT_ID
+    assert out[V3]["configuration_hash"] != out[COMPAT_ID]["configuration_hash"]
+
+
+def test_cli_selects_the_profile_and_defaults_to_strict_v3(monkeypatch):
+    import sys
+    from agent_readiness import cli
+    seen = {}
+    async def fake_run(**kwargs):
+        seen.update(kwargs)
+        return "p", {"status": "completed", "evaluation": {"passed": True}}
+    monkeypatch.setattr(cli, "run", fake_run)
+    monkeypatch.setattr(cli, "load_repo_env", lambda: None)
+    for argv, expected in ((["run", "--allow-model-calls"], V3),
+                           (["run", "--allow-model-calls", "--profile", COMPAT_ID], COMPAT_ID)):
+        monkeypatch.setattr(sys, "argv", ["readiness", *argv])
+        with pytest.raises(SystemExit):
+            cli.main()
+        assert seen["profile_id"] == expected

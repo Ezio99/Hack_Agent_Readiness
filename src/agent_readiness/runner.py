@@ -13,7 +13,8 @@ import subprocess
 import time
 from urllib.parse import urlsplit
 from .env import scrubbed_environment
-from .agent import ModelConfig, attempt, create_model, profile, validate_reasoning_effort, ModelRequestLimitReached
+from .agent import (ModelConfig, attempt, create_model, profile, validate_output_parser, validate_reasoning_effort,
+                    ModelRequestLimitReached)
 from .evaluator import evaluate
 from .inventory import INVENTORY_HASH, INVENTORY_VERSION
 from .recorder import Recorder, utcnow
@@ -89,6 +90,7 @@ async def run(*, mode="smoke", seed=0, kind="discovery", available=None,
                                     "timeout_seconds": effective["model_timeout_seconds"],
                                     "max_completion_tokens": effective["max_completion_tokens"],
                                     "reasoning_effort": effective.get("reasoning_effort") if config.provider == "meta" else None,
+                                    "output_parser": effective.get("output_parser"),
                                     } if mode == "live" else None,
                   provenance=provenance_without_key(config.key_env), started_at=utcnow(), status="running", usage=None,
                   action_count=None, steps=None, answer=None, evaluation=None)
@@ -105,6 +107,7 @@ async def run(*, mode="smoke", seed=0, kind="discovery", available=None,
             if type(effective[name]) is not int or effective[name] < 1:
                 raise ValueError(f"{name} must be a positive integer")
         validate_reasoning_effort(effective)
+        validate_output_parser(effective)
         seconds = effective["timeout_seconds"]
         if type(seconds) not in {int, float} or not math.isfinite(seconds) or seconds <= 0:
             raise ValueError("timeout_seconds must be positive and finite")
@@ -168,7 +171,8 @@ async def run(*, mode="smoke", seed=0, kind="discovery", available=None,
         if any(e["kind"] == "fidelity_violation" for e in events):
             # A blocked diagnostic request outranks later retries that merely hit the request gate.
             record.update(status="diagnostic_fidelity_violation", stop_reason="request blocked before the network")
-        elif any(e["kind"] == "model_request_limit" for e in events):
+        elif any(e["kind"] == "model_request_limit" for e in events) and record["status"] != "model_output_error":
+            # (an unrecovered model_output_error that preceded the designed gate stop keeps its cause)
             record.update(status="request_limit", stop_reason="model_request_limit")
         usages = [e["usage"] for e in events if e["kind"] == "model_response" and e.get("usage")]
         if usages:

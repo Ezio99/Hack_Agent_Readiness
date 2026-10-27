@@ -162,12 +162,12 @@ FULL_SHA = "c80ef8b813abef0b2afd79c83a6f31e857c0101ea8730952ee78d61e65f9a194"
 async def test_full_schema_replay_configuration_passes_every_pre_send_check(tmp_path, monkeypatch):
     """--max-steps 5 --max-model-requests 1 with the schema/cost expectations: one faithful request goes out."""
     path, record, calls = await fidelity_run(tmp_path, monkeypatch, max_steps=5, max_model_requests=1,
-                                             expect_schema_sha256=FULL_SHA, max_estimated_cost_usd=0.03)
+                                             expect_schema_sha256=FULL_SHA, max_estimated_cost_usd=0.035)
     assert len(calls) == 1 and record["model_request_count"] == 1 and record["status"] == "completed"
     assert record["schema_narrowing_detected"] is False and record["fidelity_violations"] is None
     assert record["http_captures"][0]["schema_sha256"] == FULL_SHA and record["http_captures"][0]["schema_narrowed"] is False
     event = next(json.loads(l) for l in (path / "trace.jsonl").read_text().splitlines() if '"model_http_request"' in l)
-    assert event["fidelity"]["violations"] == [] and event["fidelity"]["estimate"]["usd"] < 0.03
+    assert event["fidelity"]["violations"] == [] and event["fidelity"]["estimate"]["usd"] < 0.035
     assert record["diagnostic_expectations"]["schema_sha256"] == FULL_SHA
     body = json.loads(calls[0].content)
     assert (body["max_completion_tokens"], body["reasoning_effort"], body["model"]) == (4096, "low", "muse-spark-1.3")
@@ -178,7 +178,7 @@ async def test_full_schema_replay_configuration_passes_every_pre_send_check(tmp_
 
 async def test_one_step_budget_is_blocked_before_the_network_when_the_full_schema_is_required(tmp_path, monkeypatch):
     path, record, calls = await fidelity_run(tmp_path, monkeypatch, max_steps=1, max_model_requests=1,
-                                             expect_schema_sha256=FULL_SHA, max_estimated_cost_usd=0.03)
+                                             expect_schema_sha256=FULL_SHA, max_estimated_cost_usd=0.035)
     assert calls == []  # nothing reached the transport
     assert record["status"] == "diagnostic_fidelity_violation" and record["model_request_count"] == 1
     joined = " | ".join(record["fidelity_violations"])
@@ -223,7 +223,7 @@ async def test_valid_first_action_executes_then_the_gate_blocks_any_second_reque
     monkeypatch.setattr(runner, "create_model", make)
     path, record = await runner.run(mode="live", allow_model_calls=True, output=tmp_path, seed=0, kind="discovery",
                                     max_steps=5, timeout_seconds=120, max_model_requests=1,
-                                    expect_schema_sha256=FULL_SHA, max_estimated_cost_usd=0.03)
+                                    expect_schema_sha256=FULL_SHA, max_estimated_cost_usd=0.035)
     assert len(calls) == 1 and record["model_request_count"] == 1  # the second request never reached the transport
     assert record["status"] == "request_limit" and record["schema_narrowing_detected"] is False
     trace = [json.loads(l) for l in (path / "trace.jsonl").read_text().splitlines()]
@@ -232,3 +232,73 @@ async def test_valid_first_action_executes_then_the_gate_blocks_any_second_reque
     step = next(e for e in trace if e["kind"] == "step_result")
     assert step["result"]["model_output"] is not None and not step["result"]["result"][0].get("error")  # executed normally
     assert record["answer"] is None and record["evaluation"]["passed"] is False  # incomplete task, not a readiness result
+
+
+# ---- compat profile and status precedence through the real runner/browser ---------------------------------
+
+from tests.test_compat_parser import CAPTURED as PROSE_PLUS_CLICK  # noqa: E402
+
+
+async def prose_run(tmp_path, monkeypatch, content, **kwargs):
+    monkeypatch.setenv("META_MODEL_API_KEY", SENTINEL)
+    calls = []
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(200, headers={"x-request-id": f"mock-{len(calls)}"}, json={
+            "id": "m", "object": "chat.completion", "created": 0, "model": "muse-spark-1.3",
+            "choices": [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": content}}],
+            "usage": {"prompt_tokens": 9443, "completion_tokens": 229, "total_tokens": 9672,
+                      "completion_tokens_details": {"reasoning_tokens": 48}}})
+    original = runner.create_model
+    def make(config, effective):
+        model = original(config, effective)
+        model.http_client = DefaultAsyncHttpxClient(transport=httpx.MockTransport(handler))
+        sdk = model.get_client()
+        sdk._platform = "Linux"
+        model.get_client = lambda: sdk
+        return model
+    monkeypatch.setattr(runner, "create_model", make)
+    path, record = await runner.run(mode="live", allow_model_calls=True, output=tmp_path, seed=0, kind="discovery",
+                                    max_steps=5, timeout_seconds=120, max_model_requests=1,
+                                    expect_schema_sha256=FULL_SHA, max_estimated_cost_usd=0.035, **kwargs)
+    return path, record, calls
+
+
+async def test_strict_profile_keeps_the_output_error_when_the_gate_trips_afterwards(tmp_path, monkeypatch):
+    """The captured live scenario: prose + valid JSON, 1 request allowed. The cause must not become request_limit."""
+    path, record, calls = await prose_run(tmp_path, monkeypatch, PROSE_PLUS_CLICK)
+    assert len(calls) == 1 and record["model_request_count"] == 1
+    assert record["status"] == "model_output_error" and record["stop_reason"] == "model_output_error:malformed_json"
+    assert record["protocol_compliance"]["raw_protocol_noncompliant"] == 1 and record["protocol_compliance"]["recovery_attempted"] == 0
+    kinds = [json.loads(l)["kind"] for l in (path / "trace.jsonl").read_text().splitlines()]
+    assert "model_request_limit" in kinds  # the gate did trip afterwards, as designed, without masking the cause
+    assert record["answer"] is None and record["usage"][0]["completion_tokens_details"]["reasoning_tokens"] == 48
+
+
+async def test_compat_profile_executes_the_recovered_click_174_once_then_the_gate_blocks(tmp_path, monkeypatch):
+    path, record, calls = await prose_run(tmp_path, monkeypatch, PROSE_PLUS_CLICK, profile_id="natural-shopping-v3-compat1")
+    assert len(calls) == 1 and record["model_request_count"] == 1                     # no second request reached the provider
+    assert record["status"] == "request_limit" and record["profile"]["id"] == "natural-shopping-v3-compat1"
+    assert record["protocol_compliance"] == {"parser": "muse-prose-prefix-json-v1", "http_200_responses": 1,
+        "raw_protocol_compliant": 0, "raw_protocol_noncompliant": 1, "recovery_attempted": 1,
+        "recovered_action_valid": 1, "recovery_rejected": 0}
+    trace = [json.loads(l) for l in (path / "trace.jsonl").read_text().splitlines()]
+    step = next(e for e in trace if e["kind"] == "step_result")
+    proposed = step["result"]["model_output"]["action"]
+    assert proposed == [{"click": {"index": 174}}]                                    # exactly what the model sent
+    assert not step["result"]["result"][0].get("error")                              # it executed normally in Chromium
+    recovery = next(e for e in trace if e["kind"] == "model_output_recovery")
+    assert recovery["original_response"] == PROSE_PLUS_CLICK and recovery["status"] == "recovered"
+    assert record["http_captures"][0]["raw_protocol_compliant"] is False
+    assert record["usage"][0]["prompt_tokens"] == 9443 and record["answer"] is None
+
+
+async def test_compat_profile_rejects_ambiguous_output_in_a_full_run(tmp_path, monkeypatch):
+    two = PROSE_PLUS_CLICK + PROSE_PLUS_CLICK[PROSE_PLUS_CLICK.index("{"):]
+    path, record, calls = await prose_run(tmp_path, monkeypatch, two, profile_id="natural-shopping-v3-compat1")
+    assert len(calls) == 1 and record["status"] == "model_output_error"
+    assert record["protocol_compliance"]["recovery_rejected"] == 1 and record["protocol_compliance"]["recovered_action_valid"] == 0
+    assert record["http_captures"][0]["recovery"]["reason"] == "multiple_objects_or_trailing_material"
+    steps = [json.loads(l) for l in (path / "trace.jsonl").read_text().splitlines()]
+    steps = [e for e in steps if e["kind"] == "step_result"]
+    assert steps and all(e["result"]["model_output"] is None for e in steps)  # no action was ever proposed to the browser

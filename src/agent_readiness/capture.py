@@ -21,6 +21,12 @@ MIN_SYSTEM_PROMPT_CHARS = 20_000
 PRICE_INPUT_PER_M, PRICE_OUTPUT_PER_M = 1.25, 4.25
 IMAGE_TOKENS_ESTIMATE = 1_430    # calibrated: 8,128 measured prompt tokens vs ~26.8k text chars + one 1280x960 PNG
 CHARS_PER_TOKEN = 4
+# The response_format schema is billed as input: the 7,915-byte full schema added ~1,300 measured prompt tokens
+# over the 1,274-byte done-only schema (≈5 bytes/token). Count it at 4 bytes/token (≈25% conservative) and add a
+# 10% margin over the whole input estimate. Calibration points (measured prompt tokens): 8,128 (done-only schema)
+# and 9,443 (full schema); both are covered by the estimator (tests).
+SCHEMA_BYTES_PER_TOKEN = 4
+INPUT_SAFETY_MARGIN = 1.10
 
 
 class FidelityViolation(RuntimeError):
@@ -82,10 +88,14 @@ def message_texts(body: dict) -> tuple[str, str, int]:
 def estimate_cost_usd(body: dict) -> dict:
     """Upper-bound cost of one request: estimated input tokens plus the full completion cap (calculated)."""
     system, user, images = message_texts(body)
-    input_tokens = round((len(system) + len(user)) / CHARS_PER_TOKEN) + images * IMAGE_TOKENS_ESTIMATE
+    schema = ((body.get("response_format") or {}).get("json_schema") or {}).get("schema")
+    schema_bytes = len(json.dumps(schema, sort_keys=True, separators=(",", ":"))) if schema is not None else 0
+    input_tokens = round(((len(system) + len(user)) / CHARS_PER_TOKEN + images * IMAGE_TOKENS_ESTIMATE
+                          + schema_bytes / SCHEMA_BYTES_PER_TOKEN) * INPUT_SAFETY_MARGIN)
     output_tokens = body.get("max_completion_tokens") or 0
     usd = input_tokens * PRICE_INPUT_PER_M / 1e6 + output_tokens * PRICE_OUTPUT_PER_M / 1e6
-    return {"input_tokens_estimate": input_tokens, "output_tokens_cap": output_tokens, "usd": round(usd, 5)}
+    return {"input_tokens_estimate": input_tokens, "output_tokens_cap": output_tokens, "schema_bytes": schema_bytes,
+            "usd": round(usd, 5)}
 
 
 def check_fidelity(body: dict, expectations: dict) -> list[str]:
@@ -237,8 +247,12 @@ class ResponseCapture:
 
     def summary(self) -> list[dict]:
         keys = ("index", "http_status", "request_id", "finish_reason", "prompt_tokens", "completion_tokens",
-                "reasoning_tokens", "elapsed_seconds", "content_analysis", "output_error")
+                "reasoning_tokens", "elapsed_seconds", "content_analysis", "output_error",
+                "raw_protocol_compliant", "recovered_action_valid")
         rows = [{k: r.get(k) for k in keys if k in r} for r in self.records]
+        for row, record in zip(rows, self.records):
+            if record.get("recovery"):
+                row["recovery"] = {k: record["recovery"].get(k) for k in ("parser", "status", "reason", "validated")}
         for row in rows:  # merge the outgoing-request facts (schema hash, narrowing flag) by index
             if row["index"] - 1 < len(self.requests):
                 row.update({k: v for k, v in self.requests[row["index"] - 1].items() if k in ("schema_sha256", "schema_narrowed")})

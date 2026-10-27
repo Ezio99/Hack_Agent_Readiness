@@ -142,7 +142,25 @@ Each attempt creates a unique ignored `runs/<timestamp>-<id>/` directory:
   *before* Browser Use parses it (raw content up to 20,000 characters, `finish_reason`, request id, usage including
   reasoning tokens, and an analysis of whether the text is JSON), plus `model_http_request` trace events (parameters,
   response-format SHA-256, message structure; no message text or credentials). This survives adapter parse errors.
-  Diagnostic runs can pass `--expect-schema-sha256 <hash>` and `--max-estimated-cost-usd <usd>`: any outgoing request whose schema, parameters, system prompt, DOM, screenshot, task prompt or cost departs from the definition (or that carries a last-step instruction) is blocked before the network (`diagnostic_fidelity_violation`). Every request records its schema hash and `schema_narrowed`. Note: with `--max-steps 1` the only step is Browser Use's *last* step, which narrows the response schema to the `done` action; it is not equivalent to step 1 of a longer run (bound cost with `--max-model-requests` instead). A 200 response that cannot become the output model ends the run as `model_output_error`
+  **Muse compatibility profile (opt-in, separate baseline).** The default strict profile (`natural-shopping-v3`) requires
+the model response to be a single JSON object from its first character. `natural-shopping-v3-compat1`
+(`readiness run --profile natural-shopping-v3-compat1 …`) is identical except that it names the versioned parser
+`muse-prose-prefix-json-v1`, used only when the strict parse fails: it accepts exactly one single-line prose sentence
+followed by exactly one complete JSON object with nothing after it, and only if that object validates against the
+unchanged `AgentOutput` schema. The normalized text is a byte-identical slice (nothing is edited, repaired or
+invented); everything else (several objects, trailing text, truncated or duplicate-key JSON, a multi-line or fenced
+prefix, braces/brackets in the prefix, schema-invalid content) is rejected and ends the step as `model_output_error`.
+Each response records raw protocol compliance and recovered-action validity separately
+(`raw_protocol_compliant`, `recovered_action_valid`, run-level `protocol_compliance`), with the original and normalized
+text in a `model_output_recovery` trace event. Results from the two profiles measure different things and must not
+be pooled; report the raw compliance rate next to task success.
+
+Terminal status: an unrecovered `model_output_error` is no longer overwritten by a later `request_limit` (the gate
+tripping afterwards is the designed stop). The diagnostic cost estimate now counts the response schema (4 bytes per
+token) and adds a 10% margin: the full-schema step-1 request is estimated at US$0.031 (measured prompt 9,443 tokens),
+so a replay needs `--max-estimated-cost-usd 0.035`.
+
+Diagnostic runs can pass `--expect-schema-sha256 <hash>` and `--max-estimated-cost-usd <usd>`: any outgoing request whose schema, parameters, system prompt, DOM, screenshot, task prompt or cost departs from the definition (or that carries a last-step instruction) is blocked before the network (`diagnostic_fidelity_violation`). Every request records its schema hash and `schema_narrowed`. Note: with `--max-steps 1` the only step is Browser Use's *last* step, which narrows the response schema to the `done` action; it is not equivalent to step 1 of a longer run (bound cost with `--max-model-requests` instead). A 200 response that cannot become the output model ends the run as `model_output_error`
   (subtypes: `malformed_json`, `null_content`, `length_without_content`, `schema_validation`), distinct from
   `infrastructure_error` (HTTP/timeouts/other) and from task outcomes. `browser_version` is recorded from the
   Chromium executable before the first model request.

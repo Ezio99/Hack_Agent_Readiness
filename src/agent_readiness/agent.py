@@ -11,7 +11,8 @@ from .capture import attach_capture
 from .recorder import Recorder
 
 PROFILE_DIR = Path(__file__).parent / "profiles"
-PROFILE_FILES = {"natural-shopping-v2": "natural-v2.json", "natural-shopping-v3": "natural-v3.json"}
+PROFILE_FILES = {"natural-shopping-v2": "natural-v2.json", "natural-shopping-v3": "natural-v3.json",
+                 "natural-shopping-v3-compat1": "natural-v3-compat1.json"}
 DEFAULT_PROFILE_ID = "natural-shopping-v3"
 # Documented Meta levels; "none" returns HTTP 400 on Muse Spark. "xhigh"/"max" are excluded by this project.
 REASONING_EFFORTS = ("minimal", "low", "medium", "high")
@@ -23,6 +24,12 @@ def profile(profile_id: str | None = None):
     if name is None:
         raise ValueError(f"Unknown profile: {profile_id}")
     return json.loads((PROFILE_DIR / name).read_text())
+
+
+def validate_output_parser(effective: dict):
+    from .compat import SUPPORTED_PARSERS
+    if "output_parser" in effective and effective["output_parser"] not in SUPPORTED_PARSERS:
+        raise ValueError(f"output_parser must be one of {', '.join(SUPPORTED_PARSERS)}")
 
 
 def validate_reasoning_effort(effective: dict):
@@ -58,6 +65,7 @@ def create_model(config: ModelConfig, effective: dict, *, http_client=None, api_
     if endpoint.scheme not in {"http", "https"} or not endpoint.hostname or endpoint.username or endpoint.password or endpoint.query or endpoint.fragment:
         raise ValueError("Model endpoint must not contain credentials, query parameters or fragments")
     validate_reasoning_effort(effective)
+    validate_output_parser(effective)
     prepare_browser_environment()
     from browser_use import ChatOpenAI
     options = {}
@@ -81,6 +89,7 @@ class ModelCallError(RuntimeError):
 
 class RecordingModel:
     def __init__(self, inner, recorder: Recorder, effective: dict, capture=None):
+        self.parser = effective.get("output_parser")
         self.inner = inner
         self.capture = capture
         self.output_errors = []
@@ -109,12 +118,13 @@ class RecordingModel:
     def model_name(self):
         return self.model
 
-    def _classify_captured_responses(self, output_format):
+    def _classify_captured_responses(self, output_format, records=None):
         """After an adapter exception: use the response captured before parsing, if any."""
         from .capture import classify_output
-        for record in (self.capture.take() if self.capture else []):
+        for record in (records if records is not None else (self.capture.take() if self.capture else [])):
             outcome = classify_output(record, output_format)
             record["output_error"] = outcome
+            record["raw_protocol_compliant"] = False if record.get("http_status") == 200 else None
             usage = record.get("usage")
             if usage:  # the adapter discarded this usage when it raised
                 self.usages.append({**usage, "source": "http_capture_after_error"})
@@ -123,6 +133,48 @@ class RecordingModel:
                 self.output_errors.append({"request_count": self.request_count, **outcome})
                 self.recorder.event("model_output_error", request_count=self.request_count, **outcome)
             self.recorder.write(f"model-response-{record['index']:02d}.json", record)
+
+    def _try_recover(self, records, output_format):
+        """Opt-in compatibility parser; returns a completion built from the validated slice, or None.
+
+        Raw protocol compliance and recovered-action validity are tracked separately on each record."""
+        from browser_use.llm.views import ChatInvokeCompletion, ChatInvokeUsage
+        from . import compat
+        if len(records) != 1 or output_format is None:
+            return None
+        record = records[0]
+        if record.get("http_status") != 200 or "content" not in record or record.get("content_truncated"):
+            return None
+        recovery = compat.recover(record["content"], output_format)
+        if recovery["status"] == "not_needed":
+            # Strict JSON that the adapter nevertheless rejected (schema-invalid): nothing to recover, and the
+            # raw response did not meet the contract.
+            record["raw_protocol_compliant"] = False
+            record["recovery"] = {"parser": recovery["parser"], "status": "not_applicable",
+                                  "reason": "strict_json_failed_validation", "validated": False}
+            record["recovered_action_valid"] = None
+            self.recorder.write(f"model-response-{record['index']:02d}.json", record)
+            return None
+        record["raw_protocol_compliant"] = recovery["raw_protocol_compliant"]
+        record["recovery"] = {k: v for k, v in recovery.items() if k != "normalized"}
+        record["recovered_action_valid"] = recovery["validated"] if recovery["status"] != "not_needed" else None
+        record["normalized_content"] = recovery["normalized"]
+        self.recorder.event("model_output_recovery", request_count=self.request_count,
+                            file=f"model-response-{record['index']:02d}.json",
+                            original_response=record["content"], normalized_response=recovery["normalized"],
+                            **{k: v for k, v in recovery.items() if k != "normalized"})
+        self.recorder.write(f"model-response-{record['index']:02d}.json", record)
+        if recovery["status"] != "recovered":
+            return None
+        usage = record.get("usage") or {}
+        cached = (usage.get("prompt_tokens_details") or {}).get("cached_tokens")
+        return ChatInvokeCompletion(
+            completion=output_format.model_validate_json(recovery["normalized"]),
+            usage=ChatInvokeUsage(prompt_tokens=usage.get("prompt_tokens") or 0, prompt_cached_tokens=cached,
+                                  prompt_cache_creation_tokens=None, prompt_image_tokens=None,
+                                  completion_tokens=usage.get("completion_tokens") or 0,
+                                  total_tokens=usage.get("total_tokens") or 0) if usage else None,
+            stop_reason=record.get("finish_reason"))
 
     async def ainvoke(self, messages, output_format=None, **kwargs):
         if self.request_count >= self.max_requests:
@@ -134,24 +186,41 @@ class RecordingModel:
                             output_schema=output_format.model_json_schema() if output_format else None)
         try:
             result = await self.inner.ainvoke(messages, output_format=output_format, **kwargs)
+            compliant = True
         except Exception as exc:
-            self.last_error = type(exc).__name__
-            self.last_error_class = "infrastructure_error"
-            if self.capture and self.capture.violations:
-                self.last_error_class = "diagnostic_fidelity_violation"
-            self._classify_captured_responses(output_format)
-            message = self.recorder.clean(str(exc))
-            self.recorder.event("model_error", error_type=type(exc).__name__, error=message,
-                                error_class=self.last_error_class)
-            raise ModelCallError(message) from None
+            fresh = self.capture.take() if self.capture else []
+            violated = bool(self.capture and self.capture.violations)
+            result = self._try_recover(fresh, output_format) if (self.parser and not violated) else None
+            if result is None:
+                self.last_error = type(exc).__name__
+                self.last_error_class = "diagnostic_fidelity_violation" if violated else "infrastructure_error"
+                self._classify_captured_responses(output_format, fresh)
+                message = self.recorder.clean(str(exc))
+                self.recorder.event("model_error", error_type=type(exc).__name__, error=message,
+                                    error_class=self.last_error_class)
+                raise ModelCallError(message) from None
+            compliant = False  # recovered: the raw response broke the protocol; the recovered action validated
         if self.capture:
-            self.capture.take()  # keep the per-invocation pointer aligned on success
+            for record in self.capture.take():  # success path: not yet claimed
+                record["raw_protocol_compliant"] = True
+                self.recorder.write(f"model-response-{record['index']:02d}.json", record)
+        self.last_error_class = None  # the terminal state is decided by the latest invocation
         usage = result.usage.model_dump(mode="json") if result.usage else None
         if usage:
             self.usages.append(usage)
-        self.recorder.event("model_response", completion=result.completion,
-                            usage=usage, stop_reason=result.stop_reason)
+        self.recorder.event("model_response", completion=result.completion, usage=usage,
+                            stop_reason=result.stop_reason, raw_protocol_compliant=compliant)
         return result
+
+    def protocol_compliance(self):
+        """Raw-contract compliance and recovered-action validity, tracked separately (HTTP 200 responses)."""
+        records = [r for r in (self.capture.records if self.capture else []) if r.get("http_status") == 200]
+        return {"parser": self.parser, "http_200_responses": len(records),
+                "raw_protocol_compliant": sum(1 for r in records if r.get("raw_protocol_compliant") is True),
+                "raw_protocol_noncompliant": sum(1 for r in records if r.get("raw_protocol_compliant") is False),
+                "recovery_attempted": sum(1 for r in records if r.get("recovery")),
+                "recovered_action_valid": sum(1 for r in records if r.get("recovered_action_valid") is True),
+                "recovery_rejected": sum(1 for r in records if (r.get("recovery") or {}).get("status") == "rejected")}
 
 
 def classify_outcome(wrapped, done: bool, steps: int, max_steps: int):
@@ -159,15 +228,14 @@ def classify_outcome(wrapped, done: bool, steps: int, max_steps: int):
     if getattr(wrapped, "capture", None) and wrapped.capture.violations:
         # A diagnostic request was blocked before the network; later retries hitting the gate must not mask it.
         return "diagnostic_fidelity_violation", "request blocked before the network"
-    if wrapped.limit_reached:
-        return "request_limit", "model_request_limit"
     if done:
         return "completed", "agent_done"
-    if wrapped.last_error:
-        if wrapped.last_error_class == "diagnostic_fidelity_violation":
-            return "diagnostic_fidelity_violation", "request blocked before the network"
-        if wrapped.last_error_class == "model_output_error":
-            return "model_output_error", f"model_output_error:{wrapped.output_errors[-1]['subtype']}"
+    if wrapped.last_error_class == "model_output_error":
+        # The unrecovered output error is the cause; a later gate trip is only the designed stop.
+        return "model_output_error", f"model_output_error:{wrapped.output_errors[-1]['subtype']}"
+    if wrapped.limit_reached:
+        return "request_limit", "model_request_limit"
+    if wrapped.last_error_class == "infrastructure_error":
         return "infrastructure_error", wrapped.last_error
     status = "step_limit" if steps >= max_steps else "agent_failure"
     return status, status
@@ -253,6 +321,7 @@ async def attempt(task: PublicTask, url: str, llm, recorder: Recorder, effective
                         steps=len(history.history), action_count=sum(len(h.result) for h in history.history),
                         usage=wrapped.usages or None, model_request_count=wrapped.request_count, errors=[e for e in history.errors() if e],
                         http_captures=capture.summary() if capture else None,
+                        protocol_compliance=wrapped.protocol_compliance(),
                         fidelity_violations=(capture.violations or None) if capture else None,
                         schema_narrowing_detected=any(r.get("schema_narrowed") for r in capture.requests) if capture else None,
                         model_output_errors=wrapped.output_errors or None)

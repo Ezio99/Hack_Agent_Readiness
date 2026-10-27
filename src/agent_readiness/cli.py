@@ -28,6 +28,10 @@ def main():
         cmd.add_argument("--available", choices=["true", "false"])
         if name == "evaluate":
             cmd.add_argument("answer", type=Path)
+        if name == "run":
+            from .agent import PROFILE_FILES, DEFAULT_PROFILE_ID
+            cmd.add_argument("--profile", choices=sorted(PROFILE_FILES), default=DEFAULT_PROFILE_ID,
+                             help="Frozen reference profile (default keeps the strict output contract)")
         if name in {"smoke", "run"}:
             cmd.add_argument("--url", help="Existing loopback storefront; otherwise start an ephemeral server")
             cmd.add_argument("--output", type=Path, default=Path("runs"))
@@ -69,6 +73,7 @@ def main():
             seed=args.seed, kind=args.kind, available=available, url=args.url, output=args.output,
             max_steps=args.max_steps, timeout_seconds=args.timeout, max_model_requests=args.max_model_requests, model_config=config,
             allow_model_calls=getattr(args, "allow_model_calls", False),
+            profile_id=getattr(args, "profile", None),
             expect_schema_sha256=getattr(args, "expect_schema_sha256", None),
             max_estimated_cost_usd=getattr(args, "max_estimated_cost_usd", None)))
         print(json.dumps({"artifact_path": str(path), "status": record["status"],

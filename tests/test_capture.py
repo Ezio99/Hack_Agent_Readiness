@@ -180,7 +180,8 @@ async def test_request_gate_stays_effective_when_parsing_raises(tmp_path):
     with pytest.raises(ModelRequestLimitReached):
         await wrapped.ainvoke([UserMessage(content="again")], output_format=output_model)
     assert len(calls) == 1 and wrapped.limit_reached and len(capture.records) == 1
-    assert classify_outcome(wrapped, False, 1, 1)[0] == "request_limit"
+    # the unrecovered output error is the cause; the gate trip afterwards is only the designed stop
+    assert classify_outcome(wrapped, False, 1, 1)[0] == "model_output_error"
 
 
 # ---- schema-fidelity regression (diagnostic experiments) ----------------------------------------------------
@@ -197,7 +198,7 @@ def faithful_body():
 
 
 EXPECT = {"schema_sha256": "c80ef8b813abef0b2afd79c83a6f31e857c0101ea8730952ee78d61e65f9a194", "task_prompt": "TASK-PROMPT",
-          "max_estimated_cost_usd": 0.03,
+          "max_estimated_cost_usd": 0.035,
           "parameters": {"model": "muse-spark-1.3", "reasoning_effort": "low", "max_completion_tokens": 4096}}
 
 
@@ -208,12 +209,35 @@ def test_reference_full_schema_hash_is_pinned_to_the_live_agent_schema():
     assert _schema_digest(build_agent_output_schema()[0])[0] == FULL_AGENT_SCHEMA_SHA256  # dependency/tool drift fails here
 
 
-def test_faithful_request_has_no_violations_and_costs_under_three_cents():
+def test_faithful_request_has_no_violations_and_a_conservative_estimate():
     from agent_readiness.capture import check_fidelity, estimate_cost_usd
     body = faithful_body()
     assert check_fidelity(body, EXPECT) == []
     estimate = estimate_cost_usd(body)
-    assert estimate["output_tokens_cap"] == 4096 and 0.015 < estimate["usd"] < 0.03
+    assert estimate["output_tokens_cap"] == 4096 and estimate["schema_bytes"] == 7915 and 0.025 < estimate["usd"] < 0.035
+
+
+def _sized_body(system_chars, user_chars, schema_bytes):
+    """A request with the measured sizes of a live request (text lengths, one screenshot, schema bytes)."""
+    import json as _json
+    filler = {"x": ""}
+    overhead = len(_json.dumps({"x": ""}, sort_keys=True, separators=(",", ":")))
+    filler["x"] = "s" * (schema_bytes - overhead)
+    return {"max_completion_tokens": 4096,
+            "response_format": {"type": "json_schema", "json_schema": {"name": "agent_output", "strict": True, "schema": filler}},
+            "messages": [{"role": "system", "content": "s" * system_chars},
+                         {"role": "user", "content": [{"type": "text", "text": "u" * user_chars},
+                                                      {"type": "image_url", "image_url": {"url": "data:image/png;base64,AAAA"}}]}]}
+
+
+@pytest.mark.parametrize("name,system,user,schema,measured", [
+    ("done-only schema (last-step replay)", 23_590, 3_249, 1_274, 8_128),
+    ("full schema (Stage D replay)", 23_590, 3_252, 7_915, 9_443)])
+def test_cost_estimator_covers_both_measured_requests_with_a_bounded_margin(name, system, user, schema, measured):
+    from agent_readiness.capture import estimate_cost_usd
+    estimate = estimate_cost_usd(_sized_body(system, user, schema))
+    assert estimate["schema_bytes"] == schema
+    assert measured <= estimate["input_tokens_estimate"] <= measured * 1.35, (name, estimate)  # conservative, not absurd
 
 
 def mutate(body, change):
@@ -240,3 +264,125 @@ def test_each_departure_from_the_experiment_definition_is_detected(change, fragm
     from agent_readiness.capture import check_fidelity
     problems = check_fidelity(mutate(faithful_body(), change), EXPECT)
     assert any(fragment in p for p in problems), problems
+
+
+# ---- opt-in Muse compatibility parser, integrated ----------------------------------------------------------------
+
+from tests.test_compat_parser import CAPTURED, OBJECT, PREFIX  # noqa: E402  (the captured Stage D pattern)
+
+COMPAT = {"output_parser": "muse-prose-prefix-json-v1"}
+
+
+async def invoke_with(tmp_path, handler, effective_extra=None, **kw):
+    """Like invoke(), but the RecordingModel is built from an effective profile with extra settings."""
+    from agent_readiness.probe import build_agent_output_schema
+    from browser_use.llm.messages import UserMessage
+    prepare_browser_environment()
+    _, output_model = build_agent_output_schema()
+    model = create_model(ModelConfig(), profile(), api_key=KEY)
+    calls = []
+    def counted(request):
+        calls.append(request)
+        return handler(request)
+    model.http_client = DefaultAsyncHttpxClient(transport=httpx.MockTransport(counted))
+    recorder = Recorder(tmp_path, (KEY,))
+    capture = attach_capture(model, recorder)
+    wrapped = RecordingModel(model, recorder, {**profile(), **(effective_extra or {})}, capture=capture)
+    sdk = model.get_client()
+    sdk._platform = "Linux"
+    model.get_client = lambda: sdk
+    try:
+        result, error = await wrapped.ainvoke([UserMessage(content="hello")], output_format=output_model), None
+    except ModelCallError as exc:
+        result, error = None, exc
+    return wrapped, capture, recorder, result, error, calls
+
+
+async def test_compat_profile_recovers_the_captured_pattern_with_one_call_and_full_provenance(tmp_path):
+    wrapped, capture, recorder, result, error, calls = await invoke_with(tmp_path, lambda r: chat(CAPTURED), COMPAT)
+    assert error is None and len(calls) == 1 and wrapped.request_count == 1          # no extra request
+    assert result.completion.action[0].model_dump(exclude_none=True) == {"click": {"index": 174}}
+    assert result.stop_reason == "stop" and result.usage.prompt_tokens == 8000 and result.usage.completion_tokens == 900
+    record = capture.records[0]
+    assert record["raw_protocol_compliant"] is False and record["recovered_action_valid"] is True
+    assert record["recovery"]["status"] == "recovered" and record["recovery"]["parser"] == "muse-prose-prefix-json-v1"
+    saved = json.loads((recorder.path / "model-response-01.json").read_text())
+    assert saved["content"] == CAPTURED and saved["normalized_content"] == OBJECT   # original and normalized preserved
+    events = trace(recorder)
+    kinds = [e["kind"] for e in events]
+    assert "model_output_error" not in kinds and "model_error" not in kinds
+    recovery_event = next(e for e in events if e["kind"] == "model_output_recovery")
+    assert recovery_event["original_response"] == CAPTURED and recovery_event["normalized_response"] == OBJECT
+    assert recovery_event["status"] == "recovered" and recovery_event["validated"] is True
+    assert kinds.index("model_http_response") < kinds.index("model_output_recovery") < kinds.index("model_response")
+    assert next(e for e in events if e["kind"] == "model_response")["raw_protocol_compliant"] is False
+    assert len(wrapped.usages) == 1 and wrapped.last_error_class is None and wrapped.output_errors == []
+    assert wrapped.protocol_compliance() == {"parser": "muse-prose-prefix-json-v1", "http_200_responses": 1,
+        "raw_protocol_compliant": 0, "raw_protocol_noncompliant": 1, "recovery_attempted": 1,
+        "recovered_action_valid": 1, "recovery_rejected": 0}
+    assert classify_outcome(wrapped, True, 1, 1)[0] == "completed"  # a recovered step does not mark the run failed
+
+
+async def test_strict_profile_is_unchanged_and_still_fails_the_same_response(tmp_path):
+    wrapped, capture, recorder, result, error, calls = await invoke_with(tmp_path, lambda r: chat(CAPTURED))
+    assert result is None and error is not None and len(calls) == 1
+    assert wrapped.output_errors[0]["subtype"] == "malformed_json"
+    assert capture.records[0]["raw_protocol_compliant"] is False and "recovery" not in capture.records[0]
+    assert wrapped.protocol_compliance()["parser"] is None and wrapped.protocol_compliance()["recovery_attempted"] == 0
+    assert classify_outcome(wrapped, False, 5, 5) == ("model_output_error", "model_output_error:malformed_json")
+
+
+@pytest.mark.parametrize("content,reason", [
+    (PREFIX + OBJECT + OBJECT, "multiple_objects_or_trailing_material"),
+    (PREFIX + OBJECT + " trailing prose", "trailing_material"),
+    (PREFIX + OBJECT[:-1], "incomplete_or_invalid_json"),
+    (PREFIX + json.dumps({"action": "click 174"}), "schema_invalid"),
+    ("```json\n" + OBJECT + "\n```", "multi_line_prefix"),
+    (PREFIX, "no_json_object")])
+async def test_compat_profile_rejects_adversarial_responses_without_repair_or_retry(tmp_path, content, reason):
+    wrapped, capture, recorder, result, error, calls = await invoke_with(tmp_path, lambda r: chat(content), COMPAT)
+    assert result is None and error is not None and len(calls) == 1                    # no retry, no repair request
+    record = capture.records[0]
+    assert record["recovery"]["status"] == "rejected" and record["recovery"]["reason"] == reason
+    assert record["raw_protocol_compliant"] is False and record["recovered_action_valid"] is False
+    assert wrapped.last_error_class == "model_output_error" and wrapped.output_errors
+    assert wrapped.protocol_compliance()["recovered_action_valid"] == 0 and wrapped.protocol_compliance()["recovery_rejected"] == 1
+    assert classify_outcome(wrapped, False, 5, 5)[0] == "model_output_error"
+    assert "normalized_content" in record and record["normalized_content"] is None  # nothing offered for use
+
+
+async def test_compat_profile_leaves_strict_valid_json_alone_and_counts_it_as_compliant(tmp_path):
+    wrapped, capture, recorder, result, error, calls = await invoke_with(tmp_path, lambda r: chat(good_output()), COMPAT)
+    assert error is None and capture.records[0]["raw_protocol_compliant"] is True
+    assert wrapped.protocol_compliance()["raw_protocol_compliant"] == 1 and wrapped.protocol_compliance()["recovery_attempted"] == 0
+    assert "model_output_recovery" not in [e["kind"] for e in trace(recorder)]
+
+
+@pytest.mark.parametrize("response,subtype", [
+    (lambda r: chat(None, "length"), "length_without_content"),
+    (lambda r: chat(json.dumps({"action": "wrong"})), "schema_validation")])
+async def test_compat_profile_does_not_recover_null_or_schema_invalid_strict_json(tmp_path, response, subtype):
+    wrapped, capture, _, result, error, calls = await invoke_with(tmp_path, response, COMPAT)
+    assert result is None and error is not None and len(calls) == 1
+    assert wrapped.output_errors[0]["subtype"] == subtype and capture.records[0]["raw_protocol_compliant"] is False
+    assert wrapped.protocol_compliance()["recovered_action_valid"] == 0
+
+
+async def test_recovery_trace_is_sanitized(tmp_path):
+    content = PREFIX.replace("details", f"details ({KEY})") + OBJECT
+    wrapped, capture, recorder, result, error, _ = await invoke_with(tmp_path, lambda r: chat(content), COMPAT)
+    assert error is None
+    blob = "".join(p.read_text() for p in recorder.path.glob("*.json*"))
+    assert KEY not in blob and "[REDACTED]" in blob
+
+
+async def test_gate_still_blocks_after_a_recovered_response(tmp_path):
+    from agent_readiness.agent import ModelRequestLimitReached
+    from agent_readiness.probe import build_agent_output_schema
+    from browser_use.llm.messages import UserMessage
+    wrapped, capture, recorder, result, error, calls = await invoke_with(tmp_path, lambda r: chat(CAPTURED),
+                                                                         {**COMPAT, "max_model_requests": 1})
+    assert error is None and len(calls) == 1
+    with pytest.raises(ModelRequestLimitReached):
+        await wrapped.ainvoke([UserMessage(content="again")], output_format=build_agent_output_schema()[1])
+    assert len(calls) == 1 and wrapped.limit_reached
