@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Field & Home — Synthetic Shop{% endblock %}</title>
+<style>
+body {font: 17px/1.6 system-ui,sans-serif; color:#18332b; background:#f5f4ef; margin:0}
+header,main,footer {max-width:1100px; margin:auto; padding:24px}
+header {border-bottom:1px solid #b9c9bf} a {color:#125a47} a:focus-visible,input:focus,select:focus,button:focus {outline:3px solid #a14300;outline-offset:3px}
+nav a {font-size:1.35rem;font-weight:bold} h1 {line-height:1.2}
+form {display:flex; flex-wrap:wrap; gap:16px; padding:20px; background:#e4ebe3; border-radius:8px}
+label {display:block;font-weight:600} input,select,button {font:inherit;padding:9px;max-width:100%;box-sizing:border-box}
+button {background:#125a47;color:white;border:0;border-radius:4px;cursor:pointer}
+.grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
+article {background:white;border:1px solid #bdcbc1;border-radius:8px;padding:20px}
+article h2 {margin:0} .price {font-size:1.2rem;font-weight:700} dt {font-weight:700} dd {margin:0 0 16px}
+.skip {position:absolute;left:-10000px} .skip:focus {left:16px;top:8px;background:white;padding:8px}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to products</a>
+<header><nav aria-label="Main"><a href="/">Field & Home</a></nav><p>A synthetic shop for browsing experiments · All prices in AUD</p></header>
+<main id="main">{% block content %}{% endblock %}</main>
+<footer>Synthetic catalogue. No checkout or payments.</footer>
+</body></html>

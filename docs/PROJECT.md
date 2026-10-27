@@ -1,5 +1,9 @@
 # Agent Readiness
 
+> **Historical context:** The 2026-10-26 prototype checkpoints below refer to
+> `Ezio99/Agent_Readiness`, not this fresh hackathon implementation. Current
+> evidence and limitations are in [STATUS.md](../STATUS.md).
+
 > **Implementation checkpoint — 2026-10-26:** The first local loop is implemented
 > and Task 001's live acceptance is verified: discovery, both availability cases,
 > and a repeated discovery. See [current status](../STATUS.md),
