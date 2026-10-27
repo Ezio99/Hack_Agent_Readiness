@@ -1,5 +1,7 @@
 # Report 004 — Meta compatibility validation and first live trial
 
+> **Latest outcome (2026-10-28 handoff):** Stages A–C passed; strict Stage D failed. A full-schema diagnostic reproduced prose-prefix + schema-valid JSON. The opt-in `natural-shopping-v3-compat1` one-request live validation recovered and executed a click to the product detail page, then stopped at the request gate; evaluator did not record task success. Four of four observed full-schema first-step outputs had a prose prefix. The historical opening summary and dated sections below describe intermediate states; consult the latest live-compat section and `STATUS.md` before proposing new work. No further paid calls are authorized.
+
 **Status: Stage A executed three times, Stages B, C and D once each, plus two diagnostic replays, all under separate authorizations (2026-10-27). Stage D FAILED (model output not parseable); no retry was made. The first replay (`--max-steps 1`) was not faithful; the second (full-schema, `--max-steps 5 --max-model-requests 1`) **reproduced the Stage D failure mode** (prose followed by a valid JSON object).** Specification: [Task 004](../tasks/004-first-live-meta-trial.md) (proposed, unapproved).
 Ten authorized authenticated requests (Stage A attempts 1–3, Stage B once, Stage C once, Stage D two requests within one run, diagnostic replay 1, full-schema replay 2, compat-profile validation 1) were made; no other paid call or live agent trial has been made.
 
