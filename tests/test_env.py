@@ -112,26 +112,33 @@ async def test_runner_hides_key_during_smoke_too(tmp_path, monkeypatch):
 
 
 def test_scrub_keeps_lazy_load_dotenv_imports_from_restoring_the_key(tmp_path):
-    """Replicates Browser Use: a module calling load_dotenv() at import finds a .env above its own directory."""
+    """Replicates Browser Use: a module calling load_dotenv() at import finds a .env above its own directory.
+
+    Runs a script file (so python-dotenv uses the importing module's directory, as in a real run, instead of the
+    cwd fallback it uses for ``-c``) from an empty cwd so the repository's real .env can never be read.
+    """
     (tmp_path / ".env").write_text("META_MODEL_API_KEY=file-value\n")
     pkg = tmp_path / "venv" / "site"
     pkg.mkdir(parents=True)
     (pkg / "lazy_mod.py").write_text("from dotenv import load_dotenv\nload_dotenv()\n")
     (pkg / "lazy_mod2.py").write_text("from dotenv import load_dotenv\nload_dotenv()\n")
-    code = (
+    empty_cwd = tmp_path / "empty_cwd"
+    empty_cwd.mkdir()
+    script = tmp_path / "run.py"
+    script.write_text(
         "import os, sys\n"
         f"sys.path.insert(0, {str(pkg)!r})\n"
         "from agent_readiness.env import scrubbed_environment\n"
         "os.environ.pop('META_MODEL_API_KEY', None)\n"
         "import lazy_mod2  # control: outside the scrub the .env IS loaded\n"
-        "control = 'META_MODEL_API_KEY' in os.environ\n"
+        "control = os.environ.get('META_MODEL_API_KEY') == 'file-value'\n"
         "os.environ['META_MODEL_API_KEY'] = 'process-value'\n"
         "with scrubbed_environment('META_MODEL_API_KEY'):\n"
         "    import lazy_mod\n"
         "    inside = 'META_MODEL_API_KEY' in os.environ\n"
         "import dotenv\n"
         "print(control, inside, os.environ['META_MODEL_API_KEY'], dotenv.load_dotenv.__name__)\n")
-    out = subprocess.run([sys.executable, "-I", "-c", code], capture_output=True, text=True,
-                         env={"PYTHONPATH": str(env.REPO_ROOT / "src"), "PATH": os.environ.get("PATH", "")})
+    out = subprocess.run([sys.executable, "-I", str(script)], capture_output=True, text=True, cwd=empty_cwd,
+                         env={"PATH": os.environ.get("PATH", "")})
     assert out.returncode == 0, out.stderr
     assert out.stdout.split() == ["True", "False", "process-value", "load_dotenv"]
