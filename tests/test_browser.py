@@ -28,3 +28,17 @@ async def test_real_browser_smoke_and_information_boundary(tmp_path, kind, avail
     trace = [json.loads(line) for line in (path / "trace.jsonl").read_text().splitlines()]
     assert len([e for e in trace if e["kind"] == "observation"]) == 3
     assert record["action_count"] >= 4 and record["usage"] is None
+
+
+async def test_smoke_applies_viewport_and_stops_at_overridden_step_limit(tmp_path):
+    from PIL import Image
+    viewport = {"width": 960, "height": 720}
+    path, record = await run(output=tmp_path, max_steps=1, profile_overrides={"viewport": viewport})
+    assert record["status"] == "step_limit" and record["steps"] == 1
+    assert record["profile"]["viewport"] == viewport and record["limits"]["max_steps"] == 1
+    assert record["model_request_count"] == 0
+    observation = json.loads((path / "initial-listing.json").read_text())
+    assert_no_leaks(json.dumps(observation))
+    with Image.open(path / observation["agent_screenshot"]) as screenshot:
+        assert screenshot.size == (960, 720)
+    assert not (path / "filtered-listing.json").exists() and not (path / "detail.json").exists()

@@ -56,3 +56,12 @@ the original checkout. Approval-reviewed execution resolved the Git/socket block
 all 26 tests pass locally and on CI, and CLI smoke passes independent evaluation.
 No paid calls were made. Live-model validation remains pending; no historical acceptance
 checklist is claimed complete.
+
+## Approved PR #1 review changes — 2026-10-27
+
+The user approved the foundation subject to propagating one effective configuration,
+enforcing a pre-request model-call cap, recording actual request attempts and
+limits, strengthening credential redaction and verifying all offline/browser/CI
+checks. The sole reference profile advances to v2 with conservative defaults; this
+is not an additional benchmark variant. No live/paid trials or PR merge are
+authorized. Preserve the existing branch and submit the revised PR for review.

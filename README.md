@@ -8,13 +8,12 @@ filters and accessible detail pages. Listings show names, brands, categories,
 prices and opaque links. Product IDs and stock availability appear on details
 only. There is no checkout, account system, dashboard or composite score.
 
-**Validation:** all **26 tests pass**, including the three real-browser cases.
-The credential-free CLI smoke navigates to a detail page and passes independent
-evaluation. In this development environment those checks require approval-reviewed
-execution outside the restricted sandbox. [Credential-free CI passed](https://github.com/Ezio99/Hack_Agent_Readiness/actions/runs/40426022852),
-including all browser checks and CLI smoke.
-No live model trial has been performed. See [STATUS](STATUS.md) and the
-[fresh task](collaboration/tasks/003-hackathon-first-agent-run.md).
+**PR review revision:** the local full suite passes **57 tests**, including four
+real-browser cases. Standalone boundary checks and credential-free CLI smoke also
+pass. GitHub Actions for this revision is pending; previous CI evidence is retained
+in the report. No authenticated or paid model trial has been performed. See
+[STATUS](STATUS.md), [PR #1](https://github.com/Ezio99/Hack_Agent_Readiness/pull/1),
+and the [fresh task](collaboration/tasks/003-hackathon-first-agent-run.md).
 
 ## Install
 
@@ -61,14 +60,38 @@ API credentials, preserving credential-free artifacts even on failures.
 
 ## Reference agent and model configuration
 
-The single versioned `natural-shopping-v1` profile uses **DOM + screenshots**,
-a 1280×960 viewport, at most 30 agent steps, three actions per step, a 180-second
-wall-clock budget and 4096 completion tokens per model response. Cleanup may take
-up to another 15 seconds. The model's sampling defaults are retained and recorded. Chromium sandboxing is
-explicitly disabled for this isolated loopback benchmark, matching the verified
-local-container launch flags instead of relying on environment-dependent defaults.
-Limit overrides are recorded in the effective configuration and its hash; do not
-mix configurations within an experiment. Fresh sessions are created per trial.
+The single versioned `natural-shopping-v2` profile uses **DOM + screenshots**,
+a 1280×960 viewport, at most **10 agent steps, 120 seconds and 10 model request
+attempts**, with three actions per step and 2,048 completion tokens per response.
+The model request timeout is 30 seconds and the agent step timeout is 60 seconds.
+Cleanup may take up to another 15 seconds. Provider sampling defaults are retained;
+SDK retries, extra failure-finalization calls, cloud sync and model judging are off.
+Chromium sandboxing is explicitly disabled for this isolated loopback benchmark.
+
+The runner loads one profile snapshot and passes that effective dictionary through
+model setup, browser setup, agent execution and scripted smoke. CLI overrides
+`--max-steps`, `--timeout` and `--max-model-requests` are resolved once and recorded.
+The Python runner also accepts `profile_overrides` for settings such as viewport,
+instructions, actions per step and completion-token cap; explicit limit arguments
+win over those overrides. There is one reference profile, with no new site variants.
+
+Artifacts retain the effective profile and `profile_hash`, plus a
+`configuration_hash` covering the redacted profile/model/wire-parameter snapshot.
+Limit changes produce distinct configurations; freeze one configuration within an
+experiment. Profile v2 supersedes v1 for future runs; old run artifacts are kept.
+
+Every model-adapter invocation consumes one request attempt, including failed or
+cancelled invocations and framework retries. The guard blocks attempt N+1 before
+calling the provider adapter. `model_request_count` and the configured limits are
+saved even on errors, request exhaustion and timeouts. Scripted smoke makes zero
+model requests; its step limit counts observation stages. Fresh sessions and
+request counters are created for every run.
+
+**These controls are not a monetary ceiling.** Prompt size, provider pricing,
+provider-side behavior and unavailable usage reporting can affect charges, and
+failed/cancelled requests may still be billed. Reported usage is retained without
+inventing a cost estimate. Separate approval of model, provider, limits and possible
+API expenditure remains necessary before any authenticated or paid trial.
 
 Meta's official protocol and the Browser Use adapter have been checked offline;
 **authenticated Meta support is not yet verified**. Read
@@ -81,7 +104,8 @@ and run the following candidate configuration. The command can incur charges:
 # Set MODEL_API_KEY outside repository files; never commit credentials.
 readiness run --provider meta --model muse-spark-1.3 \
   --base-url https://api.meta.ai/v1 --key-env MODEL_API_KEY \
-  --kind discovery --seed 0 --allow-model-calls
+  --kind discovery --seed 0 --max-steps 5 --timeout 60 \
+  --max-model-requests 5 --allow-model-calls
 ```
 
 `--provider openai-compatible`, `--model`, `--base-url` and `--key-env` configure
@@ -108,7 +132,8 @@ constraints independently of the agent's own success claim or chosen UI path.
 Each attempt creates a unique ignored `runs/<timestamp>-<id>/` directory:
 
 - `run.json`: public task, generation parameters, inventory/code/profile hashes,
-  versions, model/provider/endpoint, execution status, final answer and evaluation.
+  versions, model/provider/endpoint, configured limits, actual model request count,
+  execution status, final answer and evaluation.
 - `trace.jsonl`: timestamped observations, model messages/responses, proposed
   actions, executed step results, navigation, reported usage and errors.
 - PNG screenshots, framework history for agent trials, and `summary.md`.
@@ -120,8 +145,18 @@ entries (including completion); startup navigation is recorded separately. Smoke
 counts scripted browser operations. These counts are not interchangeable.
 Timeouts and failures retain partial evidence. Generated private truth, credentials
 and run data are never served or committed. Run files can contain model/page text;
-keep them local and review them before sharing. API keys used by the adapter are
-redacted from saved text and configuration.
+keep them local. **Inspect all raw artifacts before publication**, including
+screenshots, model messages and page content. Text redaction removes the configured
+API credential (including common URL/JSON encodings), sensitive header/key fields,
+recognizable authorization strings and URL credentials. Provider errors are cleaned
+before reaching framework history/logging. Model endpoints cannot embed credentials
+or query parameters. JSON, JSONL and the readable summary use the same redactor.
+
+Useful observations and PNG screenshots are retained. This is not a general PII
+filter or an image/OCR redactor: screenshots and arbitrary page/model content may
+still contain private information unrelated to the configured credential. Browser
+tools never receive the model API key. Never publish raw artifacts automatically
+or treat redaction tests as a blanket guarantee that arbitrary artifacts are safe.
 
 ## Architecture and provenance
 

@@ -2,17 +2,17 @@
 import asyncio
 from decimal import Decimal
 import re
-from .agent import browser_options, prepare_browser_environment, profile
+from .agent import browser_options, prepare_browser_environment
 from .contracts import PublicTask
 from .recorder import Recorder
 
 
-async def smoke(task: PublicTask, url: str, recorder: Recorder):
+async def smoke(task: PublicTask, url: str, recorder: Recorder, effective: dict):
     prepare_browser_environment()
     from browser_use import Browser
     from playwright.async_api import async_playwright
     async with async_playwright() as pw:
-        session = Browser(**browser_options(url, pw.chromium.executable_path))
+        session = Browser(**browser_options(url, pw.chromium.executable_path, effective))
         actions = 0
         steps = 0
         try:
@@ -21,7 +21,7 @@ async def smoke(task: PublicTask, url: str, recorder: Recorder):
             recorder.event("browser_version", version=connection.version)
             context = connection.contexts[0]
             page = context.pages[0] if context.pages else await context.new_page()
-            page.set_default_timeout(10000)
+            page.set_default_timeout(effective["step_timeout_seconds"] * 1000)
             responses = []
             page.on("response", lambda response: responses.append(response))
 
@@ -56,6 +56,8 @@ async def smoke(task: PublicTask, url: str, recorder: Recorder):
             await page.goto(url)
             actions += 1
             await capture("initial-listing")
+            if steps >= effective["max_steps"]:
+                return dict(answer=None, status="step_limit", stop_reason="step_limit", action_count=actions, steps=steps, usage=None, errors=[])
             if task.kind == "availability":
                 name = re.fullmatch(r"Locate (.+)\. Return its product ID, price in integer cents, and whether it is currently available\.", task.prompt).group(1)
                 recorder.event("browser_action", action="search", value=name)
@@ -72,6 +74,8 @@ async def smoke(task: PublicTask, url: str, recorder: Recorder):
             await page.get_by_role("button", name="Apply filters").click()
             actions += 1
             await capture("filtered-listing")
+            if steps >= effective["max_steps"]:
+                return dict(answer=None, status="step_limit", stop_reason="step_limit", action_count=actions, steps=steps, usage=None, errors=[])
             links = page.locator("article h2 a")
             if await links.count() != 1:
                 raise RuntimeError("Smoke expected a unique candidate from public task constraints")

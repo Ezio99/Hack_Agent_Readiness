@@ -29,7 +29,7 @@ async def synthetic_target(url):
 
 
 async def test_trial_artifacts_evaluation_and_distinct_runs(tmp_path, monkeypatch):
-    async def scripted(public, url, recorder):
+    async def scripted(public, url, recorder, effective):
         assert public == generate().public
         assert not hasattr(public, "expected_id")
         return dict(answer=answer_for(generate()), status="completed", steps=3, action_count=5, usage=None, errors=[])
@@ -74,7 +74,7 @@ def test_nested_secret_redaction(tmp_path):
 
 
 async def test_timeout_retains_reported_usage_and_executed_steps(tmp_path, monkeypatch):
-    async def interrupted(public, url, recorder):
+    async def interrupted(public, url, recorder, effective):
         recorder.event("model_response", usage={"total_tokens": 15})
         recorder.event("step_result", result={"result": [{"is_done": False}, {"is_done": False}]})
         recorder.event("observation", url=url)

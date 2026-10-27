@@ -51,3 +51,15 @@ technology and the development window but did not establish detailed reuse rules
 in the material inspected. Participant-specific rules remain unverified. All
 executable code/tests/configuration in this implementation were written fresh;
 no prototype assets or results were imported.
+
+## PR #1 review safeguards
+
+The reference profile is now `natural-shopping-v2`. One effective snapshot feeds
+the model adapter and browser agent; model request timeout and completion-token
+limit come from that snapshot. A per-run gate blocks calls beyond the configured
+request-attempt cap before the provider adapter, including framework retries. SDK
+retries remain disabled. Step/time/request limits do not guarantee a dollar cap.
+No live or authenticated provider trial was performed for these changes. Raw
+artifacts, especially screenshots and arbitrary model/page text, require privacy
+inspection before publication. Next milestone remains separately approved Meta
+authentication/compatibility validation followed by one controlled agent trial.

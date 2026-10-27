@@ -35,14 +35,14 @@ async def test_meta_adapter_wire_contract_with_synthetic_response(tmp_path):
             "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15}})
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
-        model = create_model(ModelConfig(), http_client=client, api_key="synthetic-key")
+        model = create_model(ModelConfig(), profile(), http_client=client, api_key="synthetic-key")
         # Avoid the SDK's asynchronous platform probe in this restricted sandbox.
         # The request serializer, schema, transport and response parser remain real.
         sdk = model.get_client()
         sdk._platform = "Linux"
         model.get_client = lambda: sdk
         recorder = Recorder(tmp_path, ("synthetic-key",))
-        wrapped = RecordingModel(model, recorder)
+        wrapped = RecordingModel(model, recorder, profile())
         response = await wrapped.ainvoke([
             SystemMessage(content="Return the requested fields."),
             UserMessage(content=[ContentPartTextParam(text="Synthetic DOM. synthetic-key"),
@@ -60,9 +60,9 @@ def test_profile_and_tools_are_fixed_and_truth_is_not_in_prompt(tmp_path):
     from browser_use import Browser
     p = profile()
     browser = Browser(headless=True, enable_default_extensions=False)
-    model = create_model(ModelConfig(), api_key="synthetic")
+    model = create_model(ModelConfig(), profile(), api_key="synthetic")
     task = generate().public
-    agent = create_agent(task, "http://127.0.0.1:8000/", model, browser, Recorder(tmp_path))
+    agent = create_agent(task, "http://127.0.0.1:8000/", model, browser, Recorder(tmp_path), p)
     assert agent.settings.use_vision is True
     assert agent.settings.vision_detail_level == "high"
     assert agent.settings.use_judge is False
@@ -77,7 +77,7 @@ def test_profile_and_tools_are_fixed_and_truth_is_not_in_prompt(tmp_path):
 def test_missing_credential(monkeypatch):
     monkeypatch.delenv("MODEL_API_KEY", raising=False)
     with pytest.raises(ValueError, match="Missing credential"):
-        create_model(ModelConfig())
+        create_model(ModelConfig(), profile())
 
 
 async def test_full_agent_schema_matches_documented_meta_strict_subset(tmp_path):
@@ -85,9 +85,9 @@ async def test_full_agent_schema_matches_documented_meta_strict_subset(tmp_path)
     from browser_use import Browser
     from browser_use.llm.messages import UserMessage
     from browser_use.llm.schema import SchemaOptimizer
-    model = create_model(ModelConfig(), api_key="synthetic-key")
+    model = create_model(ModelConfig(), profile(), api_key="synthetic-key")
     agent = create_agent(generate().public, "http://127.0.0.1:8000/", model,
-                         Browser(headless=True, enable_default_extensions=False), Recorder(tmp_path))
+                         Browser(headless=True, enable_default_extensions=False), Recorder(tmp_path), profile())
     schema = SchemaOptimizer.create_optimized_json_schema(agent.AgentOutput, remove_min_items=True)
     assert schema["type"] == "object"
     assert not {"anyOf", "oneOf", "allOf", "enum", "not"} & schema.keys()
@@ -130,7 +130,7 @@ def test_browser_launch_flags_do_not_depend_on_container_detection(tmp_path, mon
     monkeypatch.delenv("IN_DOCKER", raising=False)
     for in_container in [True, False]:
         monkeypatch.setattr(config_module, "is_running_in_docker", lambda: in_container)
-        options = browser_options("http://127.0.0.1:8000/", "/unused/chromium")
+        options = browser_options("http://127.0.0.1:8000/", "/unused/chromium", profile())
         options["user_data_dir"] = str(tmp_path / "profile")
         launch = BrowserProfile(**options)
         assert launch.chromium_sandbox is False

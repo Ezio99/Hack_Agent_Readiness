@@ -3,9 +3,10 @@
 Date: 2026-10-27 Australia/Sydney. Approved specification:
 [003-hackathon-first-agent-run.md](../tasks/003-hackathon-first-agent-run.md).
 
-**Current result:** credential-free CI passed for the startup fix: 23 offline
-tests, three real-browser cases, CLI smoke and artifact upload. See the remote
-validation section below. Live Meta compatibility remains unverified.
+**PR review revision:** 57 local tests and credential-free smoke pass; remote
+CI for this revision is pending. The earlier foundation/startup-fix results below
+are retained as history. See the final review-revision section for current evidence.
+Live Meta compatibility remains unverified.
 
 ## Delivered architecture
 
@@ -196,3 +197,74 @@ independent passing grade, and artifact upload. The smoke artifact path is
 `runs/20261027T003126-d62bafa307a4/` within the downloadable evidence archive.
 The earlier failed CI run is retained, not discarded. No provider calls or
 paid model trials were made.
+
+## PR #1 requested review revision — 2026-10-27
+
+The user requested the following changes before merge. No merge or live-model
+trial is authorized. The existing `hackathon/task001` branch and PR #1 are retained.
+
+### Configuration and request controls
+
+The runner now resolves one effective profile and passes it explicitly through the
+model adapter, browser options, reference agent and scripted smoke. Components no
+longer reload defaults. Regression fixtures check actual wire token limits, SDK
+timeouts, tool permissions, instructions, viewport, agent step limits and recorded
+hashes; a real-browser test checks viewport geometry and early stopping.
+
+The single profile advances from v1 to `natural-shopping-v2`, with conservative
+defaults of 10 steps, 120 seconds, 10 request attempts and 2,048 completion tokens
+per response. The SDK request timeout is 30 seconds, the agent step timeout is
+60 seconds, and cleanup may take an additional 15 seconds. Profile v1 remains
+in Git history; old artifacts are not rewritten. This is a new configuration
+version, not an additional benchmark variant or comparison experiment.
+
+The explicit `--allow-model-calls` authorization gate remains mandatory.
+`--max-model-requests` joins the step/time overrides. A synchronous pre-invocation
+gate blocks the next provider-adapter call once the cap is reached, including
+framework retries. Failed/cancelled requests count; SDK retries are disabled.
+Setup consumes the same wall-clock budget, with an expiry check before execution.
+The additive run-v1 fields include `limits`, `model_request_count`, and
+`configuration_hash`; the effective `profile_hash` is preserved. Request exhaustion
+is recorded separately from infrastructure errors and wall-clock timeout.
+
+These are request/time/response-token controls, not a guaranteed dollar budget.
+Prompt sizes, changing prices, missing usage and provider billing on failed or
+cancelled requests prevent that guarantee. Future live trials require separate
+configuration and expenditure approval.
+
+### Artifact privacy
+
+The recorder registers the configured credential at setup and the adapter key at
+the recording boundary. Redaction covers nested sensitive header/key fields,
+common URL/JSON encodings, recognizable textual authorization, URL userinfo and
+credential query keys. JSON, JSONL and text summaries share the same redactor.
+Provider errors are sanitized before framework logging/history; credentials in
+model endpoint URLs are rejected. Focused tests preserve useful non-secret page
+observations and usage while checking traces, errors, history/configuration and
+summary output for secret leakage. Screenshot extraction/preservation still works.
+
+Raw artifacts must be inspected before publication. Redaction is not arbitrary
+PII detection or screenshot OCR; model/page content and PNGs can contain private
+information unrelated to the configured API credential. The browser never receives
+the model API key. No generated private/run artifacts are committed.
+
+### Actual fresh verification
+
+| Check | Result |
+|---|---|
+| Full suite, `pr1-review-final.xml` | **57 passed in 12.92s** |
+| Standalone real-browser suite, `pr1-review-browser.xml` | **4 passed, 53 deselected in 10.07s** |
+| `readiness smoke --output runs` | **Completed; independent evaluation passed; 0 model requests** |
+| Git diff whitespace check | Passed |
+| GitHub Actions for this revision | Pending push/revalidation |
+
+The successful smoke is preserved at `runs/20261027T010440-8c0e0676c0bc/` with
+configuration, limits/hashes/counts, observations, screenshots, trace and grade.
+An earlier 55-test full pass and the later 56-test pass preceded the final
+regressions; the final 57-test result above is authoritative for this revision.
+Offline adapter fixtures use synthetic responses and MockTransport; scripted
+smoke uses deterministic browser interactions. Neither is a live model experiment.
+No live/authenticated or paid model calls occurred.
+
+User-created local onboarding changes in AGENTS.md and COLD_START.md were read
+and preserved separately; they are not staged into this review revision.

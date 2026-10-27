@@ -25,6 +25,7 @@ def main():
             cmd.add_argument("--output", type=Path, default=Path("runs"))
             cmd.add_argument("--max-steps", type=int)
             cmd.add_argument("--timeout", type=float)
+            cmd.add_argument("--max-model-requests", type=int)
         if name == "run":
             cmd.add_argument("--provider", choices=["meta", "openai-compatible"], default="meta")
             cmd.add_argument("--model", default="muse-spark-1.3")
@@ -47,7 +48,7 @@ def main():
         config = ModelConfig(args.provider, args.model, args.base_url, args.key_env) if args.command == "run" else None
         path, record = asyncio.run(run(mode="live" if args.command == "run" else "smoke",
             seed=args.seed, kind=args.kind, available=available, url=args.url, output=args.output,
-            max_steps=args.max_steps, timeout_seconds=args.timeout, model_config=config,
+            max_steps=args.max_steps, timeout_seconds=args.timeout, max_model_requests=args.max_model_requests, model_config=config,
             allow_model_calls=getattr(args, "allow_model_calls", False)))
         print(json.dumps({"artifact_path": str(path), "status": record["status"],
                           "evaluation": record["evaluation"], "errors": record.get("errors", [])}, indent=2))
