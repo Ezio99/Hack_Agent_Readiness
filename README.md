@@ -142,7 +142,7 @@ Each attempt creates a unique ignored `runs/<timestamp>-<id>/` directory:
   *before* Browser Use parses it (raw content up to 20,000 characters, `finish_reason`, request id, usage including
   reasoning tokens, and an analysis of whether the text is JSON), plus `model_http_request` trace events (parameters,
   response-format SHA-256, message structure; no message text or credentials). This survives adapter parse errors.
-  Note: with `--max-steps 1` the only step is Browser Use's *last* step, which narrows the response schema to the `done` action; it is not equivalent to step 1 of a longer run (bound cost with `--max-model-requests` instead). A 200 response that cannot become the output model ends the run as `model_output_error`
+  Diagnostic runs can pass `--expect-schema-sha256 <hash>` and `--max-estimated-cost-usd <usd>`: any outgoing request whose schema, parameters, system prompt, DOM, screenshot, task prompt or cost departs from the definition (or that carries a last-step instruction) is blocked before the network (`diagnostic_fidelity_violation`). Every request records its schema hash and `schema_narrowed`. Note: with `--max-steps 1` the only step is Browser Use's *last* step, which narrows the response schema to the `done` action; it is not equivalent to step 1 of a longer run (bound cost with `--max-model-requests` instead). A 200 response that cannot become the output model ends the run as `model_output_error`
   (subtypes: `malformed_json`, `null_content`, `length_without_content`, `schema_validation`), distinct from
   `infrastructure_error` (HTTP/timeouts/other) and from task outcomes. `browser_version` is recorded from the
   Chromium executable before the first model request.

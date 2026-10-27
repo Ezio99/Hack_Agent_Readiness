@@ -1,7 +1,7 @@
 # Report 004 — Meta compatibility validation and first live trial
 
-**Status: Stage A executed three times, Stages B, C and D once each, plus one diagnostic replay, all under separate authorizations (2026-10-27). Stage D FAILED (model output not parseable); no retry was made. The diagnostic replay returned valid JSON but did **not** faithfully reproduce Stage D's first request (see below).** Specification: [Task 004](../tasks/004-first-live-meta-trial.md) (proposed, unapproved).
-Eight authorized authenticated requests (Stage A attempts 1–3, Stage B once, Stage C once, Stage D two requests within one run, diagnostic replay once) were made; no other paid call or live agent trial has been made.
+**Status: Stage A executed three times, Stages B, C and D once each, plus two diagnostic replays, all under separate authorizations (2026-10-27). Stage D FAILED (model output not parseable); no retry was made. The first replay (`--max-steps 1`) was not faithful; the second (full-schema, `--max-steps 5 --max-model-requests 1`) **reproduced the Stage D failure mode** (prose followed by a valid JSON object).** Specification: [Task 004](../tasks/004-first-live-meta-trial.md) (proposed, unapproved).
+Nine authorized authenticated requests (Stage A attempts 1–3, Stage B once, Stage C once, Stage D two requests within one run, diagnostic replay 1, full-schema replay 2) were made; no other paid call or live agent trial has been made.
 
 ## Completed preparation (2026-10-27)
 Credential-free only; see `STATUS.md` for details.
@@ -286,3 +286,52 @@ With `--max-steps 1` the single step is Browser Use's **last** step: `_force_don
 
 ### Smallest justified next change
 Replay at the **same step budget as the failed trial**, bounding cost with the request gate instead of the step cap: `--max-steps 5 --max-model-requests 1` (same profile, same full schema at step 1, same prompt/DOM/screenshot, one request; the gate then blocks any second request before the provider, ending as `request_limit`). If the response is valid JSON the adapter will execute that one action as it normally would (nothing is extracted or altered). Expected cost < US$0.03 worst case. This needs separate authorization. As a harness change (offline, no approval needed beyond review): flag in `run.json` when a request's response-format schema hash differs from the profile's full-schema hash, so a last-step narrowing cannot silently confound a diagnostic again.
+
+## Full-schema diagnostic replay (separately authorized, exactly 1 request) — Stage D failure mode reproduced
+Command: `readiness run --kind discovery --seed 0 --max-steps 5 --max-model-requests 1 --timeout 120 --allow-model-calls --expect-schema-sha256 c80ef8b8…9a194 --max-estimated-cost-usd 0.03`. Artifact `runs/20261027T045857-4644e338a479/` (untracked, sanitized; key absent). Git clean at HEAD `07aa6df6`. Profile v3, unchanged. (The two guard flags only block a non-conforming request before the network; they do not alter the request.)
+
+### Offline preflight and new schema-fidelity guard (all passed before the request)
+- **Pre-send guard** (`capture.check_fidelity`, raised from an httpx request hook before the transport): strict `agent_output` `response_format` with SHA-256 `c80ef8b813abef0b2afd79c83a6f31e857c0101ea8730952ee78d61e65f9a194`; `model`, `reasoning_effort: low`, `max_completion_tokens: 4096`; system prompt ≥ 20,000 chars; exactly one screenshot; DOM state and first-step history present; the public task prompt (seed 0) present; **no last-step instruction**; worst-case cost estimate < US$0.03. Any violation raises before the network and ends the run as `diagnostic_fidelity_violation`. For this request: **no violations**.
+- **Narrowing flag everywhere:** every request now records its schema SHA-256 and `schema_narrowed` (vs the pinned full-schema hash) in `http_captures` and `schema_narrowing_detected` in `run.json`, even without the flags; a test pins the reference hash to the live agent schema so dependency/tool drift fails offline.
+- **Regression tests** (offline, real Chromium + storefront + mock transport): the replay configuration passes every check and sends exactly one faithful request; `--max-steps 1` with the full-schema requirement is **blocked with zero transport calls** (schema narrowed + last-step instruction); narrowing is flagged without expectations; a cost ceiling blocks; each individual departure (schema, strictness, parameters, system prompt, screenshot, DOM, history, task prompt, last-step text, cost) is detected; a valid first action executes and the gate then blocks any second model request (exactly one transport call, `request_limit`); the gate holds when parsing raises. 136 offline + 12 browser tests passed; CLI smoke passed.
+- **Estimated cost before sending:** 8,141 input tokens (chars/4 + 1,430 for the screenshot) + the full 4,096-token cap = **US$0.0276 < US$0.03** (calculated worst case).
+
+### Result
+| Item | Observed |
+|---|---|
+| Wire schema | SHA-256 `c80ef8b813abef0b2afd79c83a6f31e857c0101ea8730952ee78d61e65f9a194`, `strict: true`, **identical to Stage D**; `schema_narrowed: false`; guard: no violations |
+| Model / params | `muse-spark-1.3`, `reasoning_effort: low`, `max_completion_tokens: 4096`, model timeout 30 s |
+| Requests / elapsed | **1** of 1 (2nd attempt blocked by the gate before the provider) / 14.67 s total run; request latency **2.23 s** |
+| HTTP status / request id / finish | **200** / `3d18e930-9b39-45ba-9e1a-219391b8948e` / **stop** |
+| Usage (provider-reported) | prompt **9,443**, completion **229**, **reasoning 48** (21%), cached 0 |
+| **Parse classification** | **(2) Prose followed by a valid JSON object**: `kind: non_json`; JSON object starts at **offset 96**, 538 chars, **0 trailing chars** |
+| Adapter outcome | `ModelProviderError` (`AgentOutput.model_validate_json` rejected "Invalid JSON … line 1 column 1"); classified `model_output_error:malformed_json` |
+| Recorded run status | `request_limit` (see finding 2) |
+| Evaluator | FAIL (no answer produced) — **not** a website-readiness result |
+
+Sanitized raw content (`model-response-01.json`): the first 96 characters are the sentence `Visually matched — the Fern Home item at $29 is in view, so I'll open it to confirm the details.`, immediately followed (no separator) by `{"action": [{"click": {"index": 174}}], "current_plan_item": 0, "evaluation_previous_goal": "…", "memory": "…", "next_goal": "Open Linen Cushion product page to get ID and availability", "plan_update": null, "thinking": "… Click link 174."}`. Checked offline only (diagnostic; **nothing was extracted or executed**): the embedded JSON alone validates against the full `AgentOutput` schema (one `click` on index 174 — the correct Fern Home $29.00 Linen Cushion link); the whole content does not.
+
+### Comparison with the original Stage D failure
+| | Stage D (2 requests) | This replay |
+|---|---|---|
+| Schema on the wire | full, 7,915 B, `c80ef8b8…` (verified offline; not captured live) | full, 7,915 B, `c80ef8b8…` (**captured live and guarded**) |
+| Parameters | v3 (`low`, 4,096) | identical |
+| Content form | non-JSON; fragments `Found the Fern Home item…` … `…click its link."}` and `Found the match — open…` … `…link index 174."}` | `Visually matched — …` + JSON ending `…Click link 174."}` |
+| Same pattern? | prose start, JSON-like end, text refers to the Fern Home item and link 174 | **yes**: prose sentence, then a complete valid JSON object ending in `"}` (last key `thinking`) |
+| `finish_reason`, request id, usage | not recorded | `stop`, `3d18e930…`, 9,443 / 229 (48 reasoning) |
+Observed full-schema agent step-1 requests: **3 of 3 returned prose-prefixed output** (2 in Stage D, raw not retained; 1 here, raw captured). Counter-observations: the done-only-schema last-step replay (1/1) and the Stage B short-prompt probe with the full schema (1/1) returned pure JSON. Samples are tiny.
+
+### Conclusions
+**Verified:** (a) the Stage D failure mode is reproducible with the identical wire schema and parameters; (b) in the one captured case the output is a one-sentence prose preamble followed by a complete, schema-valid JSON object with no trailing text, and `finish_reason` was `stop` (not truncation); (c) reasoning tokens (48) are reported separately from this visible text, so the preamble is not simply the reasoning count; (d) the adapter has no client-side step that could create the preamble — it parses the raw `message.content`; (e) the model identified the correct listing and action (click index 174).
+**Hypotheses (not verified):** (H1, most supported) for long agentic prompts the provider/model emits a short narration before the JSON even under `strict` structured output — i.e. strict enforcement is not constraining the first tokens; (H2) enforcement is weakened by the full schema's 15-way `anyOf` union (the done-only-schema replay was clean), but Stage B (full schema, short prompt) was also clean, so schema size alone is not sufficient; (H3) the large Browser Use system prompt/context induces the narration. H2/H3 are distinguishable only by changing the request, which we have not done.
+
+### Findings and harness issues
+1. **Cost estimator under-counted input:** estimated 8,141 vs actual 9,443 prompt tokens (13.8% low); the extra ≈1.3k tokens is consistent with the full schema being counted (the done-only replay had 8,128). My earlier Stage-B inference that the schema is not billed (63 prompt tokens) is therefore unreliable. Worst case at the actual input is US$0.0292 (still < US$0.03). Calibrate the estimator before further guarded runs.
+2. **Status mislabel:** the final status shows `request_limit` because the runner's finalizer gives a gate event precedence over an earlier `model_output_error`; the true terminal cause was the output error and the gate trip was the designed stop. Proposed offline fix: record `model_output_error` when one occurred before the gate trip.
+3. The guard, capture, narrowing flag, gate and redaction all worked against the live API; the key does not appear in the artifact.
+
+### Estimated cost (calculated, NOT provider-reported)
+9,443 input × $1.25/M + 229 output × $4.25/M ≈ **US$0.0128** (worst case at actual input plus the full cap would be US$0.0292). Cumulative estimated live spend across all requests ≈ **US$0.065–0.075** (published USD pricing assumed; the provider reports no cost).
+
+### Smallest justified next change (needs your decision; nothing executed)
+The contract question now has evidence: with the strict contract, full-schema agent steps fail at least intermittently, and the one captured failure is recoverable by a trivial rule (first `{` to end) — but applying it would change what is measured, and you ruled that out for this diagnostic. Recommended sequence: (1) offline, no approval beyond review: fix the status precedence and calibrate the cost estimator; (2) **one narrowly scoped experiment:** repeat this exact replay **3 more times** (3 separately authorized single-request runs, ≈US$0.013 each, < US$0.04 total) to estimate whether the preamble is the rule or the exception for full-schema step 1; (3) then decide, as an explicit research-design choice, whether to stay strict (record `model_output_error` rates as a finding about the agent+model contract) or define a new profile version with a documented output-parse rule. No agent-behaviour change is proposed until that decision.
