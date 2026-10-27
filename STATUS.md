@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-27 (Australia/Sydney)
 **Repository:** `Ezio99/Hack_Agent_Readiness`
-**Phase:** Fresh implementation delivered; browser validation blocked by sandbox
+**Phase:** Credential-free end-to-end slice verified; live model validation pending
 
 ## Approved task and implementation
 [Hackathon Task 001](collaboration/tasks/003-hackathon-first-agent-run.md) is the
@@ -21,18 +21,29 @@ Implemented from scratch:
 - Credential-free browser smoke, tests, CI workflow and setup documentation.
 
 ## Actual verification
-- `python -m pytest -m 'not browser' -q`: **21 passed, 3 deselected**.
-- Final full suite: **21 passed, 3 failed** in 3.75s. All failures are the three
-  real browser cases: socket creation is denied with EPERM before browser startup.
-- Fresh CLI smoke: **infrastructure_error**, no answer/evaluation;
-  `runs/20261026T234100-decdaa49855c/` preserves the failure.
+After the user updated execution permissions, approval-reviewed execution could
+use local storefront/CDP sockets and update Git metadata.
+
+- Full suite: **24 passed in 12.91s**; JUnit evidence at
+  `artifacts/verification/pytest-final.xml`.
+- Browser-only recheck: **3 passed, 21 deselected in 16.25s**. Discovery and both
+  availability cases verify initial/filtered DOM, accessibility, response payloads,
+  actual Browser Use observations and screenshot artifacts before detail navigation.
+- CLI smoke: **completed; independent evaluation passed** in 3.085 seconds,
+  six scripted browser operations and three observations; reported model usage null.
+  Evidence: `runs/20261027T001314-b613f9df27a2/` (Chromium 145.0.7632.6).
 - Dependency consistency: **117 installed packages checked, passed**.
 - Compile checks and wheel build/template/profile inclusion: **passed**.
 - CLI generation, help and default model-call spending gate: **verified**.
 - CI: **configured, not executed**. No live model trial or paid call was made.
 
+Initial restricted execution produced 21 passing offline tests and three EPERM
+browser failures. Those attempts remain preserved; the successful revalidation
+above supersedes the earlier environment blocker. Scripted smoke is wiring
+validation, not a successful live reference-agent measurement.
+
 [Evidence report](collaboration/reports/003-hackathon-first-agent-run.md) lists
-commands, artifacts, compatibility findings, commits and limitations.
+commands, artifacts, compatibility findings, commits and remaining acceptance.
 
 ## Meta integration
 Official endpoint/authentication, image-input format and strict structured-output
@@ -42,16 +53,15 @@ access and end-to-end Meta compatibility remain unverified**. See
 [Meta integration evidence](docs/META-INTEGRATION.md). Live trials require explicit
 spending approval; none is currently authorized.
 
-## Git delivery and blockers
-The original checkout's `.git` is read-only; `git add` fails creating `index.lock`.
-Reviewable commits were therefore created in `/tmp/readiness-hackathon-review`
-and exported to ignored `artifacts/hackathon-task001.bundle`. Original HEAD and
-index are unchanged, and the implementation remains visible as working-tree
-changes here. No branch was pushed and no remote CI run was initiated.
+## Git delivery and remaining work
+The sandbox still protects `.git`, but approval-reviewed Git execution now works.
+The three prepared commits were imported from the verified local bundle onto
+`hackathon/task001`; all 32 implementation files matched exactly before switching.
+The original checkout now holds the review branch and its commit history. The
+temporary clone and bundle were the initial fallback, not the current blocker.
+Status/report updates are committed directly on the restored review branch.
+No branch was pushed and no remote CI run was initiated.
 
-Next verification requires a socket-enabled environment: install locked packages
-and Chromium, run the three browser checks and CLI smoke, then inspect saved
-boundary/navigation evidence. Import the bundle into a clean writable clone to
-review the commits. Browser/CI and live-model acceptance remain incomplete.
-Participant-specific event reuse rules also remain unverified; executable work
-was authored fresh without prototype assets.
+Remaining: credential-free CI execution, separately approved authenticated Meta
+compatibility/live agent trials, and participant-specific event-rule verification.
+Executable work was authored fresh without prototype assets.

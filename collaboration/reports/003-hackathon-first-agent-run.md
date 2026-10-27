@@ -34,7 +34,37 @@ Timeouts, provider errors and infrastructure failures preserve partial traces an
 reported usage; unavailable metrics remain null. Token usage is never inferred
 from elapsed time. Cleanup may extend the wall-clock budget by up to 15 seconds.
 
-## Actual checks and results
+## Revalidation after the permission update
+
+The user updated session permissions and requested a retry. The sandbox still
+protects Git and sockets, but approval-reviewed execution now succeeds. The three
+prepared commits were imported locally onto `hackathon/task001`; all 32 changed
+files matched the saved commits exactly. The index and worktree were clean after
+switching. Git operations can now be completed in the original checkout.
+
+Fresh credential-free results using approval-reviewed execution:
+
+| Check | Result |
+|---|---|
+| `python -m pytest -m browser -q --basetemp=artifacts/browser-recheck` | 3 passed, 21 deselected in 16.25s |
+| Full suite with `--junitxml=artifacts/verification/pytest-final.xml --basetemp=artifacts/final-tests` | **24 passed in 12.91s** |
+| `readiness smoke --output runs` | **Completed; independent evaluation passed** |
+
+The CLI smoke used Chromium 145.0.7632.6 and completed in 3.085 seconds, with
+six scripted browser operations, three recorded observations and null model
+usage. Its evidence directory is `runs/20261027T001314-b613f9df27a2/`: initial
+and filtered observations, detail observation, ordinary and actual Browser Use
+screenshots, payloads, accessibility/DOM snapshots, trace, configuration and
+independent evaluation. The initial listing screenshot was also visually inspected.
+The three browser tests validate both task families and both stock states.
+
+These successful checks supersede the initial Git/socket blockers below. Earlier
+failed artifacts remain preserved. No model calls were made. This is a verified
+credential-free vertical slice; hosted Meta compatibility and live reference-agent
+success remain unverified. CI has not been run.
+
+## Initial checks in the restricted sandbox
+
 
 | Check | Result |
 |---|---|
@@ -56,14 +86,15 @@ actual tool restrictions, real image/schema serialization against synthetic Meta
 responses, missing credentials, spending gate, trial separation, redaction and
 partial usage retention during timeout.
 
-The browser checks are implemented to inspect raw response bodies, hidden DOM,
+The browser checks inspect raw response bodies, hidden DOM,
 accessibility trees, DOM snapshots, actual Browser Use serialized observations
-and screenshot artifacts before opening details. They are **not validated** here:
-the sandbox rejects `socket.create_server(('127.0.0.1', 0))` with
+and screenshot artifacts before opening details. In the initial execution,
+the sandbox rejected `socket.create_server(('127.0.0.1', 0))` with
 `PermissionError: [Errno 1] Operation not permitted`. Consequently neither those
-checks nor the CLI smoke reached Chromium. This report does not claim browser
-navigation success, a verified screenshot information boundary, or a successful
-reference-agent trial. CI is written but has not been executed.
+initial checks nor the initial CLI smoke reached Chromium. The successful
+revalidation above now establishes browser navigation and observation-boundary
+checks for this fixture. It does not establish live reference-agent success.
+CI is written but has not been executed.
 
 The first synchronous TestClient attempt also hung in this restricted sandbox's
 cross-thread event-loop wakeup. Final HTTP tests use asynchronous ASGITransport
@@ -88,9 +119,10 @@ model ID/configuration snapshot does not guarantee immutable hosted behavior.
 
 Generated artifacts are ignored by Git and are not part of the source commits:
 
-- `artifacts/verification/pytest.txt` and `pytest.xml`: final full-suite evidence.
-- `artifacts/verification/smoke.txt`: final CLI smoke's output and artifact path.
-- `runs/20261026T234100-decdaa49855c/`: final recorded socket failure, run metadata,
+- `artifacts/verification/pytest.txt` and `pytest.xml`: initial restricted-suite evidence;
+  `pytest-final.xml` records the successful 24-test recheck.
+- `artifacts/verification/smoke.txt`: initial restricted CLI smoke output and artifact path.
+- `runs/20261026T234100-decdaa49855c/`: initial recorded socket failure, run metadata,
   trace and readable summary. There is no answer, screenshot or grade.
 - `runs/20261026T233955-17bdf79cb487/`: default live-command spending-gate failure.
 - `runs/20261026T233014-45c492a70fe1/`: earlier smoke infrastructure failure.
@@ -101,12 +133,14 @@ Synthetic model responses and scripted browser smoke are wiring checks only.
 ## Review commits and portable delivery
 
 The original checkout protects `.git` as read-only. `git add` failed creating
-`.git/index.lock`, so no commit or index update could occur there. A clean local
+`.git/index.lock`, so no commit or index update could occur there during the initial handoff. A clean local
 clone at `/tmp/readiness-hackathon-review` holds review commits instead:
 
 1. `35034ec` — storefront, generator, evaluator and first ten tests.
 2. `6853142` — reference profile, adapter, runner, artifacts, tests and browser CI.
-3. A final documentation/evidence commit — inspect the bundle log for its hash.
+3. `da8b1f4` — initial documentation/evidence and environment limitations.
+4. A permission-update evidence commit in the original checkout records the
+   successful Git restoration and browser revalidation.
 
 `artifacts/hackathon-task001.bundle` exports the review branch and new commits
 relative to original base `ddbaca7a911f3c9b1e03f750e5eeee923da20cfa`. Verify it with
@@ -114,12 +148,11 @@ relative to original base `ddbaca7a911f3c9b1e03f750e5eeee923da20cfa`. Verify it 
 clone** with that base, fetch the bundle's `hackathon/task001` branch and switch
 to it. Do not discard the visible working-tree changes in the original checkout.
 The bundle contains source and documentation only. No push or remote action was
-performed. The original repository HEAD/index remain unchanged.
+performed. At the initial handoff the original repository HEAD/index were unchanged. The
+permission-update revalidation above subsequently restored the three commits to
+the original checkout and switched it to `hackathon/task001`.
 
 ## Acceptance still pending
-
-- Successful local browser startup, three smoke cases and observation-boundary
-  checks in an environment permitting loopback/CDP sockets.
 - A successful credential-free CI run and inspection of its navigation evidence.
 - Separately approved authenticated Meta validation, then live agent trials and
   independent evaluation; preserve every attempt, including failures.

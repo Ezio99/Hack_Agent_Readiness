@@ -8,10 +8,12 @@ filters and accessible detail pages. Listings show names, brands, categories,
 prices and opaque links. Product IDs and stock availability appear on details
 only. There is no checkout, account system, dashboard or composite score.
 
-**Validation:** offline tests pass. In this development sandbox, loopback sockets
-are prohibited, so browser smoke and full observation-boundary checks are blocked.
-CI is configured but has not run. No live model trial has been performed. See
-[STATUS](STATUS.md) and the [fresh task](collaboration/tasks/003-hackathon-first-agent-run.md).
+**Validation:** all **24 tests pass**, including the three real-browser cases.
+The credential-free CLI smoke navigates to a detail page and passes independent
+evaluation. In this development environment those checks require approval-reviewed
+execution outside the restricted sandbox. CI is configured but has not run. No live
+model trial has been performed. See [STATUS](STATUS.md) and the
+[fresh task](collaboration/tasks/003-hackathon-first-agent-run.md).
 
 ## Install
 

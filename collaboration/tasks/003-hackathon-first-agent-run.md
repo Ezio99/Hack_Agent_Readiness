@@ -46,11 +46,13 @@ credential-free vertical slice, tests, CI, STATUS updates and commits.
 - [x] Generator/evaluator/HTTP behavior and boundary tests pass.
 - [x] DOM + screenshot adapter/profile and offline Meta wire/schema checks pass.
 - [x] Trace/failure/usage recording and credential-free CI are implemented.
-- [ ] Real browser information-boundary checks and smoke pass (sandbox EPERM).
+- [x] Real browser information-boundary checks and smoke pass (approval-reviewed execution).
 - [ ] Credential-free CI passes (workflow has not run).
 - [ ] Hosted Meta compatibility/live trials (not authorized or verified).
 
 Evidence: [new hackathon report](../reports/003-hackathon-first-agent-run.md).
-Review commits are preserved in a portable Git bundle because the original
-checkout's Git metadata is read-only. No paid calls were made. This task remains
-in validation; no historical acceptance checklist is claimed complete.
+The initial Git bundle's three commits are now restored on `hackathon/task001` in
+the original checkout. Approval-reviewed execution resolved the Git/socket blockers:
+all 24 tests pass and CLI smoke passes independent evaluation. No paid calls were
+made. CI and live-model validation remain pending; no historical acceptance
+checklist is claimed complete.
