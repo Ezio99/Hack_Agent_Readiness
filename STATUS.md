@@ -18,7 +18,11 @@
     `requirements.lock` transitively and is now declared directly in `pyproject.toml`.
   - Browser Use starts Chromium with an inherited environment and Playwright's driver does the
     same, so the key *would* have been visible to those children. The runner now removes the
-    variable while the browser/agent run and restores it afterwards; regression-tested.
+    variable while the browser/agent (and scripted smoke) run and restores it afterwards; regression-tested.
+    **Limitation:** this mutates process-global `os.environ` and is supported only for single-run,
+    nonconcurrent execution; concurrent experiments need explicit sanitized subprocess environments.
+    Subprocesses started before the scrub context: only `git` (code-version lookup); the ephemeral
+    storefront is an in-process uvicorn server, and no browser/Playwright process starts earlier.
   - Docs refreshed (this file, `AGENTS.md`, `COLD_START.md`, `README.md`, task index, Meta notes).
   - [Task 004](collaboration/tasks/004-first-live-meta-trial.md) specified (proposed) with a
     [report stub](collaboration/reports/004-first-live-meta-trial.md).
@@ -26,8 +30,8 @@
 ## Actual local verification (credential-free, this branch)
 - Baseline on `main` before changes: 53 offline passed (4.95s); 4 browser passed (10.98s);
   CLI smoke completed, independent evaluation passed, model request count 0.
-- After changes: **61 offline passed (3.77s)** (53 + 8 new in `tests/test_env.py`); **4 browser
-  passed (9.89s)**; CLI smoke completed, evaluation passed; `uv pip check` clean.
+- After refinement: **62 offline passed (4.49s)** (53 + 9 in `tests/test_env.py`); **4 browser
+  passed (11.06s)**; CLI smoke completed, evaluation passed; `uv pip check` clean.
   JUnit: `artifacts/verification/task004-*.xml` (untracked).
 - `readiness run` with a dummy key and **without** `--allow-model-calls` stopped at setup with no
   model request. No authenticated Meta request, live agent trial or paid call has been made.

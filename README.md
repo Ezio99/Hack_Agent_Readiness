@@ -157,7 +157,9 @@ Useful observations and PNG screenshots are retained. This is not a general PII
 filter or an image/OCR redactor: screenshots and arbitrary page/model content may
 still contain private information unrelated to the configured credential. Browser
 tools never receive the model API key: the runner removes the key variable from the process
-environment while Playwright/Chromium start and run, and restores it afterwards (regression-tested). Do not automatically publish live or private run artifacts or treat redaction
+environment while Playwright/Chromium start and run, and restores it afterwards (regression-tested). This temporarily mutates process-global
+`os.environ`, so it is supported only for single-run, nonconcurrent execution; concurrent
+experiments would need explicit sanitized subprocess environments instead. Do not automatically publish live or private run artifacts or treat redaction
 tests as a blanket guarantee that arbitrary artifacts are safe. CI uploads only
 credential-free evidence from the controlled synthetic storefront; this does not
 establish that live/custom run artifacts are safe to share.

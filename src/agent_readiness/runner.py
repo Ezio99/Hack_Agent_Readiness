@@ -121,11 +121,12 @@ async def run(*, mode="smoke", seed=0, kind="discovery", available=None,
             async with target(url) as actual_url:
                 record["storefront_url"] = actual_url
                 recorder.write("run.json", record)
-                if mode == "smoke":
-                    result = await smoke(task.public, actual_url, recorder, effective)
-                else:
-                    # The model client already holds the key; browser/Playwright children must not inherit it.
-                    with scrubbed_environment(config.key_env):
+                # The model client already holds the key; browser/Playwright children must not inherit it.
+                # This mutates process-global os.environ, so it supports only one nonconcurrent run per process.
+                with scrubbed_environment(config.key_env):
+                    if mode == "smoke":
+                        result = await smoke(task.public, actual_url, recorder, effective)
+                    else:
                         result = await attempt(task.public, actual_url, llm, recorder, effective)
                 record.update(result)
                 record["evaluation"] = evaluate(record["answer"], task).model_dump()

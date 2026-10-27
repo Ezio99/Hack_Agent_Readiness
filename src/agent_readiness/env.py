@@ -24,7 +24,13 @@ def load_repo_env(path: Path | None = None) -> bool:
 
 @contextmanager
 def scrubbed_environment(*names: str):
-    """Hide named variables from child processes (browser, Playwright driver) and restore them."""
+    """Hide named variables from child processes (browser, Playwright driver) and restore them.
+
+Limitation: this temporarily mutates process-global ``os.environ`` and is supported only for
+single-run, nonconcurrent execution (concurrent runs or threads would observe the missing
+variable, and overlapping contexts could restore stale state). If concurrent experiments become
+necessary, replace it with explicit sanitized environments passed to each subprocess.
+"""
     saved = {name: os.environ.pop(name) for name in names if name in os.environ}
     try:
         yield

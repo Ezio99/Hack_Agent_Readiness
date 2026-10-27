@@ -94,3 +94,18 @@ def test_cli_run_loads_dotenv_only_for_run(monkeypatch):
     monkeypatch.setattr(sys, "argv", ["readiness", "generate"])
     cli.main()
     assert calls == []
+
+
+async def test_runner_hides_key_during_smoke_too(tmp_path, monkeypatch):
+    @asynccontextmanager
+    async def fake_target(url):
+        yield "http://127.0.0.1:8000/"
+    seen = {}
+    async def spy_smoke(public, url, recorder, effective):
+        seen["during"] = os.environ.get("MODEL_API_KEY")
+        raise RuntimeError("stop")
+    monkeypatch.setenv("MODEL_API_KEY", SECRET)
+    monkeypatch.setattr(runner, "target", fake_target)
+    monkeypatch.setattr(runner, "smoke", spy_smoke)
+    await runner.run(mode="smoke", output=tmp_path)
+    assert seen["during"] is None and os.environ["MODEL_API_KEY"] == SECRET
