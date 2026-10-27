@@ -14,8 +14,8 @@ import httpx
 from .agent import ModelConfig
 from .recorder import Recorder, utcnow
 
-STAGE_A_PROMPT = "Reply with the single word: ok"
-STAGE_A_MAX_COMPLETION_TOKENS = 16
+STAGE_A_PROMPT = "Reply with exactly the text: OK"
+STAGE_A_MAX_COMPLETION_TOKENS = 128
 STAGE_A_TIMEOUT_SECONDS = 30.0
 SAFE_HEADERS = {"content-type", "date", "x-request-id", "request-id", "retry-after"}
 

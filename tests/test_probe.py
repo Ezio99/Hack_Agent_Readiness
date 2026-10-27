@@ -25,8 +25,8 @@ def test_success_records_status_model_usage_and_cost(tmp_path, monkeypatch):
         assert request.url == "https://api.meta.ai/v1/chat/completions"
         assert request.headers["authorization"] == f"Bearer {KEY}"
         body = json.loads(request.content)
-        assert body["max_completion_tokens"] == 16 and body["model"] == "muse-spark-1.3"
-        return httpx.Response(200, json={"model": "muse-spark-1.3", "choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}],
+        assert body["max_completion_tokens"] == 128 and body["model"] == "muse-spark-1.3"
+        return httpx.Response(200, json={"model": "muse-spark-1.3", "choices": [{"message": {"content": "OK"}, "finish_reason": "stop"}],
                                          "usage": {"prompt_tokens": 9, "completion_tokens": 1, "total_tokens": 10, "cost": 0.0001}})
     path, record, calls = run_probe(tmp_path, monkeypatch, handler)
     assert len(calls) == 1 and record["request_attempts"] == 1
@@ -36,7 +36,7 @@ def test_success_records_status_model_usage_and_cost(tmp_path, monkeypatch):
 
 
 def test_unreported_usage_and_cost_stay_null(tmp_path, monkeypatch):
-    _, record, _ = run_probe(tmp_path, monkeypatch, lambda r: httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]}))
+    _, record, _ = run_probe(tmp_path, monkeypatch, lambda r: httpx.Response(200, json={"choices": [{"message": {"content": "OK"}}]}))
     assert record["success"] and record["usage"] is None and record["provider_reported_cost"] is None
 
 
