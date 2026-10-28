@@ -69,14 +69,14 @@ import type { Replay, ReplayStep } from "./lib/replay";
 
 // DEVELOPMENT-ONLY SYNTHETIC FIXTURE — NOT EXPERIMENT EVIDENCE (exercises rendering when the local export is absent)
 const mk = (n: number, gap: boolean): ReplayStep => ({
-  step: n, page: "filtered listing", path: "/?brand=Fern", title: "t", model_visible_dom: "DOM TEXT", model_visible_last_result: gap ? 'Found 11 elements matching "a".' : null,
+  step: n, page: "filtered listing", path: "/?brand=Fern", model_visible_dom: "DOM TEXT", model_visible_last_result: gap ? 'Found 11 elements matching "a".' : null,
   actions: [{ name: gap ? "find_elements" : "done", params: {} }],
   tool_results: [{ action: "find_elements", result_excerpt: gap ? 'Found 11:\n[3] <a> "x" {href="/products/abc"}' : "ok", result_truncated: false, error: null, is_done: !gap }],
   result_visible_to_model_next_request: gap ? 'Found 11 elements matching "a".' : null, protocol: "recovered",
-  guard: { schema: "full", budget_warning: false, final_step: false }, usage: { prompt_tokens: 9000, completion_tokens: 300, reasoning_tokens: 100 }, latency_s: 2, finish_reason: "stop", estimated_cost_usd: 0.013,
+  guard: { schema: "full", budget_warning: false, final_step: false }, usage: { prompt_tokens: 9000, completion_tokens: 300 }, latency_s: 2, estimated_cost_usd: 0.013,
 });
 const FIXTURE: Replay = {
-  schema: "task008-replay-v1", label: "Recorded experiment replay — not live inference", notes: { cost: "", excluded: "" },
+  schema: "task009-replay-v2", label: "Recorded experiment replay — not live inference", notes: { cost: "", excluded: "" },
   run: { id: "FIXTURE-NOT-EVIDENCE", scope: "Fern", arm: "B", rank: 3, task: "task text", evaluator: { passed: false, reasons: ["r"] },
     answer_submitted: { product_id: "X", price_cents: 100, available: false }, required_visits: 3, observed_visits: 1, overhead: null,
     verification_shortfall: { required_visits: 3, actual_visits: 1, detail_visit_shortfall: 2, higher_priced_candidates: 2, higher_priced_checked: 1, higher_priced_unchecked: 1 },

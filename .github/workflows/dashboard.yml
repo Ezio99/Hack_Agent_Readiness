@@ -23,3 +23,5 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+      - name: Check dist (no credentials, local paths, traces or unapproved replay data)
+        run: npm run check:dist
