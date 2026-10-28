@@ -99,6 +99,7 @@ class RecordingModel:
         self._verified_api_keys = True
         self.usages = []
         self.last_error = None
+        self.invocation_failures = []   # every invocation that produced no model response (blocked or errored)
         self.max_requests = effective["max_model_requests"]
         self.request_count = 0
         self.limit_reached = False
@@ -180,6 +181,8 @@ class RecordingModel:
         if self.request_count >= self.max_requests:
             self.limit_reached = True
             self.recorder.event("model_request_limit", count=self.request_count, limit=self.max_requests)
+            self.recorder.event("model_request_blocked", reason="model_request_limit", reached_provider=False)
+            self.invocation_failures.append({"reason": "model_request_limit", "reached_provider": False})
             raise ModelRequestLimitReached(f"Model request limit reached ({self.max_requests})")
         self.request_count += 1
         self.recorder.event("model_request", request_count=self.request_count, messages=self.recorder.messages(messages),
@@ -190,10 +193,17 @@ class RecordingModel:
         except Exception as exc:
             fresh = self.capture.take() if self.capture else []
             violated = bool(self.capture and self.capture.violations)
-            result = self._try_recover(fresh, output_format) if (self.parser and not violated) else None
+            cost_blocked = bool(self.capture and self.capture.last_block == "cost")
+            result = self._try_recover(fresh, output_format) if (self.parser and not violated and not cost_blocked) else None
             if result is None:
                 self.last_error = type(exc).__name__
-                self.last_error_class = "diagnostic_fidelity_violation" if violated else "infrastructure_error"
+                self.last_error_class = ("diagnostic_fidelity_violation" if violated else
+                                         "estimated_cost_limit" if cost_blocked else "infrastructure_error")
+                blocked_reason = ("fidelity_violation" if violated else "estimated_cost_limit" if cost_blocked else None)
+                self.invocation_failures.append({"reason": blocked_reason or "model_error",
+                                                 "reached_provider": blocked_reason is None})
+                if blocked_reason:
+                    self.recorder.event("model_request_blocked", reason=blocked_reason, reached_provider=False)
                 self._classify_captured_responses(output_format, fresh)
                 message = self.recorder.clean(str(exc))
                 self.recorder.event("model_error", error_type=type(exc).__name__, error=message,
@@ -228,6 +238,8 @@ def classify_outcome(wrapped, done: bool, steps: int, max_steps: int):
     if getattr(wrapped, "capture", None) and wrapped.capture.violations:
         # A diagnostic request was blocked before the network; later retries hitting the gate must not mask it.
         return "diagnostic_fidelity_violation", "request blocked before the network"
+    if getattr(wrapped, "capture", None) and wrapped.capture.cost_blocks:
+        return "estimated_cost_limit", "cumulative_estimated_cost_limit"
     if done:
         return "completed", "agent_done"
     if wrapped.last_error_class == "model_output_error":
@@ -305,9 +317,21 @@ async def attempt(task: PublicTask, url: str, llm, recorder: Recorder, effective
         wrapped = RecordingModel(llm, recorder, effective, capture=capture)
         agent = create_agent(task, url, wrapped, browser, recorder, effective)
         try:
+            seen_failures = 0
+
             async def completed_step(current):
+                nonlocal seen_failures
                 if current.history.history:
-                    recorder.event("step_result", result=current.history.history[-1].model_dump())
+                    result = current.history.history[-1].model_dump()
+                    failed = wrapped.invocation_failures[seen_failures:]
+                    seen_failures = len(wrapped.invocation_failures)
+                    if failed:
+                        # Browser Use leaves the previous step's output in this step's history entry when the model
+                        # call produced no response; do not let the trace present it as this step's decision.
+                        result["model_invocation"] = {"produced_response": False, "failures": failed,
+                                                      "stale_model_output_discarded": result.get("model_output") is not None}
+                        result["model_output"] = None
+                    recorder.event("step_result", result=result)
             recorder.event("initial_actions", actions=[{"navigate": {"url": url}}])
             history = await agent.run(max_steps=effective["max_steps"], on_step_end=completed_step)
             final = history.final_result()
@@ -324,7 +348,9 @@ async def attempt(task: PublicTask, url: str, llm, recorder: Recorder, effective
                         protocol_compliance=wrapped.protocol_compliance(),
                         fidelity_violations=(capture.violations or None) if capture else None,
                         schema_narrowing_detected=any(r.get("schema_narrowed") for r in capture.requests) if capture else None,
-                        model_output_errors=wrapped.output_errors or None)
+                        model_output_errors=wrapped.output_errors or None,
+                        estimated_cost=capture.cost_summary() if capture else None,
+                        cost_limit_blocks=(capture.cost_blocks or None) if capture else None)
         finally:
             recorder.write("history.json", agent.history.model_dump())
             try:

@@ -60,7 +60,7 @@ async def run(*, mode="smoke", seed=0, kind="discovery", available=None,
               url=None, model_config=None, allow_model_calls=False,
               output=Path("runs"), max_steps=None, timeout_seconds=None,
               max_model_requests=None, profile_overrides=None, profile_id=None,
-              expect_schema_sha256=None, max_estimated_cost_usd=None):
+              expect_schema_sha256=None, max_estimated_cost_usd=None, max_cumulative_estimated_cost_usd=None):
     config = model_config or ModelConfig()
     recorder = Recorder(Path(output), (os.environ.get(config.key_env, ""),))
     started = time.monotonic()
@@ -121,11 +121,13 @@ async def run(*, mode="smoke", seed=0, kind="discovery", available=None,
             "profile": effective, "model": record["model"], "model_parameters": record["model_parameters"]
         }), sort_keys=True).encode()).hexdigest()
         recorder.write("run.json", record)
-        if expect_schema_sha256 or max_estimated_cost_usd is not None:
+        if expect_schema_sha256 or max_estimated_cost_usd is not None or max_cumulative_estimated_cost_usd is not None:
             # Diagnostic experiments: block any outgoing request that departs from the experiment definition.
             recorder.expectations = {
                 "schema_sha256": expect_schema_sha256, "task_prompt": task.public.prompt,
                 "max_estimated_cost_usd": max_estimated_cost_usd,
+                "max_cumulative_estimated_cost_usd": max_cumulative_estimated_cost_usd,
+                "max_steps": effective["max_steps"],
                 "parameters": {k: effective[k] for k in ("max_completion_tokens", "reasoning_effort") if k in effective}
                               | {"model": config.model}}
             record["diagnostic_expectations"] = {k: v for k, v in recorder.expectations.items() if k != "task_prompt"}
@@ -171,6 +173,8 @@ async def run(*, mode="smoke", seed=0, kind="discovery", available=None,
         if any(e["kind"] == "fidelity_violation" for e in events):
             # A blocked diagnostic request outranks later retries that merely hit the request gate.
             record.update(status="diagnostic_fidelity_violation", stop_reason="request blocked before the network")
+        elif any(e["kind"] == "estimated_cost_limit" for e in events):
+            record.update(status="estimated_cost_limit", stop_reason="cumulative_estimated_cost_limit")
         elif any(e["kind"] == "model_request_limit" for e in events) and record["status"] != "model_output_error":
             # (an unrecovered model_output_error that preceded the designed gate stop keeps its cause)
             record.update(status="request_limit", stop_reason="model_request_limit")

@@ -182,7 +182,7 @@ async def test_one_step_budget_is_blocked_before_the_network_when_the_full_schem
     assert calls == []  # nothing reached the transport
     assert record["status"] == "diagnostic_fidelity_violation" and record["model_request_count"] == 1
     joined = " | ".join(record["fidelity_violations"])
-    assert "schema narrowed or changed" in joined and "last-step instruction" in joined
+    assert "schema narrowed or changed" in joined and "first request cannot be the final step" in joined
     assert record["schema_narrowing_detected"] is True
 
 

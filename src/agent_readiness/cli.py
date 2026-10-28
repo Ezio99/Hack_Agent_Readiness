@@ -46,6 +46,8 @@ def main():
             cmd.add_argument("--allow-model-calls", action="store_true", help="Use only after explicit spending approval")
             cmd.add_argument("--expect-schema-sha256", help="Diagnostic: block any request whose response schema differs")
             cmd.add_argument("--max-estimated-cost-usd", type=float, help="Diagnostic: block a request whose worst-case estimate reaches this")
+            cmd.add_argument("--max-cumulative-estimated-cost-usd", type=float,
+                             help="Diagnostic: block a request that would push the summed worst-case estimates over this")
     args = parser.parse_args()
     if args.command in {"run", "probe"}:
         load_repo_env()
@@ -75,7 +77,8 @@ def main():
             allow_model_calls=getattr(args, "allow_model_calls", False),
             profile_id=getattr(args, "profile", None),
             expect_schema_sha256=getattr(args, "expect_schema_sha256", None),
-            max_estimated_cost_usd=getattr(args, "max_estimated_cost_usd", None)))
+            max_estimated_cost_usd=getattr(args, "max_estimated_cost_usd", None),
+            max_cumulative_estimated_cost_usd=getattr(args, "max_cumulative_estimated_cost_usd", None)))
         print(json.dumps({"artifact_path": str(path), "status": record["status"],
                           "evaluation": record["evaluation"], "errors": record.get("errors", [])}, indent=2))
         raise SystemExit(0 if record["evaluation"] and record["evaluation"]["passed"] and record["status"] == "completed" else 1)
