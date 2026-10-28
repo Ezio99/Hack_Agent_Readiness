@@ -64,8 +64,8 @@ def permutation_p(strata, seed: int) -> float:
 
 
 def bootstrap_ci(strata, seed: int) -> list[float] | None:
-    if not all(a and b for a, b in strata.values()):
-        return None
+    if not all(a and b for a, b in strata.values()) or min(min(len(a), len(b)) for a, b in strata.values()) < 2:
+        return None                      # n<2 per arm: a resampling interval would be degenerate and misleading
     rng = random.Random(seed)
     vals = sorted(_stat({k: ([rng.choice(a) for _ in a], [rng.choice(b) for _ in b]) for k, (a, b) in strata.items()}) for _ in range(BOOTSTRAPS))
     return [round(vals[int(0.025 * BOOTSTRAPS)], 4), round(vals[int(0.975 * BOOTSTRAPS) - 1], 4)]
@@ -161,7 +161,7 @@ def markdown(res: dict) -> str:
             if x.get("effect") is None:
                 L.append(f"- {m}: no complete arms")
             else:
-                L.append(f"- {m}: pooled difference (comparison − baseline) {x['effect']}, bootstrap 95% CI {x['ci95_bootstrap']}, permutation p {x['permutation_p']} (descriptive); per task: " +
+                L.append(f"- {m}: pooled difference (comparison − baseline) {x['effect']}, bootstrap 95% CI {x['ci95_bootstrap'] if x['ci95_bootstrap'] else 'not computed (n<2 per arm)'}, permutation p {x['permutation_p']} (descriptive); per task: " +
                          "; ".join(f"{t} {v['baseline']}→{v['comparison']}" for t, v in x["per_task"].items()))
     L += ["", "Evidence tiers: observed directional signal / supported exploratory effect (replicated, consistent, beyond control variability, trace-supported mechanism) / inconclusive or no detected effect (never proof of equivalence)."]
     return "\n".join(L)

@@ -316,3 +316,18 @@ def test_mock_banner_in_analysis_and_report():
         r["mode"] = "mock"
     res = analysis.analyze(rows, s)
     assert res["banner"].startswith("MOCK RESULTS") and analysis.markdown(res).startswith("> **MOCK RESULTS")
+
+
+def test_per_run_attribution_never_blames_the_website_and_hypotheses_are_not_attributions():
+    inst = registry.get_instance("t1-anc-headphones-under-250-all")
+    rec = fake(inst.spec.task_id, make_variant("detail", "fragmented"), passed=False)
+    rec["diagnostics"]["findings"] += [{"category": "website", "confidence": "observed", "title": "Stock status was only available on product pages"},
+                                       {"category": "website", "confidence": "hypothesis", "title": "Possible contribution of fragmented specifications"},
+                                       {"category": "agent_reasoning", "confidence": "inferred", "title": "x"}]
+    row = metrics.extract(rec, [], inst)
+    assert row["attribution"] == ["agent_reasoning"] and len(row["website_observations"]) == 2
+
+
+def test_single_run_arms_get_no_interval():
+    s, rows = rows_for(1, True)
+    assert analysis.analyze(rows, s)["contrasts"]["S1"]["metrics"]["success"]["ci95_bootstrap"] is None

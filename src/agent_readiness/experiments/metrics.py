@@ -93,7 +93,9 @@ def extract(record: dict, events: list[dict], instance, *, run: dict | None = No
         seen.add(p)
     failed_calls = sum(1 for j in journey for x in j["executed"] if x["error"])
     findings = record.get("diagnostics", {}).get("findings", [])
-    attribution = sorted({f["category"] for f in findings if f["category"] != "task_outcome"}) or (["none"] if ev["passed"] else ["undetermined"])
+    # Per-run attribution never names the website: a website cause needs COMPARATIVE evidence across variants (analysis), and hypothesis-level findings are not attributions.
+    attribution = sorted({f["category"] for f in findings if f["category"] not in ("task_outcome", "website") and f["confidence"] != "hypothesis"}) or (["none"] if ev["passed"] else ["undetermined"])
+    website_observations = [f["title"] for f in findings if f["category"] == "website"]
     pa = partial_accuracy(instance, out.get("answer"))
     row = {
         "run_id": (run or {}).get("run_id"), "stage": (run or {}).get("stage"), "block": (run or {}).get("block"), "task_code": (run or {}).get("task_code"), "variant_code": (run or {}).get("variant_code"),
@@ -105,6 +107,6 @@ def extract(record: dict, events: list[dict], instance, *, run: dict | None = No
         "detail_page_loads": sum(1 for p, _ in paths if p.startswith("/p/")), "visit_kinds": dict(Counter(t["kind"] for t in tax)),
         "elapsed_seconds": m["elapsed_seconds"], "prompt_tokens": m["prompt_tokens"], "completion_tokens": m["completion_tokens"], "calculated_cost_usd": m["calculated_cost_usd"],
         "protocol": {k: v for k, v in (record.get("protocol") or {}).items() if k != "parser"}, "attribution": attribution,
-        "finding_titles": [f["title"] for f in findings],
+        "finding_titles": [f["title"] for f in findings], "website_observations": website_observations,
     }
     return row
