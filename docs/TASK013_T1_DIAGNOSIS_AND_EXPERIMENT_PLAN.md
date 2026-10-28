@@ -1,6 +1,6 @@
 # Task 013 — T1 diagnosis, harness/evidence correction and proposed follow-up experiment
 
-Status: **analysis + credential-free implementation complete; the experiment below is a PROPOSAL. No paid call is authorized; nothing live was run for Task 013.** Stage 1 (Task 012) results, schedule, manifest, ledger and private artifacts are unchanged.
+Status: **analysis + credential-free implementation complete; the experiment below is a PROPOSAL — user decision 2026-10-28: Part A DEFERRED, Parts B and C NOT to be executed (strategic move to WebArena Verified shopping as the primary realistic benchmark; see docs/WEBARENA_SPIKE.md). The live behaviour of `suite-v2-compat1` (whether the model uses `<read_state>`) remains unverified. No paid call is authorized; nothing live was run for Task 013.** Stage 1 (Task 012) results, schedule, manifest, ledger and private artifacts are unchanged.
 
 ## 1. Root cause of the `find_elements` visibility gap (Browser Use 0.11.13)
 Not our adapter and not message-history truncation; a library defect/design flaw in two tools.

@@ -268,7 +268,8 @@ def browser_options(url: str, executable: str, effective: dict):
     return dict(headless=True, executable_path=executable, enable_default_extensions=False, use_cloud=False,
                 allowed_domains=[f"{parsed.scheme}://{parsed.netloc}"],
                 viewport=effective["viewport"], chromium_sandbox=effective["chromium_sandbox"],
-                user_data_dir=None, keep_alive=True)
+                user_data_dir=None, keep_alive=True,
+                **({"record_har_path": effective["record_har_path"]} if effective.get("record_har_path") else {}))        # optional: network trace for external evaluators (WebArena)
 
 
 VISIBILITY_FIX_ACTIONS = ("find_elements", "search_page")
@@ -336,12 +337,15 @@ def create_agent(task: PublicTask, url: str, llm, browser, recorder: Recorder, e
                  initial_actions=[{"navigate": {"url": url, "new_tab": False}}])
 
 
-async def attempt(task: PublicTask, url: str, llm, recorder: Recorder, effective: dict, answer_model=Answer):
+async def attempt(task: PublicTask, url: str, llm, recorder: Recorder, effective: dict, answer_model=Answer, network_capture=None):
     prepare_browser_environment()
     from browser_use import Browser
     from playwright.async_api import async_playwright
     async with async_playwright() as pw:
         browser = Browser(**browser_options(url, pw.chromium.executable_path, effective))
+        if network_capture is not None:                       # optional (WebArena): start the browser first so the capture is attached before the first navigation
+            await browser.start()
+            await network_capture.attach(browser.cdp_url)
         recorder.event("browser_version", version=executable_version(pw.chromium.executable_path), source="executable --version")
         capture = attach_capture(llm, recorder)
         wrapped = RecordingModel(llm, recorder, effective, capture=capture)
@@ -382,6 +386,11 @@ async def attempt(task: PublicTask, url: str, llm, recorder: Recorder, effective
                         estimated_cost=capture.cost_summary() if capture else None,
                         cost_limit_blocks=(capture.cost_blocks or None) if capture else None)
         finally:
+            if network_capture is not None:
+                try:
+                    await network_capture.close()
+                except Exception as exc:
+                    recorder.event("cleanup_error", error=f"network capture: {exc}")
             recorder.write("history.json", agent.history.model_dump())
             try:
                 await asyncio.wait_for(browser.kill(), timeout=15)
