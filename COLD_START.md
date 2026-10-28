@@ -4,13 +4,17 @@
 >
 > Read this before proposing changes, writing code, or making architectural decisions. This document provides orientation, not a complete specification. Always inspect the current repository and relevant task documents.
 
-## Current execution handoff — 2026-10-28
+## Current execution handoff — 2026-10-28 (Task 010)
 
-**Current baseline:** `main` includes Task 007's completed 30-run pilot and Task 008's dashboard/replay infrastructure (PR #4 squash-merged as `04c5730`). Task 007: 29/30 independently evaluated correct, with one genuine failed Fern B run and an agent–tool visibility gap. Results are exploratory, not a universal website-readiness score. The dashboard includes Overview, Scope comparison, Evidence, and Recorded replay. The replay exporter and UI code are merged, **but the three real replay JSON files and screenshots remain local, uncommitted, and unpublished**.
+**Verified baseline:** Task 009 PR #5 was squash-merged into `main` as `1cde559`; post-merge Dashboard and Credential-free CI passed per implementation handoff. Public dashboard: https://ezio99.github.io/Hack_Agent_Readiness/ (GitHub Pages, manual workflow; deployment run 40639069457). The site displays reconciled Task 007 results (29/30 independent PASS) and an honest replay-unavailable fallback. **No replay JSON, private archives, screenshots or raw runs were published.** Real Meta-powered experiments are historical; the current public site does **not** execute live scans.
 
-**Active authorized implementation:** [Task 009 — Public Replay Finalization & Dashboard Deployment](collaboration/tasks/009-public-replay-deployment.md), documented on `main` on 2026-10-28. Claude should branch from latest `main`, minimize the replay schema, verify publication terms, prepare static deployment configuration, run checks, and open a PR with safe code only. **Do not merge, publish replay exports/screenshots, deploy publicly, run paid model calls, or start the scanner without separate explicit approval.** Task 010 bounded scanner and task-specific scoring are future possibilities, not standing authorizations.
+**Active implementation specification:** [Task 010 — Protected Live Scanner MVP](collaboration/tasks/010-protected-live-scanner.md). Product objective: public scan configuration and evidence; invitation-only, server-authorized execution and private results; controlled storefront/task allowlists; independent evaluation; strict server-side quota, concurrency, cost and time controls; server-held secrets. Start with a local mock-provider end-to-end vertical slice and PR for review.
 
-**Start here:** read this file, [Task 009](collaboration/tasks/009-public-replay-deployment.md), [STATUS.md](STATUS.md) (newer dated entries override stale historical snapshots), [AGENTS.md](AGENTS.md), [dashboard/README.md](dashboard/README.md), and [Report 007](collaboration/reports/007-availability-placement-pilot.md). Inspect GitHub and local state before relying on any summary. PR #3 and Task 004/005/006 references elsewhere are historical, not active work.
+**Approval boundaries:** User is comfortable with roughly US$10/month hosting *in principle*, and Railway is a candidate; **this is not authorization to provision a paid service, spend money, enable a public scan backend, make paid Meta calls, publish private data, or merge a PR**. Separate explicit approvals are required at each gate. Public GitHub Pages deployment is already live; do not redeploy it or alter access without task scope/approval. No arbitrary URLs/prompts, no universal readiness score, no unreviewed replay publication.
+
+**Start here:** read this file, [Task 010](collaboration/tasks/010-protected-live-scanner.md), [AGENTS.md](AGENTS.md), [STATUS.md](STATUS.md), [dashboard/README.md](dashboard/README.md), and [Report 007](collaboration/reports/007-availability-placement-pilot.md). Inspect latest GitHub state before implementation. Some historical lines below (e.g. Task 004/009 or PR #3) are dated context, not current instructions. The same coding agent may continue; this handoff is for *any future replacement agent*.
+
+**Continuity rule:** Before every new task, update this file and commit the new task specification to GitHub, even if the current agent session has not changed.
 
 ## 1. Our intention
 
