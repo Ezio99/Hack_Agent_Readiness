@@ -57,10 +57,10 @@ Examples are design targets, not guaranteed feasible fixtures. Before implementa
 
 1. **Task 010 — Product foundations (P0):** design and implement versioned realistic storefront, domain-extensible task contract, P0 task fixtures and independent evaluators. Credential-free; mock/browser smoke only. Preserve old experiment.
 2. **Task 011 — Protected scanner (P0):** integrate new storefront/task suite into public configuration, invitation-only backend, bounded Meta runner and evidence-backed reports. Implement and test locally with mock provider before paid/deployment approvals.
-3. **Diagnostic layer (P0):** evidence-linked issue taxonomy, attribution and suggested fixes, with uncertainty labels.
-4. **Controlled remediation comparison (P1):** rerun fixed tasks across isolated site factors and compare verified changes.
-5. **Structured interface channel (P1 exploration, P2 full evaluation):** API/feeds and hybrid task pathways; clearly disclose what browser scans do not cover.
-6. **Later (P2):** generated tasks with feasibility checks, more agents/domains, CI and analytics integrations.
+3. **Task 012 — Realistic agent experiments (P0):** after Task 011 agent integration and mock validation, prepare a preregistered controlled pilot on electronics-v1 (T1–T4), followed only with separate paid-call approval by focused replicated comparisons of stock visibility and specification presentation. Track independently graded success, partial accuracy, actions, latency, calculated cost, evidence, failure attribution and actionable issue yield. [Task 012 spec](../collaboration/tasks/012-realistic-agent-experiments.md).\n4. **Diagnostic layer (P0):** evidence-linked issue taxonomy, attribution and suggested fixes, with uncertainty labels.
+5. **Controlled remediation comparison (P1):** rerun fixed tasks across isolated site factors and compare verified changes.
+6. **Structured interface channel (P1 exploration, P2 full evaluation):** API/feeds and hybrid task pathways; clearly disclose what browser scans do not cover.
+7. **Later (P2):** generated tasks with feasibility checks, more agents/domains, CI and analytics integrations.
 
 **Task 011 is not cancelled**, but its previously authored narrow scanner scope is sequenced after Task 010 and must be reconciled with these contracts before implementation. No broad implementation, paid inference, paid hosting, merge, or public deployment is automatically authorized by this roadmap.
 
