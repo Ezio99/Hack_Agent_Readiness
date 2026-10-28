@@ -1,6 +1,6 @@
 # Task 012 — Proposed experimental plan (FOR REVIEW; nothing here is approved or executed)
 
-Status: **design approved with amendments A–C (user, 2026-10-28); credential-free implementation authorized; no paid call is authorized.** each live stage needs its own explicit approval of the exact call plan below.
+Status: **design approved with amendments A–C (user, 2026-10-28); credential-free implementation authorized; no paid call is authorized.** Each live stage needs its own explicit approval of the exact call plan.
 
 ## 0. What we know and what shapes the design
 - Task 011 live validation: 4/4 PASS, evidence-backed, on the **baseline** variant (`listing+structured`); 5–9 requests, 15–36 s, US$0.066–0.118 per run (mean ≈ US$0.086). One run per task — no variance estimate, no failure observed.
