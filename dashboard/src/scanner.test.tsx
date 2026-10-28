@@ -56,3 +56,10 @@ describe("scanner UI", () => {
     setToken(null);
   });
 });
+
+describe("public build hygiene", () => {
+  it("scanner UI text embeds no localhost port or local path (check:dist would reject it)", () => {
+    const html = renderToStaticMarkup(<ScannerPage />) + renderToStaticMarkup(<Unconfigured />);
+    expect(html).not.toMatch(/127\.0\.0\.1:\d+|localhost:\d+|\/home\/|\/Users\//);
+  });
+});

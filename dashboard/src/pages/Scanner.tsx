@@ -62,7 +62,7 @@ export function Unconfigured() {
       <h1>Protected scanner</h1>
       <p className="lead">The scanner lets an invited developer run a registered task on a registered storefront variant and inspect what the agent did, why it succeeded or struggled, and what could be changed.</p>
       <p role="status" className="badge">This public build is not connected to a scanner service, so nothing can be scanned here. No live scanner is deployed.</p>
-      <p className="muted">To try it locally: <code>readiness scanner invite --label me</code>, <code>readiness scanner serve</code>, then build the dashboard with <code>VITE_SCANNER_API_URL=http://127.0.0.1:8100</code>. Local scans use a deterministic mock agent unless live inference has been separately approved and enabled.</p>
+      <p className="muted">To try it locally: <code>readiness scanner invite --label me</code>, <code>readiness scanner serve</code>, then build the dashboard with <code>VITE_SCANNER_API_URL=&lt;your local scanner URL&gt;</code>. Local scans use a deterministic mock agent unless live inference has been separately approved and enabled.</p>
     </section>
   );
 }
