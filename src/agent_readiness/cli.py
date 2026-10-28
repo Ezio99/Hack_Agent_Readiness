@@ -55,6 +55,20 @@ def main():
     lv.add_argument("--allow-model-calls", action="store_true")
     lv.add_argument("--max-total-usd", type=float, default=2.00)
     lv.add_argument("--dir", type=Path, default=Path("runs/live-validation-011"))
+    ex = sub.add_parser("experiment", help="Task 012 experiment infrastructure (mock by default; live needs an approved schedule hash)")
+    exsub = ex.add_subparsers(dest="experiment_command", required=True)
+    for name in ("manifest", "schedule", "preflight", "run", "analyze", "status"):
+        c = exsub.add_parser(name)
+        c.add_argument("--stage", type=int, choices=[1, 2], default=1)
+        c.add_argument("--seed", type=int)
+        c.add_argument("--out", type=Path, default=Path("runs/experiment-012"))
+        if name == "run":
+            c.add_argument("--mode", choices=["mock", "live"], default="mock")
+            c.add_argument("--allow-model-calls", action="store_true")
+            c.add_argument("--approved-schedule-hash")
+            c.add_argument("--mock-plan", type=Path, help="JSON {run_id: mock behaviour} for mock demonstrations")
+            c.add_argument("--programme-ceiling-usd", type=float)
+            c.add_argument("--stage-ceiling-usd", type=float)
     pilot = sub.add_parser("pilot", help="Task 006 sequential, resumable, auditable pilot driver")
     psub = pilot.add_subparsers(dest="pilot_command", required=True)
     for pname in ("plan", "status", "run", "resume"):
@@ -102,6 +116,10 @@ def main():
             cmd.add_argument("--max-cumulative-estimated-cost-usd", type=float,
                              help="Diagnostic: block a request that would push the summed worst-case estimates over this")
     args = parser.parse_args()
+    if args.command == "experiment":
+        from .experiments import cli_impl
+        cli_impl.main(args)
+        return
     if args.command == "scanner":
         from .scanner.service.config import load_config
         cfg = load_config()
