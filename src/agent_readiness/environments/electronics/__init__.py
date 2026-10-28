@@ -5,7 +5,7 @@ from ...suite.core import Variant, register_environment
 from . import tasks
 from .app import create_app as _create_app
 from .catalog import DATA_VERSION, ENVIRONMENT_ID
-from .variants import DEFAULT_VARIANT, all_variants
+from .variants import DEFAULT_VARIANT, all_variants, sku_variants
 
 
 class ElectronicsEnvironment:
@@ -13,7 +13,7 @@ class ElectronicsEnvironment:
     data_version = DATA_VERSION
 
     def variants(self) -> list[Variant]:
-        return all_variants()
+        return all_variants() + sku_variants()
 
     def default_variant(self) -> Variant:
         return DEFAULT_VARIANT

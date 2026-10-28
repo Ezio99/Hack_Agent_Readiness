@@ -5,5 +5,5 @@
 <h2>Shop by category</h2>
 <ul class="tiles">{% for slug, name in categories.items() %}<li><a href="/c/{{ slug }}">{{ name }}</a></li>{% endfor %}</ul>
 <h2>Customer favourites</h2>
-<ul class="grid">{% for p in featured %}{{ card(p, structured, show_stock, chips) }}{% endfor %}</ul>
+<ul class="grid">{% for p in featured %}{{ card(p, structured, show_stock, chips, show_sku) }}{% endfor %}</ul>
 {% endblock %}

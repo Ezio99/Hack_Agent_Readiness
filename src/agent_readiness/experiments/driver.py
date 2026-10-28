@@ -29,9 +29,10 @@ def _append(path: Path, row: dict) -> None:
         os.fsync(f.fileno())
 
 
-def run_stage(stage: int, sched: dict, frozen: dict, ledger: ExperimentLedger, out: Path, *, mode: str = "mock", runner=execute_scan, current_manifest=manifest_mod.build_manifest,
+def run_stage(stage: int, sched: dict, frozen: dict, ledger: ExperimentLedger, out: Path, *, mode: str = "mock", runner=execute_scan, current_manifest=None,
               mock_plan: dict | None = None, allow_model_calls: bool = False, approved_schedule_hash: str | None = None, approved_manifest_hash: str | None = None, acknowledge_previous_halt: bool = False, model_config: ModelConfig | None = None,
               strict_tree: bool = False, reserve_usd: float = design.RUN_RESERVE_USD) -> dict:
+    current_manifest = current_manifest or (lambda: manifest_mod.build_manifest(profile_id=frozen["agent"]["profile_id"]))
     schedule_mod.validate(sched)
     if sched["stage"] != stage:
         raise Halt("schedule stage mismatch")
@@ -108,7 +109,7 @@ def run_stage(stage: int, sched: dict, frozen: dict, ledger: ExperimentLedger, o
         variant = make_variant(*design.VARIANTS[entry["variant_code"]])
         try:
             rec = asyncio.run(runner(entry["task_id"], variant, provider=mode, mock_behavior=(mock_plan or {}).get(rid, "correct") if mode == "mock" else None,
-                                     output=stage_dir / rid, model_config=config, api_key=api_key))
+                                     output=stage_dir / rid, model_config=config, api_key=api_key, profile_id=frozen["agent"]["profile_id"]))
         except BaseException as exc:                                  # interruption / crash: reservation stays counted, never retried
             ledger.interrupted(rid, type(exc).__name__, stage)
             report["interrupted"] = rid

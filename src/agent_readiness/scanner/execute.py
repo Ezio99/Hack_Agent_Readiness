@@ -70,7 +70,7 @@ def calculated_cost(usage: list[dict]) -> float:
 
 
 async def execute_scan(task_id: str, variant: core.Variant, *, provider: str = "mock", mock_behavior: str = "correct", output: Path,
-                       model_config: ModelConfig | None = None, api_key: str | None = None) -> dict:
+                       model_config: ModelConfig | None = None, api_key: str | None = None, profile_id: str = PROFILE_ID) -> dict:
     """Execute and evaluate one scan. Returns the PRIVATE result (full evaluation incl. reasons, journey, findings); callers must sanitize before sending it out."""
     if provider not in MODES:
         raise ValueError("provider must be mock or live")
@@ -78,7 +78,7 @@ async def execute_scan(task_id: str, variant: core.Variant, *, provider: str = "
         raise ValueError("live mode requires an API key supplied by the server configuration")
     instance = registry.get_instance(task_id)
     spec = instance.spec
-    effective = profile(PROFILE_ID)
+    effective = profile(profile_id)
     effective.update(max_steps=spec.limits.max_steps, timeout_seconds=spec.limits.timeout_seconds, max_model_requests=spec.limits.max_model_requests)
     hashes = hashes_for(instance.answer_model)
     config = model_config or ModelConfig()
@@ -86,7 +86,7 @@ async def execute_scan(task_id: str, variant: core.Variant, *, provider: str = "
     started, started_at = time.monotonic(), utcnow()
     env = core.ENVIRONMENTS[spec.environment_id]
     record: dict = {"scan": {"mode": provider, "mock_behavior": mock_behavior if provider == "mock" else None, "started_at": started_at,
-                              "model": config.model if provider == "live" else "mock-scripted-agent", "profile": PROFILE_ID,
+                              "model": config.model if provider == "live" else "mock-scripted-agent", "profile": profile_id,
                               "profile_hash": core.canonical_hash(effective), "schema_hashes": hashes},
                     "task": spec.record(), "variant": {"id": variant.variant_id, "factors": dict(variant.factors)}}
     status, stop_reason, errors, answer, att = "infrastructure_error", "not_started", [], None, {}
