@@ -1,0 +1,38 @@
+runs 30 sources agree on every run: True
+disagreements: []
+all runs end with done: True
+responses: files 182 http200 182 requests 182 state-summary requests 182
+categories {'recovered': 132, 'raw_valid': 50} finish Counter({'stop': 30})
+first step Counter({'recovered': 30}) later Counter({'recovered': 102, 'raw_valid': 50})
+A {'recovered': 48, 'raw_valid': 22}
+B {'recovered': 84, 'raw_valid': 28}
+max |cost recompute - metrics| = 5.000000000005e-07 | vs driver summary = 5.000000000005e-07
+positive overhead (successful runs): [('04-s00-A2', 'A', 1), ('05-s00-A3', 'A', 1), ('08-s04-A1', 'A', 1), ('12-s04-A3', 'A', 1), ('19-s03-B1', 'B', 1), ('23-s03-B3', 'B', 1), ('24-s03-A3', 'A', 1), ('25-s02-A1', 'A', 1), ('28-s02-A2', 'A', 3), ('29-s02-A3', 'A', 3)]
+zero overhead: Counter({'B': 12, 'A': 7}) failed: [('27-s02-B2', {'required_visits': 3, 'actual_visits': 1, 'detail_visit_shortfall': 2, 'higher_priced_candidates': 2, 'higher_priced_checked': 1, 'higher_priced_unchecked': 1})]
+revisit runs: [('04-s00-A2', 'A', 'Home', 1, ('Woven Basket', 2)), ('05-s00-A3', 'A', 'Home', 1, ('Woven Basket', 2)), ('08-s04-A1', 'A', 'Kitchen', 1, ('Glass Carafe', 2)), ('12-s04-A3', 'A', 'Kitchen', 1, ('Glass Carafe', 2)), ('19-s03-B1', 'B', 'Bags', 1, ('Trail Daypack', 2)), ('23-s03-B3', 'B', 'Bags', 1, ('Trail Daypack', 2)), ('24-s03-A3', 'A', 'Bags', 1, ('Trail Daypack', 2)), ('25-s02-A1', 'A', 'Fern', 1, ('Trail Daypack', 2)), ('28-s02-A2', 'A', 'Fern', 3, ('Trail Daypack', 4)), ('29-s02-A3', 'A', 'Fern', 3, ('Trail Daypack', 4))]
+find_elements runs: [('12-s04-A3', 6, [['href'], ['href']], [(True, False), (True, False)]), ('15-s01-B2', 5, [['href'], ['href']], [(True, False), (True, False)]), ('23-s03-B3', 1, [['href']], [(True, False)]), ('27-s02-B2', 7, [['href'], ['href']], [(True, False), (True, False)])]
+
+==== AGGREGATES
+OVERALL per arm (n=15 each): requests, run s, model-request s, s/request, prompt, completion, reasoning, cost mean (SD), cost total
+A 4.667 22.87 11.31 2.424 44065 1651 698 0.0621 0.0321 0.9315 req SD 2.35 visits mean(all) 1.8
+B 7.467 27.23 16.41 2.198 70342 2217 842 0.09735 0.02942 1.46026 req SD 2.2 visits mean(all) 2.4
+TOTAL cost 2.39176 sum of rounded metric costs 2.391759
+scope arm | visits all (successful only) | overhead successful-only | req [min,max] | cost mean [min,max] | run s | prompt
+Kitchen 1 A | 1.667 (1.667) | ovh 0.667 n=3 | req 6.667 [3, 10] | cost 0.089 [0.0394, 0.1344] | t 32.41 | prompt 63979
+Kitchen 1 B | 1 (1) | ovh 0 n=3 | req 4.667 [4, 5] | cost 0.0608 [0.0523, 0.0656] | t 22.66 | prompt 43427
+  B-A: Kitchen visits(all) -0.667 visits(successful only) -0.667 req -2.0 cost -0.0282 time -9.74 | required 0 extra-req diff -2.0
+Bags 2 A | 1.333 (1.333) | ovh 0.333 n=3 | req 3.333 [3, 4] | cost 0.0436 [0.0398, 0.0508] | t 16.41 | prompt 31117
+Bags 2 B | 2.667 (2.667) | ovh 0.667 n=3 | req 6.333 [5, 7] | cost 0.0838 [0.0649, 0.0935] | t 30.19 | prompt 59555
+  B-A: Bags visits(all) 1.333 visits(successful only) 1.333 req 3.0 cost 0.0403 time 13.79 | required 2 extra-req diff 1.0
+Home 3 A | 1.667 (1.667) | ovh 0.667 n=3 | req 3.667 [3, 4] | cost 0.0478 [0.0392, 0.0524] | t 13.41 | prompt 34162
+Home 3 B | 3 (3) | ovh 0 n=3 | req 8 [8, 8] | cost 0.1027 [0.1017, 0.1043] | t 25.72 | prompt 74909
+  B-A: Home visits(all) 1.333 visits(successful only) 1.333 req 4.333 cost 0.0549 time 12.31 | required 4 extra-req diff 0.333
+Outdoors 3 A | 1 (1) | ovh 0 n=3 | req 3 [3, 3] | cost 0.0401 [0.0397, 0.0409] | t 21.21 | prompt 28110
+Outdoors 3 B | 3 (3) | ovh 0 n=3 | req 9 [7, 11] | cost 0.118 [0.0911, 0.1466] | t 30.23 | prompt 85954
+  B-A: Outdoors visits(all) 2 visits(successful only) 2 req 6 cost 0.0779 time 9.02 | required 4 extra-req diff 2
+Fern 3 A | 3.333 (3.333) | ovh 2.333 n=3 | req 6.667 [4, 8] | cost 0.09 [0.0527, 0.1089] | t 30.91 | prompt 62958
+Fern 3 B | 2.333 (3) | ovh 0 n=2 | req 9.333 [8, 12] | cost 0.1215 [0.1016, 0.1602] | t 27.35 | prompt 87865
+  B-A: Fern visits(all) -1.0 visits(successful only) -0.333 req 2.667 cost 0.0314 time -3.56 | required 4 extra-req diff -1.333
+rank3 pooled (Home,Outdoors,Fern) cost (0.055, 0.038, 0.072) req (4.335, 3.222, 5.556) time (5.894, 0.264, 11.806) visits(all) (0.779, 0.222, 1.333) visits(successful) (1.001, 0.667, 1.444)
+Bags cost (0.04, 0.021, 0.053) req (3.009, 1.667, 4) time (13.67, 3.964, 25.758) visits(all) (1.329, 0.667, 2) visits(successful) (1.339, 0.667, 2)
+Kitchen cost (-0.028, -0.07, 0.021) req (-1.995, -5.333, 1.667) time (-9.8, -22.736, 3.545) visits(all) (-0.665, -1, 0) visits(successful) (-0.663, -1, 0)

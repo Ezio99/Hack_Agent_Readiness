@@ -1,0 +1,47 @@
+per run: id arm required tool-interface agent-induced total | agent-induced may be negative when a run is shorter than the minimal path
+01-s00-A1 A 2 0 1 3 
+02-s00-B1 B 6 0 2 8 
+03-s00-B2 B 6 0 2 8 
+04-s00-A2 A 2 0 2 4 
+05-s00-A3 A 2 0 2 4 
+06-s00-B3 B 6 0 2 8 
+07-s04-B1 B 2 0 3 5 
+08-s04-A1 A 2 0 5 7 
+09-s04-A2 A 2 0 1 3 
+10-s04-B2 B 2 0 3 5 
+11-s04-B3 B 2 0 2 4 
+12-s04-A3 A 2 6 2 10 
+13-s01-A1 A 2 0 1 3 
+14-s01-B1 B 6 0 3 9 
+15-s01-B2 B 6 5 0 11 
+16-s01-A2 A 2 0 1 3 
+17-s01-A3 A 2 0 1 3 
+18-s01-B3 B 6 0 1 7 
+19-s03-B1 B 4 0 3 7 
+20-s03-A1 A 2 0 1 3 
+21-s03-A2 A 2 0 1 3 
+22-s03-B2 B 4 0 1 5 
+23-s03-B3 B 4 0 3 7 
+24-s03-A3 A 2 0 2 4 
+25-s02-A1 A 2 0 2 4 
+26-s02-B1 B 6 0 2 8 
+27-s02-B2 B 6 7 -1 12 FAILED (shortfall run)
+28-s02-A2 A 2 0 6 8 
+29-s02-A3 A 2 0 6 8 
+30-s02-B3 B 6 0 2 8 
+
+MEANS per run, requests: arm | required | tool-interface | agent-induced | total ; prorated cost US$: required | tool | agent
+A 2 0.4 2.27 4.67 | 0.0265 0.0054 0.0302
+B 4.8 0.8 1.87 7.47 | 0.0624 0.0107 0.0242
+
+B - A mean requests: required 2.80, tool-interface 0.40, agent-induced -0.40, total 2.80
+
+PER SCOPE B-A requests: scope | website-induced (required diff) | tool-interface diff | agent-induced diff | total
+Kitchen 0 -2 0.0 -2.0
+Bags 2 0 1.0 3.0
+Home 4 0 0.33 4.33
+Outdoors 4 1.67 0.33 6
+Fern 4 2.33 -3.67 2.67
+
+Tool-interface loop runs: [('12-s04-A3', 'A', 6, 0.0806), ('15-s01-B2', 'B', 5, 0.0666), ('27-s02-B2', 'B', 7, 0.0935)]
+Tool-interface requests total 18 of 182 ; prorated cost US$ 0.2407 of 2.3918

@@ -1,6 +1,6 @@
 # Task 007 — Availability information placement (controlled A/B)
 
-**Status: design APPROVED and Stage 1 IMPLEMENTED OFFLINE (2026-10-28, user-approved); the live pilot is NOT approved and no paid calls are authorized.** Drafted 2026-10-28 after the user stopped Task 006 and asked for a stronger experiment. Feasibility findings are from code inspection and enumeration over the committed inventory.
+**Status: COMPLETE. Design approved and Stage 1 implemented offline; the 30-run Stage 2 pilot ran in five approved installments from commit `969d7d4` (schedule `a2cf749c…5eaa`) and is analysed in [Report 007](../reports/007-availability-placement-pilot.md). No further paid calls are authorized.** Drafted 2026-10-28 after the user stopped Task 006 and asked for a stronger experiment. Feasibility findings are from code inspection and enumeration over the committed inventory.
 
 ## Relationship to Task 006
 Task 006 was stopped by the user after block 1 (4 runs, seed 2, all passed). It remains an **exploratory finding** (A and B both 2/2, identical two-step paths, no non-target visits, ceiling effect). It must not be read as evidence that link-text placement is irrelevant; it was too small and its tasks never forced a choice that depended on the manipulated information. Entries 5–24 remain `pending` in `runs/pilot-task006/` and will not be executed; artifacts and the schedule are preserved.
@@ -31,7 +31,7 @@ Prior expectation is that H1 largely follows from information being unavailable;
 ## Confounds in the manipulation (to quantify offline, then accept or fix)
 - Arm A adds 20 short lines ("In stock"/"Out of stock") to the listing observation: more tokens (estimated ≈ +100–150 per listing view) and a taller card, so a different screenshot and possibly fewer cards visible per viewport. Use the same element/CSS class as the detail page's text style and minimal height change; report the token and screenshot deltas per observation; the DOM already holds all 20 cards.
 - Element indices shift (+1 line per card); A and B differ in the number of interactive elements by 0 (no new links).
-- In B each extra detail visit grows history and prompt size, so cost grows super-linearly; this is part of the effect being measured and is reported separately from the fixed observation delta.
+- In B each extra detail visit adds requests that each carry a full prompt (the pilot measured 9.4k–10.3k prompt tokens per request in both arms, with little growth from history), so cost grows roughly in proportion to requests (initially assumed super-linear; corrected after the pilot); this is part of the effect being measured and is reported separately from the fixed observation delta.
 - B permits an unverified guess (answering the top-priced product); that is a legitimate behaviour to record, and the evaluator decides correctness.
 - Detail pages, inventory, prices, IDs, routes, order, filters, search, task wording, evaluator, model and parameters are identical across arms; the variant is server-configured and invisible to the agent.
 
