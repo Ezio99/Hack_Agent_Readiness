@@ -7,8 +7,10 @@ from .inventory import PRODUCTS
 VARIANT_ID = "baseline-detail-v1"          # Arm A / control: the original storefront, unchanged
 VARIANT_B_ID = "link-info-placement-b-v1"  # Arm B: visible generic "View details" link, name as a plain heading
 VARIANT_D0_ID = "diagnostic-aria-generic-v1"  # offline diagnostic only: generic aria-label, visible name unchanged
-LISTING_TEMPLATES = {VARIANT_ID: "listing.html", VARIANT_B_ID: "listing_b.html", VARIANT_D0_ID: "listing_d0.html"}
-EXPERIMENTAL_ARMS = (VARIANT_ID, VARIANT_B_ID)   # variants that may be used in live trials
+VARIANT_AVAIL_ID = "listing-availability-v1"  # Task 007 arm A: availability line on each listing card (detail pages unchanged)
+LISTING_TEMPLATES = {VARIANT_ID: "listing.html", VARIANT_B_ID: "listing_b.html", VARIANT_D0_ID: "listing_d0.html",
+                     VARIANT_AVAIL_ID: "listing_avail.html"}
+EXPERIMENTAL_ARMS = (VARIANT_ID, VARIANT_B_ID, VARIANT_AVAIL_ID)   # variants that may be used in live trials
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
 
@@ -29,7 +31,8 @@ def create_app(variant: str = VARIANT_ID) -> FastAPI:
                 raise ValueError("Price must be nonnegative with at most two decimal places")
         except (InvalidOperation, ValueError):
             raise HTTPException(422, "Invalid maximum price")
-        products = [p.listing() for p in PRODUCTS
+        products = [(p.listing() | {"available": p.available}) if variant == VARIANT_AVAIL_ID else p.listing()
+                    for p in PRODUCTS
                     if (not q or q.casefold() in f"{p.name} {p.brand} {p.category}".casefold())
                     and (not category or p.category == category)
                     and (not brand or p.brand == brand)

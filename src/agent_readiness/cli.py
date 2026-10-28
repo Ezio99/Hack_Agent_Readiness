@@ -25,7 +25,8 @@ def main():
     psub = pilot.add_subparsers(dest="pilot_command", required=True)
     for pname in ("plan", "status", "run", "resume"):
         pc = psub.add_parser(pname)
-        pc.add_argument("--state-dir", type=Path, default=Path("runs/pilot-task006"))
+        pc.add_argument("--experiment", choices=["006", "007"], default="006", help="Which pre-registered schedule (default 006)")
+        pc.add_argument("--state-dir", type=Path, help="Default: runs/pilot-task<experiment>")
         if pname == "plan":
             pc.add_argument("--mode", choices=["live", "smoke"], default="live")
         if pname == "run":
@@ -39,7 +40,7 @@ def main():
     for name in ["generate", "smoke", "run", "evaluate"]:
         cmd = sub.add_parser(name)
         cmd.add_argument("--seed", type=int, default=0)
-        cmd.add_argument("--kind", choices=["discovery", "availability"], default="discovery")
+        cmd.add_argument("--kind", choices=["discovery", "availability", "instock_max"], default="discovery")
         cmd.add_argument("--available", choices=["true", "false"])
         if name == "evaluate":
             cmd.add_argument("answer", type=Path)
@@ -69,9 +70,11 @@ def main():
     args = parser.parse_args()
     if args.command == "pilot":
         from . import pilot as pilot_driver
+        if args.state_dir is None:
+            args.state_dir = Path(pilot_driver.DEFAULT_STATE_DIR[args.experiment])
         try:
             if args.pilot_command == "plan":
-                state = pilot_driver.plan(args.state_dir, args.mode)
+                state = pilot_driver.plan(args.state_dir, args.mode, args.experiment)
             elif args.pilot_command == "resume":
                 state = pilot_driver.resume(args.state_dir, args.approval_note, args.new_review_halt_usd)
             elif args.pilot_command == "run":

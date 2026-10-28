@@ -21,7 +21,7 @@ from .recorder import Recorder, utcnow
 from .server import local_storefront
 from .smoke import smoke
 from .tasks import generate
-from .storefront import EXPERIMENTAL_ARMS, LISTING_TEMPLATES, VARIANT_ID
+from .storefront import EXPERIMENTAL_ARMS, LISTING_TEMPLATES, VARIANT_AVAIL_ID, VARIANT_ID
 from .metrics import run_metrics
 
 
@@ -199,7 +199,7 @@ async def run(*, mode="smoke", seed=0, kind="discovery", available=None,
                                 for e in events if e["kind"] == "observation"]
         record.update(finished_at=utcnow(), elapsed_seconds=time.monotonic() - started)
         try:  # derived from the trace and private truth; a metrics failure must never mask the run outcome
-            record["metrics"] = run_metrics(events, record, task.expected_id)
+            record["metrics"] = run_metrics(events, record, task.expected_id, task, storefront_variant == VARIANT_AVAIL_ID)
         except Exception as exc:
             record["metrics"] = {"error": type(exc).__name__}
         recorder.event("run_finished", status=record["status"], errors=record.get("errors", []))

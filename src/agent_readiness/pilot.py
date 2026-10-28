@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from .agent import profile
 from .capture import FULL_AGENT_SCHEMA_SHA256
-from .storefront import VARIANT_B_ID, VARIANT_ID
+from .storefront import VARIANT_AVAIL_ID, VARIANT_B_ID, VARIANT_ID
 
 STATE_FILE = "pilot-state.json"
 ARM_VARIANT = {"A": VARIANT_ID, "B": VARIANT_B_ID}
@@ -25,6 +25,27 @@ HALT_STATUSES = {"diagnostic_fidelity_violation": "fidelity_violation", "estimat
                  "infrastructure_error": "infrastructure_failure", "setup_error": "setup_failure"}
 
 
+# ---- Task 007: availability on listing cards (A) vs detail pages only (B = the unchanged baseline) ----------------
+# Deviations from the Task 005/006 configuration (identical across arms; everything else - profile text, model, parameters,
+# parser, guard semantics, per-request ceiling - is unchanged): kind instock_max; 12 steps / 12 requests / 240 s instead of
+# 6 / 6 / 120 s; per-run cumulative estimated cap US$0.48 instead of 0.25; pilot cap US$15.00 and review halt US$4.00.
+ARM_VARIANT_007 = {"A": VARIANT_AVAIL_ID, "B": VARIANT_ID}
+BLOCKS_007 = ((0, "ABBAAB"), (4, "BAABBA"), (1, "ABBAAB"), (3, "BAABBA"), (2, "ABBAAB"))   # seed -> scope Home, Kitchen*, Outdoors, Bags, Fern
+FROZEN_007 = {**FROZEN, "kind": "instock_max", "max_steps": 12, "max_model_requests": 12, "timeout_seconds": 240,
+              "max_cumulative_estimated_cost_usd": 0.48}
+LIMITS_007 = {"pilot_estimated_cap_usd": 15.00, "review_halt_actual_usd": 4.00, "max_consecutive_model_output_errors": 2}
+DEFAULT_STATE_DIR = {"006": "runs/pilot-task006", "007": "runs/pilot-task007"}
+
+
+def _spec(experiment):
+    """(blocks, arm->variant, frozen, limits), read at call time so tests can adjust them."""
+    if experiment == "006":
+        return BLOCKS, ARM_VARIANT, FROZEN, LIMITS
+    if experiment == "007":
+        return BLOCKS_007, ARM_VARIANT_007, FROZEN_007, LIMITS_007
+    raise PilotError(f"Unknown experiment {experiment!r}")
+
+
 class PilotError(RuntimeError):
     pass
 
@@ -33,24 +54,29 @@ def now():
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-def build_schedule():
+def build_schedule(experiment="006"):
+    blocks, arm_variant, _, _ = _spec(experiment)
     entries = []
-    for block, (seed, pattern) in enumerate(BLOCKS, 1):
+    for block, (seed, pattern) in enumerate(blocks, 1):
         seen = {"A": 0, "B": 0}
         for slot, arm in enumerate(pattern, 1):
             seen[arm] += 1
             entries.append({"entry_id": f"{len(entries) + 1:02d}-s{seed:02d}-{arm}{seen[arm]}", "position": len(entries) + 1,
                             "block": block, "slot": slot, "seed": seed, "arm": arm, "repetition": seen[arm],
-                            "storefront_variant": ARM_VARIANT[arm]})
+                            "storefront_variant": arm_variant[arm]})
     return entries
 
 
-def frozen_config():
-    return {**FROZEN, "profile_sha256": hashlib.sha256(json.dumps(profile(FROZEN["profile_id"]), sort_keys=True).encode()).hexdigest()}
+def frozen_config(experiment="006"):
+    frozen = _spec(experiment)[2]
+    return {**frozen, "profile_sha256": hashlib.sha256(json.dumps(profile(frozen["profile_id"]), sort_keys=True).encode()).hexdigest()}
 
 
-def schedule_sha256(entries=None, frozen=None, limits=None):
-    body = {"entries": entries or build_schedule(), "frozen": frozen or frozen_config(), "limits": limits or LIMITS}
+def schedule_sha256(entries=None, frozen=None, limits=None, experiment="006"):
+    body = {"entries": entries or build_schedule(experiment), "frozen": frozen or frozen_config(experiment),
+            "limits": limits or _spec(experiment)[3]}
+    if experiment != "006":
+        body["experiment"] = experiment      # Task 006's published hash is unchanged
     return hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
@@ -76,20 +102,20 @@ def audit(state, event, **data):
     state["audit"].append({"at": now(), "event": event, **data})
 
 
-def plan(state_dir, mode="live"):
+def plan(state_dir, mode="live", experiment="006"):
     """Create (or verify) the persisted schedule. Idempotent; never alters an existing, different schedule."""
     if mode not in {"live", "smoke"}:
         raise PilotError("mode must be live or smoke")
     Path(state_dir).mkdir(parents=True, exist_ok=True)
-    entries, frozen = build_schedule(), frozen_config()
-    digest = schedule_sha256(entries, frozen, LIMITS)
+    entries, frozen, limits = build_schedule(experiment), frozen_config(experiment), dict(_spec(experiment)[3])
+    digest = schedule_sha256(entries, frozen, limits, experiment)
     if (Path(state_dir) / STATE_FILE).exists():
         state = load(state_dir)
         if state["schedule_sha256"] != digest or state["mode"] != mode:
             raise PilotError("Existing pilot state has a different schedule, configuration or mode; use a new state directory")
         return state
-    state = {"schema": "pilot-state-v1", "task": "006", "mode": mode, "created_at": now(), "schedule_sha256": digest,
-             "frozen": frozen, "limits_approved": dict(LIMITS), "limits": dict(LIMITS), "halt": None, "fingerprint": None,
+    state = {"schema": "pilot-state-v1", "task": experiment, "mode": mode, "created_at": now(), "schedule_sha256": digest,
+             "frozen": frozen, "limits_approved": dict(limits), "limits": dict(limits), "halt": None, "fingerprint": None,
              "entries": [{**e, "status": "pending"} for e in entries], "audit": []}
     audit(state, "planned", mode=mode, schedule_sha256=digest)
     save(state_dir, state)
@@ -154,7 +180,8 @@ def preflight(state, mode, allow_model_calls, approved_sha):
     if state["mode"] != mode:
         raise PilotError(f"State directory is a {state['mode']} pilot; refusing to run it as {mode}")
     if schedule_sha256(entries=[{k: e[k] for k in ("entry_id", "position", "block", "slot", "seed", "arm", "repetition", "storefront_variant")}
-                                for e in state["entries"]], frozen=state["frozen"], limits=state["limits_approved"]) != state["schedule_sha256"]:
+                                for e in state["entries"]], frozen=state["frozen"], limits=state["limits_approved"],
+                         experiment=state["task"]) != state["schedule_sha256"]:
         raise PilotError("Persisted schedule no longer matches its recorded hash")
     changed = {k for k in state["limits"] if state["limits"][k] != state["limits_approved"][k]}
     if changed - {"review_halt_actual_usd"}:
@@ -166,7 +193,7 @@ def preflight(state, mode, allow_model_calls, approved_sha):
             raise PilotError("Model calls disabled; explicit spending approval is required (--allow-model-calls)")
         if approved_sha != state["schedule_sha256"]:
             raise PilotError("--approved-schedule-sha256 must equal the approved schedule hash")
-        if frozen_config() != state["frozen"]:
+        if frozen_config(state["task"]) != state["frozen"]:
             raise PilotError("The frozen profile/configuration differs from the persisted schedule")
     if state["halt"] and not state["halt"]["resolved"]:
         raise PilotError(f"Pilot halted ({state['halt']['kind']}): {state['halt']['detail']}. Resuming needs explicit approval via 'readiness pilot resume'")

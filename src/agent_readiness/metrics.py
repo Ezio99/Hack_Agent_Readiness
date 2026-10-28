@@ -6,6 +6,7 @@ from collections import Counter
 from urllib.parse import parse_qs, urlsplit
 from .capture import PRICE_INPUT_PER_M, PRICE_OUTPUT_PER_M
 from .inventory import PRODUCTS
+from . import oracle
 
 FILTER_KEYS = ("q", "category", "brand", "max_price")
 
@@ -18,7 +19,8 @@ def product_for_url(url: str):
     return next((p for p in PRODUCTS if p.route == route), None)
 
 
-def run_metrics(events: list[dict], record: dict, expected_product_id: str | None) -> dict:
+def run_metrics(events: list[dict], record: dict, expected_product_id: str | None, task=None,
+                listing_shows_availability: bool = False) -> dict:
     observations = [e for e in events if e.get("kind") == "observation"]
     arrivals, last_url = [], None
     for event in observations:
@@ -47,6 +49,28 @@ def run_metrics(events: list[dict], record: dict, expected_product_id: str | Non
     reasoning = sum(c.get("reasoning_tokens") or 0 for c in captures)
     latencies = [c.get("elapsed_seconds") for c in captures if c.get("elapsed_seconds") is not None]
     evaluation = record.get("evaluation") or {}
+    overhead = None
+    if task is not None:
+        visited = [a["product_id"] for a in arrivals]
+        minimum = oracle.minimum_detail_visits(task, listing_shows_availability)
+        answered = (record.get("answer") or {}).get("product_id") if isinstance(record.get("answer"), dict) else None
+        overhead = {
+            "detail_visits_actual": len(visited), "detail_visits_minimum": minimum,
+            "navigation_overhead": len(visited) - minimum,
+            "distinct_detail_pages": len(set(visited)),
+            "answer_is_target": answered == expected_product_id if answered is not None else None,
+            "answered_product_page_visited": (answered in visited) if answered is not None else None,
+            "note": "overhead = actual detail visits - independently verified minimum; negative means fewer pages than needed (unverified)",
+        }
+        if task.public.kind == "instock_max":
+            info = oracle.analysis(task, listing_shows_availability)
+            checked = len(set(visited) & set(info["higher_priced_candidate_ids"]))
+            overhead.update({
+                "scope_rank_of_answer": info["rank"], "higher_priced_candidates": len(info["higher_priced_candidate_ids"]),
+                "higher_priced_candidates_checked": checked,
+                "verification_basis": "listing availability" if listing_shows_availability else "detail pages",
+                "verification_complete": True if listing_shows_availability else checked == len(info["higher_priced_candidate_ids"]),
+                "min_visits_to_find": info["min_visits_to_find"], "min_visits_to_verify_no_higher": info["min_visits_to_verify_no_higher"]})
     return {
         "task_success": {"evaluator_passed": evaluation.get("passed"), "status": record.get("status")},
         "navigation": {
@@ -60,6 +84,7 @@ def run_metrics(events: list[dict], record: dict, expected_product_id: str | Non
             "distinct_non_target_products": len({a["product_id"] for a in non_target}),
             "limitation": "pages are counted when observed at a step start; a page reached by the final action is not observed",
         },
+        "navigation_overhead": overhead,
         "strategy": {"search_or_filter_params_in_observed_urls": sorted(filter_params),
                      "used_search_or_filter": bool(filter_params)},
         "tokens": {"prompt": prompt, "completion": completion, "reasoning": reasoning, "requests_with_usage": len(usage)},
