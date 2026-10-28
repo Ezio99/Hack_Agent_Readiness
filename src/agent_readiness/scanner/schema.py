@@ -22,8 +22,8 @@ def hashes_for(answer_model) -> dict:
     return dict(_hashes(answer_model))
 
 
-@functools.lru_cache(maxsize=None)
-def _hashes(answer_model) -> tuple[tuple[str, str], ...]:
+def output_schemas(answer_model):
+    """(full optimized schema, done-only optimized schema, AgentOutput model) exactly as Browser Use/ChatOpenAI would send them (no network)."""
     prepare_browser_environment()
     from browser_use import Browser
     from browser_use.llm.schema import SchemaOptimizer
@@ -33,4 +33,10 @@ def _hashes(answer_model) -> tuple[tuple[str, str], ...]:
         agent = create_agent(_Public("schema probe"), "http://127.0.0.1:1/", model, Browser(headless=True, enable_default_extensions=False), Recorder(Path(tmp)), effective, answer_model)
         full = SchemaOptimizer.create_optimized_json_schema(agent.AgentOutput, remove_min_items=True)
         done = SchemaOptimizer.create_optimized_json_schema(agent.DoneAgentOutput, remove_min_items=True)
+        return full, done, agent.AgentOutput
+
+
+@functools.lru_cache(maxsize=None)
+def _hashes(answer_model) -> tuple[tuple[str, str], ...]:
+    full, done, _ = output_schemas(answer_model)
     return (("full", _sha(full)), ("done_only", _sha(done)))

@@ -50,6 +50,11 @@ def main():
     scsub.add_parser("invitations", help="List invitations (hashes never shown)")
     skill = scsub.add_parser("kill", help="Turn the kill switch on/off (blocks new scans, cancels running ones on a live server via the admin API)")
     skill.add_argument("state", choices=["on", "off"])
+    lv = scsub.add_parser("live-validate", help="APPROVED bounded live Muse Spark validation (probe first, then 4 fixtures); private outputs under runs/")
+    lv.add_argument("stage", choices=["status", "probe", "run"])
+    lv.add_argument("--allow-model-calls", action="store_true")
+    lv.add_argument("--max-total-usd", type=float, default=2.00)
+    lv.add_argument("--dir", type=Path, default=Path("runs/live-validation-011"))
     pilot = sub.add_parser("pilot", help="Task 006 sequential, resumable, auditable pilot driver")
     psub = pilot.add_subparsers(dest="pilot_command", required=True)
     for pname in ("plan", "status", "run", "resume"):
@@ -100,6 +105,23 @@ def main():
     if args.command == "scanner":
         from .scanner.service.config import load_config
         cfg = load_config()
+        if args.scanner_command == "live-validate":
+            import json as _json
+            from .agent import ModelConfig
+            from .scanner import live
+            ledger = live.Ledger(args.dir, min(args.max_total_usd, live.CEILING_USD))
+            try:
+                if args.stage == "status":
+                    print(_json.dumps({"committed_usd": ledger.committed(), "ceiling_usd": ledger.ceiling, "probe_ok": ledger.probe_succeeded(), "entries": ledger.entries()}, indent=1))
+                elif args.stage == "probe":
+                    rec = live.run_probe(ModelConfig(), ledger, args.dir / "probe", allow_model_calls=args.allow_model_calls)
+                    print(_json.dumps({k: rec.get(k) for k in ("success", "failure_class", "http_status", "finish_reason", "usage", "calculated_cost_usd", "grading", "error")}, indent=1, default=str))
+                else:
+                    print(_json.dumps(live.run_fixtures(ModelConfig(), ledger, args.dir, allow_model_calls=args.allow_model_calls), indent=1))
+            except live.Halt as exc:
+                print(f"HALT: {exc}")
+                raise SystemExit(2)
+            return
         if args.scanner_command == "kill":
             cfg.data_dir.mkdir(parents=True, exist_ok=True)
             (cfg.kill_switch_path.write_text("on") if args.state == "on" else cfg.kill_switch_path.unlink(missing_ok=True))
