@@ -22,11 +22,11 @@ def git_state() -> dict:
     return {"commit": run("rev-parse", "HEAD"), "dirty": bool(run("status", "--porcelain", "--untracked-files=no"))}
 
 
-def build_manifest(config: ModelConfig | None = None) -> dict:
+def build_manifest(config: ModelConfig | None = None, profile_id: str = PROFILE_ID) -> dict:
     """Frozen configuration (the *hash* covers everything except execution provenance, which is compared separately)."""
     registry.load_all()
     config = config or ModelConfig()
-    effective = profile(PROFILE_ID)
+    effective = profile(profile_id)
     limits = {t: core_limits(registry.get_instance(tid)) for t, tid in design.PRIMARY_TASKS.items()}
     first = next(iter(limits.values()))
     effective.update(max_steps=first["max_steps"], timeout_seconds=first["timeout_seconds"], max_model_requests=first["max_model_requests"])
@@ -42,7 +42,7 @@ def build_manifest(config: ModelConfig | None = None) -> dict:
         "environment": {"id": design.ENVIRONMENT, "data_version": env.data_version},
         "variants": {c: {"variant_id": design.variant_id(c), "factors": {"availability": a, "specs": s}} for c, (a, s) in design.VARIANTS.items()},
         "fixtures": fixtures,
-        "agent": {"provider": config.provider, "model": config.model, "base_url": config.base_url, "profile_id": PROFILE_ID, "profile_hash": core.canonical_hash(effective),
+        "agent": {"provider": config.provider, "model": config.model, "base_url": config.base_url, "profile_id": profile_id, "profile_hash": core.canonical_hash(effective),
                   "reasoning_effort": effective["reasoning_effort"], "max_completion_tokens": effective["max_completion_tokens"], "output_parser": effective["output_parser"],
                   "observation": effective["observation_mode"], "tools": effective["allowed_tools"], "temperature": "not sent (provider default)"},
         "versions": {"python": platform.python_version(), "browser_use": importlib.metadata.version("browser-use"), "playwright": importlib.metadata.version("playwright")},

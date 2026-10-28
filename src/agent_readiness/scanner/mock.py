@@ -9,7 +9,9 @@ Behaviours (a server-side allow-list; the default is ``correct``):
   loop            repeat the same find_elements call (reproduces the agent-tool visibility gap), then submit a wrong answer
   stuck           make no progress until the step budget is exhausted
   escape          first try to navigate outside the allowed origin (must be blocked), then behave like ``correct``
-  provider_error  the provider fails (HTTP 500) on the first request"""
+  provider_error  the provider fails (HTTP 500) on the first request
+  element_reader  a faithful model: asks find_elements for link targets on the listing, then USES them if (and only if) the next request actually shows them; otherwise it
+                  keeps asking (as the live model did) and finally answers with what it could see (product names as SKUs). Reproduces the live T1 failure mode."""
 from __future__ import annotations
 
 import json
@@ -20,7 +22,7 @@ import httpx
 from fastapi.testclient import TestClient
 from openai import DefaultAsyncHttpxClient
 
-BEHAVIORS = ("correct", "lazy", "wrong", "loop", "stuck", "escape", "provider_error")
+BEHAVIORS = ("correct", "lazy", "wrong", "loop", "stuck", "escape", "provider_error", "element_reader")
 MOCK_USAGE = {"prompt_tokens": 9500, "completion_tokens": 300, "total_tokens": 9800, "completion_tokens_details": {"reasoning_tokens": 120}}
 
 
@@ -85,6 +87,7 @@ def make_handler(instance, variant, base_url: str, behavior: str):
         script = [nav("/")]
     elif behavior == "loop":
         script = [nav("/c/headphones")] + [{"find_elements": {"selector": "a", "attributes": ["href"], "include_text": True, "max_results": 20}}] * 7
+    reader = {"stage": "start"}
     final = {"done": {"data": answer if behavior in ("correct", "lazy", "escape") else wrong, "success": True}}
     state = {"n": 0}
 
@@ -95,6 +98,8 @@ def make_handler(instance, variant, base_url: str, behavior: str):
         if behavior == "provider_error":
             return httpx.Response(500, json={"error": {"message": "mock provider failure", "type": "server_error"}})
         text = json.dumps(body["messages"]).lower()
+        if behavior == "element_reader":
+            return _element_reader(n, body, text, paths, nav, answer, reader)
         if "this is your last step" in text or n > len(script):
             if behavior == "stuck" and "this is your last step" not in text:
                 return _reply(n, {"wait": {"seconds": 1}})
@@ -110,3 +115,31 @@ def attach_mock(llm, handler):
     sdk._platform = "Linux"        # avoid the SDK's platform probe
     llm.get_client = lambda: sdk
     return llm
+
+
+def _element_reader(n, body, text, paths, nav, answer, reader):
+    """Scripted 'reads the tool output if it can see it' behaviour (see module docstring)."""
+    listing = next((p for p in paths if p.startswith("/c/")), paths[min(1, len(paths) - 1)])
+    last = "this is your last step" in text
+    if n == 1:
+        return _reply(n, nav(listing))
+    if reader["stage"] == "start":
+        reader["stage"] = "asked"
+        return _reply(n, {"find_elements": {"selector": "a", "attributes": ["href"], "include_text": True, "max_results": 20}})
+    visible = "<read_state_" in text and "/p/" in text.split("<read_state_", 1)[1]
+    if reader["stage"] == "asked" and visible:
+        reader["stage"] = "following"
+        reader["queue"] = [p for p in paths if p.startswith("/p/") or p.startswith("/help/")]
+    if reader["stage"] == "following":
+        if reader.get("queue") and not last:
+            return _reply(n, nav(reader["queue"].pop(0)))
+        return _reply(n, {"done": {"data": answer, "success": True}})
+    if last or n >= 11:                                  # never saw the elements: answers with what was visible (names in the sku field)
+        return _reply(n, {"done": {"data": _names_as_skus(answer), "success": True}})
+    return _reply(n, {"find_elements": {"selector": "a", "attributes": ["href"], "include_text": True, "max_results": 20}})
+
+
+def _names_as_skus(answer):
+    if isinstance(answer, dict) and isinstance(answer.get("products"), list):
+        return {"products": [{**p, "sku": "(name only)"} for p in answer["products"]]}
+    return answer

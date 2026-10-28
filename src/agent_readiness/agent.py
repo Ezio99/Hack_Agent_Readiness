@@ -13,7 +13,7 @@ from .recorder import Recorder
 PROFILE_DIR = Path(__file__).parent / "profiles"
 PROFILE_FILES = {"natural-shopping-v2": "natural-v2.json", "natural-shopping-v3": "natural-v3.json",
                  "natural-shopping-v3-compat1": "natural-v3-compat1.json",
-                 "suite-v1-compat1": "suite-v1-compat1.json"}      # Task 011: generic task-suite profile (answer schema supplied per task)
+                 "suite-v1-compat1": "suite-v1-compat1.json", "suite-v2-compat1": "suite-v2-compat1.json"}      # Task 011: generic task-suite profile (answer schema supplied per task)
 DEFAULT_PROFILE_ID = "natural-shopping-v3"
 # Documented Meta levels; "none" returns HTTP 400 on Muse Spark. "xhigh"/"max" are excluded by this project.
 REASONING_EFFORTS = ("minimal", "low", "medium", "high")
@@ -268,7 +268,34 @@ def browser_options(url: str, executable: str, effective: dict):
     return dict(headless=True, executable_path=executable, enable_default_extensions=False, use_cloud=False,
                 allowed_domains=[f"{parsed.scheme}://{parsed.netloc}"],
                 viewport=effective["viewport"], chromium_sandbox=effective["chromium_sandbox"],
-                user_data_dir=None, keep_alive=True)
+                user_data_dir=None, keep_alive=True,
+                **({"record_har_path": effective["record_har_path"]} if effective.get("record_har_path") else {}))        # optional: network trace for external evaluators (WebArena)
+
+
+VISIBILITY_FIX_ACTIONS = ("find_elements", "search_page")
+
+
+def apply_tool_result_visibility(tools) -> list[str]:
+    """Browser Use 0.11.13 defect workaround (profile `tool_result_visibility: read-state-v1`, reference agent suite-v2): `find_elements` and `search_page` return
+    ActionResult(extracted_content=<full result>, long_term_memory=<one count line>) WITHOUT include_extracted_content_only_once. MessageManager
+    (agent/message_manager/service.py, `_update_agent_history_description`) then puts ONLY long_term_memory into the model's history, so the model never sees the
+    elements it asked for. Setting the one-time flag - the same flag extract/dropdown_options already use - shows the full result once, in <read_state>, on the
+    next step; the count line still goes to the history. Nothing else about the tools changes."""
+    patched = []
+    for name in VISIBILITY_FIX_ACTIONS:
+        action = tools.registry.registry.actions.get(name)
+        if action is None:
+            continue
+        original = action.function
+
+        async def wrapped(*args, __original=original, **kwargs):
+            result = await __original(*args, **kwargs)
+            if getattr(result, "extracted_content", None) and getattr(result, "long_term_memory", None) and not result.include_extracted_content_only_once:
+                result.include_extracted_content_only_once = True
+            return result
+        action.function = wrapped
+        patched.append(name)
+    return patched
 
 
 def create_agent(task: PublicTask, url: str, llm, browser, recorder: Recorder, effective: dict, answer_model=Answer):
@@ -280,6 +307,9 @@ def create_agent(task: PublicTask, url: str, llm, browser, recorder: Recorder, e
     for name in list(tools.registry.registry.actions):
         if name not in p["allowed_tools"]:
             tools.exclude_action(name)
+
+    if p.get("tool_result_visibility") == "read-state-v1":
+        apply_tool_result_visibility(tools)
 
     version_recorded = False
 
@@ -307,12 +337,15 @@ def create_agent(task: PublicTask, url: str, llm, browser, recorder: Recorder, e
                  initial_actions=[{"navigate": {"url": url, "new_tab": False}}])
 
 
-async def attempt(task: PublicTask, url: str, llm, recorder: Recorder, effective: dict, answer_model=Answer):
+async def attempt(task: PublicTask, url: str, llm, recorder: Recorder, effective: dict, answer_model=Answer, network_capture=None):
     prepare_browser_environment()
     from browser_use import Browser
     from playwright.async_api import async_playwright
     async with async_playwright() as pw:
         browser = Browser(**browser_options(url, pw.chromium.executable_path, effective))
+        if network_capture is not None:                       # optional (WebArena): start the browser first so the capture is attached before the first navigation
+            await browser.start()
+            await network_capture.attach(browser.cdp_url)
         recorder.event("browser_version", version=executable_version(pw.chromium.executable_path), source="executable --version")
         capture = attach_capture(llm, recorder)
         wrapped = RecordingModel(llm, recorder, effective, capture=capture)
@@ -353,6 +386,11 @@ async def attempt(task: PublicTask, url: str, llm, recorder: Recorder, effective
                         estimated_cost=capture.cost_summary() if capture else None,
                         cost_limit_blocks=(capture.cost_blocks or None) if capture else None)
         finally:
+            if network_capture is not None:
+                try:
+                    await network_capture.close()
+                except Exception as exc:
+                    recorder.event("cleanup_error", error=f"network capture: {exc}")
             recorder.write("history.json", agent.history.model_dump())
             try:
                 await asyncio.wait_for(browser.kill(), timeout=15)

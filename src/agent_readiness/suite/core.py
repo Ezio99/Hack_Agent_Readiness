@@ -60,8 +60,9 @@ class Variant:
     def variant_id(self) -> str:
         return f"{self.environment_id}/" + "+".join(f"{k}-{v}" for k, v in self.factors)
 
-    def factor(self, name: str) -> str:
-        return dict(self.factors)[name]
+    def factor(self, name: str, *default: str) -> str:
+        """Level of a factor; an optional default is returned when the variant does not mention it (factors added after the original variants)."""
+        return dict(self.factors).get(name, default[0]) if default else dict(self.factors)[name]
 
 
 @dataclass(frozen=True)
