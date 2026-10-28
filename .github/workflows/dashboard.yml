@@ -1,9 +1,9 @@
 name: Dashboard checks
 on:
   push:
-    paths: ["dashboard/**", "collaboration/reports/007-*", "collaboration/reports/007-pilot-data/**", ".github/workflows/dashboard.yml"]
+    paths: ["dashboard/**", "collaboration/reports/007-*", "collaboration/reports/007-pilot-data/**", ".github/workflows/dashboard.yml", ".github/workflows/pages.yml"]
   pull_request:
-    paths: ["dashboard/**", "collaboration/reports/007-*", "collaboration/reports/007-pilot-data/**", ".github/workflows/dashboard.yml"]
+    paths: ["dashboard/**", "collaboration/reports/007-*", "collaboration/reports/007-pilot-data/**", ".github/workflows/dashboard.yml", ".github/workflows/pages.yml"]
 permissions:
   contents: read
 jobs:
@@ -23,5 +23,10 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Exporter and deployment-safety tests (stdlib + pytest only; no run artifacts needed)
+        run: python -m pip install pytest && python -m pytest scripts -q
       - name: Check dist (no credentials, local paths, traces or unapproved replay data)
         run: npm run check:dist

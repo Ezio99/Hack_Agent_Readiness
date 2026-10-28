@@ -4,7 +4,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
-const root = new URL("../dist", import.meta.url).pathname;
+const root = process.env.DIST_DIR ?? new URL("../dist", import.meta.url).pathname;   // DIST_DIR is for tests only
 const allowReplays = process.env.ALLOW_REPLAYS === "1";
 const files = [];
 const walk = (d) => readdirSync(d).forEach((n) => { const p = join(d, n); statSync(p).isDirectory() ? walk(p) : files.push(p); });

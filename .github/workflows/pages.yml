@@ -32,21 +32,17 @@ jobs:
           cache-dependency-path: dashboard/package-lock.json
       - name: Replay publication gate
         id: gate
-        run: |
-          if [ -d public/replays ]; then
-            if [ "${{ inputs.replay_approval_phrase }}" != "REPLAY-FILES-APPROVED-FOR-PUBLICATION" ]; then
-              echo "dashboard/public/replays exists on this ref but the approval phrase was not given: refusing to build." >&2; exit 1
-            fi
-            echo "allow=1" >> "$GITHUB_OUTPUT"
-          else
-            if [ -n "${{ inputs.replay_approval_phrase }}" ]; then echo "approval phrase given but no replay files exist on this ref." >&2; exit 1; fi
-            echo "allow=0" >> "$GITHUB_OUTPUT"
-          fi
+        env:
+          # user-supplied input is passed as data through the environment, never interpolated into the shell script
+          APPROVAL_PHRASE: ${{ inputs.replay_approval_phrase }}
+        run: bash scripts/replay-gate.sh
       - run: npm ci
       - run: npm run build
       - run: npm test
       - name: Check dist for credentials, local paths, traces and unapproved replay data
-        run: ALLOW_REPLAYS=${{ steps.gate.outputs.allow }} npm run check:dist
+        env:
+          ALLOW_REPLAYS: ${{ steps.gate.outputs.allow }}
+        run: npm run check:dist
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
