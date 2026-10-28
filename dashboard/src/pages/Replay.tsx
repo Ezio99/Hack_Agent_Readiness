@@ -72,8 +72,10 @@ export function ReplayViewer({ replays, manifest }: { replays: Replay[]; manifes
         </p>
         <p className="muted">
           {r.totals.requests} requests · {r.totals.prompt_tokens.toLocaleString()} prompt / {r.totals.completion_tokens.toLocaleString()} completion tokens · {usd(r.totals.estimated_cost_usd)} calculated estimate (not a bill) · {r.totals.elapsed_s} s.
-          Request accounting (assumption, not a per-request classification): assumed required path {r.attribution.required_path_requests}, loop calls {r.attribution.tool_loop_requests},
-          residual {r.attribution.residual_requests}{r.evaluator.passed ? "" : " (not meaningful: the required path was not completed)"}.
+          Request accounting (assumption, not a per-request classification): assumed required path {r.attribution.required_path_requests}, loop calls {r.attribution.tool_loop_requests},{" "}
+          {r.attribution.residual_requests === null
+            ? <>residual overhead <strong>not reported — not meaningful: the required path was not completed</strong> (a failed run is never read as efficiency).</>
+            : <>residual {r.attribution.residual_requests}.</>}
         </p>
       </section>
 

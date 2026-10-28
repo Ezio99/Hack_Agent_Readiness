@@ -39,11 +39,16 @@ The app imports `../collaboration/reports/007-pilot-data/per-run-reconciled.json
 `scripts/export_replay.py` deterministically exports a sanitized replay of three real runs (`25-s02-A1`, `26-s02-B1`, `27-s02-B2`) from the **local, uncommitted** `runs/pilot-task007/` artifacts into `public/replays/`, which is **Git-ignored**. The export is not committed or published until the exact files and fields are reviewed and approved.
 
 ```bash
-python3 dashboard/scripts/export_replay.py --audit   # write + sanitization audit and field/size inventory (exit 1 on any finding)
-python3 dashboard/scripts/export_replay.py --check   # regenerate in memory and compare with the files on disk
+python3 dashboard/scripts/export_replay.py           # build in memory -> audit (mandatory) -> write ONLY if the audit passes
+python3 dashboard/scripts/export_replay.py --audit   # same, and print the field/size inventory
+python3 dashboard/scripts/export_replay.py --check   # read-only: regenerate in memory and compare with the files on disk
 .venv/bin/python -m pytest dashboard/scripts -q       # exporter unit tests (synthetic inputs)
 cd dashboard && npm run dev                           # Recorded replay tab loads ./replays/ when present
 ```
+
+**Audit-before-write:** every write first builds the export in memory and runs the sanitization checks (credential value, local paths, localhost ports, key-like tokens, emails, forbidden keys, any model-written string of 20+ characters from the local responses) and integrity checks (manifest hashes, step counts, token/cost totals, attribution rules). Any finding exits nonzero, writes nothing and leaves existing exports untouched; files are staged and moved into place only after the audit passes. `--check` never writes.
+
+**Attribution in the export:** `required_path_requests` is an *assumed* path (A 2; B 2 × rank); `tool_loop_requests` counts repeated `find_elements` calls in loop runs (≥ 3); `residual_requests = total − required − loop` is an unclassified remainder. For a run that did not complete the required path (failed run 27: required 3 pages, observed 1) the residual is **`null`** with `required_path_completed: false` and a `residual_note`, because the difference is not an overhead measure and must never be read as efficiency; the request, loop and assumed-path counts are preserved. The underlying data and Report 007's numbers are unchanged.
 
 Exported per run: identifiers, scope, arm, task wording, evaluator verdict and reasons, submitted answer, required/observed visits, overhead or verification shortfall, request accounting, totals; per step: page kind and path, the model-visible DOM text, the last result shown in the model's history, allow-listed action names and parameters, sanitized tool-result excerpts (≤ 600 chars), the result as shown to the model on its next request, response-format category (raw-valid / recovered), guard state, tokens, latency and calculated cost. **Excluded:** model thinking/memory/next-goal text, prose prefixes, free-text action descriptions, system prompts and complete requests, raw HTTP bodies, request IDs, screenshots, private truth, local paths and ports. Without the export the tab shows a clearly labelled "not included in this build" message; the replay tests then run only against a clearly marked synthetic fixture.
 

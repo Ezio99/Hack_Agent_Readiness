@@ -81,6 +81,19 @@ describe.skipIf(!present)("local sanitized export reconciles with the committed 
     expect([last.guard.final_step, last.guard.schema]).toEqual([true, "done_only"]);
     expect(r27.run.verification_shortfall?.detail_visit_shortfall).toBe(2);
   });
+  it("run 27's residual overhead is null (not meaningful) while request, loop and assumed required-path counts are preserved", () => {
+    const a = replays.find((r) => r.run.id === "27-s02-B2")!.run.attribution;
+    expect(a.residual_requests).toBeNull();
+    expect(a.required_path_completed).toBe(false);
+    expect([a.total_requests, a.tool_loop_requests, a.required_path_requests]).toEqual([12, 7, 6]);
+    expect(a.residual_note).toMatch(/not meaningful/);
+    for (const id of ["25-s02-A1", "26-s02-B1"]) {
+      const b = replays.find((r) => r.run.id === id)!.run.attribution;
+      expect(b.required_path_completed).toBe(true);
+      expect(b.residual_requests).toBe(b.total_requests - b.required_path_requests - b.tool_loop_requests);
+      expect(b.residual_note).toBeNull();
+    }
+  });
   it("successful runs have no visibility gaps", () => {
     for (const id of ["25-s02-A1", "26-s02-B1"]) expect(replays.find((r) => r.run.id === id)!.steps.some(hasVisibilityGap)).toBe(false);
   });

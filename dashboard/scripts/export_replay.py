@@ -4,9 +4,9 @@
 DEVELOPMENT-ONLY OUTPUT: files are written to dashboard/public/replays/ which is Git-ignored. Do not commit or publish them until the exact
 files and fields have been reviewed and approved. Stdlib only. No model calls, no network, no changes to runs/.
 
-    python3 dashboard/scripts/export_replay.py            # write the export
-    python3 dashboard/scripts/export_replay.py --check    # regenerate in memory and compare with the files on disk
-    python3 dashboard/scripts/export_replay.py --audit    # export + sanitization audit and field/size inventory (exit 1 on any finding)
+    python3 dashboard/scripts/export_replay.py            # build in memory, audit (mandatory), write only if the audit passes
+    python3 dashboard/scripts/export_replay.py --audit    # same, and print the field/size inventory
+    python3 dashboard/scripts/export_replay.py --check    # read-only: regenerate in memory and compare with the files on disk
 
 The exporter emits an allow-list of fields only. Excluded: model thinking/memory/next-goal/evaluation text, prose prefixes, free-text action
 descriptions, system prompts and complete model requests, raw HTTP bodies, request IDs, screenshots, history.json, private task truth,
@@ -111,6 +111,23 @@ def sha(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def attribution_for(rec):
+    """Request accounting for the replay header (an assumption, not a per-request classification).
+
+    required_path_requests is the *assumed* website-required path (A: 2; B: 2 x rank) and is kept for reference. tool_loop_requests is the number of
+    repeated find_elements calls in loop runs (>= 3). residual_requests = total - required - tool is only meaningful when the run completed the
+    required path. For a failed run (verification shortfall: the required path was never completed) it is set to null and explicitly marked, so
+    it cannot be read as efficiency. The underlying experimental data and Report 007's numbers are unchanged."""
+    required = 2 if rec["arm"] == "A" else 2 * rec["rank"]
+    tool = len(rec["find_elements"]) if len(rec["find_elements"]) >= 3 else 0
+    completed = rec["shortfall"] is None and rec["passed"]
+    return {"required_path_requests": required, "tool_loop_requests": tool, "total_requests": rec["requests"],
+            "required_path_completed": completed,
+            "residual_requests": (rec["requests"] - required - tool) if completed else None,
+            "residual_note": None if completed else "not meaningful: the required navigation path was not completed (failed run, verification shortfall), "
+                                                    "so total - required - loop calls is not an overhead measure and must not be read as efficiency"}
+
+
 def build():
     state = json.loads(STATE.read_text())
     reconciled = {r["id"]: r for r in json.loads(RECONCILED.read_text())}
@@ -154,8 +171,6 @@ def build():
                 "estimated_cost_usd": round(usage["prompt_tokens"] * PRICE_IN / 1e6 + usage["completion_tokens"] * PRICE_OUT / 1e6, 6),
             })
         total_tokens = sum(s["usage"]["prompt_tokens"] for s in steps), sum(s["usage"]["completion_tokens"] for s in steps)
-        att_required = 2 if rec["arm"] == "A" else 2 * rec["rank"]
-        att_tool = len(rec["find_elements"]) if len(rec["find_elements"]) >= 3 else 0
         out[name] = {
             "schema": SCHEMA, "label": "Recorded experiment replay — not live inference",
             "run": {"id": entry_id, "scope": rec["scope"], "arm": rec["arm"], "rank": rec["rank"], "task": run["task"]["prompt"],
@@ -163,12 +178,13 @@ def build():
                     "answer_submitted": {k: rec["answer"][k] for k in ("product_id", "price_cents", "available")},
                     "required_visits": rec["required_visits"], "observed_visits": len(rec["visits_trace"]),
                     "overhead": rec["overhead"], "verification_shortfall": rec["shortfall"],
-                    "attribution": {"required_path_requests": att_required, "tool_loop_requests": att_tool,
-                                    "residual_requests": rec["requests"] - att_required - att_tool, "total_requests": rec["requests"]},
+                    "attribution": attribution_for(rec),
                     "totals": {"requests": rec["requests"], "prompt_tokens": total_tokens[0], "completion_tokens": total_tokens[1],
                                "estimated_cost_usd": round(sum(s["estimated_cost_usd"] for s in steps), 6), "elapsed_s": round(run["elapsed_seconds"], 1)}},
             "steps": steps,
-            "notes": {"cost": "calculated from provider-reported tokens at published prices (US$1.25/M input, US$4.25/M output); not a bill",
+            "notes": {"attribution": "required_path_requests is an assumed path (A 2; B 2 x rank); residual_requests = total - required - loop calls, an unclassified "
+                                     "remainder reported only for runs that completed the required path and null otherwise (see residual_note)",
+                      "cost": "calculated from provider-reported tokens at published prices (US$1.25/M input, US$4.25/M output); not a bill",
                       "excluded": "model reasoning/memory/next-goal text, prose prefixes, free-text action descriptions, system prompts, full requests, "
                                   "raw HTTP bodies, request IDs, screenshots, private task truth, local paths and ports"},
         }
@@ -184,8 +200,53 @@ def build():
     return files
 
 
-def audit(files):
+def integrity(files):
+    """Structural checks that must hold before anything is written."""
     findings = []
+    try:
+        manifest = json.loads(files["manifest.json"])
+    except (KeyError, ValueError):
+        return ["manifest.json missing or unparsable"]
+    listed = {r["file"]: r for r in manifest["replays"]}
+    if set(listed) != {n for n in files if n != "manifest.json"}:
+        findings.append("manifest file list does not match the exported files")
+    for name, entry in listed.items():
+        if name in files and (hashlib.sha256(files[name].encode()).hexdigest() != entry["sha256"] or len(files[name].encode()) != entry["bytes"]):
+            findings.append(f"{name}: manifest sha256/bytes mismatch")
+    for name in listed:
+        if name not in files:
+            continue
+        try:
+            findings.extend(check_replay(name, json.loads(files[name])))
+        except (KeyError, TypeError, ValueError, IndexError) as exc:
+            findings.append(f"{name}: malformed structure ({type(exc).__name__}: {exc})")
+    return findings
+
+
+def check_replay(name, data):
+    findings = []
+    run, steps = data["run"], data["steps"]
+    if len(steps) != run["totals"]["requests"] or [s["step"] for s in steps] != list(range(1, len(steps) + 1)):
+        findings.append(f"{name}: step numbering/count does not match totals")
+    if sum(s["usage"]["prompt_tokens"] for s in steps) != run["totals"]["prompt_tokens"] or sum(s["usage"]["completion_tokens"] for s in steps) != run["totals"]["completion_tokens"]:
+        findings.append(f"{name}: token totals do not match steps")
+    if abs(sum(s["estimated_cost_usd"] for s in steps) - run["totals"]["estimated_cost_usd"]) > 1e-5:
+        findings.append(f"{name}: cost total does not match steps")
+    att, passed = run["attribution"], run["evaluator"]["passed"]
+    if att["total_requests"] != len(steps):
+        findings.append(f"{name}: attribution total_requests does not match steps")
+    if passed and (att["residual_requests"] != att["total_requests"] - att["required_path_requests"] - att["tool_loop_requests"] or not att["required_path_completed"]):
+        findings.append(f"{name}: residual accounting inconsistent for a successful run")
+    if not passed and (att["residual_requests"] is not None or att["required_path_completed"] or not att.get("residual_note") or run["verification_shortfall"] is None):
+        findings.append(f"{name}: failed run must have residual null, required_path_completed false, a note and a verification shortfall")
+    if passed and run["verification_shortfall"] is not None:
+        findings.append(f"{name}: successful run carries a verification shortfall")
+    return findings
+
+
+def audit(files):
+    """Sanitization and integrity checks on the in-memory export; returns (findings, inventory)."""
+    findings = integrity(files)
     secret = os.environ.get("META_MODEL_API_KEY", "")
     envfile = ROOT / ".env"
     if not secret and envfile.exists():
@@ -243,23 +304,39 @@ def audit(files):
     return findings, inventory
 
 
+def write_files(files):
+    """Write the (already audited) export. Staged in a temporary directory beside OUT and moved into place, so a failure never leaves a partial export."""
+    import shutil
+    import tempfile
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    stage = Path(tempfile.mkdtemp(prefix=".replays-stage-", dir=OUT.parent))
+    try:
+        for n, t in files.items():
+            (stage / n).write_text(t)
+        OUT.mkdir(parents=True, exist_ok=True)
+        for n in files:
+            os.replace(stage / n, OUT / n)
+    finally:
+        shutil.rmtree(stage, ignore_errors=True)
+
+
 def main(argv):
-    files = build()
-    if "--check" in argv:
+    files = build()                                    # 1. build in memory
+    if "--check" in argv:                              # read-only: never writes, never audits-to-disk
         bad = [n for n, t in files.items() if not (OUT / n).exists() or (OUT / n).read_text() != t]
         print("export matches files on disk" if not bad else f"MISMATCH: {bad}")
         return 1 if bad else 0
-    OUT.mkdir(parents=True, exist_ok=True)
-    for n, t in files.items():
-        (OUT / n).write_text(t)
-    print(f"wrote {len(files)} files to {OUT.relative_to(ROOT)} (Git-ignored, development-only)")
+    findings, inventory = audit(files)                 # 2. sanitization + integrity checks (mandatory for every write)
     if "--audit" in argv:
-        findings, inventory = audit(files)
         print(json.dumps(inventory, indent=1))
-        print("AUDIT:", "no findings" if not findings else f"{len(findings)} finding(s)")
-        for f in findings:
-            print(" -", f)
-        return 1 if findings else 0
+    print("AUDIT:", "no findings" if not findings else f"{len(findings)} finding(s)")
+    for f in findings:
+        print(" -", f)
+    if findings:                                       # 3. any finding: exit nonzero, write nothing, leave existing exports untouched
+        print("NOT WRITTEN: audit failed; existing files (if any) were left unchanged")
+        return 1
+    write_files(files)                                 # 4. only after the audit passes
+    print(f"wrote {len(files)} files to {OUT} (Git-ignored, development-only; not approved for publication)")
     return 0
 
 

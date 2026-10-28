@@ -80,7 +80,7 @@ const FIXTURE: Replay = {
   run: { id: "FIXTURE-NOT-EVIDENCE", scope: "Fern", arm: "B", rank: 3, task: "task text", evaluator: { passed: false, reasons: ["r"] },
     answer_submitted: { product_id: "X", price_cents: 100, available: false }, required_visits: 3, observed_visits: 1, overhead: null,
     verification_shortfall: { required_visits: 3, actual_visits: 1, detail_visit_shortfall: 2, higher_priced_candidates: 2, higher_priced_checked: 1, higher_priced_unchecked: 1 },
-    attribution: { required_path_requests: 6, tool_loop_requests: 3, residual_requests: -1, total_requests: 5 },
+    attribution: { required_path_requests: 6, tool_loop_requests: 3, residual_requests: null, total_requests: 5, required_path_completed: false, residual_note: "not meaningful" },
     totals: { requests: 5, prompt_tokens: 45000, completion_tokens: 1500, estimated_cost_usd: 0.065, elapsed_s: 10 } },
   steps: [mk(1, false), mk(2, true), mk(3, true), mk(4, true), mk(5, false)],
 };
@@ -93,7 +93,9 @@ describe("recorded replay UI (rendered with a synthetic development fixture)", (
     expect(html).toContain("incomplete verification, not an efficient short path");
     expect(html).toContain("FAIL");
     expect(html).toContain("not a per-request classification");
-    expect(html).toContain("not meaningful: the required path was not completed");
+    expect(html).toContain("not reported — not meaningful: the required path was not completed");
+    expect(html).not.toContain("residual -1");
+    expect(html).not.toContain("residual overhead -");
     expect(html).toContain("agent–tool interface");
     expect(html).toContain("Model reasoning, plans and goal text are intentionally not part of this export");
     expect(html).not.toMatch(/\bthinking\b|next goal/i);

@@ -29,7 +29,9 @@ export interface ReplayRun {
   answer_submitted: { product_id: string; price_cents: number; available: boolean };
   required_visits: number; observed_visits: number; overhead: number | null;
   verification_shortfall: { required_visits: number; actual_visits: number; detail_visit_shortfall: number; higher_priced_candidates: number; higher_priced_checked: number | null; higher_priced_unchecked: number | null } | null;
-  attribution: { required_path_requests: number; tool_loop_requests: number; residual_requests: number; total_requests: number };
+  /** required_path_requests is an ASSUMED path (A 2; B 2×rank). residual_requests = total − required − loop calls is an unclassified remainder and is
+   *  null for a run that did not complete the required path (failed run): it is then not meaningful and must not be read as efficiency. */
+  attribution: { required_path_requests: number; tool_loop_requests: number; residual_requests: number | null; total_requests: number; required_path_completed: boolean; residual_note: string | null };
   totals: { requests: number; prompt_tokens: number; completion_tokens: number; estimated_cost_usd: number; elapsed_s: number };
 }
 export interface Replay { schema: string; label: string; run: ReplayRun; steps: ReplayStep[]; notes: { cost: string; excluded: string } }
