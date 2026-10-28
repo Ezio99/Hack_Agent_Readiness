@@ -107,17 +107,17 @@ def main():
         cfg = load_config()
         if args.scanner_command == "live-validate":
             import json as _json
-            from .agent import ModelConfig
+            from .agent import ModelConfig as LiveModelConfig
             from .scanner import live
             ledger = live.Ledger(args.dir, min(args.max_total_usd, live.CEILING_USD))
             try:
                 if args.stage == "status":
                     print(_json.dumps({"committed_usd": ledger.committed(), "ceiling_usd": ledger.ceiling, "probe_ok": ledger.probe_succeeded(), "entries": ledger.entries()}, indent=1))
                 elif args.stage == "probe":
-                    rec = live.run_probe(ModelConfig(), ledger, args.dir / "probe", allow_model_calls=args.allow_model_calls)
+                    rec = live.run_probe(LiveModelConfig(), ledger, args.dir / "probe", allow_model_calls=args.allow_model_calls)
                     print(_json.dumps({k: rec.get(k) for k in ("success", "failure_class", "http_status", "finish_reason", "usage", "calculated_cost_usd", "grading", "error")}, indent=1, default=str))
                 else:
-                    print(_json.dumps(live.run_fixtures(ModelConfig(), ledger, args.dir, allow_model_calls=args.allow_model_calls), indent=1))
+                    print(_json.dumps(live.run_fixtures(LiveModelConfig(), ledger, args.dir, allow_model_calls=args.allow_model_calls), indent=1))
             except live.Halt as exc:
                 print(f"HALT: {exc}")
                 raise SystemExit(2)
