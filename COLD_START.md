@@ -4,6 +4,10 @@
 >
 > Read this before proposing changes, writing code, or making architectural decisions. This document provides orientation, not a complete specification. Always inspect the current repository and relevant task documents.
 
+## Current execution handoff
+
+For a new Claude/Codex agent: **read [STATUS.md](STATUS.md) first for the latest verified state**, then [AGENTS.md](AGENTS.md), [Report 004](collaboration/reports/004-first-live-meta-trial.md), and the active task. The working branch is `hackathon/task004-stage-a` (PR #3, unmerged). Meta A–C probes passed; the strict Stage D trial failed on non-JSON output. An opt-in compatibility profile recovered and executed one live click, but the request gate prevented completion. No end-to-end live success is established. Draft Task 005 is a proposal only; do not spend, retry, or merge without user approval. Verify current GitHub state on startup; this paragraph is a dated 2026-10-28 snapshot.
+
 ## 1. Our intention
 
 **Agent Readiness** investigates how effectively AI agents can interact with websites.
@@ -56,7 +60,7 @@ Our immediate technical priorities are a reliable experimental harness and verif
 
 The current state of the hackathon implementation is recorded in `STATUS.md`. Do not infer completion from this document.
 
-As of 2026-10-27 the credential-free foundation is merged (PR #1, task `003-hackathon-first-agent-run.md`). The active milestone is authenticated Meta compatibility validation followed by one independently evaluated trial, specified in `collaboration/tasks/004-first-live-meta-trial.md` (proposed; **no model call is authorized until the user approves model, endpoint, test sequence and limits**). Tasks 001 and 002 are historical pre-event specifications. Credentials come from `MODEL_API_KEY` in the environment or a repository-root `.env`; never expose the value.
+As of 2026-10-27 the credential-free foundation is merged (PR #1, task `003-hackathon-first-agent-run.md`). The active milestone is authenticated Meta compatibility validation followed by one independently evaluated trial, specified in `collaboration/tasks/004-first-live-meta-trial.md` (proposed; **no model call is authorized until the user approves model, endpoint, test sequence and limits**). Tasks 001 and 002 are historical pre-event specifications. Credentials come from `META_MODEL_API_KEY` in the environment or a repository-root `.env`; never expose the value.
 
 ## 4. Where to find information
 

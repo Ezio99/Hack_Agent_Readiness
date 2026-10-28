@@ -26,7 +26,7 @@ async def test_meta_adapter_wire_contract_with_synthetic_response(tmp_path):
         assert body["response_format"]["type"] == "json_schema"
         assert body["response_format"]["json_schema"]["strict"] is True
         assert "temperature" not in body and "frequency_penalty" not in body
-        assert "reasoning_effort" not in body  # Do not force an undocumented adapter default.
+        assert "reasoning_effort" not in body  # v2 profile defines none; v3 is covered in test_profile_v3.py
         parts = body["messages"][1]["content"]
         assert any(p["type"] == "image_url" and p["image_url"]["url"].startswith("data:image/png;base64,") for p in parts)
         return httpx.Response(200, json={"id": "synthetic", "object": "chat.completion", "created": 0,
@@ -35,7 +35,7 @@ async def test_meta_adapter_wire_contract_with_synthetic_response(tmp_path):
             "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15}})
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
-        model = create_model(ModelConfig(), profile(), http_client=client, api_key="synthetic-key")
+        model = create_model(ModelConfig(), profile("natural-shopping-v2"), http_client=client, api_key="synthetic-key")
         # Avoid the SDK's asynchronous platform probe in this restricted sandbox.
         # The request serializer, schema, transport and response parser remain real.
         sdk = model.get_client()
@@ -75,7 +75,7 @@ def test_profile_and_tools_are_fixed_and_truth_is_not_in_prompt(tmp_path):
 
 
 def test_missing_credential(monkeypatch):
-    monkeypatch.delenv("MODEL_API_KEY", raising=False)
+    monkeypatch.delenv("META_MODEL_API_KEY", raising=False)
     with pytest.raises(ValueError, match="Missing credential"):
         create_model(ModelConfig(), profile())
 

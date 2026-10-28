@@ -1,0 +1,2424 @@
+[
+ {
+  "id": "01-s00-A1",
+  "run_id": "20261028T010726-f1ca97bbc309",
+  "seed": 0,
+  "scope": "Home",
+  "arm": "A",
+  "rep": 1,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 1,
+  "rank": 3,
+  "higher_ids": [
+   "AR-7522",
+   "AR-7471"
+  ],
+  "visits_trace": [
+   "Woven Basket"
+  ],
+  "visits_history": [
+   "Woven Basket"
+  ],
+  "visits_metric": 1,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7505",
+   "price_cents": 3700,
+   "available": true
+  },
+  "expected": "AR-7505",
+  "requests": 3,
+  "resp_files": 3,
+  "http200": 3,
+  "categories": [
+   "recovered",
+   "raw_valid",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 28102,
+  "completion": 957,
+  "reasoning": 376,
+  "cost": 0.03919475,
+  "cost_metric": 0.039195,
+  "elapsed": 11.426548288999584,
+  "model_s": 6.013,
+  "per_req_s": [
+   2.221,
+   1.74,
+   2.052
+  ],
+  "worst_sent": 0.09393,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.039195,
+  "state_summary_requests": 3,
+  "overhead": 0,
+  "shortfall": null,
+  "revisits": 0
+ },
+ {
+  "id": "02-s00-B1",
+  "run_id": "20261028T010737-0dd8e661897d",
+  "seed": 0,
+  "scope": "Home",
+  "arm": "B",
+  "rep": 1,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 3,
+  "rank": 3,
+  "higher_ids": [
+   "AR-7522",
+   "AR-7471"
+  ],
+  "visits_trace": [
+   "Cotton Throw",
+   "Reading Lamp",
+   "Woven Basket"
+  ],
+  "visits_history": [
+   "Cotton Throw",
+   "Reading Lamp",
+   "Woven Basket"
+  ],
+  "visits_metric": 3,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7505",
+   "price_cents": 3700,
+   "available": true
+  },
+  "expected": "AR-7505",
+  "requests": 8,
+  "resp_files": 8,
+  "http200": 8,
+  "categories": [
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 74673,
+  "completion": 1965,
+  "reasoning": 584,
+  "cost": 0.1016925,
+  "cost_metric": 0.101693,
+  "elapsed": 21.472762547000457,
+  "model_s": 14.651,
+  "per_req_s": [
+   2.213,
+   2.045,
+   1.528,
+   2.14,
+   2.091,
+   1.503,
+   1.377,
+   1.754
+  ],
+  "worst_sent": 0.25092,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.101693,
+  "state_summary_requests": 8,
+  "overhead": 0,
+  "shortfall": null,
+  "revisits": 0
+ },
+ {
+  "id": "03-s00-B2",
+  "run_id": "20261028T010801-b87009764bd2",
+  "seed": 0,
+  "scope": "Home",
+  "arm": "B",
+  "rep": 2,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 3,
+  "rank": 3,
+  "higher_ids": [
+   "AR-7522",
+   "AR-7471"
+  ],
+  "visits_trace": [
+   "Cotton Throw",
+   "Reading Lamp",
+   "Woven Basket"
+  ],
+  "visits_history": [
+   "Cotton Throw",
+   "Reading Lamp",
+   "Woven Basket"
+  ],
+  "visits_metric": 3,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7505",
+   "price_cents": 3700,
+   "available": true
+  },
+  "expected": "AR-7505",
+  "requests": 8,
+  "resp_files": 8,
+  "http200": 8,
+  "categories": [
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "raw_valid",
+   "recovered",
+   "recovered",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 75277,
+  "completion": 2406,
+  "reasoning": 995,
+  "cost": 0.10432175,
+  "cost_metric": 0.104322,
+  "elapsed": 22.821138127000268,
+  "model_s": 15.642,
+  "per_req_s": [
+   2.444,
+   1.498,
+   1.861,
+   2.107,
+   1.551,
+   1.971,
+   1.281,
+   2.929
+  ],
+  "worst_sent": 0.25133,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.104322,
+  "state_summary_requests": 8,
+  "overhead": 0,
+  "shortfall": null,
+  "revisits": 0
+ },
+ {
+  "id": "04-s00-A2",
+  "run_id": "20261028T010826-390f94c87f88",
+  "seed": 0,
+  "scope": "Home",
+  "arm": "A",
+  "rep": 2,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 1,
+  "rank": 3,
+  "higher_ids": [
+   "AR-7522",
+   "AR-7471"
+  ],
+  "visits_trace": [
+   "Woven Basket",
+   "Woven Basket"
+  ],
+  "visits_history": [
+   "Woven Basket",
+   "Woven Basket"
+  ],
+  "visits_metric": 2,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7505",
+   "price_cents": 3700,
+   "available": true
+  },
+  "expected": "AR-7505",
+  "requests": 4,
+  "resp_files": 4,
+  "http200": 4,
+  "categories": [
+   "recovered",
+   "recovered",
+   "recovered",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 37161,
+  "completion": 1399,
+  "reasoning": 640,
+  "cost": 0.052397,
+  "cost_metric": 0.052397,
+  "elapsed": 14.594024097999863,
+  "model_s": 9.94,
+  "per_req_s": [
+   2.662,
+   2.077,
+   2.781,
+   2.42
+  ],
+  "worst_sent": 0.12498,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.052397,
+  "state_summary_requests": 4,
+  "overhead": 1,
+  "shortfall": null,
+  "revisits": 1
+ },
+ {
+  "id": "05-s00-A3",
+  "run_id": "20261028T010841-e7c71f9e5a0f",
+  "seed": 0,
+  "scope": "Home",
+  "arm": "A",
+  "rep": 3,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 1,
+  "rank": 3,
+  "higher_ids": [
+   "AR-7522",
+   "AR-7471"
+  ],
+  "visits_trace": [
+   "Woven Basket",
+   "Woven Basket"
+  ],
+  "visits_history": [
+   "Woven Basket",
+   "Woven Basket"
+  ],
+  "visits_metric": 2,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7505",
+   "price_cents": 3700,
+   "available": true
+  },
+  "expected": "AR-7505",
+  "requests": 4,
+  "resp_files": 4,
+  "http200": 4,
+  "categories": [
+   "recovered",
+   "recovered",
+   "recovered",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 37224,
+  "completion": 1261,
+  "reasoning": 452,
+  "cost": 0.051889250000000005,
+  "cost_metric": 0.051889,
+  "elapsed": 14.212052830000175,
+  "model_s": 9.929,
+  "per_req_s": [
+   3.05,
+   1.898,
+   3.574,
+   1.407
+  ],
+  "worst_sent": 0.12508,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.051889,
+  "state_summary_requests": 4,
+  "overhead": 1,
+  "shortfall": null,
+  "revisits": 1
+ },
+ {
+  "id": "06-s00-B3",
+  "run_id": "20261028T010857-6721c15127db",
+  "seed": 0,
+  "scope": "Home",
+  "arm": "B",
+  "rep": 3,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 3,
+  "rank": 3,
+  "higher_ids": [
+   "AR-7522",
+   "AR-7471"
+  ],
+  "visits_trace": [
+   "Cotton Throw",
+   "Reading Lamp",
+   "Woven Basket"
+  ],
+  "visits_history": [
+   "Cotton Throw",
+   "Reading Lamp",
+   "Woven Basket"
+  ],
+  "visits_metric": 3,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7505",
+   "price_cents": 3700,
+   "available": true
+  },
+  "expected": "AR-7505",
+  "requests": 8,
+  "resp_files": 8,
+  "http200": 8,
+  "categories": [
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "raw_valid",
+   "recovered",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 74777,
+  "completion": 2040,
+  "reasoning": 620,
+  "cost": 0.10214125,
+  "cost_metric": 0.102141,
+  "elapsed": 32.857910994999656,
+  "model_s": 17.984,
+  "per_req_s": [
+   2.608,
+   2.112,
+   2.634,
+   1.595,
+   2.594,
+   1.341,
+   2.39,
+   2.71
+  ],
+  "worst_sent": 0.251,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.102141,
+  "state_summary_requests": 8,
+  "overhead": 0,
+  "shortfall": null,
+  "revisits": 0
+ },
+ {
+  "id": "07-s04-B1",
+  "run_id": "20261028T011700-2b991c7961a2",
+  "seed": 4,
+  "scope": "Kitchen",
+  "arm": "B",
+  "rep": 1,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 1,
+  "rank": 1,
+  "higher_ids": [],
+  "visits_trace": [
+   "Glass Carafe"
+  ],
+  "visits_history": [
+   "Glass Carafe"
+  ],
+  "visits_metric": 1,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7420",
+   "price_cents": 3400,
+   "available": true
+  },
+  "expected": "AR-7420",
+  "requests": 5,
+  "resp_files": 5,
+  "http200": 5,
+  "categories": [
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 46626,
+  "completion": 1720,
+  "reasoning": 821,
+  "cost": 0.0655925,
+  "cost_metric": 0.065592,
+  "elapsed": 22.287486870000066,
+  "model_s": 14.2,
+  "per_req_s": [
+   3.792,
+   2.437,
+   2.415,
+   2.389,
+   3.167
+  ],
+  "worst_sent": 0.15659,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.065592,
+  "state_summary_requests": 5,
+  "overhead": 0,
+  "shortfall": null,
+  "revisits": 0
+ },
+ {
+  "id": "08-s04-A1",
+  "run_id": "20261028T011725-c90cefd23bac",
+  "seed": 4,
+  "scope": "Kitchen",
+  "arm": "A",
+  "rep": 1,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 1,
+  "rank": 1,
+  "higher_ids": [],
+  "visits_trace": [
+   "Glass Carafe",
+   "Glass Carafe"
+  ],
+  "visits_history": [
+   "Glass Carafe",
+   "Glass Carafe"
+  ],
+  "visits_metric": 2,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7420",
+   "price_cents": 3400,
+   "available": true
+  },
+  "expected": "AR-7420",
+  "requests": 7,
+  "resp_files": 7,
+  "http200": 7,
+  "categories": [
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 66243,
+  "completion": 2463,
+  "reasoning": 1044,
+  "cost": 0.0932715,
+  "cost_metric": 0.093271,
+  "elapsed": 33.0842057079999,
+  "model_s": 16.726,
+  "per_req_s": [
+   2.572,
+   2.18,
+   2.27,
+   1.909,
+   1.688,
+   3.938,
+   2.169
+  ],
+  "worst_sent": 0.22049,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.093271,
+  "state_summary_requests": 7,
+  "overhead": 1,
+  "shortfall": null,
+  "revisits": 1
+ },
+ {
+  "id": "09-s04-A2",
+  "run_id": "20261028T011801-523edc1ffff7",
+  "seed": 4,
+  "scope": "Kitchen",
+  "arm": "A",
+  "rep": 2,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 1,
+  "rank": 1,
+  "higher_ids": [],
+  "visits_trace": [
+   "Glass Carafe"
+  ],
+  "visits_history": [
+   "Glass Carafe"
+  ],
+  "visits_metric": 1,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7420",
+   "price_cents": 3400,
+   "available": true
+  },
+  "expected": "AR-7420",
+  "requests": 3,
+  "resp_files": 3,
+  "http200": 3,
+  "categories": [
+   "recovered",
+   "recovered",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 28053,
+  "completion": 1012,
+  "reasoning": 350,
+  "cost": 0.03936725,
+  "cost_metric": 0.039367,
+  "elapsed": 18.579334210000525,
+  "model_s": 7.4830000000000005,
+  "per_req_s": [
+   2.088,
+   2.937,
+   2.458
+  ],
+  "worst_sent": 0.09388,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.039367,
+  "state_summary_requests": 3,
+  "overhead": 0,
+  "shortfall": null,
+  "revisits": 0
+ },
+ {
+  "id": "10-s04-B2",
+  "run_id": "20261028T011822-eaf41cd215da",
+  "seed": 4,
+  "scope": "Kitchen",
+  "arm": "B",
+  "rep": 2,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 1,
+  "rank": 1,
+  "higher_ids": [],
+  "visits_trace": [
+   "Glass Carafe"
+  ],
+  "visits_history": [
+   "Glass Carafe"
+  ],
+  "visits_metric": 1,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7420",
+   "price_cents": 3400,
+   "available": true
+  },
+  "expected": "AR-7420",
+  "requests": 5,
+  "resp_files": 5,
+  "http200": 5,
+  "categories": [
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 46620,
+  "completion": 1444,
+  "reasoning": 509,
+  "cost": 0.064412,
+  "cost_metric": 0.064412,
+  "elapsed": 23.90749283199966,
+  "model_s": 11.818,
+  "per_req_s": [
+   2.184,
+   2.683,
+   1.465,
+   2.436,
+   3.05
+  ],
+  "worst_sent": 0.15655,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.064412,
+  "state_summary_requests": 5,
+  "overhead": 0,
+  "shortfall": null,
+  "revisits": 0
+ },
+ {
+  "id": "11-s04-B3",
+  "run_id": "20261028T011846-4bf4b0a8485e",
+  "seed": 4,
+  "scope": "Kitchen",
+  "arm": "B",
+  "rep": 3,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 1,
+  "rank": 1,
+  "higher_ids": [],
+  "visits_trace": [
+   "Glass Carafe"
+  ],
+  "visits_history": [
+   "Glass Carafe"
+  ],
+  "visits_metric": 1,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7420",
+   "price_cents": 3400,
+   "available": true
+  },
+  "expected": "AR-7420",
+  "requests": 4,
+  "resp_files": 4,
+  "http200": 4,
+  "categories": [
+   "recovered",
+   "recovered",
+   "raw_valid",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 37035,
+  "completion": 1415,
+  "reasoning": 674,
+  "cost": 0.0523075,
+  "cost_metric": 0.052307,
+  "elapsed": 21.79824913399989,
+  "model_s": 9.676,
+  "per_req_s": [
+   2.303,
+   2.318,
+   2.173,
+   2.882
+  ],
+  "worst_sent": 0.12501,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.052307,
+  "state_summary_requests": 4,
+  "overhead": 0,
+  "shortfall": null,
+  "revisits": 0
+ },
+ {
+  "id": "12-s04-A3",
+  "run_id": "20261028T011910-88dbeb4c8625",
+  "seed": 4,
+  "scope": "Kitchen",
+  "arm": "A",
+  "rep": 3,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 1,
+  "rank": 1,
+  "higher_ids": [],
+  "visits_trace": [
+   "Glass Carafe",
+   "Glass Carafe"
+  ],
+  "visits_history": [
+   "Glass Carafe",
+   "Glass Carafe"
+  ],
+  "visits_metric": 2,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7420",
+   "price_cents": 3400,
+   "available": true
+  },
+  "expected": "AR-7420",
+  "requests": 10,
+  "resp_files": 10,
+  "http200": 10,
+  "categories": [
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "raw_valid",
+   "recovered",
+   "raw_valid",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 97641,
+  "completion": 2897,
+  "reasoning": 910,
+  "cost": 0.1343635,
+  "cost_metric": 0.134363,
+  "elapsed": 45.563941503000024,
+  "model_s": 30.274,
+  "per_req_s": [
+   2.69,
+   2.299,
+   1.422,
+   1.679,
+   2.051,
+   2.754,
+   1.7,
+   2.463,
+   11.464,
+   1.752
+  ],
+  "worst_sent": 0.31836,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [
+   {
+    "step": 1,
+    "tool_output_contains_product_hrefs": true,
+    "next_model_request_shows_hrefs": false,
+    "next_model_request_shows_count_line": true
+   },
+   {
+    "step": 2,
+    "tool_output_contains_product_hrefs": true,
+    "next_model_request_shows_hrefs": false,
+    "next_model_request_shows_count_line": true
+   },
+   {
+    "step": 3,
+    "tool_output_contains_product_hrefs": true,
+    "next_model_request_shows_hrefs": false,
+    "next_model_request_shows_count_line": true
+   },
+   {
+    "step": 4,
+    "tool_output_contains_product_hrefs": true,
+    "next_model_request_shows_hrefs": false,
+    "next_model_request_shows_count_line": true
+   },
+   {
+    "step": 5,
+    "tool_output_contains_product_hrefs": true,
+    "next_model_request_shows_hrefs": false,
+    "next_model_request_shows_count_line": true
+   },
+   {
+    "step": 6,
+    "tool_output_contains_product_hrefs": true,
+    "next_model_request_shows_hrefs": false,
+    "next_model_request_shows_count_line": true
+   }
+  ],
+  "find_elements_params_href": [
+   [
+    "href"
+   ],
+   [
+    "href"
+   ],
+   [
+    "href"
+   ],
+   [
+    "href"
+   ],
+   [
+    "href"
+   ],
+   [
+    "href"
+   ]
+  ],
+  "state_summary_cost": 0.134363,
+  "state_summary_requests": 10,
+  "overhead": 1,
+  "shortfall": null,
+  "revisits": 1
+ },
+ {
+  "id": "13-s01-A1",
+  "run_id": "20261028T012459-3f778133d3b9",
+  "seed": 1,
+  "scope": "Outdoors",
+  "arm": "A",
+  "rep": 1,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 1,
+  "rank": 3,
+  "higher_ids": [
+   "AR-7573",
+   "AR-7607"
+  ],
+  "visits_trace": [
+   "Yoga Mat"
+  ],
+  "visits_history": [
+   "Yoga Mat"
+  ],
+  "visits_metric": 1,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7556",
+   "price_cents": 3500,
+   "available": true
+  },
+  "expected": "AR-7556",
+  "requests": 3,
+  "resp_files": 3,
+  "http200": 3,
+  "categories": [
+   "recovered",
+   "recovered",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 28163,
+  "completion": 1340,
+  "reasoning": 668,
+  "cost": 0.04089875,
+  "cost_metric": 0.040899,
+  "elapsed": 27.948264507000204,
+  "model_s": 10.381,
+  "per_req_s": [
+   2.728,
+   2.681,
+   4.972
+  ],
+  "worst_sent": 0.09397,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.040899,
+  "state_summary_requests": 3,
+  "overhead": 0,
+  "shortfall": null,
+  "revisits": 0
+ },
+ {
+  "id": "14-s01-B1",
+  "run_id": "20261028T012529-00a3d8cba8aa",
+  "seed": 1,
+  "scope": "Outdoors",
+  "arm": "B",
+  "rep": 1,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 3,
+  "rank": 3,
+  "higher_ids": [
+   "AR-7573",
+   "AR-7607"
+  ],
+  "visits_trace": [
+   "Picnic Blanket",
+   "Camp Stool",
+   "Yoga Mat"
+  ],
+  "visits_history": [
+   "Picnic Blanket",
+   "Camp Stool",
+   "Yoga Mat"
+  ],
+  "visits_metric": 3,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7556",
+   "price_cents": 3500,
+   "available": true
+  },
+  "expected": "AR-7556",
+  "requests": 9,
+  "resp_files": 9,
+  "http200": 9,
+  "categories": [
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "raw_valid",
+   "raw_valid",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 85134,
+  "completion": 2325,
+  "reasoning": 683,
+  "cost": 0.11629874999999999,
+  "cost_metric": 0.116299,
+  "elapsed": 34.24905612500061,
+  "model_s": 19.548,
+  "per_req_s": [
+   2.665,
+   2.426,
+   3.428,
+   2.153,
+   2.026,
+   1.861,
+   1.95,
+   1.251,
+   1.788
+  ],
+  "worst_sent": 0.28356,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.116299,
+  "state_summary_requests": 9,
+  "overhead": 0,
+  "shortfall": null,
+  "revisits": 0
+ },
+ {
+  "id": "15-s01-B2",
+  "run_id": "20261028T012606-3df7b4ec673e",
+  "seed": 1,
+  "scope": "Outdoors",
+  "arm": "B",
+  "rep": 2,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 3,
+  "rank": 3,
+  "higher_ids": [
+   "AR-7573",
+   "AR-7607"
+  ],
+  "visits_trace": [
+   "Picnic Blanket",
+   "Camp Stool",
+   "Yoga Mat"
+  ],
+  "visits_history": [
+   "Picnic Blanket",
+   "Camp Stool",
+   "Yoga Mat"
+  ],
+  "visits_metric": 3,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7556",
+   "price_cents": 3500,
+   "available": true
+  },
+  "expected": "AR-7556",
+  "requests": 11,
+  "resp_files": 11,
+  "http200": 11,
+  "categories": [
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "raw_valid",
+   "recovered",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 106908,
+  "completion": 3041,
+  "reasoning": 898,
+  "cost": 0.14655925,
+  "cost_metric": 0.146559,
+  "elapsed": 34.64165895199949,
+  "model_s": 19.984,
+  "per_req_s": [
+   2.26,
+   2.091,
+   2.072,
+   1.536,
+   2.545,
+   2.166,
+   1.5,
+   1.61,
+   1.32,
+   1.182,
+   1.702
+  ],
+  "worst_sent": 0.34977,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [
+   {
+    "step": 1,
+    "tool_output_contains_product_hrefs": true,
+    "next_model_request_shows_hrefs": false,
+    "next_model_request_shows_count_line": true
+   },
+   {
+    "step": 2,
+    "tool_output_contains_product_hrefs": true,
+    "next_model_request_shows_hrefs": false,
+    "next_model_request_shows_count_line": true
+   },
+   {
+    "step": 3,
+    "tool_output_contains_product_hrefs": true,
+    "next_model_request_shows_hrefs": false,
+    "next_model_request_shows_count_line": true
+   },
+   {
+    "step": 4,
+    "tool_output_contains_product_hrefs": true,
+    "next_model_request_shows_hrefs": false,
+    "next_model_request_shows_count_line": true
+   },
+   {
+    "step": 5,
+    "tool_output_contains_product_hrefs": true,
+    "next_model_request_shows_hrefs": false,
+    "next_model_request_shows_count_line": true
+   }
+  ],
+  "find_elements_params_href": [
+   [
+    "href"
+   ],
+   [
+    "href"
+   ],
+   [
+    "href"
+   ],
+   [
+    "href"
+   ],
+   [
+    "href"
+   ]
+  ],
+  "state_summary_cost": 0.146559,
+  "state_summary_requests": 11,
+  "overhead": 0,
+  "shortfall": null,
+  "revisits": 0
+ },
+ {
+  "id": "16-s01-A2",
+  "run_id": "20261028T012643-3fe9153009d1",
+  "seed": 1,
+  "scope": "Outdoors",
+  "arm": "A",
+  "rep": 2,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 1,
+  "rank": 3,
+  "higher_ids": [
+   "AR-7573",
+   "AR-7607"
+  ],
+  "visits_trace": [
+   "Yoga Mat"
+  ],
+  "visits_history": [
+   "Yoga Mat"
+  ],
+  "visits_metric": 1,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7556",
+   "price_cents": 3500,
+   "available": true
+  },
+  "expected": "AR-7556",
+  "requests": 3,
+  "resp_files": 3,
+  "http200": 3,
+  "categories": [
+   "recovered",
+   "recovered",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 28059,
+  "completion": 1087,
+  "reasoning": 445,
+  "cost": 0.0396935,
+  "cost_metric": 0.039693,
+  "elapsed": 17.83159669500037,
+  "model_s": 6.61,
+  "per_req_s": [
+   1.95,
+   1.608,
+   3.052
+  ],
+  "worst_sent": 0.09385,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.039693,
+  "state_summary_requests": 3,
+  "overhead": 0,
+  "shortfall": null,
+  "revisits": 0
+ },
+ {
+  "id": "17-s01-A3",
+  "run_id": "20261028T012703-69285e165748",
+  "seed": 1,
+  "scope": "Outdoors",
+  "arm": "A",
+  "rep": 3,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 1,
+  "rank": 3,
+  "higher_ids": [
+   "AR-7573",
+   "AR-7607"
+  ],
+  "visits_trace": [
+   "Yoga Mat"
+  ],
+  "visits_history": [
+   "Yoga Mat"
+  ],
+  "visits_metric": 1,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7556",
+   "price_cents": 3500,
+   "available": true
+  },
+  "expected": "AR-7556",
+  "requests": 3,
+  "resp_files": 3,
+  "http200": 3,
+  "categories": [
+   "recovered",
+   "recovered",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 28108,
+  "completion": 1075,
+  "reasoning": 437,
+  "cost": 0.039703749999999996,
+  "cost_metric": 0.039704,
+  "elapsed": 17.853519346000212,
+  "model_s": 6.73,
+  "per_req_s": [
+   3.007,
+   1.724,
+   1.999
+  ],
+  "worst_sent": 0.09391,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.039704,
+  "state_summary_requests": 3,
+  "overhead": 0,
+  "shortfall": null,
+  "revisits": 0
+ },
+ {
+  "id": "18-s01-B3",
+  "run_id": "20261028T012721-e42abf5ce1a2",
+  "seed": 1,
+  "scope": "Outdoors",
+  "arm": "B",
+  "rep": 3,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 3,
+  "rank": 3,
+  "higher_ids": [
+   "AR-7573",
+   "AR-7607"
+  ],
+  "visits_trace": [
+   "Picnic Blanket",
+   "Camp Stool",
+   "Yoga Mat"
+  ],
+  "visits_history": [
+   "Picnic Blanket",
+   "Camp Stool",
+   "Yoga Mat"
+  ],
+  "visits_metric": 3,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7556",
+   "price_cents": 3500,
+   "available": true
+  },
+  "expected": "AR-7556",
+  "requests": 7,
+  "resp_files": 7,
+  "http200": 7,
+  "categories": [
+   "recovered",
+   "recovered",
+   "raw_valid",
+   "recovered",
+   "recovered",
+   "recovered",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 65821,
+  "completion": 2074,
+  "reasoning": 868,
+  "cost": 0.09109075,
+  "cost_metric": 0.091091,
+  "elapsed": 21.802683516000798,
+  "model_s": 15.314,
+  "per_req_s": [
+   3.172,
+   1.889,
+   1.538,
+   2.448,
+   1.112,
+   2.915,
+   2.24
+  ],
+  "worst_sent": 0.21957,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.091091,
+  "state_summary_requests": 7,
+  "overhead": 0,
+  "shortfall": null,
+  "revisits": 0
+ },
+ {
+  "id": "19-s03-B1",
+  "run_id": "20261028T014430-02271ce1314e",
+  "seed": 3,
+  "scope": "Bags",
+  "arm": "B",
+  "rep": 1,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 2,
+  "rank": 2,
+  "higher_ids": [
+   "AR-7352"
+  ],
+  "visits_trace": [
+   "Weekend Duffel",
+   "Trail Daypack",
+   "Trail Daypack"
+  ],
+  "visits_history": [
+   "Weekend Duffel",
+   "Trail Daypack",
+   "Trail Daypack"
+  ],
+  "visits_metric": 3,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7301",
+   "price_cents": 3900,
+   "available": true
+  },
+  "expected": "AR-7301",
+  "requests": 7,
+  "resp_files": 7,
+  "http200": 7,
+  "categories": [
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "raw_valid",
+   "recovered",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 66087,
+  "completion": 2553,
+  "reasoning": 1061,
+  "cost": 0.093459,
+  "cost_metric": 0.093459,
+  "elapsed": 43.56835650299945,
+  "model_s": 17.291,
+  "per_req_s": [
+   2.573,
+   2.03,
+   2.704,
+   1.97,
+   3.116,
+   2.223,
+   2.675
+  ],
+  "worst_sent": 0.22001,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.093459,
+  "state_summary_requests": 7,
+  "overhead": 1,
+  "shortfall": null,
+  "revisits": 1
+ },
+ {
+  "id": "20-s03-A1",
+  "run_id": "20261028T014518-df1e1f68515f",
+  "seed": 3,
+  "scope": "Bags",
+  "arm": "A",
+  "rep": 1,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 1,
+  "rank": 2,
+  "higher_ids": [
+   "AR-7352"
+  ],
+  "visits_trace": [
+   "Trail Daypack"
+  ],
+  "visits_history": [
+   "Trail Daypack"
+  ],
+  "visits_metric": 1,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7301",
+   "price_cents": 3900,
+   "available": true
+  },
+  "expected": "AR-7301",
+  "requests": 3,
+  "resp_files": 3,
+  "http200": 3,
+  "categories": [
+   "recovered",
+   "recovered",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 28129,
+  "completion": 1140,
+  "reasoning": 499,
+  "cost": 0.04000625,
+  "cost_metric": 0.040006,
+  "elapsed": 20.227773968000292,
+  "model_s": 6.281000000000001,
+  "per_req_s": [
+   2.313,
+   2.011,
+   1.957
+  ],
+  "worst_sent": 0.09395,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.040006,
+  "state_summary_requests": 3,
+  "overhead": 0,
+  "shortfall": null,
+  "revisits": 0
+ },
+ {
+  "id": "21-s03-A2",
+  "run_id": "20261028T014538-66e433ee0204",
+  "seed": 3,
+  "scope": "Bags",
+  "arm": "A",
+  "rep": 2,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 1,
+  "rank": 2,
+  "higher_ids": [
+   "AR-7352"
+  ],
+  "visits_trace": [
+   "Trail Daypack"
+  ],
+  "visits_history": [
+   "Trail Daypack"
+  ],
+  "visits_metric": 1,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7301",
+   "price_cents": 3900,
+   "available": true
+  },
+  "expected": "AR-7301",
+  "requests": 3,
+  "resp_files": 3,
+  "http200": 3,
+  "categories": [
+   "recovered",
+   "recovered",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 28124,
+  "completion": 1101,
+  "reasoning": 476,
+  "cost": 0.03983425,
+  "cost_metric": 0.039834,
+  "elapsed": 17.71087526500014,
+  "model_s": 6.32,
+  "per_req_s": [
+   1.807,
+   2.11,
+   2.403
+  ],
+  "worst_sent": 0.09394,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.039834,
+  "state_summary_requests": 3,
+  "overhead": 0,
+  "shortfall": null,
+  "revisits": 0
+ },
+ {
+  "id": "22-s03-B2",
+  "run_id": "20261028T014558-e49945d61008",
+  "seed": 3,
+  "scope": "Bags",
+  "arm": "B",
+  "rep": 2,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 2,
+  "rank": 2,
+  "higher_ids": [
+   "AR-7352"
+  ],
+  "visits_trace": [
+   "Weekend Duffel",
+   "Trail Daypack"
+  ],
+  "visits_history": [
+   "Weekend Duffel",
+   "Trail Daypack"
+  ],
+  "visits_metric": 2,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7301",
+   "price_cents": 3900,
+   "available": true
+  },
+  "expected": "AR-7301",
+  "requests": 5,
+  "resp_files": 5,
+  "http200": 5,
+  "categories": [
+   "recovered",
+   "recovered",
+   "raw_valid",
+   "recovered",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 46772,
+  "completion": 1515,
+  "reasoning": 610,
+  "cost": 0.06490375000000001,
+  "cost_metric": 0.064904,
+  "elapsed": 23.97055675900083,
+  "model_s": 18.834,
+  "per_req_s": [
+   2.346,
+   1.969,
+   1.272,
+   11.038,
+   2.209
+  ],
+  "worst_sent": 0.15657,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.064904,
+  "state_summary_requests": 5,
+  "overhead": 0,
+  "shortfall": null,
+  "revisits": 0
+ },
+ {
+  "id": "23-s03-B3",
+  "run_id": "20261028T014625-3a2aa3ce3347",
+  "seed": 3,
+  "scope": "Bags",
+  "arm": "B",
+  "rep": 3,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 2,
+  "rank": 2,
+  "higher_ids": [
+   "AR-7352"
+  ],
+  "visits_trace": [
+   "Weekend Duffel",
+   "Trail Daypack",
+   "Trail Daypack"
+  ],
+  "visits_history": [
+   "Weekend Duffel",
+   "Trail Daypack",
+   "Trail Daypack"
+  ],
+  "visits_metric": 3,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7301",
+   "price_cents": 3900,
+   "available": true
+  },
+  "expected": "AR-7301",
+  "requests": 7,
+  "resp_files": 7,
+  "http200": 7,
+  "categories": [
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "raw_valid",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 65807,
+  "completion": 2556,
+  "reasoning": 1211,
+  "cost": 0.09312175,
+  "cost_metric": 0.093122,
+  "elapsed": 23.043758650999735,
+  "model_s": 16.86,
+  "per_req_s": [
+   3.23,
+   1.605,
+   3.365,
+   1.349,
+   2.213,
+   2.647,
+   2.451
+  ],
+  "worst_sent": 0.21982,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [
+   {
+    "step": 1,
+    "tool_output_contains_product_hrefs": true,
+    "next_model_request_shows_hrefs": false,
+    "next_model_request_shows_count_line": true
+   }
+  ],
+  "find_elements_params_href": [
+   [
+    "href"
+   ]
+  ],
+  "state_summary_cost": 0.093122,
+  "state_summary_requests": 7,
+  "overhead": 1,
+  "shortfall": null,
+  "revisits": 1
+ },
+ {
+  "id": "24-s03-A3",
+  "run_id": "20261028T014648-e239ce611415",
+  "seed": 3,
+  "scope": "Bags",
+  "arm": "A",
+  "rep": 3,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 1,
+  "rank": 2,
+  "higher_ids": [
+   "AR-7352"
+  ],
+  "visits_trace": [
+   "Trail Daypack",
+   "Trail Daypack"
+  ],
+  "visits_history": [
+   "Trail Daypack",
+   "Trail Daypack"
+  ],
+  "visits_metric": 2,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7301",
+   "price_cents": 3900,
+   "available": true
+  },
+  "expected": "AR-7301",
+  "requests": 4,
+  "resp_files": 4,
+  "http200": 4,
+  "categories": [
+   "recovered",
+   "recovered",
+   "recovered",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 37099,
+  "completion": 1050,
+  "reasoning": 338,
+  "cost": 0.05083625,
+  "cost_metric": 0.050836,
+  "elapsed": 11.277457710999442,
+  "model_s": 7.409000000000001,
+  "per_req_s": [
+   1.793,
+   2.035,
+   2.168,
+   1.413
+  ],
+  "worst_sent": 0.12492,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.050836,
+  "state_summary_requests": 4,
+  "overhead": 1,
+  "shortfall": null,
+  "revisits": 1
+ },
+ {
+  "id": "25-s02-A1",
+  "run_id": "20261028T021327-09ee19845659",
+  "seed": 2,
+  "scope": "Fern",
+  "arm": "A",
+  "rep": 1,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 1,
+  "rank": 3,
+  "higher_ids": [
+   "AR-7573",
+   "AR-7471"
+  ],
+  "visits_trace": [
+   "Trail Daypack",
+   "Trail Daypack"
+  ],
+  "visits_history": [
+   "Trail Daypack",
+   "Trail Daypack"
+  ],
+  "visits_metric": 2,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7301",
+   "price_cents": 3900,
+   "available": true
+  },
+  "expected": "AR-7301",
+  "requests": 4,
+  "resp_files": 4,
+  "http200": 4,
+  "categories": [
+   "recovered",
+   "recovered",
+   "raw_valid",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 37207,
+  "completion": 1460,
+  "reasoning": 706,
+  "cost": 0.052713750000000004,
+  "cost_metric": 0.052714,
+  "elapsed": 16.61492595799973,
+  "model_s": 8.034,
+  "per_req_s": [
+   1.877,
+   1.478,
+   2.084,
+   2.595
+  ],
+  "worst_sent": 0.12506,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.052714,
+  "state_summary_requests": 4,
+  "overhead": 1,
+  "shortfall": null,
+  "revisits": 1
+ },
+ {
+  "id": "26-s02-B1",
+  "run_id": "20261028T021347-36139a46dcb8",
+  "seed": 2,
+  "scope": "Fern",
+  "arm": "B",
+  "rep": 1,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 3,
+  "rank": 3,
+  "higher_ids": [
+   "AR-7573",
+   "AR-7471"
+  ],
+  "visits_trace": [
+   "Picnic Blanket",
+   "Reading Lamp",
+   "Trail Daypack"
+  ],
+  "visits_history": [
+   "Picnic Blanket",
+   "Reading Lamp",
+   "Trail Daypack"
+  ],
+  "visits_metric": 3,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7301",
+   "price_cents": 3900,
+   "available": true
+  },
+  "expected": "AR-7301",
+  "requests": 8,
+  "resp_files": 8,
+  "http200": 8,
+  "categories": [
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 74732,
+  "completion": 2144,
+  "reasoning": 681,
+  "cost": 0.102527,
+  "cost_metric": 0.102527,
+  "elapsed": 28.858874359000765,
+  "model_s": 13.271,
+  "per_req_s": [
+   2.069,
+   1.601,
+   1.55,
+   1.214,
+   1.45,
+   1.428,
+   1.645,
+   2.314
+  ],
+  "worst_sent": 0.25094,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.102527,
+  "state_summary_requests": 8,
+  "overhead": 0,
+  "shortfall": null,
+  "revisits": 0
+ },
+ {
+  "id": "27-s02-B2",
+  "run_id": "20261028T021416-4cd90698fc80",
+  "seed": 2,
+  "scope": "Fern",
+  "arm": "B",
+  "rep": 2,
+  "passed": false,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 3,
+  "rank": 3,
+  "higher_ids": [
+   "AR-7573",
+   "AR-7471"
+  ],
+  "visits_trace": [
+   "Picnic Blanket"
+  ],
+  "visits_history": [
+   "Picnic Blanket"
+  ],
+  "visits_metric": 1,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7573",
+   "price_cents": 4800,
+   "available": false
+  },
+  "expected": "AR-7301",
+  "requests": 12,
+  "resp_files": 12,
+  "http200": 12,
+  "categories": [
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "raw_valid",
+   "raw_valid",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 113980,
+  "completion": 4172,
+  "reasoning": 1944,
+  "cost": 0.160206,
+  "cost_metric": 0.160206,
+  "elapsed": 33.328862772999855,
+  "model_s": 27.995,
+  "per_req_s": [
+   4.21,
+   1.882,
+   2.453,
+   1.923,
+   1.52,
+   1.274,
+   2.79,
+   1.403,
+   1.586,
+   2.237,
+   3.313,
+   3.404
+  ],
+  "worst_sent": 0.37883,
+  "narrowed": true,
+  "violations": null,
+  "find_elements": [
+   {
+    "step": 3,
+    "tool_output_contains_product_hrefs": true,
+    "next_model_request_shows_hrefs": false,
+    "next_model_request_shows_count_line": true
+   },
+   {
+    "step": 4,
+    "tool_output_contains_product_hrefs": true,
+    "next_model_request_shows_hrefs": false,
+    "next_model_request_shows_count_line": true
+   },
+   {
+    "step": 5,
+    "tool_output_contains_product_hrefs": true,
+    "next_model_request_shows_hrefs": false,
+    "next_model_request_shows_count_line": true
+   },
+   {
+    "step": 6,
+    "tool_output_contains_product_hrefs": true,
+    "next_model_request_shows_hrefs": false,
+    "next_model_request_shows_count_line": true
+   },
+   {
+    "step": 7,
+    "tool_output_contains_product_hrefs": true,
+    "next_model_request_shows_hrefs": false,
+    "next_model_request_shows_count_line": true
+   },
+   {
+    "step": 8,
+    "tool_output_contains_product_hrefs": true,
+    "next_model_request_shows_hrefs": false,
+    "next_model_request_shows_count_line": true
+   },
+   {
+    "step": 9,
+    "tool_output_contains_product_hrefs": true,
+    "next_model_request_shows_hrefs": false,
+    "next_model_request_shows_count_line": true
+   }
+  ],
+  "find_elements_params_href": [
+   [
+    "href"
+   ],
+   [
+    "href"
+   ],
+   [
+    "href"
+   ],
+   [
+    "href"
+   ],
+   [
+    "href"
+   ],
+   [
+    "href"
+   ],
+   [
+    "href"
+   ]
+  ],
+  "state_summary_cost": 0.160206,
+  "state_summary_requests": 12,
+  "overhead": null,
+  "shortfall": {
+   "required_visits": 3,
+   "actual_visits": 1,
+   "detail_visit_shortfall": 2,
+   "higher_priced_candidates": 2,
+   "higher_priced_checked": 1,
+   "higher_priced_unchecked": 1
+  },
+  "revisits": 0
+ },
+ {
+  "id": "28-s02-A2",
+  "run_id": "20261028T021451-4d306ed14d6f",
+  "seed": 2,
+  "scope": "Fern",
+  "arm": "A",
+  "rep": 2,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 1,
+  "rank": 3,
+  "higher_ids": [
+   "AR-7573",
+   "AR-7471"
+  ],
+  "visits_trace": [
+   "Trail Daypack",
+   "Trail Daypack",
+   "Trail Daypack",
+   "Trail Daypack"
+  ],
+  "visits_history": [
+   "Trail Daypack",
+   "Trail Daypack",
+   "Trail Daypack",
+   "Trail Daypack"
+  ],
+  "visits_metric": 4,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7301",
+   "price_cents": 3900,
+   "available": true
+  },
+  "expected": "AR-7301",
+  "requests": 8,
+  "resp_files": 8,
+  "http200": 8,
+  "categories": [
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "raw_valid",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 75813,
+  "completion": 3226,
+  "reasoning": 1601,
+  "cost": 0.10847675,
+  "cost_metric": 0.108477,
+  "elapsed": 33.459750913998505,
+  "model_s": 17.627,
+  "per_req_s": [
+   2.371,
+   1.881,
+   2.674,
+   2.445,
+   2.411,
+   2.046,
+   1.81,
+   1.989
+  ],
+  "worst_sent": 0.25213,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.108477,
+  "state_summary_requests": 8,
+  "overhead": 3,
+  "shortfall": null,
+  "revisits": 3
+ },
+ {
+  "id": "29-s02-A3",
+  "run_id": "20261028T021527-9d46f19d65d6",
+  "seed": 2,
+  "scope": "Fern",
+  "arm": "A",
+  "rep": 3,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 1,
+  "rank": 3,
+  "higher_ids": [
+   "AR-7573",
+   "AR-7471"
+  ],
+  "visits_trace": [
+   "Trail Daypack",
+   "Trail Daypack",
+   "Trail Daypack",
+   "Trail Daypack"
+  ],
+  "visits_history": [
+   "Trail Daypack",
+   "Trail Daypack",
+   "Trail Daypack",
+   "Trail Daypack"
+  ],
+  "visits_metric": 4,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7301",
+   "price_cents": 3900,
+   "available": true
+  },
+  "expected": "AR-7301",
+  "requests": 8,
+  "resp_files": 8,
+  "http200": 8,
+  "categories": [
+   "recovered",
+   "recovered",
+   "raw_valid",
+   "recovered",
+   "raw_valid",
+   "recovered",
+   "recovered",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 75855,
+  "completion": 3302,
+  "reasoning": 1522,
+  "cost": 0.10885225,
+  "cost_metric": 0.108852,
+  "elapsed": 42.662440123000124,
+  "model_s": 19.904,
+  "per_req_s": [
+   3.037,
+   2.413,
+   2.979,
+   1.76,
+   2.866,
+   2.443,
+   1.92,
+   2.486
+  ],
+  "worst_sent": 0.2521,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.108852,
+  "state_summary_requests": 8,
+  "overhead": 3,
+  "shortfall": null,
+  "revisits": 3
+ },
+ {
+  "id": "30-s02-B3",
+  "run_id": "20261028T021616-e88f328f7966",
+  "seed": 2,
+  "scope": "Fern",
+  "arm": "B",
+  "rep": 3,
+  "passed": true,
+  "status": "completed",
+  "stop_reason": "agent_done",
+  "required_visits": 3,
+  "rank": 3,
+  "higher_ids": [
+   "AR-7573",
+   "AR-7471"
+  ],
+  "visits_trace": [
+   "Picnic Blanket",
+   "Reading Lamp",
+   "Trail Daypack"
+  ],
+  "visits_history": [
+   "Picnic Blanket",
+   "Reading Lamp",
+   "Trail Daypack"
+  ],
+  "visits_metric": 3,
+  "sources_agree": true,
+  "last_action": [
+   "done"
+  ],
+  "answer": {
+   "product_id": "AR-7301",
+   "price_cents": 3900,
+   "available": true
+  },
+  "expected": "AR-7301",
+  "requests": 8,
+  "resp_files": 8,
+  "http200": 8,
+  "categories": [
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "recovered",
+   "raw_valid",
+   "raw_valid"
+  ],
+  "finish": [
+   "stop"
+  ],
+  "prompt": 74883,
+  "completion": 1888,
+  "reasoning": 467,
+  "cost": 0.10162775,
+  "cost_metric": 0.101628,
+  "elapsed": 19.872844041999997,
+  "model_s": 13.09,
+  "per_req_s": [
+   2.005,
+   2.437,
+   1.18,
+   1.163,
+   1.258,
+   1.253,
+   1.355,
+   2.439
+  ],
+  "worst_sent": 0.25108,
+  "narrowed": false,
+  "violations": null,
+  "find_elements": [],
+  "find_elements_params_href": [],
+  "state_summary_cost": 0.101628,
+  "state_summary_requests": 8,
+  "overhead": 0,
+  "shortfall": null,
+  "revisits": 0
+ }
+]

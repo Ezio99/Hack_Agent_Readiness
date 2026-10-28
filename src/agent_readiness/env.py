@@ -26,13 +26,22 @@ def load_repo_env(path: Path | None = None) -> bool:
 def scrubbed_environment(*names: str):
     """Hide named variables from child processes (browser, Playwright driver) and restore them.
 
-Limitation: this temporarily mutates process-global ``os.environ`` and is supported only for
-single-run, nonconcurrent execution (concurrent runs or threads would observe the missing
-variable, and overlapping contexts could restore stale state). If concurrent experiments become
-necessary, replace it with explicit sanitized environments passed to each subprocess.
-"""
+    Browser Use calls ``dotenv.load_dotenv()`` at import time and finds the repository ``.env`` from inside
+    this repo's ``.venv``; modules it imports lazily during a run would silently put the key back. While the
+    context is active ``dotenv.load_dotenv`` is therefore inert (modules first imported inside the context keep
+    the inert binding, which only matters at their import time).
+
+    Limitation: this temporarily mutates process-global ``os.environ`` and ``dotenv.load_dotenv`` and is
+    supported only for single-run, nonconcurrent execution (concurrent runs or threads would observe the
+    missing variable, and overlapping contexts could restore stale state). If concurrent experiments become
+    necessary, replace it with explicit sanitized environments passed to each subprocess.
+    """
+    import dotenv
     saved = {name: os.environ.pop(name) for name in names if name in os.environ}
+    original = dotenv.load_dotenv
+    dotenv.load_dotenv = lambda *args, **kwargs: False
     try:
         yield
     finally:
+        dotenv.load_dotenv = original
         os.environ.update(saved)

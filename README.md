@@ -11,9 +11,13 @@ only. There is no checkout, account system, dashboard or composite score.
 **PR review revision:** the local full suite passes **57 tests**, including four
 real-browser cases. Standalone boundary checks and credential-free CLI smoke also
 pass. [PR CI passed](https://github.com/Ezio99/Hack_Agent_Readiness/actions/runs/40430691859)
-for this revision; previous CI evidence is retained in the report. No authenticated or paid model trial has been performed. See
+for this revision; previous CI evidence is retained in the report. Authenticated Meta probes and bounded live trials have occurred on the Task 004 branch; see STATUS.md and Report 004. No end-to-end task success is established. See
 [STATUS](STATUS.md), [PR #1](https://github.com/Ezio99/Hack_Agent_Readiness/pull/1),
 and the [fresh task](collaboration/tasks/003-hackathon-first-agent-run.md).
+
+## New agent / current milestone
+
+Start with [COLD_START.md](COLD_START.md), then [STATUS.md](STATUS.md) and [Report 004](collaboration/reports/004-first-live-meta-trial.md). The current open work is PR #3 on `hackathon/task004-stage-a`. The strict Stage D run failed on prose-prefixed output; the opt-in compatibility profile executed one recovered click but did not finish the task. A full compatibility run is proposed in draft Task 005 and requires separate spending approval.
 
 ## Install
 
@@ -60,9 +64,9 @@ API credentials, preserving credential-free artifacts even on failures.
 
 ## Reference agent and model configuration
 
-The single versioned `natural-shopping-v2` profile uses **DOM + screenshots**,
+The default `natural-shopping-v3` profile (v2 is preserved unchanged for reproducing earlier runs) uses **DOM + screenshots**,
 a 1280×960 viewport, at most **10 agent steps, 120 seconds and 10 model request
-attempts**, with three actions per step and 2,048 completion tokens per response.
+attempts**, with three actions per step, an explicit `reasoning_effort: low` (sent only to the `meta` provider; Muse Spark always reasons and rejects `none`) and 4,096 completion tokens per response (reasoning tokens count toward this cap).
 The model request timeout is 30 seconds and the agent step timeout is 60 seconds.
 Cleanup may take up to another 15 seconds. Provider sampling defaults are retained;
 SDK retries, extra failure-finalization calls, cloud sync and model judging are off.
@@ -78,7 +82,7 @@ win over those overrides. There is one reference profile, with no new site varia
 Artifacts retain the effective profile and `profile_hash`, plus a
 `configuration_hash` covering the redacted profile/model/wire-parameter snapshot.
 Limit changes produce distinct configurations; freeze one configuration within an
-experiment. Profile v2 supersedes v1 for future runs; old run artifacts are kept.
+experiment. Profile v3 supersedes v2 for future runs (changes: `reasoning_effort` and the completion cap only); old run artifacts are kept.
 
 Every model-adapter invocation consumes one request attempt, including failed or
 cancelled invocations and framework retries. The guard blocks attempt N+1 before
@@ -94,17 +98,17 @@ inventing a cost estimate. Separate approval of model, provider, limits and poss
 API expenditure remains necessary before any authenticated or paid trial.
 
 Meta's official protocol and the Browser Use adapter have been checked offline;
-**authenticated Meta support is not yet verified**. Read
+**authenticated Meta access, strict schema and image probes have been verified; end-to-end agent success has not**. Read
 [Meta integration evidence](docs/META-INTEGRATION.md) before planning live trials.
 
 After separate explicit spending approval, provide a key through the environment
 and run the following candidate configuration. The command can incur charges:
 
 ```bash
-# Provide MODEL_API_KEY via the process environment or an untracked repository-root .env
+# Provide META_MODEL_API_KEY via the process environment or an untracked repository-root .env
 # (copy .env.example; chmod 600). Process variables take precedence. Never commit credentials.
 readiness run --provider meta --model muse-spark-1.3 \
-  --base-url https://api.meta.ai/v1 --key-env MODEL_API_KEY \
+  --base-url https://api.meta.ai/v1 --key-env META_MODEL_API_KEY \
   --kind discovery --seed 0 --max-steps 5 --timeout 60 \
   --max-model-requests 5 --allow-model-calls
 ```
@@ -138,6 +142,32 @@ Each attempt creates a unique ignored `runs/<timestamp>-<id>/` directory:
 - `trace.jsonl`: timestamped observations, model messages/responses, proposed
   actions, executed step results, navigation, reported usage and errors.
 - PNG screenshots, framework history for agent trials, and `summary.md`.
+- `model-response-NN.json` and `http_captures` (live runs): the sanitized, bounded model HTTP response captured
+  *before* Browser Use parses it (raw content up to 20,000 characters, `finish_reason`, request id, usage including
+  reasoning tokens, and an analysis of whether the text is JSON), plus `model_http_request` trace events (parameters,
+  response-format SHA-256, message structure; no message text or credentials). This survives adapter parse errors.
+  **Muse compatibility profile (opt-in, separate baseline).** The default strict profile (`natural-shopping-v3`) requires
+the model response to be a single JSON object from its first character. `natural-shopping-v3-compat1`
+(`readiness run --profile natural-shopping-v3-compat1 …`) is identical except that it names the versioned parser
+`muse-prose-prefix-json-v1`, used only when the strict parse fails: it accepts exactly one single-line prose sentence
+followed by exactly one complete JSON object with nothing after it, and only if that object validates against the
+unchanged `AgentOutput` schema. The normalized text is a byte-identical slice (nothing is edited, repaired or
+invented); everything else (several objects, trailing text, truncated or duplicate-key JSON, a multi-line or fenced
+prefix, braces/brackets in the prefix, schema-invalid content) is rejected and ends the step as `model_output_error`.
+Each response records raw protocol compliance and recovered-action validity separately
+(`raw_protocol_compliant`, `recovered_action_valid`, run-level `protocol_compliance`), with the original and normalized
+text in a `model_output_recovery` trace event. Results from the two profiles measure different things and must not
+be pooled; report the raw compliance rate next to task success.
+
+Terminal status: an unrecovered `model_output_error` is no longer overwritten by a later `request_limit` (the gate
+tripping afterwards is the designed stop). The diagnostic cost estimate now counts the response schema (4 bytes per
+token) and adds a 10% margin: the full-schema step-1 request is estimated at US$0.031 (measured prompt 9,443 tokens),
+so a replay needs `--max-estimated-cost-usd 0.035`.
+
+Diagnostic runs can pass `--expect-schema-sha256 <hash>` and `--max-estimated-cost-usd <usd>`: any outgoing request whose schema, parameters, system prompt, DOM, screenshot, task prompt or cost departs from the definition (or that carries a last-step instruction) is blocked before the network (`diagnostic_fidelity_violation`). Every request records its schema hash and `schema_narrowed`. Note: with `--max-steps 1` the only step is Browser Use's *last* step, which narrows the response schema to the `done` action; it is not equivalent to step 1 of a longer run (bound cost with `--max-model-requests` instead). A 200 response that cannot become the output model ends the run as `model_output_error`
+  (subtypes: `malformed_json`, `null_content`, `length_without_content`, `schema_validation`), distinct from
+  `infrastructure_error` (HTTP/timeouts/other) and from task outcomes. `browser_version` is recorded from the
+  Chromium executable before the first model request.
 
 Model screenshots are separate PNG files referenced from recorded messages.
 Reported token usage is retained per response; unavailable usage is `null`,
@@ -157,7 +187,7 @@ Useful observations and PNG screenshots are retained. This is not a general PII
 filter or an image/OCR redactor: screenshots and arbitrary page/model content may
 still contain private information unrelated to the configured credential. Browser
 tools never receive the model API key: the runner removes the key variable from the process
-environment while Playwright/Chromium start and run, and restores it afterwards (regression-tested). This temporarily mutates process-global
+environment while Playwright/Chromium start and run, and restores it afterwards (regression-tested). Because Browser Use calls `load_dotenv()` at import time and finds this repository's `.env` from inside `.venv`, `dotenv.load_dotenv` is also made inert for the duration, so lazily imported Browser Use modules cannot put the key back (found and fixed during Stage D preflight). This temporarily mutates process-global
 `os.environ`, so it is supported only for single-run, nonconcurrent execution; concurrent
 experiments would need explicit sanitized subprocess environments instead. Do not automatically publish live or private run artifacts or treat redaction
 tests as a blanket guarantee that arbitrary artifacts are safe. CI uploads only

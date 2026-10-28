@@ -17,7 +17,7 @@ async def test_paid_calls_disabled_and_missing_credentials(tmp_path, monkeypatch
     assert "disabled" in record["errors"][0]
     assert (path / "trace.jsonl").exists()
     monkeypatch.undo()
-    monkeypatch.delenv("MODEL_API_KEY", raising=False)
+    monkeypatch.delenv("META_MODEL_API_KEY", raising=False)
     _, record = await runner.run(mode="live", allow_model_calls=True, output=tmp_path)
     assert record["status"] == "setup_error"
     assert "Missing credential" in record["errors"][0]
@@ -53,7 +53,9 @@ async def test_failures_and_timeouts_preserve_records(tmp_path, monkeypatch, fai
         await asyncio.sleep(1)
     monkeypatch.setattr(runner, "target", synthetic_target)
     monkeypatch.setattr(runner, "smoke", broken)
-    path, record = await runner.run(output=tmp_path, timeout_seconds=0.05)
+    # Setup (git provenance, hashing) counts toward the wall-clock budget, so a tiny budget is only meaningful for the
+    # timeout case; the failure case must not race setup time on a slow runner.
+    path, record = await runner.run(output=tmp_path, timeout_seconds=30 if failure else 0.05)
     assert record["status"] == status and record["evaluation"] is None
     assert json.loads((path / "run.json").read_text())["finished_at"]
     assert (path / "summary.md").exists()
@@ -82,7 +84,7 @@ async def test_timeout_retains_reported_usage_and_executed_steps(tmp_path, monke
         await asyncio.sleep(1)
     monkeypatch.setattr(runner, "target", synthetic_target)
     monkeypatch.setattr(runner, "smoke", interrupted)
-    _, record = await runner.run(output=tmp_path, timeout_seconds=0.05)
+    _, record = await runner.run(output=tmp_path, timeout_seconds=0.3)
     assert record["status"] == "timeout"
     assert record["usage"] == [{"total_tokens": 15}]
     assert record["steps"] == 1 and record["action_count"] == 2

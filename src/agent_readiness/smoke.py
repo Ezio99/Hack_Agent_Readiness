@@ -58,6 +58,8 @@ async def smoke(task: PublicTask, url: str, recorder: Recorder, effective: dict)
             await capture("initial-listing")
             if steps >= effective["max_steps"]:
                 return dict(answer=None, status="step_limit", stop_reason="step_limit", action_count=actions, steps=steps, usage=None, errors=[])
+            if task.kind == "instock_max":
+                return await instock_max_walk(page, task, capture, recorder, effective, actions, steps_ref=lambda: steps)
             if task.kind == "availability":
                 name = re.fullmatch(r"Locate (.+)\. Return its product ID, price in integer cents, and whether it is currently available\.", task.prompt).group(1)
                 recorder.event("browser_action", action="search", value=name)
@@ -76,7 +78,7 @@ async def smoke(task: PublicTask, url: str, recorder: Recorder, effective: dict)
             await capture("filtered-listing")
             if steps >= effective["max_steps"]:
                 return dict(answer=None, status="step_limit", stop_reason="step_limit", action_count=actions, steps=steps, usage=None, errors=[])
-            links = page.locator("article h2 a")
+            links = page.locator("article a[href^='/products/']")  # arm-independent: the card's only product link
             if await links.count() != 1:
                 raise RuntimeError("Smoke expected a unique candidate from public task constraints")
             recorder.event("browser_action", action="open_detail", href=await links.first.get_attribute("href"))
@@ -94,3 +96,41 @@ async def smoke(task: PublicTask, url: str, recorder: Recorder, effective: dict)
                 await asyncio.wait_for(session.kill(), 15)
             except Exception as exc:
                 recorder.event("cleanup_error", error=str(exc))
+
+
+async def instock_max_walk(page, task, capture, recorder, effective, actions, steps_ref):
+    """Scripted wiring check for the in-stock-maximum task: walk down by price, using listing availability when it is
+    shown and opening detail pages when it is not. (The independent oracle lives in ``oracle.py``.)"""
+    scope = re.match(r"Find the most expensive (.+) product that is currently in stock\.", task.prompt).group(1)
+    brands = await page.locator("#brand option").all_inner_texts()
+    recorder.event("browser_action", action="filter", scope=scope)
+    await page.get_by_label("Brand" if scope in brands else "Category", exact=True).select_option(label=scope)
+    await page.get_by_role("button", name="Apply filters").click()
+    actions += 2
+    await capture("filtered-listing")
+    cards = await page.eval_on_selector_all("article", """els => els.map(e => ({
+        href: e.querySelector("a[href^='/products/']").getAttribute("href"), text: e.innerText}))""")
+    for card in cards:
+        card["price"] = Decimal(re.search(r"\$(\d+\.\d{2})", card["text"]).group(1))
+    cards.sort(key=lambda c: -c["price"])
+    for card in cards:
+        if "Out of stock" in card["text"]:
+            continue
+        if steps_ref() >= effective["max_steps"]:
+            return dict(answer=None, status="step_limit", stop_reason="step_limit", action_count=actions, steps=steps_ref(), usage=None, errors=[])
+        recorder.event("browser_action", action="open_detail", href=card["href"])
+        await page.locator(f"a[href='{card['href']}']").click()
+        actions += 1
+        await capture("detail")
+        if (await page.locator("#availability").inner_text()).strip() == "In stock":
+            answer = dict(product_id=(await page.locator("#product-id").inner_text()).strip(),
+                          price_cents=int(Decimal((await page.locator("#price").inner_text()).strip().removeprefix("$")) * 100),
+                          available=True)
+            recorder.event("final_answer", answer=answer)
+            return dict(answer=answer, status="completed", stop_reason="scripted_smoke_done",
+                        action_count=actions, steps=steps_ref(), usage=None, errors=[])
+        await page.go_back()
+        await page.wait_for_load_state("load")
+        actions += 1
+        await capture("listing-return")
+    return dict(answer=None, status="agent_failure", stop_reason="no_in_stock_product", action_count=actions, steps=steps_ref(), usage=None, errors=[])

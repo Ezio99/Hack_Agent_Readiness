@@ -13,7 +13,7 @@ class Answer(BaseModel):
 class PublicTask(BaseModel):
     model_config = ConfigDict(frozen=True)
     task_id: str
-    kind: Literal["discovery", "availability"]
+    kind: Literal["discovery", "availability", "instock_max"]
     prompt: str
     permitted_actions: tuple[str, ...] = ("browse", "search", "filter", "read_detail")
 
