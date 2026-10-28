@@ -41,8 +41,23 @@ class ExperimentLedger(Ledger):
             raise Halt(f"programme ceiling US${self.ceiling:.2f} cannot cover the next reservation (committed US${self.committed():.4f} + US${usd:.2f})")
         self._append({"kind": "reserve", "id": item, "usd": usd, "stage": stage})
 
-    def settle(self, item: str, actual: float, stage: int | None = None) -> None:        # type: ignore[override]
-        self._append({"kind": "settle", "id": item, "usd": actual, "stage": stage})
+    def reserved(self, item: str) -> float | None:
+        return next((e["usd"] for e in self.entries() if e["kind"] == "reserve" and e["id"] == item), None)
+
+    def settled(self, item: str) -> bool:
+        return any(e["kind"] == "settle" and e["id"] == item for e in self.entries())
+
+    def settle(self, item: str, actual: float, stage: int | None = None, note: str | None = None) -> float:        # type: ignore[override]
+        """Replace a reservation by its calculated actual. Returns the OVERRUN (actual above the reservation), which is recorded - never clamped or hidden.
+        Settling an item twice or without a reservation is refused."""
+        res = self.reserved(item)
+        if res is None:
+            raise Halt(f"{item} has no reservation to settle")
+        if self.settled(item):
+            raise Halt(f"{item} is already settled")
+        overrun = round(max(0.0, actual - res), 6)
+        self._append({"kind": "settle", "id": item, "usd": actual, "stage": stage, "reserved_usd": res, "overrun_usd": overrun, **({"note": note} if note else {})})
+        return overrun
 
     def interrupted(self, item: str, note: str, stage: int) -> None:
         self._append({"kind": "interrupted", "id": item, "usd": 0.0, "stage": stage, "note": note})

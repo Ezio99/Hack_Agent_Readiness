@@ -66,6 +66,8 @@ def main():
             c.add_argument("--mode", choices=["mock", "live"], default="mock")
             c.add_argument("--allow-model-calls", action="store_true")
             c.add_argument("--approved-schedule-hash")
+            c.add_argument("--approved-manifest-hash")
+            c.add_argument("--acknowledge-previous-halt", action="store_true")
             c.add_argument("--mock-plan", type=Path, help="JSON {run_id: mock behaviour} for mock demonstrations")
             c.add_argument("--programme-ceiling-usd", type=float)
             c.add_argument("--stage-ceiling-usd", type=float)

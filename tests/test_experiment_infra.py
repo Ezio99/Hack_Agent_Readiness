@@ -211,11 +211,11 @@ def test_live_mode_is_refused_without_flag_hash_and_key(tmp_path, frozen, monkey
     with pytest.raises(Halt, match="approved-schedule-hash"):
         driver.run_stage(1, sched, frozen, L, tmp_path / "o", mode="live", runner=run, current_manifest=lambda: frozen, allow_model_calls=True)
     with pytest.raises(Halt, match="allow-model-calls"):
-        driver.run_stage(1, sched, frozen, L, tmp_path / "o", mode="live", runner=run, current_manifest=lambda: frozen, approved_schedule_hash=sched["schedule_hash"])
+        driver.run_stage(1, sched, frozen, L, tmp_path / "o", mode="live", runner=run, current_manifest=lambda: frozen, approved_schedule_hash=sched["schedule_hash"], approved_manifest_hash=frozen["manifest_hash"])
     monkeypatch.delenv("META_MODEL_API_KEY")
     monkeypatch.setattr("agent_readiness.env.load_repo_env", lambda *a, **k: False)
     with pytest.raises(Halt, match="not set"):
-        driver.run_stage(1, sched, frozen, L, tmp_path / "o", mode="live", runner=run, current_manifest=lambda: frozen, allow_model_calls=True, approved_schedule_hash=sched["schedule_hash"])
+        driver.run_stage(1, sched, frozen, L, tmp_path / "o", mode="live", runner=run, current_manifest=lambda: frozen, allow_model_calls=True, approved_schedule_hash=sched["schedule_hash"], approved_manifest_hash=frozen["manifest_hash"])
     assert not run.calls
 
 
@@ -331,3 +331,124 @@ def test_per_run_attribution_never_blames_the_website_and_hypotheses_are_not_att
 def test_single_run_arms_get_no_interval():
     s, rows = rows_for(1, True)
     assert analysis.analyze(rows, s)["contrasts"]["S1"]["metrics"]["success"]["ci95_bootstrap"] is None
+
+
+# ---- review fixes: settlement, crash consistency, resume state, manifest-bound authorization -----------------------------------------
+def test_settlement_records_overruns_and_refuses_double_or_unreserved(tmp_path):
+    L = ExperimentLedger(tmp_path)
+    L.reserve("a", 0.48, 1)
+    assert L.settle("a", 0.60, 1) == pytest.approx(0.12)               # actual preserved, overrun returned
+    e = [x for x in L.entries() if x["kind"] == "settle"][0]
+    assert e["usd"] == 0.60 and e["overrun_usd"] == pytest.approx(0.12) and L.committed() == pytest.approx(0.60)
+    with pytest.raises(Halt, match="already settled"):
+        L.settle("a", 0.1, 1)
+    with pytest.raises(Halt, match="no reservation"):
+        L.settle("ghost", 0.1, 1)
+
+
+def test_overrun_is_preserved_halts_and_is_reported_explicitly(tmp_path, frozen):
+    _, L, run, rep = go(tmp_path, frozen, run=runner(lambda n, t, v: fake(t, v, cost=0.6)))
+    assert len(run.calls) == 1 and rep["halted"] and rep["overrun"]["overrun_usd"] == pytest.approx(0.12) and L.committed() == pytest.approx(0.6)
+
+
+class CrashOnFirstSettle(ExperimentLedger):
+    crashed = False
+    def settle(self, *a, **k):
+        if not CrashOnFirstSettle.crashed:
+            CrashOnFirstSettle.crashed = True
+            raise KeyboardInterrupt()
+        return super().settle(*a, **k)
+
+
+def test_crash_between_result_and_settlement_is_reconciled_without_rerun(tmp_path, frozen):
+    CrashOnFirstSettle.crashed = False
+    L = CrashOnFirstSettle(tmp_path / "led")
+    r1 = runner(lambda n, t, v: fake(t, v, cost=0.07))
+    with pytest.raises(KeyboardInterrupt):
+        driver.run_stage(1, S.build_schedule(1), frozen, L, tmp_path / "out", runner=r1, current_manifest=lambda: frozen)
+    first = S.build_schedule(1)["entries"][0]["run_id"]
+    assert len(r1.calls) == 1 and L.unsettled() == [first] and L.committed() == pytest.approx(0.48)        # conservative until reconciled
+    r2 = runner(lambda n, t, v: fake(t, v, cost=0.07))
+    rep = driver.run_stage(1, S.build_schedule(1), frozen, L, tmp_path / "out", runner=r2, current_manifest=lambda: frozen)
+    assert rep["reconciled_settlements"] == [first] and len(r2.calls) == 7 and first not in {e["run_id"] for e in S.build_schedule(1)["entries"][1:]}
+    assert not L.unsettled() and L.committed() == pytest.approx(8 * 0.07)
+
+
+def test_resume_does_not_reset_infrastructure_threshold(tmp_path, frozen):
+    L = ExperimentLedger(tmp_path / "led")
+    r1 = runner(lambda n, t, v: fake(t, v, status="infrastructure_error", passed=False, cost=0.0, requests=0) if n == 1 else KeyboardInterrupt())
+    with pytest.raises(KeyboardInterrupt):
+        driver.run_stage(1, S.build_schedule(1), frozen, L, tmp_path / "out", runner=r1, current_manifest=lambda: frozen)
+    r2 = runner(lambda n, t, v: fake(t, v))
+    rep = driver.run_stage(1, S.build_schedule(1), frozen, L, tmp_path / "out", runner=r2, current_manifest=lambda: frozen)     # 1 infra error + 1 unresolved attempt persisted
+    assert not r2.calls and rep["halted"] and "infrastructure" in rep["halt_reason"] and rep["state_reconstructed"]["infrastructure_or_unresolved"] == 2
+
+
+def test_resume_does_not_reset_parser_rejection_threshold(tmp_path, frozen):
+    L = ExperimentLedger(tmp_path / "led")
+    r1 = runner(lambda n, t, v: fake(t, v, rejected=1) if n == 1 else KeyboardInterrupt())
+    with pytest.raises(KeyboardInterrupt):
+        driver.run_stage(1, S.build_schedule(1), frozen, L, tmp_path / "out", runner=r1, current_manifest=lambda: frozen)
+    # n=1 rejection persisted (block 1) + the unresolved interrupted attempt; next completed run adds one more rejection in block 1 -> halt after exactly one new run
+    L2 = ExperimentLedger(tmp_path / "led")
+    r2 = runner(lambda n, t, v: fake(t, v, rejected=1))
+    rep = driver.run_stage(1, S.build_schedule(1), frozen, L2, tmp_path / "out", runner=r2, current_manifest=lambda: frozen)
+    assert len(r2.calls) == 1 and "recovery rejected" in rep["halt_reason"]
+
+
+def test_previous_guard_failure_blocks_resume_until_acknowledged(tmp_path, frozen):
+    L = ExperimentLedger(tmp_path / "led")
+    go(tmp_path, frozen, ledger=L, run=runner(lambda n, t, v: fake(t, v, status="diagnostic_fidelity_violation", passed=False)))
+    r2 = runner(lambda n, t, v: fake(t, v))
+    rep = driver.run_stage(1, S.build_schedule(1), frozen, L, tmp_path / "out", runner=r2, current_manifest=lambda: frozen)
+    assert not r2.calls and "new approval" in rep["halt_reason"]
+    rep2 = driver.run_stage(1, S.build_schedule(1), frozen, L, tmp_path / "out", runner=r2, current_manifest=lambda: frozen, acknowledge_previous_halt=True)
+    assert len(r2.calls) == 7 and not any(c for c in rep2["skipped_previously_attempted"] if c not in rep["not_started"] and False)
+
+
+def test_attempted_runs_never_execute_again(tmp_path, frozen):
+    L = ExperimentLedger(tmp_path / "led")
+    sched, _, r1, _ = go(tmp_path, frozen, ledger=L)
+    r2 = runner(lambda n, t, v: fake(t, v))
+    rep = driver.run_stage(1, sched, frozen, L, tmp_path / "out", runner=r2, current_manifest=lambda: frozen)
+    assert not r2.calls and len(rep["skipped_previously_attempted"]) == 8
+
+
+def test_live_authorization_binds_schedule_and_manifest_hashes(tmp_path, frozen, monkeypatch):
+    monkeypatch.setenv("META_MODEL_API_KEY", "k")
+    monkeypatch.setattr("agent_readiness.env.load_repo_env", lambda *a, **k: False)
+    sched = S.build_schedule(1)
+    run = runner(lambda n, t, v: fake(t, v, mode="live"))
+    base = dict(mode="live", runner=run, current_manifest=lambda: frozen, allow_model_calls=True)
+    with pytest.raises(Halt, match="approved-manifest-hash"):
+        driver.run_stage(1, sched, frozen, ExperimentLedger(tmp_path / "a"), tmp_path / "o", approved_schedule_hash=sched["schedule_hash"], **base)
+    with pytest.raises(Halt, match="approved-manifest-hash"):
+        driver.run_stage(1, sched, frozen, ExperimentLedger(tmp_path / "b"), tmp_path / "o", approved_schedule_hash=sched["schedule_hash"], approved_manifest_hash="0" * 64, **base)
+    # a configuration change after approval: the frozen file changed (so its hash no longer equals the approved one) -> halt before any call
+    changed = copy.deepcopy(frozen); changed["agent"]["output_parser"] = "other"
+    changed["manifest_hash"] = core.canonical_hash({k: v for k, v in changed.items() if k not in ("manifest_hash", "provenance")})
+    with pytest.raises(Halt, match="approved-manifest-hash"):
+        driver.run_stage(1, sched, changed, ExperimentLedger(tmp_path / "c"), tmp_path / "o", approved_schedule_hash=sched["schedule_hash"], approved_manifest_hash=frozen["manifest_hash"], **base)
+    # or the live environment changed after freezing -> drift halts before any model call
+    cur = copy.deepcopy(frozen); cur["agent"]["model"] = "other-model"; cur["manifest_hash"] = core.canonical_hash({k: v for k, v in cur.items() if k not in ("manifest_hash", "provenance")})
+    rep = driver.run_stage(1, sched, frozen, ExperimentLedger(tmp_path / "d"), tmp_path / "o", approved_schedule_hash=sched["schedule_hash"], approved_manifest_hash=frozen["manifest_hash"],
+                           **{**base, "current_manifest": lambda: cur})
+    assert not run.calls and "drift" in rep["halt_reason"]
+    ok = driver.run_stage(1, sched, frozen, ExperimentLedger(tmp_path / "e"), tmp_path / "o2", approved_schedule_hash=sched["schedule_hash"], approved_manifest_hash=frozen["manifest_hash"], **base)
+    assert len(run.calls) == 8 and not ok["halted"]
+
+
+def test_tampered_frozen_manifest_is_refused(tmp_path, frozen):
+    bad = copy.deepcopy(frozen); bad["budget"]["run_reserve_usd"] = 0.01
+    with pytest.raises(Halt, match="own hash"):
+        driver.run_stage(1, S.build_schedule(1), bad, ExperimentLedger(tmp_path / "l"), tmp_path / "o", runner=runner(lambda n, t, v: fake(t, v)), current_manifest=lambda: bad)
+
+
+def test_stage1_ceiling_covers_all_eight_maximum_reservations_and_programme_ceiling_is_kept():
+    assert design.STAGES[1]["stage_ceiling_usd"] == 4.00 and design.PROGRAMME_CEILING_USD == 6.00 and design.RUN_RESERVE_USD == 0.48
+    import tempfile, pathlib
+    L = ExperimentLedger(pathlib.Path(tempfile.mkdtemp()))
+    for e in S.build_schedule(1)["entries"]:
+        L.reserve(e["run_id"], design.RUN_RESERVE_USD, 1)                 # all eight reservable (3.84 <= 4.00)
+    assert L.committed() == pytest.approx(3.84) and L.remaining(1) == pytest.approx(0.16)
+    assert S.build_schedule(1)["schedule_hash"] == "96e459ad4dd88ee49753e276ac19840239f47cd164e232441bc40382cfc99fec"      # schedule unaffected by the budget change

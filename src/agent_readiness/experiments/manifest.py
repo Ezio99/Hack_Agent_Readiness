@@ -71,3 +71,8 @@ def drift(frozen: dict, current: dict, *, check_commit: bool = True) -> list[str
     if check_commit and current["provenance"]["dirty"]:
         out.append("working tree has uncommitted tracked changes")
     return out
+
+
+def self_hash_ok(m: dict) -> bool:
+    """The stored hash must match the stored content (a hand-edited frozen manifest is refused)."""
+    return m.get("manifest_hash") == core.canonical_hash({k: v for k, v in m.items() if k not in ("manifest_hash", "provenance")})

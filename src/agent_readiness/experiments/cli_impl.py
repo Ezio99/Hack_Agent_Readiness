@@ -55,7 +55,7 @@ def main(args) -> None:
     plan = json.loads(args.mock_plan.read_text()) if args.mock_plan else None
     try:
         rep = driver.run_stage(args.stage, sched, frozen, _ledger(args, args.mode, stage_ceiling=args.stage_ceiling_usd, programme=args.programme_ceiling_usd), out, mode=args.mode,
-                               mock_plan=plan, allow_model_calls=args.allow_model_calls, approved_schedule_hash=args.approved_schedule_hash, strict_tree=args.mode == "live")
+                               mock_plan=plan, allow_model_calls=args.allow_model_calls, approved_schedule_hash=args.approved_schedule_hash, approved_manifest_hash=args.approved_manifest_hash, acknowledge_previous_halt=args.acknowledge_previous_halt, strict_tree=args.mode == "live")
     except Halt as exc:
         print(f"HALT: {exc}"); raise SystemExit(2)
     print(json.dumps({k: rep[k] for k in ("mode", "banner", "stage", "completed", "halted", "halt_reason", "not_started", "partial", "ledger")}, indent=1))

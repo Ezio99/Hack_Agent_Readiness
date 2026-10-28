@@ -14,7 +14,7 @@ def variant_id(code: str) -> str:
 
 # stage -> {task code: [(variant code, runs per cell)]}; blocks = number of randomization blocks
 STAGES = {
-    1: {"purpose": "feasibility + combined-change SENSITIVITY test (V0 vs V3 change both factors; NOT a causal comparison)", "blocks": 2, "stage_ceiling_usd": 1.50,
+    1: {"purpose": "feasibility + combined-change SENSITIVITY test (V0 vs V3 change both factors; NOT a causal comparison)", "blocks": 2, "stage_ceiling_usd": 4.00,
         "cells": {"T1": {"V0": 1, "V3": 1}, "T2": {"V0": 1, "V3": 1}, "T3": {"V0": 1, "V3": 1}, "T4": {"V0": 1, "V3": 1}}},
     2: {"purpose": "focused single-factor study (availability V0 vs V1; specs V0 vs V2; T2 availability = placebo; T4 = control)", "blocks": 3, "stage_ceiling_usd": 4.50,
         "cells": {"T1": {"V0": 3, "V1": 3, "V2": 3}, "T3": {"V0": 3, "V1": 3, "V2": 3}, "T2": {"V0": 3, "V1": 3, "V2": 3}, "T4": {"V0": 2}}},
