@@ -1,6 +1,6 @@
 # Task 010 — Realistic Storefront and Diverse Task Suite
 
-**Status:** Approved implementation direction, credential-free only. **No paid inference, paid hosting, public deployment, PR merge or private artifact publication.**
+**Status:** Implemented on branch `task010-realistic-storefront` (PR open, not merged) — see [Report 010](../reports/010-realistic-storefront-task-suite.md). Credential-free only. **No paid inference, paid hosting, public deployment, PR merge or private artifact publication.**
 **Baseline:** Latest `main`; read [COLD_START.md](../../COLD_START.md) and [product roadmap](../../docs/PRODUCT_ROADMAP.md) first.
 **Owner:** Claude implementation; user and ChatGPT product review.
 **Sequence:** Implement first. Task 011 protected scanner follows and must consume the new contracts.

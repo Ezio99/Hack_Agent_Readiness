@@ -1,0 +1,11 @@
+{% macro card(p, structured, show_stock, chips) %}
+<li><article class="card">
+  <div class="media" aria-hidden="true">{{ p.category|capitalize }}</div>
+  <h2><a href="{{ p.path }}">{{ p.name }}</a></h2>
+  <p class="brand">{{ p.brand }}</p>
+  <p class="rating"><span aria-label="Rated {{ p.rating }} out of 5">★ {{ p.rating }}</span></p>
+  {% if structured %}<ul class="chips" aria-label="Key attributes">{% for c in chips(p) %}<li>{{ c }}</li>{% endfor %}</ul>{% endif %}
+  <p class="price">{{ p.price_cents|money }}</p>
+  {% if show_stock %}<p class="stock {{ 'in' if p.in_stock else 'out' }}">{{ 'In stock' if p.in_stock else 'Out of stock' }}</p>{% endif %}
+</article></li>
+{% endmacro %}

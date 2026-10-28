@@ -1,0 +1,33 @@
+{% extends "base.html" %}{% from "macros.html" import card %}
+{% block title %}{{ title }} — Circuit &amp; Co.{% endblock %}
+{% block content %}
+<h1>{{ heading }}</h1>
+<div class="layout">
+<form class="filters" method="get" action="{{ path }}" aria-label="Filter and sort">
+  {% if not category %}<label for="f-q">Search</label><input id="f-q" type="search" name="q" value="{{ f.q }}">
+  <label for="f-cat">Category</label><select id="f-cat" name="category"><option value="">All categories</option>{% for slug, name in categories.items() %}<option value="{{ slug }}" {{ 'selected' if f.category == slug }}>{{ name }}</option>{% endfor %}</select>{% endif %}
+  <label for="f-brand">Brand</label><select id="f-brand" name="brand"><option value="">All brands</option>{% for b in brands %}<option value="{{ b }}" {{ 'selected' if f.brand == b }}>{{ b }}</option>{% endfor %}</select>
+  <label for="f-price">Maximum price (A$)</label><input id="f-price" type="number" name="max_price" min="0" step="0.01" value="{{ values.get('max_price','') }}">
+  {% if category == 'headphones' %}
+  <div class="check"><input id="f-anc" type="checkbox" name="anc" value="1" {{ 'checked' if f.anc }}><label for="f-anc">Active noise cancelling</label></div>
+  <label for="f-form">Type</label><select id="f-form" name="form"><option value="">Any</option><option value="over-ear" {{ 'selected' if f.form == 'over-ear' }}>Over-ear</option><option value="in-ear" {{ 'selected' if f.form == 'in-ear' }}>In-ear</option></select>
+  {% elif category == 'laptops' %}
+  <label for="f-ram">Minimum memory</label><select id="f-ram" name="min_ram"><option value="">Any</option>{% for n in (8,16,32,64) %}<option value="{{ n }}" {{ 'selected' if f.min_ram == n }}>{{ n }} GB or more</option>{% endfor %}</select>
+  {% elif category == 'monitors' %}
+  <label for="f-size">Minimum screen size</label><select id="f-size" name="min_screen"><option value="">Any</option>{% for n in (24,27,32,34) %}<option value="{{ n }}" {{ 'selected' if f.min_screen == n }}>{{ n }} inch or more</option>{% endfor %}</select>
+  <label for="f-hz">Minimum refresh rate</label><select id="f-hz" name="min_refresh"><option value="">Any</option>{% for n in (60,75,120,144,165) %}<option value="{{ n }}" {{ 'selected' if f.min_refresh == n }}>{{ n }} Hz or more</option>{% endfor %}</select>
+  <div class="check"><input id="f-usbc" type="checkbox" name="usb_c" value="1" {{ 'checked' if f.usb_c }}><label for="f-usbc">USB-C input</label></div>
+  {% endif %}
+  {% if show_stock %}<div class="check"><input id="f-stock" type="checkbox" name="in_stock" value="1" {{ 'checked' if f.in_stock }}><label for="f-stock">In stock only</label></div>{% endif %}
+  <label for="f-sort">Sort by</label><select id="f-sort" name="sort">{% for key, name in sorts.items() %}<option value="{{ key }}" {{ 'selected' if f.sort == key }}>{{ name }}</option>{% endfor %}</select>
+  <p><button type="submit">Apply</button> <a href="{{ path }}{{ '?q=' ~ f.q if (not category and f.q) else '' }}">Clear filters</a></p>
+</form>
+<section aria-label="Results">
+  <p role="status">{% if total %}Showing {{ first }}–{{ last }} of {{ total }} product{{ '' if total == 1 else 's' }}{% else %}No products match your filters.{% endif %}</p>
+  <ul class="grid">{% for p in items %}{{ card(p, structured, show_stock, chips) }}{% endfor %}</ul>
+  {% if pages > 1 %}<nav class="pager" aria-label="Pagination">
+    {% if prev_qs %}<a href="{{ path }}?{{ prev_qs }}" rel="prev">← Previous page</a>{% endif %}<span>Page {{ page }} of {{ pages }}</span>{% if next_qs %}<a href="{{ path }}?{{ next_qs }}" rel="next">Next page →</a>{% endif %}
+  </nav>{% endif %}
+</section>
+</div>
+{% endblock %}

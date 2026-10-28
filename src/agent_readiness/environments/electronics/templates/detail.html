@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{{ p.name }} — Circuit &amp; Co.{% endblock %}
+{% block content %}
+<nav aria-label="Breadcrumb"><ol class="crumbs"><li><a href="/">Home</a></li><li><a href="/c/{{ p.category }}">{{ category_name }}</a></li><li aria-current="page">{{ p.name }}</li></ol></nav>
+<article>
+  <h1>{{ p.name }}</h1>
+  <p class="brand">by {{ p.brand }} · SKU <span id="sku">{{ p.sku }}</span></p>
+  <p class="rating"><span aria-label="Rated {{ p.rating }} out of 5">★ {{ p.rating }}</span></p>
+  <p class="price" id="price">{{ p.price_cents|money }}</p>
+  <p class="stock {{ 'in' if p.in_stock else 'out' }}" id="availability">{{ 'In stock' if p.in_stock else 'Out of stock' }}</p>
+  {% if structured %}
+  <section class="panel" aria-labelledby="specs"><h2 id="specs">Specifications</h2>
+    <dl class="specs">{% for label, value in rows %}<dt>{{ label }}</dt><dd>{{ value }}</dd>{% endfor %}</dl></section>
+  {% else %}
+  <section class="panel" aria-labelledby="overview"><h2 id="overview">Overview</h2>{% for para in paragraphs %}<p>{{ para }}</p>{% endfor %}</section>
+  {% endif %}
+  <section class="panel" aria-labelledby="ship"><h2 id="ship">Delivery &amp; returns</h2>
+    <p>Delivery cost and returns terms depend on the product type and the order value.</p>
+    <ul><li><a href="/help/delivery">Delivery information</a></li><li><a href="/help/returns">Returns policy</a></li></ul></section>
+</article>
+{% endblock %}
