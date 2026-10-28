@@ -4,9 +4,13 @@
 >
 > Read this before proposing changes, writing code, or making architectural decisions. This document provides orientation, not a complete specification. Always inspect the current repository and relevant task documents.
 
-## Current execution handoff
+## Current execution handoff — 2026-10-28
 
-For a new Claude/Codex agent: **read [STATUS.md](STATUS.md) first for the latest verified state**, then [AGENTS.md](AGENTS.md), [Report 004](collaboration/reports/004-first-live-meta-trial.md), and the active task. The working branch is `hackathon/task004-stage-a` (PR #3, unmerged). Meta A–C probes passed; the strict Stage D trial failed on non-JSON output. An opt-in compatibility profile recovered and executed one live click, but the request gate prevented completion. No end-to-end live success is established. Draft Task 005 is a proposal only; do not spend, retry, or merge without user approval. Verify current GitHub state on startup; this paragraph is a dated 2026-10-28 snapshot.
+**Current baseline:** `main` includes Task 007's completed 30-run pilot and Task 008's dashboard/replay infrastructure (PR #4 squash-merged as `04c5730`). Task 007: 29/30 independently evaluated correct, with one genuine failed Fern B run and an agent–tool visibility gap. Results are exploratory, not a universal website-readiness score. The dashboard includes Overview, Scope comparison, Evidence, and Recorded replay. The replay exporter and UI code are merged, **but the three real replay JSON files and screenshots remain local, uncommitted, and unpublished**.
+
+**Active authorized implementation:** [Task 009 — Public Replay Finalization & Dashboard Deployment](collaboration/tasks/009-public-replay-deployment.md), documented on `main` on 2026-10-28. Claude should branch from latest `main`, minimize the replay schema, verify publication terms, prepare static deployment configuration, run checks, and open a PR with safe code only. **Do not merge, publish replay exports/screenshots, deploy publicly, run paid model calls, or start the scanner without separate explicit approval.** Task 010 bounded scanner and task-specific scoring are future possibilities, not standing authorizations.
+
+**Start here:** read this file, [Task 009](collaboration/tasks/009-public-replay-deployment.md), [STATUS.md](STATUS.md) (newer dated entries override stale historical snapshots), [AGENTS.md](AGENTS.md), [dashboard/README.md](dashboard/README.md), and [Report 007](collaboration/reports/007-availability-placement-pilot.md). Inspect GitHub and local state before relying on any summary. PR #3 and Task 004/005/006 references elsewhere are historical, not active work.
 
 ## 1. Our intention
 
@@ -56,9 +60,9 @@ The distinction matters:
 - Check official competition requirements before making eligibility claims.
 - Meta AI technology must have a meaningful, demonstrable role in the submitted system.
 
-Our immediate technical priorities are a reliable experimental harness and verified Meta model integration.
+The experimental harness and Meta integration have been demonstrated in bounded runs; the current priority is a safe, demonstrable diagnostic dashboard and replay.
 
-The current state of the hackathon implementation is recorded in `STATUS.md`. Do not infer completion from this document.
+The current state is recorded in `STATUS.md` and the active task; verify repository state rather than inferring completion from older sections.
 
 As of 2026-10-27 the credential-free foundation is merged (PR #1, task `003-hackathon-first-agent-run.md`). The active milestone is authenticated Meta compatibility validation followed by one independently evaluated trial, specified in `collaboration/tasks/004-first-live-meta-trial.md` (proposed; **no model call is authorized until the user approves model, endpoint, test sequence and limits**). Tasks 001 and 002 are historical pre-event specifications. Credentials come from `META_MODEL_API_KEY` in the environment or a repository-root `.env`; never expose the value.
 
