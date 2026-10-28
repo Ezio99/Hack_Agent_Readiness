@@ -11,3 +11,4 @@ artifacts/
 *.egg-info/
 build/
 dist/
+node_modules/
