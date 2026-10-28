@@ -24,7 +24,7 @@ OUT = ROOT / "dashboard" / "public" / "replays"
 STATE = ROOT / "runs" / "pilot-task007" / "pilot-state.json"
 RECONCILED = ROOT / "collaboration" / "reports" / "007-pilot-data" / "per-run-reconciled.json"
 RUNS = {"fern-A-25-s02-A1": "25-s02-A1", "fern-B-26-s02-B1": "26-s02-B1", "fern-B-27-s02-B2": "27-s02-B2"}
-SCHEMA = "task008-replay-v1"
+SCHEMA = "task009-replay-v2"      # v2: minimized public-facing schema (no title, finish_reason, reasoning_tokens, done.success)
 PRICE_IN, PRICE_OUT = 1.25, 4.25          # USD per million tokens (published prices; calculated estimate, not a bill)
 EXCERPT_CHARS = 600
 # Action parameters that may be published (everything else is dropped). Free-text fields such as `description`, `thinking`,
@@ -32,11 +32,13 @@ EXCERPT_CHARS = 600
 ALLOWED_PARAMS = {
     "click": ["index"], "navigate": ["url", "new_tab"], "go_back": [], "select_dropdown": ["index", "text"], "dropdown_options": ["index"],
     "find_elements": ["selector", "attributes", "include_text", "max_results"], "wait": ["seconds"], "scroll": ["down", "pages"],
-    "done": ["data", "success"],
+    "done": ["data"],   # the agent's self-reported `success` flag is deliberately NOT exported: only the independent evaluator verdict is authoritative
 }
 DONE_DATA = ["product_id", "price_cents", "available"]
 FORBIDDEN_KEYS = {"thinking", "memory", "next_goal", "evaluation_previous_goal", "description", "request_id", "content", "prose_prefix",
-                  "system_prompt", "messages", "screenshot", "expected", "artifact_path", "history"}
+                  "system_prompt", "messages", "screenshot", "expected", "artifact_path", "history",
+                  # minimized out of the public schema (Task 009): provider metadata, redundant title, agent self-reported success
+                  "reasoning_tokens", "finish_reason", "title", "success"}
 
 
 def scrub(text):
@@ -157,7 +159,7 @@ def build():
                                  "error": scrub(result.get("error")), "is_done": bool(result.get("is_done"))})
             nxt = history_last_result(requests[i]) if i < len(requests) else None
             steps.append({
-                "step": i, "page": page_kind(obs["url"]), "path": path_of(obs["url"]), "title": scrub(obs.get("title")),
+                "step": i, "page": page_kind(obs["url"]), "path": path_of(obs["url"]),
                 "model_visible_dom": scrub(obs["dom"]),
                 "model_visible_last_result": history_last_result(req),
                 "actions": proposed, "tool_results": executed,
@@ -165,9 +167,8 @@ def build():
                 "protocol": "raw_valid" if response.get("raw_protocol_compliant") else "recovered",
                 "guard": {"schema": "done_only" if hreq["fidelity"]["schema_narrowed"] else "full",
                           "budget_warning": "BUDGET WARNING" in json.dumps(req["messages"]), "final_step": bool(hreq["fidelity"]["schema_narrowed"])},
-                "usage": {"prompt_tokens": usage["prompt_tokens"], "completion_tokens": usage["completion_tokens"],
-                          "reasoning_tokens": response.get("reasoning_tokens")},
-                "latency_s": round(response["elapsed_seconds"], 3), "finish_reason": response["finish_reason"],
+                "usage": {"prompt_tokens": usage["prompt_tokens"], "completion_tokens": usage["completion_tokens"]},
+                "latency_s": round(response["elapsed_seconds"], 3),
                 "estimated_cost_usd": round(usage["prompt_tokens"] * PRICE_IN / 1e6 + usage["completion_tokens"] * PRICE_OUT / 1e6, 6),
             })
         total_tokens = sum(s["usage"]["prompt_tokens"] for s in steps), sum(s["usage"]["completion_tokens"] for s in steps)
@@ -185,8 +186,9 @@ def build():
             "notes": {"attribution": "required_path_requests is an assumed path (A 2; B 2 x rank); residual_requests = total - required - loop calls, an unclassified "
                                      "remainder reported only for runs that completed the required path and null otherwise (see residual_note)",
                       "cost": "calculated from provider-reported tokens at published prices (US$1.25/M input, US$4.25/M output); not a bill",
-                      "excluded": "model reasoning/memory/next-goal text, prose prefixes, free-text action descriptions, system prompts, full requests, "
-                                  "raw HTTP bodies, request IDs, screenshots, private task truth, local paths and ports"},
+                      "excluded": "model reasoning/memory/next-goal text, prose prefixes, free-text action descriptions, the agent's self-reported done.success flag, "
+                                  "reasoning-token counts, finish reasons, page titles, system prompts, full requests, raw HTTP bodies, request IDs, screenshots, "
+                                  "private task truth, local paths and ports"},
         }
         sources[name] = {"entry_id": entry_id, **{f: sha(d / f) for f in ["run.json", "trace.jsonl"]},
                          "model_responses": {p.name: sha(p) for p in sorted(d.glob("model-response-*.json"))}}

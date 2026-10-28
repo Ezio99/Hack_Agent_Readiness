@@ -21,7 +21,8 @@ def test_actions_are_allow_listed_and_free_text_is_dropped():
     n = x.sanitize_action({"navigate": {"url": "http://127.0.0.1:1234/products/abc?x=1", "new_tab": False}})
     assert n["params"] == {"url": "/products/abc?x=1", "new_tab": False}
     d = x.sanitize_action({"done": {"success": True, "data": {"product_id": "AR-1", "price_cents": 1, "available": True, "text": "free"}, "files_to_display": []}})
-    assert d["params"] == {"data": {"product_id": "AR-1", "price_cents": 1, "available": True}, "success": True}
+    assert d["params"] == {"data": {"product_id": "AR-1", "price_cents": 1, "available": True}}      # self-reported success is not exported
+    assert "success" not in d["params"]
     u = x.sanitize_action({"weird_tool": {"thinking": "secret"}})
     assert u == {"name": "weird_tool", "params": {}, "params_omitted": True}
 

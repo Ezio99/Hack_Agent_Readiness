@@ -10,7 +10,6 @@ export interface ReplayStep {
   step: number;
   page: "listing" | "filtered listing" | "product detail";
   path: string;
-  title: string | null;
   model_visible_dom: string;
   model_visible_last_result: string | null;
   actions: ReplayAction[];
@@ -18,9 +17,8 @@ export interface ReplayStep {
   result_visible_to_model_next_request: string | null;
   protocol: "raw_valid" | "recovered";
   guard: { schema: "full" | "done_only"; budget_warning: boolean; final_step: boolean };
-  usage: { prompt_tokens: number; completion_tokens: number; reasoning_tokens: number | null };
+  usage: { prompt_tokens: number; completion_tokens: number };
   latency_s: number;
-  finish_reason: string;
   estimated_cost_usd: number;
 }
 export interface ReplayRun {

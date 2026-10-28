@@ -98,7 +98,7 @@ export function ReplayViewer({ replays, manifest }: { replays: Replay[]; manifes
         <div className="panels">
           <article className="panel" aria-labelledby="saw">
             <h3 id="saw">What the model saw</h3>
-            <p className="muted">{s.page} · <code>{s.path}</code>{s.title ? <> · title <code>{s.title}</code></> : null}</p>
+            <p className="muted">{s.page} · <code>{s.path}</code></p>
             <p><strong>Last result shown in its history:</strong> <code>{s.model_visible_last_result ?? "—"}</code></p>
             <details>
               <summary>Page text as given to the model (DOM view)</summary>
@@ -109,7 +109,7 @@ export function ReplayViewer({ replays, manifest }: { replays: Replay[]; manifes
             <h3 id="did">What the agent did</h3>
             <ul>{s.actions.map((a, i) => <li key={i}><code>{describeAction(a)}</code></li>)}</ul>
             <p className="muted">
-              Response format: {s.protocol === "raw_valid" ? "raw-valid JSON" : "compatibility-recovered (prose prefix removed; text not exported)"} · finish: {s.finish_reason}.
+              Response format: {s.protocol === "raw_valid" ? "raw-valid JSON" : "compatibility-recovered (prose prefix removed; text not exported)"}.
               Guard: schema {s.guard.schema}{s.guard.budget_warning ? " · budget warning shown" : ""}{s.guard.final_step ? " · final step" : ""}.
             </p>
             <p className="muted">Model reasoning, plans and goal text are intentionally not part of this export.</p>
@@ -136,7 +136,7 @@ export function ReplayViewer({ replays, manifest }: { replays: Replay[]; manifes
 
         <p className="muted tally">
           Through step {s.step}: {cum.requests} request{cum.requests === 1 ? "" : "s"}, {cum.prompt.toLocaleString()} prompt / {cum.completion.toLocaleString()} completion tokens, {usd(cum.cost)} calculated estimate, {cum.latency.toFixed(1)} s model time.
-          This step: {s.usage.prompt_tokens.toLocaleString()} prompt / {s.usage.completion_tokens.toLocaleString()} completion{s.usage.reasoning_tokens !== null ? ` (${s.usage.reasoning_tokens} reasoning)` : ""} tokens, {s.latency_s} s, {usd(s.estimated_cost_usd)}.
+          This step: {s.usage.prompt_tokens.toLocaleString()} prompt / {s.usage.completion_tokens.toLocaleString()} completion tokens (provider-reported), {s.latency_s} s model latency, {usd(s.estimated_cost_usd)} calculated estimate (not a bill).
         </p>
       </section>
 

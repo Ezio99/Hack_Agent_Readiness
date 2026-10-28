@@ -1,0 +1,61 @@
+name: Dashboard static deployment (MANUAL ONLY, not enabled by default)
+# This workflow never runs automatically. It only runs when someone with write access starts it from the Actions tab,
+# and it can only deploy if GitHub Pages is enabled for the repository (Settings -> Pages -> Source: GitHub Actions),
+# which is a separate, manual decision. By default it deploys the PUBLIC build WITHOUT replay data (the dashboard then shows its
+# honest "replay data is not included" message). Replay JSON may be deployed only if the exact files were approved and are present
+# in dashboard/public/replays/ on the chosen ref AND the approval phrase below is typed.
+on:
+  workflow_dispatch:
+    inputs:
+      replay_approval_phrase:
+        description: "Leave empty for a public build without replay data. To include replay files type exactly: REPLAY-FILES-APPROVED-FOR-PUBLICATION"
+        required: false
+        default: ""
+permissions:
+  contents: read
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - name: Replay publication gate
+        id: gate
+        env:
+          # user-supplied input is passed as data through the environment, never interpolated into the shell script
+          APPROVAL_PHRASE: ${{ inputs.replay_approval_phrase }}
+        run: bash scripts/replay-gate.sh
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - name: Check dist for credentials, local paths, traces and unapproved replay data
+        env:
+          ALLOW_REPLAYS: ${{ steps.gate.outputs.allow }}
+        run: npm run check:dist
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dashboard/dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

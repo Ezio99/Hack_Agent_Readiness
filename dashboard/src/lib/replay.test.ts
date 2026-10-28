@@ -1,18 +1,18 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { cumulative, describeAction, hasVisibilityGap, visibilityLoop, type Replay, type ReplayStep } from "./replay";
+import { cumulative, describeAction, hasVisibilityGap, loadReplays, visibilityLoop, type Replay, type ReplayStep } from "./replay";
 import { runs } from "../data/task007";
 
 // ---- DEVELOPMENT-ONLY TEST FIXTURE — NOT EXPERIMENT EVIDENCE --------------------------------------------------------------
 // Synthetic steps used only to exercise the replay helpers when the locally generated export is absent (e.g. in CI).
 const step = (n: number, over: Partial<ReplayStep> = {}): ReplayStep => ({
-  step: n, page: "listing", path: "/", title: "t", model_visible_dom: "dom", model_visible_last_result: null,
+  step: n, page: "listing", path: "/", model_visible_dom: "dom", model_visible_last_result: null,
   actions: [{ name: "find_elements", params: { selector: "a" } }],
   tool_results: [{ action: "find_elements", result_excerpt: 'Found 3 elements:\n[0] <a> "x" {href="/products/abc"}', result_truncated: false, error: null, is_done: false }],
   result_visible_to_model_next_request: 'Found 3 elements matching "a".', protocol: "recovered",
-  guard: { schema: "full", budget_warning: false, final_step: false }, usage: { prompt_tokens: 100, completion_tokens: 10, reasoning_tokens: 4 },
-  latency_s: 1, finish_reason: "stop", estimated_cost_usd: 0.001, ...over,
+  guard: { schema: "full", budget_warning: false, final_step: false }, usage: { prompt_tokens: 100, completion_tokens: 10 },
+  latency_s: 1, estimated_cost_usd: 0.001, ...over,
 });
 const FIXTURE_NOT_EVIDENCE: ReplayStep[] = [
   step(1, { actions: [{ name: "click", params: { index: 3 } }], tool_results: [{ action: "click", result_excerpt: "Clicked", result_truncated: false, error: null, is_done: false }], result_visible_to_model_next_request: "Clicked" }),
@@ -41,15 +41,34 @@ describe("replay helpers (synthetic development fixture, not evidence)", () => {
   });
 });
 
+describe("replay loader fallback (no data is ever fabricated)", () => {
+  const res = (body: string, type: string, ok = true) => ({ ok, headers: { get: () => type }, json: async () => JSON.parse(body) }) as unknown as Response;
+  it("returns null when the manifest is missing, a network error occurs, or a SPA fallback serves HTML", async () => {
+    expect(await loadReplays((async () => res("", "text/html", false)) as unknown as typeof fetch)).toBeNull();
+    expect(await loadReplays((async () => { throw new Error("offline"); }) as unknown as typeof fetch)).toBeNull();
+    expect(await loadReplays((async () => res("<html>", "text/html")) as unknown as typeof fetch)).toBeNull();
+  });
+});
+
 // ---- Tests against the locally generated, sanitized export (skipped when it is not present, e.g. in CI) ------------------------
 const dir = resolve(__dirname, "../../public/replays");
 const present = existsSync(resolve(dir, "manifest.json"));
-const FORBIDDEN = ["thinking", "memory", "next_goal", "evaluation_previous_goal", "description", "request_id", "content", "prose_prefix", "messages", "screenshot", "expected", "artifact_path"];
+const FORBIDDEN = ["thinking", "memory", "next_goal", "evaluation_previous_goal", "description", "request_id", "content", "prose_prefix", "messages", "screenshot", "expected", "artifact_path", "reasoning_tokens", "finish_reason", "title", "success"];
 const keysOf = (o: unknown): string[] => (Array.isArray(o) ? o.flatMap(keysOf) : o && typeof o === "object" ? Object.entries(o).flatMap(([k, v]) => [k, ...keysOf(v)]) : []);
 
 describe.skipIf(!present)("local sanitized export reconciles with the committed per-run data", () => {
   const manifest = present ? JSON.parse(readFileSync(resolve(dir, "manifest.json"), "utf8")) : null;
   const replays: Replay[] = present ? manifest.replays.map((r: { file: string }) => JSON.parse(readFileSync(resolve(dir, r.file), "utf8"))) : [];
+  it("uses the minimized public schema (no title, finish_reason, reasoning_tokens or done.success) and keeps the retained fields", () => {
+    for (const rp of replays) {
+      expect(rp.schema).toBe("task009-replay-v2");
+      for (const s of rp.steps) {
+        expect(Object.keys(s).sort()).toEqual(["actions", "estimated_cost_usd", "guard", "latency_s", "model_visible_dom", "model_visible_last_result", "page", "path", "protocol", "result_visible_to_model_next_request", "step", "tool_results", "usage"]);
+        expect(Object.keys(s.usage).sort()).toEqual(["completion_tokens", "prompt_tokens"]);
+        for (const a of s.actions) if (a.name === "done") expect(Object.keys(a.params)).toEqual(["data"]);
+      }
+    }
+  });
   it("contains exactly the three approved runs", () => {
     expect(replays.map((r) => r.run.id)).toEqual(["25-s02-A1", "26-s02-B1", "27-s02-B2"]);
     expect(manifest.development_only).toBe(true);
