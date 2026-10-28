@@ -55,14 +55,14 @@ Examples are design targets, not guaranteed feasible fixtures. Before implementa
 
 ## Delivery roadmap
 
-1. **Task 011 — Product foundations (P0):** design and implement versioned realistic storefront, domain-extensible task contract, P0 task fixtures and independent evaluators. Credential-free; mock/browser smoke only. Preserve old experiment.
-2. **Task 010 (revised order) — Protected scanner (P0):** integrate new storefront/task suite into public configuration, invitation-only backend, bounded Meta runner and evidence-backed reports. Implement and test locally with mock provider before paid/deployment approvals.
+1. **Task 010 — Product foundations (P0):** design and implement versioned realistic storefront, domain-extensible task contract, P0 task fixtures and independent evaluators. Credential-free; mock/browser smoke only. Preserve old experiment.
+2. **Task 011 — Protected scanner (P0):** integrate new storefront/task suite into public configuration, invitation-only backend, bounded Meta runner and evidence-backed reports. Implement and test locally with mock provider before paid/deployment approvals.
 3. **Diagnostic layer (P0):** evidence-linked issue taxonomy, attribution and suggested fixes, with uncertainty labels.
 4. **Controlled remediation comparison (P1):** rerun fixed tasks across isolated site factors and compare verified changes.
 5. **Structured interface channel (P1 exploration, P2 full evaluation):** API/feeds and hybrid task pathways; clearly disclose what browser scans do not cover.
 6. **Later (P2):** generated tasks with feasibility checks, more agents/domains, CI and analytics integrations.
 
-**Task 010 is not cancelled**, but its previously authored narrow scanner scope is sequenced after Task 011 and must be reconciled with these contracts before implementation. No broad implementation, paid inference, paid hosting, merge, or public deployment is automatically authorized by this roadmap.
+**Task 011 is not cancelled**, but its previously authored narrow scanner scope is sequenced after Task 010 and must be reconciled with these contracts before implementation. No broad implementation, paid inference, paid hosting, merge, or public deployment is automatically authorized by this roadmap.
 
 ## Acceptance standard
 
