@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% from "macros.html" import card %}
+{% block content %}
+<h1>Electronics for work and play</h1>
+<p class="muted">Headphones, laptops, monitors and accessories. Browse a category, use search, or compare in the product pages.</p>
+<h2>Shop by category</h2>
+<ul class="tiles">{% for slug, name in categories.items() %}<li><a href="/c/{{ slug }}">{{ name }}</a></li>{% endfor %}</ul>
+<h2>Customer favourites</h2>
+<ul class="grid">{% for p in featured %}{{ card(p, structured, show_stock, chips) }}{% endfor %}</ul>
+{% endblock %}

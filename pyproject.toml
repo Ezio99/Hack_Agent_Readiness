@@ -21,4 +21,4 @@ testpaths = ["tests"]
 markers = ["browser: real Chromium/CDP checks requiring loopback sockets"]
 
 [tool.setuptools.package-data]
-agent_readiness = ["templates/*.html", "profiles/*.json"]
+agent_readiness = ["templates/*.html", "profiles/*.json", "environments/electronics/templates/*.html"]

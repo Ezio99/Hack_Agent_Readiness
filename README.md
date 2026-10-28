@@ -3,21 +3,19 @@
 A small, freshly implemented shopping experiment:
 **controlled storefront → feasible task → browser interaction → trace → independent evaluation**.
 
-The storefront has twenty synthetic products with search, category/brand/price
+The original toy storefront (Tasks 003–007, unchanged) has twenty synthetic products with search, category/brand/price
 filters and accessible detail pages. Listings show names, brands, categories,
 prices and opaque links. Product IDs and stock availability appear on details
 only. There is no checkout, account system, dashboard or composite score.
 
-**PR review revision:** the local full suite passes **57 tests**, including four
-real-browser cases. Standalone boundary checks and credential-free CLI smoke also
-pass. [PR CI passed](https://github.com/Ezio99/Hack_Agent_Readiness/actions/runs/40430691859)
-for this revision; previous CI evidence is retained in the report. Authenticated Meta probes and bounded live trials have occurred on the Task 004 branch; see STATUS.md and Report 004. No end-to-end task success is established. See
-[STATUS](STATUS.md), [PR #1](https://github.com/Ezio99/Hack_Agent_Readiness/pull/1),
-and the [fresh task](collaboration/tasks/003-hackathon-first-agent-run.md).
+## Current state (2026-10-28)
 
-## New agent / current milestone
+> Historical note: the paragraphs below this block were written for the early foundation (PR #1) and the Task 004 branch; they are kept for provenance and are **not** a description of the current repository. See [STATUS.md](STATUS.md) for the authoritative state.
 
-Start with [COLD_START.md](COLD_START.md), then [STATUS.md](STATUS.md) and [Report 004](collaboration/reports/004-first-live-meta-trial.md). The current open work is PR #3 on `hackathon/task004-stage-a`. The strict Stage D run failed on prose-prefixed output; the opt-in compatibility profile executed one recovered click but did not finish the task. A full compatibility run is proposed in draft Task 005 and requires separate spending approval.
+- **Measured evidence (Tasks 004–007):** authenticated Meta Muse Spark trials exist; Task 007 is a 30-run exploratory pilot on the 20-product toy storefront (29/30 independent PASS; descriptive, one site, one model) with the [consolidated report](collaboration/reports/007-availability-placement-pilot.md). Task 006 was stopped as an exploratory finding.
+- **Dashboard (Tasks 008–009):** a standalone, static React dashboard under [`dashboard/`](dashboard/README.md) over the committed Task 007 data, deployed (public build, no replay data) at https://ezio99.github.io/Hack_Agent_Readiness/ . Replay JSON and raw traces are private and unpublished.
+- **Task 010 (in review, credential-free):** a realistic synthetic electronics store `electronics-v1` (48 products, filters, sort, pagination, search, policy pages), two controlled design factors (stock on listings vs detail only; structured vs fragmented specifications), a domain-extensible task contract and four P0 task templates (ten fixtures) with independent oracles. See [docs/TASK_SUITE_DESIGN.md](docs/TASK_SUITE_DESIGN.md) and the [Task 010 report](collaboration/reports/010-realistic-storefront-task-suite.md). `readiness suite list|show|smoke` and `readiness serve-env` run it locally; **scripted smoke is not a model run**, and no model has been run on the new environment.
+- **Not built / not claimed:** no live scanner, no readiness score, no real-website results.
 
 ## Install
 

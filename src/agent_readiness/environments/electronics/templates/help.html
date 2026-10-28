@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Help — Circuit &amp; Co.{% endblock %}
+{% block content %}
+{% if page == 'index' %}
+<h1>Help</h1><ul><li><a href="/help/delivery">Delivery information</a></li><li><a href="/help/returns">Returns policy</a></li></ul>
+{% elif page == 'returns' %}
+<h1>Returns policy</h1>
+<p>Return a product within its return window for a refund to the original payment method. The window starts on the delivery date. Opened laptops and monitors carry a restocking fee deducted from the refund.</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Returns by product category (scrolls sideways on narrow screens)"><table><caption class="muted">Returns by product category</caption><thead><tr><th scope="col">Category</th><th scope="col">Return window</th><th scope="col">Restocking fee (opened items)</th><th scope="col">Return shipping</th></tr></thead>
+<tbody>{% for cat, days, fee, ship in rows %}<tr><th scope="row">{{ cat }}</th><td>{{ days }} days</td><td>{{ fee }}%</td><td>{{ ship }}</td></tr>{% endfor %}</tbody></table></div>
+{% else %}
+<h1>Delivery information</h1>
+<p>Prices include GST. Delivery costs below apply to metropolitan addresses; delivery is free once the order value reaches the free-delivery threshold for its shipping class. Estimates are in business days after dispatch.</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Delivery by shipping class (scrolls sideways on narrow screens)"><table><caption class="muted">Delivery by shipping class</caption><thead><tr><th scope="col">Shipping class</th><th scope="col">Applies to</th><th scope="col">Delivery cost</th><th scope="col">Free delivery when order value is at least</th><th scope="col">Estimated delivery</th></tr></thead>
+<tbody>{% for cls, cost, threshold, lo, hi, cats in rows %}<tr><th scope="row">{{ 'Bulky items' if cls == 'bulky' else 'Standard' }}</th><td>{{ cats }}</td><td>{{ cost|money }}</td><td>{{ threshold|money }}</td><td>{{ lo }}–{{ hi }} business days</td></tr>{% endfor %}</tbody></table></div>
+{% endif %}
+{% endblock %}
