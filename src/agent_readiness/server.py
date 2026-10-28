@@ -3,15 +3,15 @@ import asyncio
 from contextlib import asynccontextmanager
 import socket
 import uvicorn
-from .storefront import app
+from .storefront import VARIANT_ID, create_app
 
 
 @asynccontextmanager
-async def local_storefront():
+async def local_storefront(variant: str = VARIANT_ID):
     sock = socket.create_server(("127.0.0.1", 0))
     sock.setblocking(False)
     url = f"http://127.0.0.1:{sock.getsockname()[1]}/"
-    server = uvicorn.Server(uvicorn.Config(app, log_level="error", access_log=False, lifespan="off"))
+    server = uvicorn.Server(uvicorn.Config(create_app(variant), log_level="error", access_log=False, lifespan="off"))
     task = asyncio.create_task(server.serve(sockets=[sock]))
     try:
         async with asyncio.timeout(10):

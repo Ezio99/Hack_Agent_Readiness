@@ -76,7 +76,7 @@ async def smoke(task: PublicTask, url: str, recorder: Recorder, effective: dict)
             await capture("filtered-listing")
             if steps >= effective["max_steps"]:
                 return dict(answer=None, status="step_limit", stop_reason="step_limit", action_count=actions, steps=steps, usage=None, errors=[])
-            links = page.locator("article h2 a")
+            links = page.locator("article a[href^='/products/']")  # arm-independent: the card's only product link
             if await links.count() != 1:
                 raise RuntimeError("Smoke expected a unique candidate from public task constraints")
             recorder.event("browser_action", action="open_detail", href=await links.first.get_attribute("href"))

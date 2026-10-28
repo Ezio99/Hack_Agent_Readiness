@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Browse our collection</h1>
+<form action="/" method="get" role="search" aria-label="Search and filter products">
+<div><label for="q">Search products</label><input type="search" id="q" name="q" value="{{ q }}"></div>
+<div><label for="category">Category</label><select id="category" name="category"><option value="">All categories</option>{% for c in categories %}<option value="{{ c }}" {% if c == category %}selected{% endif %}>{{ c }}</option>{% endfor %}</select></div>
+<div><label for="brand">Brand</label><select id="brand" name="brand"><option value="">All brands</option>{% for b in brands %}<option value="{{ b }}" {% if b == brand %}selected{% endif %}>{{ b }}</option>{% endfor %}</select></div>
+<div><label for="max_price">Maximum price (AUD)</label><input type="number" id="max_price" name="max_price" min="0" step="0.01" value="{{ max_price }}" placeholder="No limit"></div>
+<button type="submit">Apply filters</button><a href="/">Clear filters</a>
+</form>
+<p>{{ products|length }} products</p>
+<div class="grid">{% for p in products %}<article><h2>{{ p.name }}</h2><p><a href="/products/{{ p.route }}">View details</a></p><p>{{ p.brand }} · {{ p.category }}</p><p class="price">${{ '%.2f'|format(p.price_cents / 100) }}</p></article>{% else %}<p>No products match your search. Try clearing a filter.</p>{% endfor %}</div>
+{% endblock %}
