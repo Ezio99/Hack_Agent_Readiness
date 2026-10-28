@@ -1,6 +1,6 @@
 # Task 006 — Product-link information placement (controlled A/B)
 
-**Status: Stage 1 IMPLEMENTED OFFLINE (2026-10-28, user-approved); Stages 2–3 NOT APPROVED. No paid calls are authorized.** Revised 2026-10-28 (twice: staged design; then the planning-budget update to A$30 overall and a 24-run pilot) after inspecting the storefront and Browser Use pipeline and after the user's decisions (Control A unchanged; Arm B = visible generic link text; accessible-name-only variant is an offline diagnostic only; staged design).
+**Status: STOPPED by the user decision of 2026-10-28 after Stage 2 block 1 (entries 1–4, seed 2). Entries 5–24 will not be executed. Preserved as an exploratory finding, not evidence of equivalence. Stage 1 was implemented offline; no further paid calls are authorized.** Revised 2026-10-28 (twice: staged design; then the planning-budget update to A$30 overall and a 24-run pilot) after inspecting the storefront and Browser Use pipeline and after the user's decisions (Control A unchanged; Arm B = visible generic link text; accessible-name-only variant is an offline diagnostic only; staged design).
 
 ## Research question and hypothesis
 How does the placement of product information relative to the clickable element affect a shopping agent's ability to discover and identify the correct product?

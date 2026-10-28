@@ -43,5 +43,8 @@ No halt. Entries 1–4 `done`; entries 5–24 `pending`; next scheduled run is e
 ## Interpretation and limitations
 At this stage there is **no observable effect**: 4/4 success, identical 2-step paths, 0 wrong visits. This matches the ceiling-effect concern: the unfiltered listing shows name, brand, category and price next to every link, and the task is solved from those facts, without search or filter, in both arms. Four runs on one seed cannot detect anything but a large effect; token and latency differences (e.g. the reasoning tokens 182–650) are within run-to-run noise (arm A itself ranges 182 to 650). The pilot continues to be informative only if later seeds (multiple candidates under every filter pair) produce more navigation; a persistent ceiling would argue for redesigning the intervention (Stage 3) rather than running all 24 runs.
 
-## Next (needs approval; nothing started)
+## Decision (2026-10-28, user)
+Task 006 is **stopped after this four-run seed-2 block**; entries 5–24 stay `pending` in `runs/pilot-task006/` and are not to be executed. The result is an **exploratory finding**: with one seed, two runs per arm and a task solvable from adjacent card text, the arms were indistinguishable (a ceiling effect). It is **not evidence that the placement of link-identifying text is irrelevant**. The follow-up design is [Task 007](../tasks/007-availability-information-placement.md).
+
+## Next (superseded by the decision above)
 Options: continue the schedule in further installments (next: seed 9 block, entries 5–8), or stop and revisit the design given the ceiling. PR #3 remains unmerged.
