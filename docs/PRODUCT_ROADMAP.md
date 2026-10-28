@@ -67,3 +67,21 @@ Examples are design targets, not guaranteed feasible fixtures. Before implementa
 ## Acceptance standard
 
 A developer unfamiliar with the experiments can select a realistic task, see a real or explicitly labeled mock run, inspect independent correctness and the agent's actual journey, understand a grounded issue, and compare an actionable change. Product claims must remain narrower than evidence.
+
+## Long-term platform vision — Agent Readiness Registry and API
+
+**Product direction accepted 2026-10-28; future roadmap, not an implemented or approved build.** Beyond diagnosing and improving individual websites, Agent Readiness could become a reusable **agentic-web primitive**: a shared, independently evaluated registry of how reliably and efficiently agents can complete specific tasks on specific websites.
+
+**Phase 1 — Measure (hackathon):** Run bounded, versioned reference-agent tasks; independently verify outcomes; report navigation effort, time, calculated cost, evidence quality, uncertainty, and failure attribution. Do not claim broad reliability from a small pilot.
+
+**Phase 2 — Optimize (hackathon target):** Suggest evidence-linked website changes and rescan controlled variants to test whether they actually improve task outcomes or effort. Hypotheses are not validated improvements until measured.
+
+**Phase 3 — Registry (post-hackathon):** Publish opt-in, task-specific website capability and readiness records, with evaluation dates, sample sizes, agent/tool versions, uncertainty, provenance and reproducible methodology. Explore independent rankings only once coverage and validity justify comparisons. Do not collapse heterogeneous tasks into a universal score.
+
+**Phase 4 — Agent-facing API (post-hackathon):** Provide a compact, machine-readable query interface so shopping and other agents can estimate task success, interaction effort and expected cost before choosing a website or interaction path. An illustrative endpoint is `GET /v1/readiness?domain=example.com&task=product_search`; it is a concept, not an existing API. Agents must still weigh price, product quality, availability and user preferences; readiness is not an instruction to exclude a retailer.
+
+**Business hypothesis, not an established effect:** If agents use readiness signals to choose among otherwise comparable websites, website owners may have a stronger incentive to improve agent accessibility and efficiency. Higher request counts can impose cumulative inference costs on agent operators, but model requests are not interchangeable in price and the current experiments cannot establish lost traffic, ranking effects or revenue impact. Validate agent adoption, choice effects and economic value in separate experiments.
+
+**Trust and governance:** Keep evaluation/rankings independent of paid audits or optimization services; publish clear methodology and evidence limits, allow correction/retesting, resist gaming, and consider coverage, freshness and cold-start challenges. Protect private traces, model output and credentials; no publication without separate review and approval.
+
+**Scope gate:** The Registry/API is suitable for the hackathon *vision/pitch*, clearly labeled as future work. It does **not** expand Task 012, authorize model calls or deployment, or supersede the current priority: finish the experiment, review evidence, and demonstrate a targeted intervention/rescan. A small read-only proof of concept may be considered later only after explicit prioritization.
