@@ -19,6 +19,10 @@ export function Scopes({ initial = "All" }: { initial?: Sel }) {
   const revisited = rs.filter((r) => r.revisits > 0);
   const ovh = (x: ReturnType<typeof stats>) =>
     x.overheadMean === null ? "—" : `${x.overheadMean > 0 ? "+" : ""}${x.overheadMean.toFixed(2)} (${x.overheadRuns} of ${x.successfulRuns} successful runs above 0)`;
+  const okMean = (arm: "A" | "B") => {
+    const ok = byArm(rs, arm).filter((r) => r.passed);
+    return ok.length ? `${(ok.reduce((a, r) => a + r.visits_trace.length, 0) / ok.length).toFixed(2)} (${ok.length} of ${byArm(rs, arm).length} runs)` : "—";
+  };
   const cell = (label: string, a: React.ReactNode, b: React.ReactNode) => (
     <tr><th scope="row">{label}</th><td>{a}</td><td>{b}</td></tr>
   );
@@ -60,7 +64,8 @@ export function Scopes({ initial = "All" }: { initial?: Sel }) {
               {cell("Model requests per run", `${A.requests.toFixed(2)} (range ${A.requestsMin}–${A.requestsMax})`, `${B.requests.toFixed(2)} (range ${B.requestsMin}–${B.requestsMax})`)}
               {cell("Estimated cost per run", `${usd(A.cost)} (${usd(A.costMin, 3)}–${usd(A.costMax, 3)})`, `${usd(B.cost)} (${usd(B.costMin, 3)}–${usd(B.costMax, 3)})`)}
               {cell("Elapsed time per run", secs(A.elapsed), secs(B.elapsed))}
-              {cell("Detail pages observed / required (mean)", `${A.visits.toFixed(2)} / ${A.required.toFixed(2)}`, `${B.visits.toFixed(2)} / ${B.required.toFixed(2)}`)}
+              {cell("Detail pages observed / required (mean, all runs)", `${A.visits.toFixed(2)} / ${A.required.toFixed(2)}`, `${B.visits.toFixed(2)} / ${B.required.toFixed(2)}${failed.some((r) => r.arm === "B") ? " — includes failed run" : ""}`)}
+              {failed.length ? cell("Detail pages observed (successful runs only)", okMean("A"), okMean("B")) : null}
               {cell("Navigation overhead, successful runs only", ovh(A), ovh(B))}
               {cell("Runs re-opening an already-seen page", `${A.revisitRuns} (${A.extraOpenings} extra openings)`, `${B.revisitRuns} (${B.extraOpenings} extra openings)`)}
               {cell("Runs with an agent–tool loop", A.loopRuns, B.loopRuns)}
@@ -69,6 +74,11 @@ export function Scopes({ initial = "All" }: { initial?: Sel }) {
           </table>
         </div>
         <p className="muted">Overhead = observed detail pages − independently derived minimum, reported for <strong>successful runs only</strong>. A failed run is never shown as “fewer pages = more efficient”: it carries a verification shortfall instead.</p>
+        {failed.length ? (
+          <p className="muted">
+            <strong>Reading the “observed” means:</strong> {failed.map((r) => `${r.id} (arm ${r.arm})`).join(", ")} is included in the all-runs mean above although it opened only {failed.map((r) => r.visits_trace.length).join(", ")} of {failed.map((r) => r.required_visits).join(", ")} required pages because it did not finish the verification. That lowers the arm’s mean observed pages; it is <em>incomplete verification, not better efficiency</em>. The successful-runs-only row shows the comparable figure.
+          </p>
+        ) : null}
         <div className="grid2">
           <PairedBars title="Model requests per run" a={A.requests} b={B.requests} format={(x) => x.toFixed(2)} />
           <PairedBars title="Estimated cost per run (calculated)" a={A.cost} b={B.cost} format={(x) => usd(x)} />
@@ -78,19 +88,19 @@ export function Scopes({ initial = "All" }: { initial?: Sel }) {
       </section>
 
       <section aria-labelledby="why">
-        <h2 id="why">Where the extra requests came from</h2>
+        <h2 id="why">Where the requests came from</h2>
         <AttributionLegend />
         <div className="stack">
           <AttributionBar arm="A" att={attA} max={attMax} />
           <AttributionBar arm="B" att={attB} max={attMax} />
         </div>
         <p>
-          B − A requests {signed(d.requests)} = <strong>{signed(d.required)} website-required</strong> {signed(d.agent)} agent-induced {signed(d.tool)} agent–tool interface.
-          Website-required navigation is deterministic; the other two depend on what the agent happened to do.
+          B − A requests {signed(d.requests)} = <strong>{signed(d.required)} assumed website-required path</strong> {signed(d.residual)} residual agent overhead {signed(d.tool)} agent–tool interface loop.
+          The required path is deterministic. The <em>residual</em> is an unclassified remainder (total − required path − loop calls), not a per-request classification; for a run that did not complete the required path (a failed run) it can be negative and should not be read as efficiency.
         </p>
         {sel !== "All" && info && info.rank === 1 && d.requests < 0 ? (
           <Callout title="The control did not behave like a clean null" tone="warn">
-            Both arms need one page here, yet arm B used {Math.abs(d.requests).toFixed(1)} fewer requests per run. The difference traces to {loops.length} agent–tool loop{loops.length === 1 ? "" : "s"} ({loops.map((r) => r.id).join(", ")}): {Math.abs(d.agent) < 0.05 ? "agent-induced extra requests were equal across the arms, so the loop accounts for the whole gap" : `the loop accounts for ${signed(d.tool)} of it and other agent behaviour for ${signed(d.agent)}`} — not the storefront design.
+            Both arms need one page here, yet arm B used {Math.abs(d.requests).toFixed(1)} fewer requests per run. The difference traces to {loops.length} agent–tool loop{loops.length === 1 ? "" : "s"} ({loops.map((r) => r.id).join(", ")}): {Math.abs(d.residual) < 0.05 ? "the residual was equal across the arms, so the loop accounts for the whole gap" : `the loop accounts for ${signed(d.tool)} of it and other agent behaviour for ${signed(d.residual)}`} — not the storefront design.
           </Callout>
         ) : null}
         {failed.length ? (
@@ -108,7 +118,7 @@ export function Scopes({ initial = "All" }: { initial?: Sel }) {
       <section aria-labelledby="runs">
         <h2 id="runs">Run-level evidence</h2>
         <RunTable runs={rs} caption={`${sel === "All" ? "All runs" : `${sel} runs`}: outcome, navigation and cost per run`} />
-        <p className="muted">Legend: <Pill tone="pass">PASS</Pill> / <Pill tone="fail">FAIL</Pill> are the independent evaluator’s verdicts. “Requests (required · agent · tool)” splits each run’s model requests into website-required, agent-induced and agent–tool interface loop calls. Raw traces are kept locally; replay is planned for Stage B.</p>
+        <p className="muted">Legend: <Pill tone="pass">PASS</Pill> / <Pill tone="fail">FAIL</Pill> are the independent evaluator’s verdicts. “Requests (required · agent · tool)” splits each run’s model requests into the assumed website-required path, the residual agent overhead and agent–tool interface loop calls (“not completed” for a failed run). Raw traces are kept locally; see the Recorded replay page for the three runs available locally.</p>
       </section>
     </>
   );

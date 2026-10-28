@@ -68,3 +68,14 @@ footer.site { border-top: 1px solid var(--line); background: #fff; color: var(--
   header.site { position: static; } .kpi-value { font-size: 1.35rem; }
 }
 @media (prefers-reduced-motion: no-preference) { .bar, .seg { transition: width .3s; } }
+
+.replay-banner { background: var(--warn-bg); border: 1px solid #e8cf8b; color: #5a3d00; border-radius: var(--radius); padding: .6rem .9rem; }
+.stepper { display: flex; gap: .6rem; align-items: center; } .stepper input[type=range] { flex: 1; }
+.chips { display: flex; flex-wrap: wrap; gap: .3rem; list-style: none; padding: 0; margin: .6rem 0; }
+.chip { min-width: 2.2rem; padding: .25rem .5rem; border: 1px solid var(--line); border-radius: 6px; background: #fff; font-weight: 600; }
+.chip.current { outline: 3px solid var(--required); outline-offset: 1px; } .chip.gap { background: #f6dff3; border-color: var(--tool); } .chip.final { border-style: dashed; border-width: 2px; border-color: var(--bad); }
+.chip.static { display: inline-block; text-align: center; min-width: 1.6rem; padding: 0 .3rem; }
+.panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 1rem; margin: 1rem 0; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: .8rem 1rem; min-width: 0; }
+pre.code { background: #0f1722; color: #e7edf5; border-radius: 8px; padding: .6rem .8rem; overflow: auto; max-height: 18rem; font-size: .8rem; white-space: pre-wrap; word-break: break-word; }
+.loopnote { color: var(--tool); font-weight: 600; } .tally { border-top: 1px dashed var(--line); padding-top: .5rem; }

@@ -25,7 +25,7 @@ describe("Report 007 states what the dashboard computes", () => {
   });
   it("attribution table", () => {
     const a = meanAttribution(byArm(allRuns, "A")), b = meanAttribution(byArm(allRuns, "B"));
-    const row = (name: string, x: ReturnType<typeof meanAttribution>) => `| ${name} (n = 15) | ${x.required.toFixed(2)} | ${x.tool.toFixed(2)} | ${x.agent.toFixed(2)} | ${x.total.toFixed(2)} |`;
+    const row = (name: string, x: ReturnType<typeof meanAttribution>) => `| ${name} (n = 15) | ${x.required.toFixed(2)} | ${x.tool.toFixed(2)} | ${x.residual.toFixed(2)} | ${x.total.toFixed(2)} |`;
     expect(report).toContain(row("Arm A", a));
     expect(report).toContain(row("Arm B", b));
   });

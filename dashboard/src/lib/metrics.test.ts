@@ -94,17 +94,17 @@ describe("request attribution", () => {
   });
   it("per-arm means: A 2.00/0.40/2.27 = 4.67; B 4.80/0.80/1.87 = 7.47; B − A required +2.80", () => {
     const a = meanAttribution(byArm(allRuns, "A")), b = meanAttribution(byArm(allRuns, "B"));
-    expect([a.required, a.tool, a.agent, a.total].map((x) => +x.toFixed(2))).toEqual([2, 0.4, 2.27, 4.67]);
-    expect([b.required, b.tool, b.agent, b.total].map((x) => +x.toFixed(2))).toEqual([4.8, 0.8, 1.87, 7.47]);
+    expect([a.required, a.tool, a.residual, a.total].map((x) => +x.toFixed(2))).toEqual([2, 0.4, 2.27, 4.67]);
+    expect([b.required, b.tool, b.residual, b.total].map((x) => +x.toFixed(2))).toEqual([4.8, 0.8, 1.87, 7.47]);
     expect(+diffBA(allRuns).required.toFixed(2)).toBe(2.8);
   });
   it("components always sum to the run's requests; agent-induced is negative only for the truncated run 27", () => {
-    for (const r of allRuns) { const t = attribution(r); expect(t.required + t.tool + t.agent).toBe(r.requests); }
-    expect(allRuns.filter((r) => attribution(r).agent < 0).map((r) => r.id)).toEqual(["27-s02-B2"]);
+    for (const r of allRuns) { const t = attribution(r); expect(t.required + t.tool + t.residual).toBe(r.requests); }
+    expect(allRuns.filter((r) => attribution(r).residual < 0).map((r) => r.id)).toEqual(["27-s02-B2"]);
   });
   it("Kitchen's B − A request gap is fully explained by the single arm-A tool loop", () => {
     const d = diffBA(byScope(allRuns, "Kitchen"));
-    expect([d.requests, d.required, d.tool, +d.agent.toFixed(6)]).toEqual([-2, 0, -2, 0]);
+    expect([d.requests, d.required, d.tool, +d.residual.toFixed(6)]).toEqual([-2, 0, -2, 0]);
   });
 });
 

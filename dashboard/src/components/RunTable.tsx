@@ -12,7 +12,7 @@ export function RunTable({ runs, caption }: { runs: Run[]; caption: string }) {
           <tr>
             <th scope="col">Run</th><th scope="col">Arm</th><th scope="col">Independent evaluator</th>
             <th scope="col">Detail pages: observed / required</th><th scope="col">Overhead or shortfall</th>
-            <th scope="col">Requests (required · agent · tool)</th><th scope="col">Est. cost</th><th scope="col">Time</th><th scope="col">Evidence flags</th>
+            <th scope="col">Requests (required · residual · tool)</th><th scope="col">Est. cost</th><th scope="col">Time</th><th scope="col">Evidence flags</th>
           </tr>
         </thead>
         <tbody>
@@ -30,7 +30,12 @@ export function RunTable({ runs, caption }: { runs: Run[]; caption: string }) {
                     ? <span>overhead {r.overhead === 0 ? "0" : `+${r.overhead}`}</span>
                     : <span className="shortfall">verification shortfall {r.shortfall?.detail_visit_shortfall} <span className="muted">(not an efficiency gain)</span></span>}
                 </td>
-                <td>{r.requests} <span className="muted">({att.required} · {att.agent} · {att.tool})</span></td>
+                <td>
+                  {r.requests}{" "}
+                  {r.passed
+                    ? <span className="muted">({att.required} · {att.residual} · {att.tool})</span>
+                    : <span className="muted">(tool loop {att.tool}; required path <strong>not completed</strong>, so no residual is reported)</span>}
+                </td>
                 <td>{usd(r.cost)}</td>
                 <td>{secs(r.elapsed)}</td>
                 <td>{flags.length ? flags.join("; ") : <span className="muted">—</span>}</td>

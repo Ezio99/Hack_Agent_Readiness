@@ -44,8 +44,8 @@ export function PairedBars({ title, a, b, format, max }: { title: string; a: num
 }
 
 const SEG = [
-  { key: "required", label: "Website-required navigation", cls: "seg-required" },
-  { key: "agent", label: "Agent-induced extra requests", cls: "seg-agent" },
+  { key: "required", label: "Assumed website-required path", cls: "seg-required" },
+  { key: "residual", label: "Residual agent overhead", cls: "seg-agent" },
   { key: "tool", label: "Agent–tool interface loop", cls: "seg-tool" },
 ] as const;
 
@@ -66,7 +66,7 @@ export function AttributionBar({ arm, att, max }: { arm: "A" | "B"; att: Attribu
   return (
     <div className="stack-row">
       <span className="bar-label">{arm === "A" ? "A · cards" : "B · detail only"}</span>
-      <span className="stack-track" role="img" aria-label={`Arm ${arm} mean requests per run: ${att.required.toFixed(2)} website-required, ${att.agent.toFixed(2)} agent-induced, ${att.tool.toFixed(2)} agent-tool loop, total ${att.total.toFixed(2)}`}>
+      <span className="stack-track" role="img" aria-label={`Arm ${arm} mean requests per run: ${att.required.toFixed(2)} assumed website-required path, ${att.residual.toFixed(2)} residual agent overhead, ${att.tool.toFixed(2)} agent-tool loop, total ${att.total.toFixed(2)}`}>
         {parts.map((p) => (p.v > 0 ? <span key={p.key} className={`seg ${p.cls}`} style={{ width: `${(p.v / max) * 100}%` }} title={`${p.label}: ${p.v.toFixed(2)}`} /> : null))}
       </span>
       <span className="bar-value">{att.total.toFixed(2)}</span>

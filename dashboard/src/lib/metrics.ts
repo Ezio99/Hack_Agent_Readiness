@@ -19,17 +19,20 @@ export const byScope = (rs: Run[], scope: Scope): Run[] => rs.filter((r) => r.sc
 /** A "tool-interface loop" is >= 3 identical consecutive find_elements calls (the three loop runs in Task 007). */
 export const toolLoopCalls = (r: Run): number => (r.find_elements.length >= 3 ? r.find_elements.length : 0);
 
-/** Request attribution: website-required path, agent–tool interface loop, and everything else (agent-induced). */
-export interface Attribution { required: number; tool: number; agent: number; total: number }
+/** Request accounting: assumed website-required path, agent–tool interface loop calls, and the residual (see Attribution). */
+/** Accounting assumption: `residual` is NOT a per-request classification. It is total requests − the assumed website-required path
+ *  (A: 2; B: 2×rank) − the repeated find_elements calls in loop runs. It therefore bundles every other agent behaviour (re-opening
+ *  pages, filtering, backtracking, "be thorough" detours) and can be negative for a run that never completed the required path (run 27). */
+export interface Attribution { required: number; tool: number; residual: number; total: number }
 export const attribution = (r: Run): Attribution => {
   const required = r.arm === "A" ? 2 : 2 * r.rank;
   const tool = toolLoopCalls(r);
-  return { required, tool, agent: r.requests - required - tool, total: r.requests };
+  return { required, tool, residual: r.requests - required - tool, total: r.requests };
 };
 export const meanAttribution = (rs: Run[]): Attribution => ({
   required: mean(rs.map((r) => attribution(r).required)),
   tool: mean(rs.map((r) => attribution(r).tool)),
-  agent: mean(rs.map((r) => attribution(r).agent)),
+  residual: mean(rs.map((r) => attribution(r).residual)),
   total: mean(rs.map((r) => r.requests)),
 });
 
@@ -91,7 +94,7 @@ export const diffBA = (rs: Run[]) => {
   const attrA = meanAttribution(byArm(rs, "A")), attrB = meanAttribution(byArm(rs, "B"));
   return {
     requests: b.requests - a.requests, cost: b.cost - a.cost, elapsed: b.elapsed - a.elapsed,
-    required: attrB.required - attrA.required, tool: attrB.tool - attrA.tool, agent: attrB.agent - attrA.agent,
+    required: attrB.required - attrA.required, tool: attrB.tool - attrA.tool, residual: attrB.residual - attrA.residual,
   };
 };
 

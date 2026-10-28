@@ -21,7 +21,7 @@ export function Evidence() {
         <ol className="findings">
           <li><strong>Correctness is near ceiling.</strong> {total.passes} of {total.n} runs passed the independent evaluator (A {A.passes}/{A.n}, B {B.passes}/{B.n}); every pass had the answered product’s page observed and the higher-priced candidates ruled out. The benchmark therefore discriminates by effort, not accuracy.</li>
           <li><strong>Hiding availability on detail pages costs deterministic extra navigation.</strong> Arm B must open every higher-priced candidate; the cost grows with how many are out of stock (rank). Arm B’s extra website-required requests per run: {diffBA(allRuns).required.toFixed(1)} on average over scopes, with identical accuracy except the single tool-loop failure.</li>
-          <li><strong>The agent adds its own overhead.</strong> {overheadRuns.length} successful runs re-opened a page they had already seen (A {overheadRuns.filter((r) => r.arm === "A").length}, B {overheadRuns.filter((r) => r.arm === "B").length}); all of the positive overhead is re-opening the same page, never opening a wrong product.</li>
+          <li><strong>The agent adds its own overhead (reported separately).</strong> {overheadRuns.length} successful runs re-opened a page they had already seen (A {overheadRuns.filter((r) => r.arm === "A").length}, B {overheadRuns.filter((r) => r.arm === "B").length}); all of the positive overhead is re-opening the same page, never opening a wrong product.</li>
           <li><strong>One tool-interface defect, not a site defect.</strong> {loopRuns.length} runs ({loopRuns.map((r) => r.id).join(", ")}) repeated <code>find_elements</code> {loopCalls} times in total.</li>
           <li><strong>The Muse Spark agent needed protocol compatibility handling.</strong> {proto.rawValid} raw-valid, {proto.recovered} compatibility-recovered, {proto.rejected} rejected responses of {proto.total}; correctness is judged separately.</li>
         </ol>
@@ -34,11 +34,11 @@ export function Evidence() {
             <dt>Independent evaluator</dt><dd><Pill tone="fail">FAIL</Pill> answered {run27.answer.product_id} (${(run27.answer.price_cents / 100).toFixed(2)}, available: {String(run27.answer.available)}); the target was {run27.expected}.</dd>
             <dt>Required vs observed pages</dt><dd>required <strong>{run27.required_visits}</strong>, observed <strong>{run27.visits_trace.length}</strong> → verification shortfall <strong>{run27.shortfall?.detail_visit_shortfall}</strong> ({run27.shortfall?.higher_priced_checked} of {run27.shortfall?.higher_priced_candidates} higher-priced candidates checked). No overhead value is reported for a failed run.</dd>
             <dt>Mechanism</dt><dd>{toolLoopCalls(run27)} consecutive <code>find_elements</code> calls (steps {run27.find_elements[0].step}–{run27.find_elements[run27.find_elements.length - 1].step}). The tool returned the product links to the harness, but in all {run27.find_elements.length} calls the model-visible history kept only the line <code>Found 11 elements matching "a".</code> — the agent kept retrying until the 12-step budget was nearly gone.</dd>
-            <dt>Attribution</dt><dd><strong>Agent–tool interface</strong> ({att27.tool} of {run27.requests} requests), not the storefront: arm B’s required path was {att27.required} requests and the loop displaced it.</dd>
+            <dt>Attribution</dt><dd><strong>Agent–tool interface</strong> ({att27.tool} of {run27.requests} requests), not the storefront. Arm B’s assumed required path is {att27.required} requests; the run did not complete it (the loop used the step budget), so its residual ({att27.residual}) is not meaningful.</dd>
             <dt>Guard / harness</dt><dd>The final-step state was reached (request {run27.requests} of 12) and accepted as designed; the harness status reads “completed” only because the agent called <code>done</code>. Only the independent evaluator establishes failure.</dd>
           </dl>
         </Callout>
-        <p className="muted">Step-by-step <em>Recorded experiment replay</em> of this run is planned for Stage B and needs a reviewed, sanitized trace export; nothing is simulated here.</p>
+        <p className="muted">A step-by-step <em>Recorded experiment replay</em> of this run is on the Recorded replay page when the locally generated, sanitized export is present (development-only data; not published); nothing is simulated.</p>
       </section>
 
       <section aria-labelledby="method">
@@ -48,7 +48,7 @@ export function Evidence() {
           <li><strong>Reference agent:</strong> Browser Use driving Meta Muse Spark (<code>{provenance.model}</code>), profile <code>{provenance.profile}</code>, {provenance.limits}.</li>
           <li><strong>Independent evaluator:</strong> grades the final answer against inventory truth, separate from what the agent claims.</li>
           <li><strong>Oracle:</strong> derives the minimum detail pages any correct agent needs (arm A 1; arm B = rank) from inventory truth alone. <em>Overhead</em> = observed − minimum, for successful runs only; failed runs report a <em>verification shortfall</em> instead.</li>
-          <li><strong>Attribution:</strong> required path (A 2 requests; B 2×rank), agent–tool loop requests (runs with ≥3 consecutive identical <code>find_elements</code> calls), and the remainder as agent-induced.</li>
+          <li><strong>Request accounting (an assumption, not a per-request classification):</strong> assumed required path (A 2 requests; B 2×rank) + loop calls (≥3 consecutive identical <code>find_elements</code> calls) + <strong>residual agent overhead</strong> = total requests. The residual bundles every other agent behaviour and is negative for run 27, whose required path was not completed.</li>
           <li><strong>Schedule:</strong> 30 runs, counterbalanced ABBAAB/BAABBA blocks per scope, executed once each from commit <code>{provenance.executionCommit}</code>; schedule SHA-256 <code>{provenance.scheduleSha256.slice(0, 12)}…</code>.</li>
         </ul>
       </section>

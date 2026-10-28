@@ -12,3 +12,6 @@ artifacts/
 build/
 dist/
 node_modules/
+
+# Task 008 Stage B: development-only sanitized trace export (generated locally; NOT to be committed until reviewed and approved)
+dashboard/public/replays/

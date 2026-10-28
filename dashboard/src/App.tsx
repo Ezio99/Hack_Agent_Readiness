@@ -2,13 +2,15 @@ import { useEffect, useState } from "react";
 import { Overview } from "./pages/Overview";
 import { Scopes } from "./pages/Scopes";
 import { Evidence } from "./pages/Evidence";
+import { ReplayPage } from "./pages/Replay";
 import { provenance } from "./data/task007";
 
-export type Page = "overview" | "scopes" | "evidence";
+export type Page = "overview" | "scopes" | "evidence" | "replay";
 const PAGES: { id: Page; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "scopes", label: "Scope comparison" },
   { id: "evidence", label: "Evidence & method" },
+  { id: "replay", label: "Recorded replay" },
 ];
 const fromHash = (): Page => {
   const h = window.location.hash.replace(/^#\/?/, "");
@@ -52,6 +54,7 @@ export default function App() {
         {page === "overview" && <Overview go={(p) => go(p)} />}
         {page === "scopes" && <Scopes />}
         {page === "evidence" && <Evidence />}
+        {page === "replay" && <ReplayPage />}
       </main>
       <footer className="site"><div className="wrap">
         <p>Controlled synthetic storefront (20 products) · Meta Muse Spark <code>{provenance.model}</code> reference agent · executed from commit <code>{provenance.executionCommit}</code> · costs are calculated estimates, not bills · no universal readiness score, no claims about real websites.</p>

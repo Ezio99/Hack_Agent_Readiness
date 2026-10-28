@@ -1,5 +1,5 @@
 import { Callout, Kpi, PairedBars, AttributionBar, AttributionLegend, ARM_LABEL } from "../components/ui";
-import { allRuns, byArm, diffBA, meanAttribution, protocol, secs, signed, signedUsd, stats, usd } from "../lib/metrics";
+import { allRuns, attribution, byArm, diffBA, failedRuns, meanAttribution, protocol, secs, signed, signedUsd, stats, usd } from "../lib/metrics";
 import { provenance } from "../data/task007";
 
 export function Overview({ go }: { go: (p: "scopes" | "evidence") => void }) {
@@ -56,7 +56,7 @@ export function Overview({ go }: { go: (p: "scopes" | "evidence") => void }) {
       </section>
 
       <section aria-labelledby="why">
-        <h2 id="why">Why did arm B cost more? Separating three causes</h2>
+        <h2 id="why">Why did arm B cost more? Separating three sources</h2>
         <AttributionLegend />
         <div className="stack">
           <AttributionBar arm="A" att={attA} max={attMax} />
@@ -64,16 +64,22 @@ export function Overview({ go }: { go: (p: "scopes" | "evidence") => void }) {
         </div>
         <table className="mini">
           <caption>Mean model requests per run by source</caption>
-          <thead><tr><th scope="col">Arm</th><th scope="col">Website-required navigation</th><th scope="col">Agent-induced extra requests</th><th scope="col">Agent–tool interface loop</th><th scope="col">Total</th></tr></thead>
+          <thead><tr><th scope="col">Arm</th><th scope="col">Assumed website-required path</th><th scope="col">Residual agent overhead</th><th scope="col">Agent–tool interface loop</th><th scope="col">Total</th></tr></thead>
           <tbody>
-            <tr><th scope="row">A</th><td>{attA.required.toFixed(2)}</td><td>{attA.agent.toFixed(2)}</td><td>{attA.tool.toFixed(2)}</td><td>{attA.total.toFixed(2)}</td></tr>
-            <tr><th scope="row">B</th><td>{attB.required.toFixed(2)}</td><td>{attB.agent.toFixed(2)}</td><td>{attB.tool.toFixed(2)}</td><td>{attB.total.toFixed(2)}</td></tr>
-            <tr><th scope="row">B − A</th><td><strong>{signed(diff.required)}</strong></td><td>{signed(diff.agent)}</td><td>{signed(diff.tool)}</td><td>{signed(diff.requests)}</td></tr>
+            <tr><th scope="row">A</th><td>{attA.required.toFixed(2)}</td><td>{attA.residual.toFixed(2)}</td><td>{attA.tool.toFixed(2)}</td><td>{attA.total.toFixed(2)}</td></tr>
+            <tr><th scope="row">B</th><td>{attB.required.toFixed(2)}</td><td>{attB.residual.toFixed(2)}</td><td>{attB.tool.toFixed(2)}</td><td>{attB.total.toFixed(2)}</td></tr>
+            <tr><th scope="row">B − A</th><td><strong>{signed(diff.required)}</strong></td><td>{signed(diff.residual)}</td><td>{signed(diff.tool)}</td><td>{signed(diff.requests)}</td></tr>
           </tbody>
         </table>
+        <Callout title="How this accounting works" tone="info">
+          <p>
+            Requests are <strong>not classified one by one</strong>. For each run: <em>required path</em> is assumed from the task (A 2; B 2 × rank), <em>loop calls</em> are the repeated <code>find_elements</code> calls in the three loop runs, and the <strong>residual</strong> is total requests minus those two. The residual is therefore an unclassified remainder, not a measured “agent fault”.
+            For the failed run 27 the required path was <em>not completed</em> (it opened 1 of 3 required pages), so its “required” share is an assumed path and its residual is negative ({attribution(failedRuns()[0]).residual}); excluding failed runs, arm B’s mean residual is {meanAttribution(byArm(allRuns, "B").filter((r) => r.passed)).residual.toFixed(2)} (all runs: {attB.residual.toFixed(2)}).
+          </p>
+        </Callout>
         <ul>
-          <li><strong>Website-required</strong> is deterministic: a click and a back-step per higher-priced candidate, then the answer. It is the part a page design causes.</li>
-          <li><strong>Agent-induced</strong> is everything else the agent did beyond the minimum path (re-opening a page it had already seen, “be thorough” detours, applying filters). It occurs in both arms and is as large as the website effect in some cells.</li>
+          <li><strong>Assumed website-required path</strong> is deterministic: a click and a back-step per higher-priced candidate, then the answer (arm A: 2 requests; arm B: 2 × rank). It is the part a page design causes.</li>
+          <li><strong>Residual agent overhead</strong> is what remains: total requests − required path − loop calls. It bundles every other agent behaviour (re-opening a page it had already seen, “be thorough” detours, applying filters, backtracking); it occurs in both arms and is as large as the website effect in some cells.</li>
           <li><strong>Agent–tool interface</strong> is {allRuns.filter((r) => r.find_elements.length >= 3).length} runs where repeated <code>find_elements</code> calls returned links to the harness but the model-visible history kept only a count line. That is an agent/tool defect, <em>not</em> a storefront defect.</li>
         </ul>
       </section>
