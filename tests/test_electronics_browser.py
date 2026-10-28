@@ -35,9 +35,9 @@ def test_every_task_is_solvable_through_the_real_browser_and_graded_independentl
             visited = []
 
             def fetch(path):
-                visited.append(path)
                 response = page.goto(base + path)
                 assert response.status == 200, (path, response.status)
+                visited.append(core.Observation(path.split("?", 1)[0], page.inner_text("body")))     # what a visitor was actually shown
                 return page.content()
             answer = solve(inst.spec.template_id, dict(inst.spec.parameters), inst.spec.outcome_type, fetch)
             result = core.evaluate(inst, answer, variant, visited)

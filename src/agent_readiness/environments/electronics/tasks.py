@@ -10,7 +10,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from ...suite.core import (ENVIRONMENTS, EvidenceRequirement, Grade, Limits, TaskInstance, TaskSpec, register_template)
+from ...suite.core import (EvidenceRequirement, Grade, Limits, TaskInstance, TaskSpec, register_template)
 from .catalog import BY_SKU, BY_SLUG, DATA_VERSION, DELIVERY, ENVIRONMENT_ID, PRODUCTS, RETURNS, Product, delivery_cost_cents
 
 VERSION = "1.0.0"
@@ -181,7 +181,11 @@ class T1Discovery:
         spec = _spec(f"t1-anc-headphones-{fixture_id}", self.template_id, obj, T1Answer, "set" if mode == "set" else "any_valid",
                      "Reported products should have been seen in the store (listing or product pages).", {"budget_cents": budget}, "electronics-t1-grader")
         truth = {"mode": mode, "eligible": {p.sku: p.price_cents for p in eligible}}
-        return TaskInstance(spec, truth, T1Answer, grade_t1, ())
+        if mode == "set":    # every eligible product's name and price must have appeared in what the agent was shown
+            ev = tuple(EvidenceRequirement("observed_text", p.name, f"{p.sku} must have been shown") for p in eligible)
+        else:
+            ev = (EvidenceRequirement("observed_text_any", "|".join(p.name for p in eligible), "at least one eligible product must have been shown"),)
+        return TaskInstance(spec, truth, T1Answer, grade_t1, ev)
 
 
 class T2Comparison:
@@ -199,7 +203,9 @@ class T2Comparison:
         truth = {"a": f(a), "b": f(b), "more_ram": compare(a.spec("ram_gb"), b.spec("ram_gb")), "longer_battery": compare(a.spec("battery_hours"), b.spec("battery_hours"))}
         spec = _spec(f"t2-compare-{fixture_id}", self.template_id, obj, T2Answer, "unique", "Both laptops' product pages should have been viewed.",
                      {"laptop_a": a.name, "laptop_b": b.name}, "electronics-t2-grader")
-        ev = tuple(EvidenceRequirement("visited_path", p.path, f"specifications of {p.name}") for p in (a, b))
+        ev = tuple(e for p in (a, b) for e in (EvidenceRequirement("visited_path", p.path, f"product page of {p.name}"),
+                                                EvidenceRequirement("observed_text", f"{p.spec('ram_gb')} GB", f"RAM of {p.name} was shown", p.path),
+                                                EvidenceRequirement("observed_text", f"up to {p.spec('battery_hours')} hours", f"advertised battery of {p.name} was shown", p.path)))
         return TaskInstance(spec, truth, T2Answer, grade_t2, ev)
 
 
@@ -218,7 +224,9 @@ class T3Constraint:
         spec = _spec(f"t3-cheapest-monitor-{fixture_id}", self.template_id, obj, T3Answer, "unique", "The selected monitor's product page should have been viewed to verify the criteria.",
                      {"min_size_in": size, "min_refresh_hz": hz}, "electronics-t3-grader")
         truth = {"answer_sku": best.sku, "eligible": {p.sku: p.price_cents for p in eligible}}
-        return TaskInstance(spec, truth, T3Answer, grade_t3, (EvidenceRequirement("visited_path", best.path, f"USB-C, size and refresh rate of {best.name}"),))
+        ev = (EvidenceRequirement("visited_path", best.path, f"product page of {best.name}"), EvidenceRequirement("observed_text", money(best.price_cents), "its price was shown", best.path),
+              EvidenceRequirement("observed_text", "USB-C", "USB-C support was shown", best.path), EvidenceRequirement("observed_text", f"{best.spec('refresh_hz')} Hz", "its refresh rate was shown", best.path))
+        return TaskInstance(spec, truth, T3Answer, grade_t3, ev)
 
 
 class T4Policy:
@@ -235,8 +243,15 @@ class T4Policy:
                "and the estimated delivery time as a minimum and maximum number of business days.")
         spec = _spec(f"t4-policy-delivery-{fixture_id}", self.template_id, obj, T4Answer, "unique",
                      "The product page and both the returns and delivery policy pages should have been viewed.", {"sku": p.sku}, "electronics-t4-grader")
-        ev = (EvidenceRequirement("visited_path", p.path, "the product's price and category"), EvidenceRequirement("visited_path", "/help/returns", "return window and restocking fee"),
-              EvidenceRequirement("visited_path", "/help/delivery", "delivery cost, threshold and estimate"))
+        days, fee, _ = RETURNS[p.category]
+        cost, threshold, lo, hi = DELIVERY[p.shipping_class]
+        ev = (EvidenceRequirement("visited_path", p.path, "the product's price and category"), EvidenceRequirement("observed_text", money(p.price_cents), "the product's price was shown", p.path),
+              EvidenceRequirement("visited_path", "/help/returns", "return window and restocking fee"),
+              EvidenceRequirement("observed_text", f"{days} days", "the return window was shown", "/help/returns"), EvidenceRequirement("observed_text", f"{fee}%", "the restocking fee was shown", "/help/returns"),
+              EvidenceRequirement("visited_path", "/help/delivery", "delivery cost, threshold and estimate"),
+              EvidenceRequirement("observed_text", money(cost), "the delivery cost for its shipping class was shown", "/help/delivery"),
+              EvidenceRequirement("observed_text", money(threshold), "the free-delivery threshold was shown", "/help/delivery"),
+              EvidenceRequirement("observed_text", f"{lo}–{hi} business days", "the delivery estimate was shown", "/help/delivery"))
         return TaskInstance(spec, oracle_policy(p), T4Answer, grade_t4, ev)
 
 

@@ -32,10 +32,22 @@ class Limits:
 
 @dataclass(frozen=True)
 class EvidenceRequirement:
-    """A page the agent must have observed for the answer to count as evidence-backed (matched on the URL path)."""
-    kind: str            # "visited_path" (exact path) | "visited_prefix" (path prefix)
+    """Evidence the agent must have been shown for the answer to count as evidence-backed.
+
+    kinds: ``visited_path`` (exact URL path observed), ``visited_prefix`` (path prefix observed), ``observed_text`` (the text ``value`` appeared in an observation,
+    optionally restricted to ``path``) and ``observed_text_any`` (any of the ``|``-separated alternatives appeared). Text kinds check what the model-visible page view
+    actually contained - stronger than "the URL was visited", though still not proof that the model read or understood it (screenshot-only content is not covered)."""
+    kind: str
     value: str
     why: str
+    path: str | None = None
+
+
+@dataclass(frozen=True)
+class Observation:
+    """One page view the agent was given: the URL path (no query) and the text of the model-visible view (None when unavailable)."""
+    path: str
+    text: str | None = None
 
 
 @dataclass(frozen=True)
@@ -155,19 +167,35 @@ def all_instances(environment_id: str | None = None) -> list[TaskInstance]:
     return [t.build(f) for t in TEMPLATES.values() if environment_id in (None, t.environment_id) for f in t.fixtures()]
 
 
-def evidence_gaps(instance: TaskInstance, visited_paths: list[str] | None) -> list[str]:
-    """Required evidence not present among the observed URL paths (path without query)."""
-    paths = [p.split("?", 1)[0] for p in (visited_paths or [])]
+def _as_observations(observed) -> list[Observation] | None:
+    if observed is None:
+        return None
+    return [o if isinstance(o, Observation) else Observation(str(o).split("?", 1)[0], None) for o in observed]
+
+
+def evidence_gaps(instance: TaskInstance, observed) -> list[str]:
+    """Required evidence not present among the observations (paths without query; text kinds need the observation text)."""
+    obs = [Observation(o.path.split("?", 1)[0], o.text) for o in (_as_observations(observed) or [])]
     missing = []
     for req in instance.evidence:
-        hit = any(p == req.value for p in paths) if req.kind == "visited_path" else any(p.startswith(req.value) for p in paths)
+        scope = [o for o in obs if req.path is None or o.path == req.path]
+        if req.kind == "visited_path":
+            hit = any(o.path == req.value for o in obs)
+        elif req.kind == "visited_prefix":
+            hit = any(o.path.startswith(req.value) for o in obs)
+        elif req.kind == "observed_text":
+            hit = any(o.text is not None and req.value in o.text for o in scope)
+        elif req.kind == "observed_text_any":
+            hit = any(o.text is not None and any(alt in o.text for alt in req.value.split("|")) for o in scope)
+        else:
+            raise ValueError(f"unknown evidence kind {req.kind!r}")
         if not hit:
-            missing.append(f"{req.kind}:{req.value} ({req.why})")
+            missing.append(f"{req.kind}:{req.value}" + (f" on {req.path}" if req.path else "") + f" ({req.why})")
     return missing
 
 
-def evaluate(instance: TaskInstance, raw_answer: object, variant: Variant, visited_paths: list[str] | None = None) -> EvaluationRecord:
-    """Independent evaluation. The agent's own claims are never consulted: only the answer payload, the observed pages and private truth."""
+def evaluate(instance: TaskInstance, raw_answer: object, variant: Variant, observed=None) -> EvaluationRecord:
+    """Independent evaluation. The agent's own claims are never consulted: only the answer payload, the observations (URL paths and model-visible page text; plain path strings are accepted and can only satisfy path-based evidence) and private truth."""
     spec = instance.spec
     base = dict(task_id=spec.task_id, template_id=spec.template_id, task_version=spec.version, environment_id=spec.environment_id,
                 data_version=spec.data_version, variant_id=variant.variant_id, evaluator_id=spec.evaluator_id,
@@ -180,8 +208,8 @@ def evaluate(instance: TaskInstance, raw_answer: object, variant: Variant, visit
                                 reasons=("Malformed answer: does not match the task's answer schema",), details={"validation_errors": [
                                     {"loc": [str(p) for p in e["loc"]], "type": e["type"]} for e in exc.errors(include_input=False)[:10]]})
     grade = instance.grader(instance, answer)
-    gaps = evidence_gaps(instance, visited_paths) if visited_paths is not None else []
-    satisfied = visited_paths is not None and not gaps
+    gaps = evidence_gaps(instance, observed) if observed is not None else []
+    satisfied = observed is not None and not gaps
     return EvaluationRecord(**base, answer_valid=True, passed=grade.passed, evidence_satisfied=satisfied, evidence_backed=grade.passed and satisfied,
                             missing_evidence=tuple(gaps), reasons=grade.reasons, details=dict(grade.details))
 

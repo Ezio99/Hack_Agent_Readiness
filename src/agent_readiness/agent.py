@@ -12,7 +12,8 @@ from .recorder import Recorder
 
 PROFILE_DIR = Path(__file__).parent / "profiles"
 PROFILE_FILES = {"natural-shopping-v2": "natural-v2.json", "natural-shopping-v3": "natural-v3.json",
-                 "natural-shopping-v3-compat1": "natural-v3-compat1.json"}
+                 "natural-shopping-v3-compat1": "natural-v3-compat1.json",
+                 "suite-v1-compat1": "suite-v1-compat1.json"}      # Task 011: generic task-suite profile (answer schema supplied per task)
 DEFAULT_PROFILE_ID = "natural-shopping-v3"
 # Documented Meta levels; "none" returns HTTP 400 on Muse Spark. "xhigh"/"max" are excluded by this project.
 REASONING_EFFORTS = ("minimal", "low", "medium", "high")
@@ -270,7 +271,7 @@ def browser_options(url: str, executable: str, effective: dict):
                 user_data_dir=None, keep_alive=True)
 
 
-def create_agent(task: PublicTask, url: str, llm, browser, recorder: Recorder, effective: dict):
+def create_agent(task: PublicTask, url: str, llm, browser, recorder: Recorder, effective: dict, answer_model=Answer):
     prepare_browser_environment()
     from browser_use import Agent, Tools
     p = effective
@@ -295,7 +296,7 @@ def create_agent(task: PublicTask, url: str, llm, browser, recorder: Recorder, e
 
     return Agent(task=f"Start at {url}\n{task.prompt}", llm=llm, browser_session=browser,
                  tools=tools, use_vision=p["use_vision"], vision_detail_level=p["vision_detail_level"],
-                 output_model_schema=Answer, extend_system_message=p["instructions"],
+                 output_model_schema=answer_model, extend_system_message=p["instructions"],
                  register_new_step_callback=observe, use_judge=False, calculate_cost=False,
                  max_actions_per_step=p["max_actions_per_step"], max_failures=2,
                  llm_timeout=p["model_timeout_seconds"], step_timeout=p["step_timeout_seconds"],
@@ -306,7 +307,7 @@ def create_agent(task: PublicTask, url: str, llm, browser, recorder: Recorder, e
                  initial_actions=[{"navigate": {"url": url, "new_tab": False}}])
 
 
-async def attempt(task: PublicTask, url: str, llm, recorder: Recorder, effective: dict):
+async def attempt(task: PublicTask, url: str, llm, recorder: Recorder, effective: dict, answer_model=Answer):
     prepare_browser_environment()
     from browser_use import Browser
     from playwright.async_api import async_playwright
@@ -315,7 +316,7 @@ async def attempt(task: PublicTask, url: str, llm, recorder: Recorder, effective
         recorder.event("browser_version", version=executable_version(pw.chromium.executable_path), source="executable --version")
         capture = attach_capture(llm, recorder)
         wrapped = RecordingModel(llm, recorder, effective, capture=capture)
-        agent = create_agent(task, url, wrapped, browser, recorder, effective)
+        agent = create_agent(task, url, wrapped, browser, recorder, effective, answer_model)
         try:
             seen_failures = 0
 
