@@ -45,7 +45,7 @@ Trade-off: n=3 per arm per task (6 when T1 and T3 are pooled, task as block) can
 
 ## 4. Budget, ledger and gates
 Ceilings below are **planning limits, not spending authorization**; each stage needs its own explicit approval of the exact call plan.
-- **Programme-wide ceiling US$6.00 (calculated) enforced across both stages** by one persistent append-only ledger (shared file; stage ceilings Stage 1 US$1.50, Stage 2 US$4.50 are additional per-stage limits). Calculated cost = provider tokens × verified prices (provider reports no cost; **calculated ≠ billed**).
+- **Programme-wide ceiling US$6.00 (calculated) enforced across both stages** by one persistent append-only ledger (shared file; stage ceilings Stage 1 US$4.00 (amended 2026-10-28: covers all eight US$0.48 maximum reservations = US$3.84; a planning limit, not spending authorization), Stage 2 US$4.50 are additional per-stage limits). Calculated cost = provider tokens × verified prices (provider reports no cost; **calculated ≠ billed**).
 - **Reserve-before-run:** each run reserves its maximum estimated cost (US$0.48 = 12 × US$0.04) before any request. A settled run replaces its reservation with its calculated actual, releasing the unused budget; an interrupted or unsettled run keeps its full reservation counted. If the remaining stage or programme budget cannot cover the next reservation, execution **halts safely before** that run (no partial run is started).
 - **Partial schedules are reported explicitly:** completed / halted / not-started cells and counts, reason for the halt, ledger totals, and the analysis labelled "partial schedule". **No silent retries and no replacement runs**; a replacement for a provider-fault run only with explicit approval, recorded as an extra with the original kept in the denominator. Budget exhaustion never discards completed runs: they stay in the ledger, results and analysis.
 - Persistent ledger: a recorded attempt is never repeated; resuming continues only with not-yet-attempted schedule entries and re-checks manifest/schedule hashes.
@@ -80,4 +80,4 @@ Experiment manifest + schedule generator/validator (hashes, seeded block randomi
 ## 9. Decisions requested
 1. Approve the design (matrix, stages, analysis, decision rule) or amend it.
 2. Approve credential-free preparation (§8).
-3. Later, separately: approve the exact Stage 1 call plan (8 runs, US$1.50 ceiling) — this document is not that approval.
+3. Later, separately: approve the exact Stage 1 call plan (8 runs, US$4.00 stage ceiling, US$6.00 programme ceiling) — this document is not that approval.
