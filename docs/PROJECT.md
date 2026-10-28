@@ -112,3 +112,11 @@ not guarantee deterministic model responses or immutable hosted model behavior.
 Historical proposal (not an approved hackathon execution plan): agree on the contrast and essential choices, then implement one
 storefront, one reference agent, a small runner/recorder, and independent grading.
 Research relevant existing benchmarks and standards before claiming novelty.
+
+## Forward-looking product vision (decision 2026-10-28)
+
+The current hackathon deliverable remains an evidence-backed website diagnostic and controlled remediation loop. The accepted **long-term direction**, contingent on validation, is an **Agent Readiness Registry and agent-facing API**: a shared, task-specific directory that helps autonomous agents estimate which sites they can interact with reliably and efficiently. This could become a reusable *agentic-web primitive*, reducing duplicated exploratory browsing across agent operators.
+
+Roadmap: **measure → optimize → registry → agent-facing API**. The first two phases are the hackathon focus; the latter two are future work and may be described as vision in the pitch, not as shipped functionality. Rankings must retain task, reference-agent, sample-size, version, freshness and uncertainty context rather than inventing a universal score. Agents must also consider prices, availability and user preferences. Whether such signals influence agent selection, merchant traffic or merchant incentives is a **commercial hypothesis requiring separate experiments**, not a finding of Task 012.
+
+See [Product roadmap](PRODUCT_ROADMAP.md) for implementation phases, governance, API concept and scope gates. This addition does not authorize extra experiments, deployment, publication or expansion of the frozen Task 012 plan.
