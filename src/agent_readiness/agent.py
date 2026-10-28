@@ -13,7 +13,7 @@ from .recorder import Recorder
 PROFILE_DIR = Path(__file__).parent / "profiles"
 PROFILE_FILES = {"natural-shopping-v2": "natural-v2.json", "natural-shopping-v3": "natural-v3.json",
                  "natural-shopping-v3-compat1": "natural-v3-compat1.json",
-                 "suite-v1-compat1": "suite-v1-compat1.json"}      # Task 011: generic task-suite profile (answer schema supplied per task)
+                 "suite-v1-compat1": "suite-v1-compat1.json", "suite-v2-compat1": "suite-v2-compat1.json"}      # Task 011: generic task-suite profile (answer schema supplied per task)
 DEFAULT_PROFILE_ID = "natural-shopping-v3"
 # Documented Meta levels; "none" returns HTTP 400 on Muse Spark. "xhigh"/"max" are excluded by this project.
 REASONING_EFFORTS = ("minimal", "low", "medium", "high")
@@ -271,6 +271,32 @@ def browser_options(url: str, executable: str, effective: dict):
                 user_data_dir=None, keep_alive=True)
 
 
+VISIBILITY_FIX_ACTIONS = ("find_elements", "search_page")
+
+
+def apply_tool_result_visibility(tools) -> list[str]:
+    """Browser Use 0.11.13 defect workaround (profile `tool_result_visibility: read-state-v1`, reference agent suite-v2): `find_elements` and `search_page` return
+    ActionResult(extracted_content=<full result>, long_term_memory=<one count line>) WITHOUT include_extracted_content_only_once. MessageManager
+    (agent/message_manager/service.py, `_update_agent_history_description`) then puts ONLY long_term_memory into the model's history, so the model never sees the
+    elements it asked for. Setting the one-time flag - the same flag extract/dropdown_options already use - shows the full result once, in <read_state>, on the
+    next step; the count line still goes to the history. Nothing else about the tools changes."""
+    patched = []
+    for name in VISIBILITY_FIX_ACTIONS:
+        action = tools.registry.registry.actions.get(name)
+        if action is None:
+            continue
+        original = action.function
+
+        async def wrapped(*args, __original=original, **kwargs):
+            result = await __original(*args, **kwargs)
+            if getattr(result, "extracted_content", None) and getattr(result, "long_term_memory", None) and not result.include_extracted_content_only_once:
+                result.include_extracted_content_only_once = True
+            return result
+        action.function = wrapped
+        patched.append(name)
+    return patched
+
+
 def create_agent(task: PublicTask, url: str, llm, browser, recorder: Recorder, effective: dict, answer_model=Answer):
     prepare_browser_environment()
     from browser_use import Agent, Tools
@@ -280,6 +306,9 @@ def create_agent(task: PublicTask, url: str, llm, browser, recorder: Recorder, e
     for name in list(tools.registry.registry.actions):
         if name not in p["allowed_tools"]:
             tools.exclude_action(name)
+
+    if p.get("tool_result_visibility") == "read-state-v1":
+        apply_tool_result_visibility(tools)
 
     version_recorded = False
 

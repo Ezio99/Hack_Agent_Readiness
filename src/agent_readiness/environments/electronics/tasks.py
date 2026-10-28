@@ -179,12 +179,16 @@ class T1Discovery:
             obj = (f"Find one headphone that has active noise cancelling (ANC), is currently in stock and costs {money(budget)} or less. "
                    "Report its SKU and price in integer cents.")
         spec = _spec(f"t1-anc-headphones-{fixture_id}", self.template_id, obj, T1Answer, "set" if mode == "set" else "any_valid",
-                     "Reported products should have been seen in the store (listing or product pages).", {"budget_cents": budget}, "electronics-t1-grader")
+                     "Reported products - names, prices AND SKUs - should have been shown to the agent (listing or product pages).", {"budget_cents": budget}, "electronics-t1-grader")
         truth = {"mode": mode, "eligible": {p.sku: p.price_cents for p in eligible}}
-        if mode == "set":    # every eligible product's name and price must have appeared in what the agent was shown
-            ev = tuple(EvidenceRequirement("observed_text", p.name, f"{p.sku} must have been shown") for p in eligible)
+        # t1-evidence-v2 (Task 013): the task asks for SKUs, so each eligible product's NAME and its SKU text must have appeared in what the agent was shown
+        # (SKU text may be on a product page, or on listings in a variant that shows it). v1 required names only, which let a SKU-blind run look "fully shown".
+        if mode == "set":
+            ev = tuple(EvidenceRequirement("observed_text", p.name, f"{p.sku} must have been shown") for p in eligible) + \
+                 tuple(EvidenceRequirement("observed_text", p.sku, f"the SKU of {p.name} must have been shown") for p in eligible)
         else:
-            ev = (EvidenceRequirement("observed_text_any", "|".join(p.name for p in eligible), "at least one eligible product must have been shown"),)
+            ev = (EvidenceRequirement("observed_text_any", "|".join(p.name for p in eligible), "at least one eligible product must have been shown"),
+                  EvidenceRequirement("observed_text_any", "|".join(p.sku for p in eligible), "the SKU of an eligible product must have been shown"))
         return TaskInstance(spec, truth, T1Answer, grade_t1, ev)
 
 

@@ -24,7 +24,7 @@
 </form>
 <section aria-label="Results">
   <p role="status">{% if total %}Showing {{ first }}–{{ last }} of {{ total }} product{{ '' if total == 1 else 's' }}{% else %}No products match your filters.{% endif %}</p>
-  <ul class="grid">{% for p in items %}{{ card(p, structured, show_stock, chips) }}{% endfor %}</ul>
+  <ul class="grid">{% for p in items %}{{ card(p, structured, show_stock, chips, show_sku) }}{% endfor %}</ul>
   {% if pages > 1 %}<nav class="pager" aria-label="Pagination">
     {% if prev_qs %}<a href="{{ path }}?{{ prev_qs }}" rel="prev">← Previous page</a>{% endif %}<span>Page {{ page }} of {{ pages }}</span>{% if next_qs %}<a href="{{ path }}?{{ next_qs }}" rel="next">Next page →</a>{% endif %}
   </nav>{% endif %}

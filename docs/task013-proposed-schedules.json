@@ -1,0 +1,184 @@
+{
+ "A": {
+  "part": "A",
+  "seed": 20261101,
+  "task": "t1-anc-headphones-under-250-all",
+  "variant": "electronics-v1/availability-listing+specs-structured",
+  "runs": [
+   {
+    "index": 1,
+    "run_id": "a-01-v2",
+    "reference_agent": "suite-v2-compat1"
+   },
+   {
+    "index": 2,
+    "run_id": "a-02-v2",
+    "reference_agent": "suite-v2-compat1"
+   },
+   {
+    "index": 3,
+    "run_id": "a-03-v2",
+    "reference_agent": "suite-v2-compat1"
+   },
+   {
+    "index": 4,
+    "run_id": "a-04-v1",
+    "reference_agent": "suite-v1-compat1"
+   },
+   {
+    "index": 5,
+    "run_id": "a-05-v1",
+    "reference_agent": "suite-v1-compat1"
+   },
+   {
+    "index": 6,
+    "run_id": "a-06-v2",
+    "reference_agent": "suite-v2-compat1"
+   },
+   {
+    "index": 7,
+    "run_id": "a-07-v2",
+    "reference_agent": "suite-v2-compat1"
+   },
+   {
+    "index": 8,
+    "run_id": "a-08-v1",
+    "reference_agent": "suite-v1-compat1"
+   }
+  ],
+  "schedule_hash": "0d9ceca7fa4101947d5880d4a5fcb92acaecf5eb9dc98fae35320550c48fdea7"
+ },
+ "B": {
+  "part": "B",
+  "seed": 20261102,
+  "runs": [
+   {
+    "index": 1,
+    "block": 1,
+    "run_id": "b-01-t1-skuh",
+    "task": "t1-anc-headphones-under-250-all",
+    "sku": "hidden",
+    "variant": "electronics-v1/availability-listing+specs-structured",
+    "reference_agent": "suite-v2-compat1"
+   },
+   {
+    "index": 2,
+    "block": 1,
+    "run_id": "b-02-t1-skul",
+    "task": "t1-anc-headphones-under-250-all",
+    "sku": "listing",
+    "variant": "electronics-v1/availability-listing+specs-structured+sku-listing",
+    "reference_agent": "suite-v2-compat1"
+   },
+   {
+    "index": 3,
+    "block": 1,
+    "run_id": "b-03-t2-skuh",
+    "task": "t2-compare-air14-vs-probook15",
+    "sku": "hidden",
+    "variant": "electronics-v1/availability-listing+specs-structured",
+    "reference_agent": "suite-v2-compat1"
+   },
+   {
+    "index": 4,
+    "block": 1,
+    "run_id": "b-04-t2-skul",
+    "task": "t2-compare-air14-vs-probook15",
+    "sku": "listing",
+    "variant": "electronics-v1/availability-listing+specs-structured+sku-listing",
+    "reference_agent": "suite-v2-compat1"
+   },
+   {
+    "index": 5,
+    "block": 2,
+    "run_id": "b-05-t1-skuh",
+    "task": "t1-anc-headphones-under-250-all",
+    "sku": "hidden",
+    "variant": "electronics-v1/availability-listing+specs-structured",
+    "reference_agent": "suite-v2-compat1"
+   },
+   {
+    "index": 6,
+    "block": 2,
+    "run_id": "b-06-t2-skul",
+    "task": "t2-compare-air14-vs-probook15",
+    "sku": "listing",
+    "variant": "electronics-v1/availability-listing+specs-structured+sku-listing",
+    "reference_agent": "suite-v2-compat1"
+   },
+   {
+    "index": 7,
+    "block": 2,
+    "run_id": "b-07-t2-skuh",
+    "task": "t2-compare-air14-vs-probook15",
+    "sku": "hidden",
+    "variant": "electronics-v1/availability-listing+specs-structured",
+    "reference_agent": "suite-v2-compat1"
+   },
+   {
+    "index": 8,
+    "block": 2,
+    "run_id": "b-08-t1-skul",
+    "task": "t1-anc-headphones-under-250-all",
+    "sku": "listing",
+    "variant": "electronics-v1/availability-listing+specs-structured+sku-listing",
+    "reference_agent": "suite-v2-compat1"
+   },
+   {
+    "index": 9,
+    "block": 3,
+    "run_id": "b-09-t1-skuh",
+    "task": "t1-anc-headphones-under-250-all",
+    "sku": "hidden",
+    "variant": "electronics-v1/availability-listing+specs-structured",
+    "reference_agent": "suite-v2-compat1"
+   },
+   {
+    "index": 10,
+    "block": 3,
+    "run_id": "b-10-t1-skul",
+    "task": "t1-anc-headphones-under-250-all",
+    "sku": "listing",
+    "variant": "electronics-v1/availability-listing+specs-structured+sku-listing",
+    "reference_agent": "suite-v2-compat1"
+   },
+   {
+    "index": 11,
+    "block": 4,
+    "run_id": "b-11-t1-skul",
+    "task": "t1-anc-headphones-under-250-all",
+    "sku": "listing",
+    "variant": "electronics-v1/availability-listing+specs-structured+sku-listing",
+    "reference_agent": "suite-v2-compat1"
+   },
+   {
+    "index": 12,
+    "block": 4,
+    "run_id": "b-12-t1-skuh",
+    "task": "t1-anc-headphones-under-250-all",
+    "sku": "hidden",
+    "variant": "electronics-v1/availability-listing+specs-structured",
+    "reference_agent": "suite-v2-compat1"
+   },
+   {
+    "index": 13,
+    "block": 5,
+    "run_id": "b-13-t1-skul",
+    "task": "t1-anc-headphones-under-250-all",
+    "sku": "listing",
+    "variant": "electronics-v1/availability-listing+specs-structured+sku-listing",
+    "reference_agent": "suite-v2-compat1"
+   },
+   {
+    "index": 14,
+    "block": 5,
+    "run_id": "b-14-t1-skuh",
+    "task": "t1-anc-headphones-under-250-all",
+    "sku": "hidden",
+    "variant": "electronics-v1/availability-listing+specs-structured",
+    "reference_agent": "suite-v2-compat1"
+   }
+  ],
+  "schedule_hash": "22a3da981b3a12ef05da1c53dec993a87b76879a793b6729d070b3cdd47fc3ef"
+ }
+}

@@ -1,0 +1,62 @@
+# Task 013 — T1 diagnosis, harness/evidence correction and proposed follow-up experiment
+
+Status: **analysis + credential-free implementation complete; the experiment below is a PROPOSAL. No paid call is authorized; nothing live was run for Task 013.** Stage 1 (Task 012) results, schedule, manifest, ledger and private artifacts are unchanged.
+
+## 1. Root cause of the `find_elements` visibility gap (Browser Use 0.11.13)
+Not our adapter and not message-history truncation; a library defect/design flaw in two tools.
+1. `browser_use/tools/service.py` `find_elements` (and `search_page`) build the full result text but return `ActionResult(extracted_content=formatted, long_term_memory="Found N elements matching \"a\".")` **without** `include_extracted_content_only_once=True`.
+2. `browser_use/agent/message_manager/service.py` (`_update_agent_history_description`): `if action_result.long_term_memory: action_results += long_term_memory … elif extracted_content and not include_extracted_content_only_once: …`. Because `long_term_memory` is set, **only the count line enters the model's history**, and because the one-time flag is false the full text is never placed in `<read_state>` either. The model never sees the elements it asked for.
+3. Other tools that return large payloads (`extract`, `dropdown_options`, file reads) set the one-time flag; these two do not.
+Trace evidence (live, private): in Stage 1 run s1-03 (V0) the agent called `find_elements("a")` 9 times and in s1-06 (V3) 5 times; the tool *did* return 14/16 elements with `href`, and the next request carried only the count line. The mock `loop` persona (Task 011) and Task 007 trace reviews show the same signature. Test `test_library_root_cause_is_present_in_the_pinned_browser_use` pins the library behaviour so an upgrade is noticed.
+
+## 2. Minimal fix → new versioned reference agent `suite-v2-compat1`
+- `agent.apply_tool_result_visibility` sets the one-time flag on exactly `find_elements` and `search_page` results (enabled only by the profile key `tool_result_visibility: "read-state-v1"`); the full text then appears once in `<read_state>` of the next step; the count line still goes to history. Nothing else changes (tools, limits, parser `muse-prose-prefix-json-v1`, model settings identical; only `id` and the switch differ — tested).
+- `suite-v1-compat1` is untouched, so the frozen Task 012 configuration and manifest hash are unchanged; `execute_scan(profile_id=…)` and the experiment manifest/driver take the profile from the frozen manifest. The profile hash differs, so any run with v2 needs a **new manifest** and approval.
+- The fidelity guard accepted the extra `<read_state>` block in the real-agent mock run (no violation).
+- Diagnostics' gap detector now looks at the whole next request: no gap is reported when the output appears in `<read_state>`.
+
+## 3. Evidence correction (T1) — `t1-evidence-v2`
+T1 asks for **SKUs**, but v1 evidence required only product names. v2 additionally requires each eligible SKU's text (set mode) / an eligible SKU's text (any-valid) to have been observed (any page). Diagnostics now distinguish: **required information not among the observations** (undetermined cause; notes concurrent tool-visibility gaps), **observed but misused** (agent reasoning, inferred), **agent–tool-interface failures** (observed), and **incomplete execution** (whole step/request budget used). Stage 1 records and classifications are **not rewritten**. Offline re-evaluation of the preserved traces under v2 (read-only): s1-03 never observed 3/3 eligible SKUs, s1-06 never observed 2/3 (it answered with the 1 it had), while the Task 011 T1 pass observed all 3 — i.e. both Stage 1 T1 failures were SKU-blind, consistent with the tool-gap diagnosis; the original "answer wrong although facts were shown (agent reasoning)" label was an artifact of the weaker evidence spec.
+
+## 4. Offline validation (deterministic, mock; NOT live evidence)
+`tests/test_tool_visibility.py` (3 unit + 1 real-Chromium): profile isolation; library root cause pinned; patch flips only the two tools; a scripted **element-reader** model that uses link targets only if they are actually shown: under v1 it repeats `find_elements`, answers SKU-blind, fails, diagnostics report `agent_tool_interface` + missing SKU evidence; under v2 the next request contains `<read_state_0>` with the hrefs, it follows them, passes with evidence, uses fewer requests, no tool-gap finding. `tests/test_sku_factor.py` (website factor, §5). Full suite results in the report. A mock pass proves the mechanism delivers information to the model; it says nothing about whether the live model uses it.
+
+## 5. Controlled website factor `sku` (optional third factor)
+`sku: hidden` (original; SKU on detail pages only) vs `listing` (SKU also printed on every listing/search/home card). Variant id `electronics-v1/availability-listing+specs-structured+sku-listing`; the four original variants and their ids are unchanged and **byte-identical** (golden SHA-256 of 20 sampled pages from `main` @ `7e9bf61`); sku-listing pages equal baseline pages minus the SKU lines; detail/policy pages identical; data, oracles, task wording, evaluators unchanged; all 10 fixtures solvable and evidence-backed in the new variant.
+
+**Is SKU-on-listing a shortcut or a meaningful improvement?** Honest answer: *both, and it depends on the result of Part A.* SKUs are identifiers real shoppers/agents are routinely asked to cite, and showing the identifier where the product list is read is ordinary design practice — not an answer leak (eligibility still needs filters/stock reading; SKU alone reveals nothing). But on T1 it mechanically removes the need to open product pages just to read a SKU, so a request/page-load reduction is *expected by construction* and must not be sold as an agent-readiness discovery. Therefore the **primary** outcome for any SKU test is evidence-backed independent success and SKU-blind answers; effort is secondary and labelled "mechanically expected". T2 (SKU still requires detail pages for RAM/battery) is the control: no effort change expected there.
+**Likely value:** the live T1 failures were caused by the tool defect; once fixed, the baseline may already pass. In that case the SKU intervention has no failure to cure (ceiling) and would show only the mechanical effort effect — then it is **not** the best demonstration, and the better candidate is the **availability** factor on T1/T3 under the corrected agent (V0 listing-stock vs V1 detail-only), which has prior evidence (Task 007: more requests/cost in detail-only on a synthetic store, 29/30 success) and a real design recommendation ("show stock on cards"). The plan below makes that choice from Part A data instead of assuming it.
+
+## 6. Proposed experiment (exact paid-call plan; NOT approved)
+Frozen for both parts: model `muse-spark-1.3`, parser `muse-prose-prefix-json-v1`, profile settings, tools, limits (12 steps / 12 requests / 240 s), fixtures/oracles, price constants, environment data version; **new manifest** per part (profile v2 and, for B, the sku variant) and approval of schedule + manifest hashes as in Task 012. Sequential, no retries/replacements, kill switch, per-run reservation US$0.48, persistent ledger shared with the programme (US$6.00 ceiling; US$0.718 already committed by Task 012 Stage 1 → US$5.28 available). Executable support (reference-agent arm and sku variant in the experiment driver/manifest, with tests) is a small extension to implement **after** approval of this plan and before any run.
+
+### Part A — baseline reliability of the corrected agent (8 runs, ceiling US$2.00)
+Fixture `t1-anc-headphones-under-250-all`, unchanged V0, randomized interleaved order (seed 20261101, schedule hash `0d9ceca7fa4101947d5880d4a5fcb92acaecf5eb9dc98fae35320550c48fdea7`, `docs/task013-proposed-schedules.json`): 5 × `suite-v2-compat1`, 3 × `suite-v1-compat1` (**contemporaneous control**, so model drift and ordinary variance are visible side by side). Order: a-01 v2, a-02 v2, a-03 v2, a-04 v1, a-05 v1, a-06 v2, a-07 v2, a-08 v1.
+- *Question:* does the visibility fix remove the failure mode (loop → SKU-blind answer)? 
+- *Primary outcome:* evidence-backed independent PASS. *Mechanism check (per v2 run):* every `find_elements`/`search_page` is followed by a request whose `<read_state>` contains the output. *Secondary:* requests, page loads, revisits, repeated identical calls, partial accuracy, cost.
+- *Fixed criteria:* **fix works** if v2 ≥ 4/5 evidence-backed PASS, no v2 run with ≥3 identical consecutive `find_elements`, and median requests ≤ 8; **fix insufficient** if ≤ 2/5 or the same loop persists (stop; investigate; no Part B); **ambiguous** otherwise (report as such).
+- *Distinguishing improvement from variance:* the 3 v1 runs run in the same session; historical T1/V0 under v1: 1 pass in 3 (Task 011 pass, Stage 1 fail, plus the V3 fail). With n=5 vs 3 only a large effect is detectable (e.g. 5/5 vs 0–1/3); results are descriptive with exact (Fisher) probabilities reported, not significance claims.
+- *Stop conditions:* any guard/halt rule of Task 012 (fidelity violation, cost-limit block, ≥2 infrastructure errors, overrun, drift, kill switch); **also stop early after the first 2 v2 runs if both repeat the identical loop-and-SKU-blind failure**. Expected cost: US$0.7–1.3 calculated (T1 runs cost US$0.12–0.17 when looping; ≈US$0.08–0.12 when they finish quickly); reservation sum US$3.84 (the ledger halts safely before any run it cannot reserve).
+
+### Decision gate after Part A (user review required)
+| Part A outcome | Recommendation |
+|---|---|
+| v2 ≥ 4/5 PASS (ceiling reached) | SKU-on-listing is **unlikely to give meaningful success evidence**. Prefer **Part C** (availability on T1/T3 with v2) as the demonstrable improvement; SKU test only as an explicitly effort-only/mechanical check if wanted |
+| v2 = 3/5 | Part B informative (room to improve) |
+| v2 ≤ 2/5 | fix insufficient → further diagnosis, no website experiment yet |
+
+### Part B — SKU-on-listing intervention (14 runs, ceiling US$3.00; only after Part A review)
+Agent v2, listing availability + structured specs fixed; factor `sku` hidden vs listing; T1 (primary) 5 runs/arm, T2 (control) 2 runs/arm, 5 randomized blocks (seed 20261102, schedule hash `22a3da981b3a12ef05da1c53dec993a87b76879a793b6729d070b3cdd47fc3ef`; entries in the JSON). 
+- *Hypothesis (stated before running):* showing the SKU on listing cards reduces SKU-blind/incomplete T1 answers and the product-page visits made only to read SKUs, without changing T2 (where detail pages are needed anyway).
+- *Primary:* evidence-backed success (T1); *secondary (labelled mechanically expected):* requests, page loads, revisits; *control:* T2 effort unchanged; *negative results are reported* (e.g. both arms 5/5 ⇒ "no success headroom; effort-only effect").
+- *Evidence tiers:* as Task 012 (directional signal / supported exploratory effect / inconclusive — never equivalence); an effect is "beyond ordinary variance" only if the treatment arm lies outside the range of the contemporaneous control arm and Part A v2 baseline runs, in a consistent direction, with trace support, and T2 shows no comparable change. Detectable only at 5/5 vs ≤1/5 (Fisher one-sided p≈0.024); 4/5 vs 1/5 is p≈0.26 — i.e. only large effects.
+- Expected cost US$1.0–1.8 calculated (T1 ≈US$0.08–0.14 × 10, T2 ≈US$0.04 × 4); same halt rules.
+
+### Part C (alternative, not scheduled) — availability on T1/T3 with `suite-v2-compat1`
+V0 vs V1 (detail-only), T1 and T3, ≈4 runs per cell (16 runs, ≈US$1.6–2.4), if Part A shows a ceiling; needs its own plan/hashes.
+
+### Budget summary (calculated, not billed)
+Part A ≈ US$0.7–1.3 (ceiling 2.00) + Part B ≈ US$1.0–1.8 (ceiling 3.00) = ≈ US$1.7–3.1 expected; ceilings 5.00 ≤ 5.28 remaining of the US$6.00 programme ceiling.
+
+## 7. Remaining uncertainties
+Whether the live model actually reads and uses `<read_state>` content (unknown until Part A); extra tokens per request from long read-state blocks (≈ +0.5–1k tokens; cost impact small); `search_page` is patched the same way but was not observed failing live; the mock element-reader models the mechanism, not live behaviour; Stage 1 had n=1 per cell, so the earlier V0/V3 "null" is uninformative; SKU factor only meaningful for tasks whose answer needs SKUs (T1, T2, T3).

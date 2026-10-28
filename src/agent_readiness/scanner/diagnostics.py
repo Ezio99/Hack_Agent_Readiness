@@ -36,16 +36,28 @@ def _last_result_in_history(request_event: dict) -> str | None:
     return None
 
 
+def _request_text(request_event: dict) -> str:
+    parts = []
+    for message in request_event.get("messages", []):
+        content = message.get("content")
+        for part in (content if isinstance(content, list) else [{"text": content}]):
+            parts.append((part or {}).get("text") or "")
+    return "\n".join(parts)
+
+
 def visibility_gap_steps(events: list[dict]) -> list[int]:
-    """Steps whose tool output carried links (href=...) that the model's NEXT request did not show (only a count line survived in its history)."""
+    """Steps whose tool output carried links (href=...) that the model's NEXT request did not show anywhere (history shows only a count line and no <read_state> block).
+    With reference agent suite-v2 (`tool_result_visibility: read-state-v1`) the full output is shown once in <read_state>, so no gap is reported."""
     results = [e["result"]["result"] for e in events if e["kind"] == "step_result"]
     requests = [e for e in events if e["kind"] == "model_request"]
     gaps = []
     for i, res in enumerate(results):
         tool = "\n".join((r.get("extracted_content") or "") for r in res)
         if 'href="' in tool and i + 1 < len(requests):
+            text = _request_text(requests[i + 1])
             seen = _last_result_in_history(requests[i + 1])
-            if seen is not None and "href" not in seen:
+            shown_once = "<read_state_" in text and 'href="' in text.split("<read_state_", 1)[1]
+            if seen is not None and "href" not in seen and not shown_once:
                 gaps.append(i + 1)
     return gaps
 
@@ -118,18 +130,21 @@ def analyze(record: dict, events: list[dict], instance, variant) -> dict:
     for run in repeated_actions(journey):
         if not set(run) <= set(gaps):
             findings.append(_finding(n(), "agent_reasoning", f"Repeated the same action without progress (steps {run[0]}–{run[-1]})", f"The identical action was issued {len(run)} times in a row; the page did not change in a way that advanced the task.", "inferred", [{"step": s} for s in run]))
-    # 4. wrong answer: where does the evidence say the problem lies?
-    text_gaps = [m for m in ev["missing_evidence"] if m.startswith("observed_text")]
+    # 4. not passed: separate (a) information never observed, (b) observed but misused, (c) incomplete execution, with tool-interface findings above kept distinct
+    exhausted = bool(record.get("guard", {}).get("final_step_schema_seen")) or record["metrics"]["model_requests"] >= record["metrics"]["limits"]["max_model_requests"]
     if not ev["passed"] and ev["answer_valid"] and status not in INFRA_STATUSES:
         if ev["evidence_satisfied"]:
-            findings.append(_finding(n(), "agent_reasoning", "The required facts were shown, but the answer is wrong", "Every required fact appeared in pages shown to the agent, so the error arose after viewing the information (extraction, reasoning or arithmetic), not from missing information.", "inferred"))
+            findings.append(_finding(n(), "agent_reasoning", "Required information was observed, but the answer is wrong", "Every required fact (as defined by the task's evidence requirements) appeared in the text shown to the agent, so the error arose after viewing it (extraction, reasoning, arithmetic or answer formatting).", "inferred"))
             if variant.factor("specs") == "fragmented" and re.search(r"\bRAM\b|battery|every criterion", " ".join(ev["reasons"]), re.I):
                 findings.append(_finding(n(), "website", "Possible contribution of fragmented specifications (hypothesis)",
                                          "In this variant specification facts are written as prose rather than a labelled table, and the wrong fields are specification-like. One run cannot show the presentation caused the error.", "hypothesis", [{"note": "; ".join(ev["reasons"][:3])}],
                                          "Present the same specifications as a labelled table.", {"factor": "specs", "from": "fragmented", "to": "structured", "task": spec.task_id}))
         else:
-            findings.append(_finding(n(), "undetermined", "The agent did not see information the task needs", "Required evidence never appeared in a page the agent was shown: " + "; ".join(ev["missing_evidence"][:3]) + ". This could reflect agent navigation strategy or how discoverable the information is on the site; one scan cannot distinguish them.", "observed",
+            tool_note = " The same run also had tool-output visibility gaps (see the agent–tool-interface finding), which may explain why the information was never read." if gaps else ""
+            findings.append(_finding(n(), "undetermined", "Required information was not among the agent's observations", "Required evidence never appeared in text shown to the agent: " + "; ".join(ev["missing_evidence"][:3]) + ". Whether this reflects navigation strategy, a tool problem or how discoverable the information is cannot be separated by one run." + tool_note, "observed",
                                      [{"note": m} for m in ev["missing_evidence"][:6]]))
+    if not ev["passed"] and status not in INFRA_STATUSES and exhausted:
+        findings.append(_finding(n(), "incomplete_execution", "The run used its whole step/request budget", f"The agent reached the final step ({record['metrics']['model_requests']} of {record['metrics']['limits']['max_model_requests']} requests) and had to answer with what it had. Incomplete task execution is an agent/harness outcome unless comparison across variants shows the budget is consumed by site-specific effort.", "observed"))
     # 5. website-attributable observations (facts first, then hypotheses)
     detail_views = [j["step"] for j in journey if j["path"].startswith("/p/")]
     stock_task = "in stock" in spec.objective.lower()
