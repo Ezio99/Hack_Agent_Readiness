@@ -40,7 +40,7 @@ def registry_view(config, manager_killed: bool) -> dict:
     envs, tasks = [], []
     for env in core.ENVIRONMENTS.values():
         envs.append({"environment_id": env.environment_id, "data_version": env.data_version,
-                     "variants": [{"variant_id": v.variant_id, "factors": dict(v.factors), "default": v == env.default_variant(),
+                     "variants": [{"variant_id": v.variant_id, "factors": [list(f) for f in v.factors], "default": v == env.default_variant(),
                                    "descriptions": [DESCRIPTIONS.get((k, lvl), "") for k, lvl in v.factors]} for v in env.variants()]})
     for inst in core.all_instances():
         tasks.append({**inst.spec.public(), "template_id": inst.spec.template_id, "environment_id": inst.spec.environment_id})
