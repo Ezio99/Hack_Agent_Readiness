@@ -2,9 +2,9 @@
 
 ## CURRENT STATE (authoritative, 2026-10-28; supersedes the dated entries below)
 
-- **Merged to `main`:** PR #3 (`91933a2`, Tasks 004–007), #4 (`04c5730`, dashboard), #5 (`1cde559`, replay schema/check:dist/manual Pages), #6 (`1c31820`, Task 010 storefront + suite), #7 (`23db19f`, Task 011 protected scanner). **PR #8** (Task 011 live-validation driver + Report 011b) is the last Task 011 item; see its state on GitHub.
+- **Merged to `main`:** PR #3 (`91933a2`, Tasks 004–007), #4 (`04c5730`, dashboard), #5 (`1cde559`, replay schema/check:dist/manual Pages), #6 (`1c31820`, Task 010 storefront + suite), #7 (`23db19f`, Task 011 protected scanner). **PR #8** (`4509165`, live-validation driver + Report 011b) completed Task 011.
 - **Task 011 is complete:** protected scanner (mock by default; live gated and off) and an approved live validation — probe OK, **4/4 independent PASS, evidence-backed** on `availability-listing+specs-structured`, calculated US$0.348 (not a bill); raw strict-JSON compliance 1/26 responses, 25 recovered by the fixed compat parser. Four runs do not establish reliability or variant effects. [Report 011b](collaboration/reports/011-live-validation.md).
-- **Next objective: Task 012** (controlled, repeated experiments over the existing 4 variants × 10 fixtures). A plan is in review ([docs/TASK012_EXPERIMENT_PLAN.md](docs/TASK012_EXPERIMENT_PLAN.md)); **no paid Task 012 call is authorized.**
+- **Next objective: Task 012** (controlled, repeated experiments over the existing 4 variants × 10 fixtures). The plan was approved with amendments A–C ([docs/TASK012_EXPERIMENT_PLAN.md](docs/TASK012_EXPERIMENT_PLAN.md)); credential-free implementation is in progress; **no paid Task 012 call is authorized.**
 - **Standing constraints unchanged:** no paid calls, hosting, public deployment or publication of private traces/replays without explicit approval; Meta-terms/hackathon-rules questions for publishing replay data remain open; no merge without approval. Nothing is deployed except the public dashboard without replay data.
 - The dated bullets below are historical checkpoints written at the time; where they say "open/unmerged" the PR has since merged (see list above).
 
