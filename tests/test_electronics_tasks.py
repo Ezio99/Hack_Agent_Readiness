@@ -187,21 +187,34 @@ def test_malformed_answers_and_extra_fields_fail_validation(task_id):
 
 
 @pytest.mark.parametrize("task_id", [i for i in IDS if by_id[i].evidence])
-def test_correct_answers_without_the_required_pages_are_correct_but_not_evidence_backed(task_id):
+def test_correct_answers_without_the_required_evidence_are_correct_but_not_evidence_backed(task_id):
     inst = by_id[task_id]
-    answer = solved(inst)["answer"]
-    r = verdict(inst, answer, ["/", "/c/laptops"])
+    run = solved(inst)
+    answer, observed = run["answer"], run["_observed"]
+    r = verdict(inst, answer, [core.Observation("/", "home"), core.Observation("/c/laptops", "listing")])
     assert r.passed and not r.evidence_backed and r.missing_evidence
     assert verdict(inst, answer, None).passed and not verdict(inst, answer, None).evidence_backed
-    full = verdict(inst, answer, [e.value for e in inst.evidence])
-    assert full.evidence_backed and not full.missing_evidence
+    assert verdict(inst, answer, observed).evidence_backed and not verdict(inst, answer, observed).missing_evidence
+
+
+@pytest.mark.parametrize("task_id", [i for i in IDS if any(e.kind.startswith("observed_text") for e in by_id[i].evidence)])
+def test_visiting_a_page_is_not_the_same_as_being_shown_its_content(task_id):
+    """Path-only observations (or pages whose text lacks the facts) cannot satisfy text evidence, even if every required URL was visited."""
+    inst = by_id[task_id]
+    run = solved(inst)
+    paths_only = [o.path for o in run["_observed"]]
+    r = verdict(inst, run["answer"], paths_only)
+    assert r.passed and not r.evidence_backed and any(g.startswith("observed_text") for g in r.missing_evidence)
+    emptied = [core.Observation(o.path, "no useful text here") for o in run["_observed"]]
+    r2 = verdict(inst, run["answer"], emptied)
+    assert r2.passed and not r2.evidence_backed and any(g.startswith("observed_text") for g in r2.missing_evidence)
 
 
 def test_no_task_is_solved_by_the_start_page_alone_and_each_requires_navigation_beyond_it():
     for inst in INSTANCES:
         paths = solved(inst)["visited_paths"]
         assert len(paths) >= 3 and paths != ["/"]
-        assert not verdict(inst, {} , ["/"]).passed
+        assert not verdict(inst, {}, [core.Observation("/", "home")]).passed
     for i in INSTANCES:
         assert i.spec.start_path == "/" and "/" not in [e.value for e in i.evidence]
 

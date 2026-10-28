@@ -35,6 +35,21 @@ def main():
     senv.add_argument("--environment", default="electronics-v1")
     senv.add_argument("--variant", help="e.g. availability=detail,specs=fragmented")
     senv.add_argument("--port", type=int, default=8001)
+    scn = sub.add_parser("scanner", help="Task 011 protected scanner (mock by default; live inference is gated and off)")
+    scsub = scn.add_subparsers(dest="scanner_command", required=True)
+    sserve = scsub.add_parser("serve", help="Run the scanner API (loopback by default)")
+    sserve.add_argument("--host", default="127.0.0.1")
+    sserve.add_argument("--port", type=int, default=8100)
+    sinv = scsub.add_parser("invite", help="Create an invitation code (shown once; only its hash is stored)")
+    sinv.add_argument("--label", required=True)
+    sinv.add_argument("--days", type=float, default=7)
+    sinv.add_argument("--redemptions", type=int, default=1)
+    sinv.add_argument("--scans", type=int, default=5, help="scan quota per redeemed session")
+    srev = scsub.add_parser("revoke", help="Revoke an invitation (and its sessions)")
+    srev.add_argument("invitation_id")
+    scsub.add_parser("invitations", help="List invitations (hashes never shown)")
+    skill = scsub.add_parser("kill", help="Turn the kill switch on/off (blocks new scans, cancels running ones on a live server via the admin API)")
+    skill.add_argument("state", choices=["on", "off"])
     pilot = sub.add_parser("pilot", help="Task 006 sequential, resumable, auditable pilot driver")
     psub = pilot.add_subparsers(dest="pilot_command", required=True)
     for pname in ("plan", "status", "run", "resume"):
@@ -82,6 +97,31 @@ def main():
             cmd.add_argument("--max-cumulative-estimated-cost-usd", type=float,
                              help="Diagnostic: block a request that would push the summed worst-case estimates over this")
     args = parser.parse_args()
+    if args.command == "scanner":
+        from .scanner.service.config import load_config
+        cfg = load_config()
+        if args.scanner_command == "kill":
+            cfg.data_dir.mkdir(parents=True, exist_ok=True)
+            (cfg.kill_switch_path.write_text("on") if args.state == "on" else cfg.kill_switch_path.unlink(missing_ok=True))
+            print(f"kill switch {args.state} (new scans {'blocked' if args.state == 'on' else 'allowed'})")
+            return
+        from .scanner.service.store import Store
+        store = Store(cfg)
+        if args.scanner_command == "invite":
+            inv, code = store.create_invitation(args.label, args.days, args.redemptions, args.scans)
+            print(f"invitation {inv}\ncode: {code}   (shown once; give it to one person; expires in {args.days:g} days)")
+        elif args.scanner_command == "revoke":
+            store.revoke_invitation(args.invitation_id)
+            print("revoked")
+        elif args.scanner_command == "invitations":
+            for i in store.list_invitations():
+                print(i["id"], i["label"], f"redeemed {i['redeemed']}/{i['max_redemptions']}", "REVOKED" if i["revoked"] else "")
+        else:
+            import uvicorn
+            from .scanner.service.api import create_scanner_app
+            print(f"Scanner API at http://{args.host}:{args.port}/ — live inference {'ENABLED' if cfg.live_available else 'disabled'}; data in {cfg.data_dir}")
+            uvicorn.run(create_scanner_app(cfg), host=args.host, port=args.port, log_level="warning")
+        return
     if args.command in {"suite", "serve-env"}:
         from .suite import core as suite_core, registry as suite_registry, runner as suite_runner
         suite_registry.load_all()

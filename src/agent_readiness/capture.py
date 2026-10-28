@@ -189,8 +189,9 @@ def check_fidelity(body: dict, expectations: dict, request_index: int = 1) -> li
         state, step_problems = classify_step_state(user, max_steps, request_index, standalone_messages(body))
     expected_sha = expectations.get("schema_sha256")
     if state == "final" and not step_problems:
-        if sha != DONE_ONLY_SCHEMA_SHA256:
-            problems.append(f"final-step schema sha256 {sha} != known done-only schema {DONE_ONLY_SCHEMA_SHA256}")
+        done_only = expectations.get("done_only_schema_sha256") or DONE_ONLY_SCHEMA_SHA256      # per-task answer models have their own done-only schema
+        if sha != done_only:
+            problems.append(f"final-step schema sha256 {sha} != known done-only schema {done_only}")
     elif expected_sha and sha != expected_sha:
         problems.append(f"response_format schema sha256 {sha} != expected {expected_sha} (schema narrowed or changed)")
     problems.extend(step_problems)
@@ -284,7 +285,7 @@ class ResponseCapture:
         summary = request_summary(body)
         index = len(self._started)
         schema_sha = (summary["response_format"] or {}).get("schema_sha256")
-        fidelity = {"schema_sha256": schema_sha, "schema_narrowed": schema_sha != FULL_AGENT_SCHEMA_SHA256}
+        fidelity = {"schema_sha256": schema_sha, "schema_narrowed": schema_sha != ((self.expectations or {}).get("schema_sha256") or FULL_AGENT_SCHEMA_SHA256)}
         problems = check_fidelity(body, self.expectations, index) if self.expectations else []
         cost_problem = None
         if self.expectations:

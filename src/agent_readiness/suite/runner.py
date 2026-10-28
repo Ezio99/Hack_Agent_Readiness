@@ -13,20 +13,28 @@ from . import core, registry
 MODE = "scripted_smoke"
 
 
+def page_text(html: str) -> str:
+    import html as htmllib, re
+    body = re.sub(r"<(script|style)\b.*?</\1>", " ", html, flags=re.S)
+    return re.sub(r"\s+", " ", htmllib.unescape(re.sub(r"<[^>]+>", " ", body))).strip()
+
+
 def run_scripted(instance: core.TaskInstance, variant: core.Variant, output: Path | None = None) -> dict:
     registry.load_all()
     from ..environments.electronics.scripted import solve
     env = core.ENVIRONMENTS[instance.spec.environment_id]
     visited: list[str] = []
+    observed: list[core.Observation] = []
     client = TestClient(env.create_app(variant), base_url="http://shop.local")
 
     def fetch(path: str) -> str:
         visited.append(path)
         response = client.get(path)
         response.raise_for_status()
+        observed.append(core.Observation(path.split("?", 1)[0], page_text(response.text)))
         return response.text
     answer = solve(instance.spec.template_id, dict(instance.spec.parameters), instance.spec.outcome_type, fetch)
-    record = core.evaluate(instance, answer, variant, visited)
+    record = core.evaluate(instance, answer, variant, observed)
     result = {"mode": MODE, "note": "Scripted navigator over the real pages; not a model run and not evidence about any agent's ability.",
               "task": instance.spec.record(), "variant": {"id": variant.variant_id, "factors": dict(variant.factors)}, "answer": answer,
               "visited_paths": visited, "page_requests": len(visited), "evaluation": record.as_dict()}
@@ -34,6 +42,7 @@ def run_scripted(instance: core.TaskInstance, variant: core.Variant, output: Pat
         recorder = Recorder(Path(output))
         recorder.write("result.json", result)
         result["artifact_path"] = str(recorder.path)
+    result["_observed"] = observed          # in-memory only (never written): the observations used for evidence checks
     return result
 
 
