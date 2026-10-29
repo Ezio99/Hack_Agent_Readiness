@@ -38,6 +38,18 @@ def audit_demo_target(factors: dict) -> dict:
         t.stop()
 
 
+def prior_stage_from(results_dir: Path) -> dict:
+    """Provenance of the pilot this main stage follows: the ORIGINAL frozen gate result is carried verbatim and never re-decided."""
+    import hashlib
+    results_dir = Path(results_dir)
+    files = {n: hashlib.sha256((results_dir / n).read_bytes()).hexdigest() for n in ("rows.jsonl", "pilot-gate.json", "effect-record.json", "ledger.jsonl", "status.json")}
+    gate = json.loads((results_dir / "pilot-gate.json").read_text())
+    pm = json.loads((results_dir.parent / "manifest.json").read_text())
+    return {"pilot_manifest_sha256": pm["manifest_sha256"], "pilot_results_sha256": files, "original_gate_decision": gate["decision"], "original_gate_reason": gate["reason"],
+            "erratum": "The original gate said `stop` ('ceiling effect') while the unmodified pilot run FAILED on recall 0.33 after exhausting its step budget: the 'ceiling effect' interpretation was wrong. "
+                       "The original result is preserved unchanged; the corrected gate (GATE_V2) applies prospectively to this stage only."}
+
+
 def main(args) -> None:
     root = Path(args.root)
     try:
@@ -48,7 +60,8 @@ def main(args) -> None:
             if rec is None:
                 raise Halt("the audit produced no applicable recommendation to test")
             probe_sl = ex.StageLedger(root, args.stage, {"limits": {"usd_to_aud": budget.usd_to_aud_rate(budget.load()), "stage_cap_aud": ex.STAGES[args.stage]["stage_cap_aud"]}})
-            m = ex.build_manifest(args.stage, report, rec["id"], _factors(args.initial), args.seed, committed_elsewhere_usd=probe_sl.others_committed_usd())
+            prior = prior_stage_from(Path(args.pilot_results)) if args.stage == "main" else None
+            m = ex.build_manifest(args.stage, report, rec["id"], _factors(args.initial), args.seed, committed_elsewhere_usd=probe_sl.others_committed_usd(), prior_stage=prior)
             ex.save_manifest(out / "manifest.json", m)
             (out / "audit-baseline.json").write_text(json.dumps(report, indent=1))
             cmd = (f"uv run readiness remediation-experiment run --manifest {out / 'manifest.json'} --audit {out / 'audit-baseline.json'} --root {root} --mode live "

@@ -1,0 +1,56 @@
+MOCK DRY RUN of the REVISED main manifest (real mock provider through the real scanner, gate, ledger, interim gate, re-audits). NOT evidence about any model; not counted toward the programme.
+manifest_sha256 11c7b4ec8f7c381b247dd4b5f2b7c21d125110c6ee951113ac91fa6f2c90bff9
+runs attempted 24/24, void 0, halt None, interim gate continue (mock baseline opens 5 product pages)
+
+--- rows (MOCK) ---
+{"run_id": "main-01", "block": 1, "task_code": "T1", "state": "unmodified", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 7, "product_page_visits": 5, "passed": true, "recall": 1.0, "audit_id": "5c927050dfbf", "recommendation_id": "rec-show-availability-on-listing-cards"}
+{"run_id": "main-02", "block": 1, "task_code": "T1", "state": "modified", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 7, "product_page_visits": 5, "passed": true, "recall": 1.0, "audit_id": "5c927050dfbf", "recommendation_id": "rec-show-availability-on-listing-cards"}
+{"run_id": "main-03", "block": 1, "task_code": "T1", "state": "labels_only", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 7, "product_page_visits": 5, "passed": true, "recall": 1.0, "audit_id": "5c927050dfbf", "recommendation_id": "rec-show-availability-on-listing-cards"}
+{"run_id": "main-04", "block": 1, "task_code": "T4", "state": "modified", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 4, "product_page_visits": 1, "passed": true, "recall": null, "audit_id": "5c927050dfbf", "recommendation_id": "rec-show-availability-on-listing-cards"}
+{"run_id": "main-05", "block": 1, "task_code": "T4", "state": "labels_only", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 4, "product_page_visits": 1, "passed": true, "recall": null, "audit_id": "5c927050dfbf", "recommendation_id": "rec-show-availability-on-listing-cards"}
+{"run_id": "main-06", "block": 1, "task_code": "T4", "state": "unmodified", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 4, "product_page_visits": 1, "passed": true, "recall": null, "audit_id": "5c927050dfbf", "recommendation_id": "rec-show-availability-on-listing-cards"}
+{"run_id": "main-07", "block": 2, "task_code": "T1", "state": "labels_only", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 7, "product_page_visits": 5, "passed": true, "recall": 1.0, "audit_id": "5c927050dfbf", "recommendation_id": "rec-show-availability-on-listing-cards"}
+{"run_id": "main-08", "block": 2, "task_code": "T1", "state": "unmodified", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 7, "product_page_visits": 5, "passed": true, "recall": 1.0, "audit_id": "5c927050dfbf", "recommendation_id": "rec-show-availability-on-listing-cards"}
+{"run_id": "main-09", "block": 2, "task_code": "T1", "state": "modified", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 7, "product_page_visits": 5, "passed": true, "recall": 1.0, "audit_id": "5c927050dfbf", "recommendation_id": "rec-show-availability-on-listing-cards"}
+{"run_id": "main-10", "block": 2, "task_code": "T4", "state": "modified", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 4, "product_page_visits": 1, "passed": true, "recall": null, "audit_id": "5c927050dfbf", "recommendation_id": "rec-show-availability-on-listing-cards"}
+{"run_id": "main-11", "block": 2, "task_code": "T4", "state": "labels_only", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 4, "product_page_visits": 1, "passed": true, "recall": null, "audit_id": "5c927050dfbf", "recommendation_id": "rec-show-availability-on-listing-cards"}
+{"run_id": "main-12", "block": 2, "task_code": "T4", "state": "unmodified", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 4, "product_page_visits": 1, "passed": true, "recall": null, "audit_id": "5c927050dfbf", "recommendation_id": "rec-show-availability-on-listing-cards"}
+{"run_id": "main-13", "block": 3, "task_code": "T1", "state": "labels_only", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 7, "product_page_visits": 5, "passed": true, "recall": 1.0, "audit_id": "5c927050dfbf", "recommendation_id": "rec-show-availability-on-listing-cards"}
+{"run_id": "main-14", "block": 3, "task_code": "T1", "state": "modified", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 7, "product_page_visits": 5, "passed": true, "recall": 1.0, "audit_id": "5c927050dfbf", "recommendation_id": "rec-show-availability-on-listing-cards"}
+{"run_id": "main-15", "block": 3, "task_code": "T1", "state": "unmodified", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 7, "product_page_visits": 5, "passed": true, "recall": 1.0, "audit_id": "5c927050dfbf", "recommendation_id": "rec-show-availability-on-listing-cards"}
+{"run_id": "main-16", "block": 4, "task_code": "T1", "state": "modified", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 7, "product_page_visits": 5, "passed": true, "recall": 1.0, "audit_id": "5c927050dfbf", "recommendation_id": "rec-show-availability-on-listing-cards"}
+{"run_id": "main-17", "block": 4, "task_code": "T1", "state": "unmodified", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 7, "product_page_visits": 5, "passed": true, "recall": 1.0, "audit_id": "5c927050dfbf", "recommendation_id": "rec-show-availability-on-listing-cards"}
+{"run_id": "main-18", "block": 4, "task_code": "T1", "state": "labels_only", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 7, "product_page_visits": 5, "passed": true, "recall": 1.0, "audit_id": "5c927050dfbf", "recommendation_id": "rec-show-availability-on-listing-cards"}
+{"run_id": "main-19", "block": 5, "task_code": "T1", "state": "unmodified", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 7, "product_page_visits": 5, "passed": true, "recall": 1.0, "audit_id": "5c927050dfbf", "recommendation_id": "rec-show-availability-on-listing-cards"}
+{"run_id": "main-20", "block": 5, "task_code": "T1", "state": "labels_only", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 7, "product_page_visits": 5, "passed": true, "recall": 1.0, "audit_id": "5c927050dfbf", "recommendation_id": "rec-show-availability-on-listing-cards"}
+{"run_id": "main-21", "block": 5, "task_code": "T1", "state": "modified", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 7, "product_page_visits": 5, "passed": true, "recall": 1.0, "audit_id": "5c927050dfbf", "recommendation_id": "rec-show-availability-on-listing-cards"}
+{"run_id": "main-22", "block": 6, "task_code": "T1", "state": "modified", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 7, "product_page_visits": 5, "passed": true, "recall": 1.0, "audit_id": "5c927050dfbf", "recommendation_id": "rec-show-availability-on-listing-cards"}
+{"run_id": "main-23", "block": 6, "task_code": "T1", "state": "labels_only", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 7, "product_page_visits": 5, "passed": true, "recall": 1.0, "audit_id": "5c927050dfbf", "recommendation_id": "rec-show-availability-on-listing-cards"}
+{"run_id": "main-24", "block": 6, "task_code": "T1", "state": "unmodified", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 7, "product_page_visits": 5, "passed": true, "recall": 1.0, "audit_id": "5c927050dfbf", "recommendation_id": "rec-show-availability-on-listing-cards"}
+
+--- effect-record (MOCK; mode mock => never attached to the audit) ---
+{
+ "mode": "mock",
+ "verdict": "not_supported",
+ "verdict_reason": "no meaningful reduction in model requests",
+ "n_pairs": 6,
+ "scope_of_verdict": "H1 only (recommendation as issued vs unmodified); decomposition contrasts are descriptive",
+ "independent_reaudits": {
+  "labels_only": {
+   "audit_id": "52d3c9922242",
+   "lifecycle": {
+    "attribute_detail_only:availability": "resolved",
+    "filter_absent:availability": "persisting"
+   },
+   "note": "the state was re-audited by the product without labels; resolution is not an effect measurement"
+  },
+  "modified": {
+   "audit_id": "50786f9baf1f",
+   "lifecycle": {
+    "attribute_detail_only:availability": "resolved",
+    "filter_absent:availability": "resolved"
+   },
+   "note": "the state was re-audited by the product without labels; resolution is not an effect measurement"
+  }
+ }
+}

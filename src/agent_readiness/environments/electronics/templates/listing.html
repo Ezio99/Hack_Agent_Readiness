@@ -18,7 +18,7 @@
   <label for="f-hz">Minimum refresh rate</label><select id="f-hz" name="min_refresh"><option value="">Any</option>{% for n in (60,75,120,144,165) %}<option value="{{ n }}" {{ 'selected' if f.min_refresh == n }}>{{ n }} Hz or more</option>{% endfor %}</select>
   <div class="check"><input id="f-usbc" type="checkbox" name="usb_c" value="1" {{ 'checked' if f.usb_c }}><label for="f-usbc">USB-C input</label></div>
   {% endif %}
-  {% if show_stock %}<div class="check"><input id="f-stock" type="checkbox" name="in_stock" value="1" {{ 'checked' if f.in_stock }}><label for="f-stock">In stock only</label></div>{% endif %}
+  {% if show_stock_filter %}<div class="check"><input id="f-stock" type="checkbox" name="in_stock" value="1" {{ 'checked' if f.in_stock }}><label for="f-stock">In stock only</label></div>{% endif %}
   <label for="f-sort">Sort by</label><select id="f-sort" name="sort">{% for key, name in sorts.items() %}<option value="{{ key }}" {{ 'selected' if f.sort == key }}>{{ name }}</option>{% endfor %}</select>
   <p><button type="submit">Apply</button> <a href="{{ path }}{{ '?q=' ~ f.q if (not category and f.q) else '' }}">Clear filters</a></p>
 </form>

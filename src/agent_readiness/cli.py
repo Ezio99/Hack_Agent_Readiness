@@ -48,6 +48,7 @@ def main():
     rp.add_argument("--root", default="runs/task015")
     rp.add_argument("--seed", type=int, default=20261029)
     rp.add_argument("--audit", help="existing audit report JSON (default: audit the managed demo target now)")
+    rp.add_argument("--pilot-results", default="collaboration/experiments/task015/pilot/results", help="main stage: directory of the executed pilot's results (carried as provenance, never re-decided)")
     rp.add_argument("--recommendation", help="recommendation id from the audit (default: the first applicable one)")
     rp.add_argument("--initial", help="operator initial site state, e.g. availability=detail,specs=structured,sku=listing")
     rr = rxs.add_parser("run", help="execute a frozen manifest (mock by default)")

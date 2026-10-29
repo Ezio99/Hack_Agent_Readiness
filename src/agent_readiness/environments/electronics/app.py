@@ -29,10 +29,11 @@ def create_app(variant: Variant = DEFAULT_VARIANT) -> FastAPI:
     show_stock_on_listing = variant.factor("availability") == "listing"
     structured = variant.factor("specs") == "structured"
     show_sku = variant.factor("sku", "hidden") == "listing"
+    show_stock_filter = show_stock_on_listing and variant.factor("stockfilter", "on") == "on"
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
     def ctx(request: Request, **extra):
-        return {"request": request, "categories": CATEGORIES, "brands": BRANDS, "show_stock": show_stock_on_listing, "structured": structured,
+        return {"request": request, "categories": CATEGORIES, "brands": BRANDS, "show_stock": show_stock_on_listing, "show_stock_filter": show_stock_filter, "structured": structured,
                 "chips": chips, "show_sku": show_sku, "sorts": query.SORTS, **extra}
 
     def render(request, name, status=200, **extra):
@@ -40,7 +41,7 @@ def create_app(variant: Variant = DEFAULT_VARIANT) -> FastAPI:
 
     def listing(request: Request, category: str, title: str, heading: str):
         try:
-            f = query.parse(request.query_params, category=category, allow_in_stock=show_stock_on_listing)
+            f = query.parse(request.query_params, category=category, allow_in_stock=show_stock_filter)
         except query.BadQuery as exc:
             return render(request, "notfound.html", 422, message=f"Those filters could not be applied: {exc}.")
         items, total, pages = query.run(f)

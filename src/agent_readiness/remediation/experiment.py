@@ -25,6 +25,7 @@ from ..agent import ModelConfig, profile
 from ..environments.electronics.variants import make_variant
 from ..recorder import utcnow
 from ..scanner.execute import execute_scan
+from ..scanner.diagnostics import repeated_actions
 from ..scanner.live import Halt, Ledger
 from ..spend_gate import IMAGE_UPPER_BOUND_TOKENS, PER_REQUEST_CAP_USD, RequestGate
 from ..suite import core, registry
@@ -33,15 +34,35 @@ from .probe import SiteProbe
 from .targets import CHANGES
 
 EXPERIMENT_ID = "task015-remediation"
-MANIFEST_VERSION = "task015-manifest-v1"
+MANIFEST_VERSION = "task015-manifest-v2"
 TASKS = {"T1": "t1-anc-headphones-under-250-all", "T4": "t4-policy-delivery-tessera-whisper"}
 AGENT_PROFILE = "suite-v2-compat1"
 PER_RUN_CAP_USD = 0.50
+# Website arms. `unmodified` = the audited site; `modified` = the product's recommendation AS ISSUED (stock labels on cards + in-stock filter, the bundle piloted);
+# `labels_only` (main stage only) = the labels without the filter, isolating the filter's contribution. Labels are experiment-design names; the audit engine never sees them.
+ARMS = {"pilot": ("unmodified", "modified"), "main": ("unmodified", "labels_only", "modified")}
 STAGES = {"pilot": {"blocks": 1, "t4_blocks": 0, "stage_cap_aud": 1.50, "purpose": "feasibility + room-to-act gate (2 runs, NO inference about effect)"},
-          "main": {"blocks": 6, "t4_blocks": 3, "stage_cap_aud": 7.50, "purpose": "controlled paired experiment (12 task runs + 6 control runs)"}}
-STOPPING_RULES = {"max_void_runs": 2, "max_parser_rejections_per_block": 2, "halt_on": ["budget_stop", "guard_violation", "bound_violation", "stage_cap"], "retries": "never", "replacements": "never"}
-VERDICT_RULE = {"min_valid_pairs": 4, "supports": "mean(delta model_requests) <= -3 AND mean(delta product_page_visits) <= -3 AND modified pass-rate >= unmodified AND two-sided exact sign-flip p <= 0.07 AND control |delta requests| < 2 (if valid control pairs)",
+          "main": {"blocks": 6, "t4_blocks": 2, "stage_cap_aud": 6.00, "purpose": "controlled paired experiment: 18 task runs (6 blocks x 3 arms) + 6 negative-control runs (2 blocks x 3 arms)"}}
+STOPPING_RULES = {"max_void_runs": 2, "max_parser_rejections_per_block": 2, "halt_on": ["budget_stop", "guard_violation", "bound_violation", "stage_cap", "no_room_to_act_after_block_2"],
+                  "retries": "never", "replacements": "never"}
+CAUSAL_QUESTION = ("Does applying the product's recommendation as issued (stock labels on listing cards plus an in-stock filter) change the outcome of the frozen stock-dependent set-collection task for the frozen "
+                   "agent on this storefront, and how much of any change is attributable to the labels alone versus the added filter?")
+HYPOTHESES = {"H1_confirmatory": "modified vs unmodified: fewer model requests per T1 run, with answer completeness not worse",
+              "H2_exploratory": "labels_only vs unmodified: some reduction from labels alone", "H3_exploratory": "modified vs labels_only: an additional reduction from the filter",
+              "negative_control": "T4 (stock-independent) shows no arm-related shift: |mean delta model requests| < 2",
+              "negative_control_limits": "A coarse diagnostic only: 2 blocks per arm can flag a LARGE unrelated shift; passing it does NOT rule out confounding, drift or unrelated effects, and failing it only blocks a `supports` verdict"}
+VERDICT_RULE = {"scope": "H1 (modified - unmodified) only; H2/H3 are reported descriptively", "min_valid_pairs": 5,
+                "supports": "mean(delta model_requests) <= -3 AND mean(delta product_page_visits) <= -2 AND modified pass-rate >= unmodified pass-rate AND two-sided exact sign-flip p <= 0.07 AND control |mean delta requests| < 2 (if >= 1 valid control pair)",
                 "not_supported": "mean(delta model_requests) >= -1 with >= min_valid_pairs", "else": "inconclusive"}
+# Corrected prospective gate (v2). Written after the pilot, applied only prospectively; the pilot's own frozen gate result (`stop`) is preserved unchanged.
+GATE_V2 = {"id": "room-to-act-v2", "applies_to": "the `unmodified` arm, T1, non-void runs only",
+           "room_if_any": {"R1_incomplete_answer": "oracle reports >= 1 missing eligible product (recall < 1)", "R2_oracle_fail_on_recall": "oracle verdict FAIL and recall < 1",
+                           "R3_budget_exhausted_with_unchecked_candidates": "model requests >= 75% of the request limit (>= 9 of 12) or stop_reason request_limit, AND the oracle reports missing products",
+                           "R5_wrong_inclusion": "the answer reported >= 1 ineligible product (for example an out-of-stock one): an oracle-measured error that stock visibility addresses",
+                           "R4_substantial_task_effort": "model requests >= 9 (75% of the limit) OR product-page visits >= 5, AND no repeated-action loop and no tool-visibility gap in the run (so the effort is not a tool artefact)"},
+           "never_counts": ["budget_stop", "provider_failure", "ambiguous_timeout", "guard_violation", "interrupted runs (all void)"],
+           "interim_check": "after the `unmodified` T1 runs of blocks 1 and 2 exist: continue iff at least one of them shows room (R1-R5); if both are void, or one is void and the other shows no room -> halt as inconclusive (no replacement); if both are valid and neither shows room -> halt as `no_room_to_act` (a ceiling finding)", "role": "prospective continue/halt criterion only; it never enters the effect verdict",
+           "limits": {"request_fraction": 0.75, "min_visits": 5}}
 PILOT_GATE = "continue iff the unmodified-state T1 run is a valid completed run AND (>= 4 product-page visits OR the answer reported a not-eligible product); otherwise stop and report a ceiling effect (no replacement run)"
 FROZEN_FILES = ("src/agent_readiness/remediation/probe.py", "src/agent_readiness/remediation/findings.py", "src/agent_readiness/remediation/library.py", "src/agent_readiness/remediation/engine.py",
                 "src/agent_readiness/remediation/experiment.py", "src/agent_readiness/spend_gate.py", "src/agent_readiness/capture.py", "src/agent_readiness/scanner/execute.py",
@@ -67,15 +88,21 @@ def git_info() -> dict:
         return {"commit": None, "dirty": None}
 
 
-def states_for(initial_factors: dict, change_id: str) -> dict:
-    """The two website states of the experiment: the audited (unmodified) one and the one with the product's own change applied."""
+def states_for(initial_factors: dict, change_id: str, stage: str = "pilot") -> dict:
+    """The website states of a stage: the audited (unmodified) one, the one with the product's recommendation applied as issued, and (main stage) the labels-only decomposition."""
     factor, level = CHANGES[change_id]
-    return {"unmodified": dict(initial_factors), "modified": {**initial_factors, factor: level}}
+    modified = {**initial_factors, factor: level}
+    states = {"unmodified": dict(initial_factors), "modified": modified}
+    if "labels_only" in ARMS[stage]:
+        if change_id != "availability-on-listing-cards":
+            raise Halt("the labels-only decomposition exists only for the stock-labels recommendation")
+        states["labels_only"] = {**modified, "stockfilter": "off"}
+    return {a: states[a] for a in ARMS[stage]}
 
 
 def variant_of(factors: dict):
     registry.load_all()
-    return make_variant(factors["availability"], factors["specs"], factors["sku"])
+    return make_variant(factors["availability"], factors["specs"], factors["sku"], factors.get("stockfilter", "on"))
 
 
 def verify_state_reproduces_audit(factors: dict, report: dict, rec: dict) -> dict:
@@ -93,22 +120,26 @@ def verify_state_reproduces_audit(factors: dict, report: dict, rec: dict) -> dic
     return {"reproduced": rec["addresses"], "fresh_audit_id": fresh["audit_id"]}
 
 
-def build_manifest(stage: str, report: dict, recommendation_id: str, initial_factors: dict, seed: int, *, committed_elsewhere_usd: float = 0.0) -> dict:
+def build_manifest(stage: str, report: dict, recommendation_id: str, initial_factors: dict, seed: int, *, committed_elsewhere_usd: float = 0.0, prior_stage: dict | None = None) -> dict:
     registry.load_all()
     cfg = STAGES[stage]
     rec = next((r for r in report["recommendations"] if r["id"] == recommendation_id), None)
     if rec is None or not rec.get("change_id") or rec["change_id"] not in CHANGES:
         raise Halt("the audit report has no such recommendation with an applicable change id")
-    states = states_for(initial_factors, rec["change_id"])
+    states = states_for(initial_factors, rec["change_id"], stage)
     reproduces = verify_state_reproduces_audit(states["unmodified"], report, rec)
     ledger = budget.load()
     chk = budget.check_stage(cfg["stage_cap_aud"], ledger, extra_usd=committed_elsewhere_usd)
     rng = random.Random(f"{EXPERIMENT_ID}/{stage}/{seed}")
+    arms = ARMS[stage]
+    orders = list(itertools.permutations(arms))                         # every ordering of the arms occurs equally often when blocks is a multiple of len(orders)
+    rng.shuffle(orders)
     schedule, n = [], 0
     for b in range(cfg["blocks"]):
-        entries = [("T1", s) for s in ("unmodified", "modified")] + ([("T4", s) for s in ("unmodified", "modified")] if b < cfg["t4_blocks"] else [])
-        rng.shuffle(entries)
-        for code, state in entries:
+        seq = [("T1", a) for a in orders[b % len(orders)]]
+        if b < cfg["t4_blocks"]:
+            seq += [("T4", a) for a in rng.choice(orders)]
+        for code, state in seq:
             n += 1
             schedule.append({"run_id": f"{stage}-{n:02d}", "block": b + 1, "task_code": code, "task_id": TASKS[code], "state": state, "variant_id": variant_of(states[state]).variant_id})
     prof = profile(AGENT_PROFILE)
@@ -126,12 +157,28 @@ def build_manifest(stage: str, report: dict, recommendation_id: str, initial_fac
                    "stage_cap_aud": cfg["stage_cap_aud"], "stage_cap_usd": chk["stage_cap_usd"], "usd_to_aud": chk["usd_to_aud"], "programme_ceiling_aud": chk["ceiling_aud"]},
         "budget_check": {"spent_before_usd": chk["spent_usd"], "spent_before_aud": chk["spent_aud"], "remaining_before_aud": chk["remaining_aud"], "remaining_after_stage_cap_aud": chk["remaining_after_cap_aud"],
                          "basis": "calculated, not billed; ceiling is a limit, not an authorization"},
-        "stopping_rules": STOPPING_RULES, "pilot_gate": PILOT_GATE if stage == "pilot" else None, "verdict_rule": VERDICT_RULE if stage == "main" else None,
+        "stopping_rules": STOPPING_RULES, "pilot_gate": PILOT_GATE if stage == "pilot" else None, "gate": GATE_V2 if stage == "main" else None,
+        "verdict_rule": VERDICT_RULE if stage == "main" else None, "causal_question": CAUSAL_QUESTION if stage == "main" else None, "hypotheses": HYPOTHESES if stage == "main" else None,
+        "arms": list(arms), "prior_stage": prior_stage,
+        "cost_envelope": cost_envelope(schedule, chk["stage_cap_usd"], chk["usd_to_aud"]),
         "schedule": schedule, "schedule_sha256": _sha(schedule),
         "approval_required": "the owner approves this exact manifest_sha256 for this stage; pilot and main approvals are separate",
     }
     body["manifest_sha256"] = _sha(body)
     return body
+
+
+COST_PER_RUN_USD = {"unmodified": (0.12, 0.20), "labels_only": (0.05, 0.15), "modified": (0.04, 0.08), "T4": (0.06, 0.10)}      # calculated; pilot: unmodified 0.161, modified 0.053; Task 011/012: T4 0.065-0.095; labels_only is unobserved (assumed between)
+
+
+def cost_envelope(schedule: list[dict], stage_cap_usd: float, rate: float) -> dict:
+    lo = sum(COST_PER_RUN_USD["T4" if e["task_code"] == "T4" else e["state"]][0] for e in schedule)
+    hi = sum(COST_PER_RUN_USD["T4" if e["task_code"] == "T4" else e["state"]][1] for e in schedule)
+    mid = (lo + hi) / 2
+    return {"expected_usd": [round(lo, 3), round(mid, 3), round(hi, 3)], "expected_aud": [round(lo * rate, 2), round(mid * rate, 2), round(hi * rate, 2)],
+            "worst_case_usd": stage_cap_usd, "worst_case_aud": round(stage_cap_usd * rate, 2),
+            "worst_case_basis": "the ledger stage cap: reservations can never sum above it (further requests are refused, the run is void, the stage halts); if every request used its full reservation the stage would end at the cap",
+            "per_run_cost_assumptions_usd": COST_PER_RUN_USD, "basis": "calculated at published prices from pilot/earlier observations; not a bill"}
 
 
 def manifest_hash(m: dict) -> str:
@@ -165,7 +212,7 @@ class StageLedger:
     def others_committed_usd(self) -> float:
         total = 0.0
         for p in self.root.glob("*/ledger/ledger.jsonl"):
-            if p.parent.parent.name != self.stage:
+            if p.parent.parent.name != self.stage and p.parent.parent.name not in self.bud.get("recorded_runtime_stages", []):      # recorded stages are already in the programme ledger file
                 total += Ledger(p.parent).committed()
         return round(total, 6)
 
@@ -205,9 +252,13 @@ def row_from(entry: dict, record: dict, cls: dict, manifest: dict, mode: str, ga
     ev, met, j = record["evaluation"], record["metrics"], record["journey"]
     pages = [x for x in j if x["path"].startswith("/p/")]
     details = ev.get("details") or {}
+    limit = (record.get("metrics") or {}).get("limits", {}).get("max_model_requests") or manifest["limits"]["max_requests_per_run"]
+    loops = repeated_actions(j)
+    gaps = ((record.get("diagnostics") or {}).get("metrics") or {}).get("visibility_gap_steps") or []
     return {**entry, "audit_id": manifest["audit"]["audit_id"], "finding_fingerprints": manifest["audit"]["finding_fingerprints"], "recommendation_id": manifest["audit"]["recommendation_id"],
             "mode": mode, "mock": mode == "mock", **cls, "passed": ev["passed"], "evidence_backed": ev["evidence_backed"], "reasons": ev["reasons"][:3],
-            "extra_items": details.get("extra") or [], "model_requests": met["model_requests"], "page_views": met["page_views"], "product_page_visits": len(pages),
+            "extra_items": details.get("extra") or [], "missing_items": details.get("missing") or [], "recall": details.get("recall"), "request_limit": limit,
+            "repeated_action_runs": len(loops), "visibility_gap_steps": len(gaps), "model_requests": met["model_requests"], "page_views": met["page_views"], "product_page_visits": len(pages),
             "distinct_product_pages": len({x["path"] for x in pages}), "elapsed_seconds": met["elapsed_seconds"], "calculated_cost_usd": met["calculated_cost_usd"],
             "reserved_usd": gate.run_committed(), "unsettled_reservations": gate.unsettled(), "raw_protocol": record.get("protocol"), "finished_at": record["finished_at"]}
 
@@ -235,8 +286,8 @@ def preflight(m: dict, approved_sha: str | None, mode: str, allow_model_calls: b
             raise Halt("refusing: live calls need --allow-model-calls")
         if m["stage"] == "main":
             gate_file = sl.root / "pilot" / "pilot-gate.json"      # written by `finalize` of the pilot stage under the same root
-            if not gate_file.exists() or json.loads(gate_file.read_text()).get("decision") != "continue":
-                raise Halt("the main stage needs a completed pilot whose gate decision is 'continue' (and its own approval)")
+            if not gate_file.exists() or not m.get("prior_stage"):
+                raise Halt("the main stage needs the recorded pilot (its original gate result is preserved in prior_stage) and its own separate approval")
         from ..webarena.live import preflight as live_preflight
         live_preflight(ModelConfig(), allow_model_calls)
     drift = {f: (h, code_hashes().get(f)) for f, h in m["code"]["files_sha256"].items() if code_hashes().get(f) != h}
@@ -252,6 +303,9 @@ async def run_stage(m: dict, root: Path, *, mode: str, approved_sha: str | None 
     out = root / m["stage"]
     out.mkdir(parents=True, exist_ok=True)
     sl = StageLedger(root, m["stage"], m)
+    halt_file = out / "halt.json"
+    if halt_file.exists():
+        raise Halt(f"this stage already halted ({json.loads(halt_file.read_text()).get('reason')}); a halt is final: continuing needs a new approval (a new manifest), not a re-run of the command")
     pre = preflight(m, approved_sha, mode, allow_model_calls, sl)
     registry.load_all()
     key = None
@@ -261,6 +315,15 @@ async def run_stage(m: dict, root: Path, *, mode: str, approved_sha: str | None 
     rows = read_rows(rows_path)
     attempted = {r["run_id"] for r in rows}
     halt = None
+    for entry in m["schedule"]:                                               # crash recovery: a run marker without a row means the driver died mid-run => void row + final halt
+        if entry["run_id"] not in attempted and sl.ledger.attempted(entry["run_id"]):
+            row = {**entry, "mode": mode, "outcome_class": "provider_failure", "void": True, "attribution": "driver crash/kill during the run (no result was recorded); not attributable to the website",
+                   "audit_id": m["audit"]["audit_id"], "recommendation_id": m["audit"]["recommendation_id"], "unsettled_reservations": []}
+            append_jsonl(rows_path, row)
+            rows.append(row)
+            attempted.add(entry["run_id"])
+            halt_file.write_text(json.dumps({"reason": "crash_recovered", "run_id": entry["run_id"]}))
+            raise Halt(f"run {entry['run_id']} has a ledger marker but no recorded result (driver crash); recorded as void and the stage is halted for review")
     voids = len([r for r in rows if r["void"]])
     for entry in m["schedule"]:
         if entry["run_id"] in attempted or sl.ledger.attempted(entry["run_id"]):
@@ -277,6 +340,7 @@ async def run_stage(m: dict, root: Path, *, mode: str, approved_sha: str | None 
             append_jsonl(rows_path, {**entry, "mode": mode, "outcome_class": "provider_failure", "void": True, "attribution": f"driver interrupted ({type(exc).__name__}); not attributable to the website",
                                      "audit_id": m["audit"]["audit_id"], "recommendation_id": m["audit"]["recommendation_id"], "unsettled_reservations": gate.unsettled()})
             halt = {"reason": "interrupted", "run_id": entry["run_id"]}
+            halt_file.write_text(json.dumps(halt))
             raise
         cls = classify(record, gate)
         row = row_from(entry, record, cls, m, mode, gate)
@@ -293,6 +357,14 @@ async def run_stage(m: dict, root: Path, *, mode: str, approved_sha: str | None 
             halt = {"reason": "parser_rejections", "run_id": entry["run_id"]}
         elif sl.ledger.committed() >= sl.cap_usd - 1e-9:
             halt = {"reason": "stage_cap", "run_id": entry["run_id"]}
+        elif m["stage"] == "main" and entry["task_code"] == "T1" and entry["state"] == "unmodified" and entry["block"] <= 2:
+            g = interim_gate(rows)
+            if g["decision"] in ("halt_no_room", "halt_inconclusive"):
+                halt = {"reason": "no_room_to_act_after_block_2" if g["decision"] == "halt_no_room" else "baseline_inconclusive", "run_id": entry["run_id"], "note": g["reason"]}
+            if g["decision"] != "pending":
+                (out / "interim-gate.json").write_text(json.dumps(g, indent=1))
+    if halt:
+        halt_file.write_text(json.dumps(halt))
     done = {r["run_id"] for r in read_rows(rows_path)}
     result = {"stage": m["stage"], "mode": mode, "manifest_sha256": m["manifest_sha256"], "runs_attempted": len(done), "runs_scheduled": len(m["schedule"]), "halt": halt,
               "complete": len(done) == len(m["schedule"]) and not halt,
@@ -302,16 +374,6 @@ async def run_stage(m: dict, root: Path, *, mode: str, approved_sha: str | None 
 
 
 # ---------------- post-run: independent re-audit, analysis, effect record ----------------
-def reaudit(m: dict, baseline_report: dict) -> dict:
-    """Serve the modified state, probe it and compare with the stored baseline audit. Uses no label: lifecycle comes from what the probe observes."""
-    from ..scanner.serve import serve_app
-
-    async def go():
-        async with serve_app(core.ENVIRONMENTS["electronics-v1"].create_app(variant_of(m["frozen"]["states"]["modified"]["factors"]))) as base:
-            return build_report(await asyncio.to_thread(lambda: SiteProbe(base, allow_private_hosts=True).run()), previous=baseline_report, target=baseline_report["target"])
-    return asyncio.run(go())
-
-
 def pilot_gate(rows: list[dict]) -> dict:
     t1 = [r for r in rows if r["task_code"] == "T1"]
     un = next((r for r in t1 if r["state"] == "unmodified"), None)
@@ -322,34 +384,107 @@ def pilot_gate(rows: list[dict]) -> dict:
             "rule": PILOT_GATE, "note": "the pilot has one pair and supports NO inference about the effect"}
 
 
+def _missing_from_reasons(row: dict) -> list:
+    for r in row.get("reasons") or []:
+        if r.startswith("Missing eligible products:"):
+            return [x.strip() for x in r.split(":", 1)[1].split(",") if x.strip()]
+    return []
+
+
+def room_to_act(row: dict, limits: dict | None = None) -> dict:
+    """Corrected prospective gate (GATE_V2) for ONE non-void `unmodified` T1 run. Every criterion is an independently measurable outcome (oracle verdict/recall, request counts,
+    product-page visits, tool-loop flags). Returns which criteria fired; void rows never count."""
+    lim = {**GATE_V2["limits"], **(limits or {})}
+    if row.get("void"):
+        return {"room": False, "void": True, "criteria": [], "note": "void run (budget/provider/ambiguous/guard): never counted as room and never as a website result"}
+    n, cap = row.get("model_requests") or 0, row.get("request_limit") or 12
+    missing = row.get("missing_items") or _missing_from_reasons(row)
+    recall = row.get("recall")
+    if recall is None and missing:
+        recall = 0.0                                          # historical rows (the pilot) carry only the oracle's reason text; any missing product means recall < 1
+    near_limit = n >= lim["request_fraction"] * cap or row.get("stop_reason") == "request_limit"
+    fired = []
+    if missing or (recall is not None and recall < 1):
+        fired.append("R1_incomplete_answer")
+    if not row.get("passed") and (recall is not None and recall < 1):
+        fired.append("R2_oracle_fail_on_recall")
+    if near_limit and (missing or (recall is not None and recall < 1)):
+        fired.append("R3_budget_exhausted_with_unchecked_candidates")
+    if row.get("extra_items"):
+        fired.append("R5_wrong_inclusion")
+    tool_artefact = (row.get("repeated_action_runs") or 0) > 0 or (row.get("visibility_gap_steps") or 0) > 0
+    if (near_limit or (row.get("product_page_visits") or 0) >= lim["min_visits"]) and not tool_artefact:
+        fired.append("R4_substantial_task_effort")
+    return {"room": bool(fired), "void": False, "criteria": fired, "tool_artefact_flag": tool_artefact,
+            "evidence": {"model_requests": n, "request_limit": cap, "recall": recall, "missing": missing, "product_page_visits": row.get("product_page_visits"), "passed": row.get("passed")}}
+
+
+def interim_gate(rows: list[dict]) -> dict:
+    """Applied once the `unmodified` T1 runs of blocks 1 and 2 exist (main stage)."""
+    base = sorted((r for r in rows if r["task_code"] == "T1" and r["state"] == "unmodified" and r["block"] <= 2), key=lambda r: r["block"])
+    if len(base) < 2:
+        return {"decision": "pending", "reason": "the unmodified T1 runs of blocks 1 and 2 are not both available yet"}
+    judged = [room_to_act(r) for r in base]
+    if all(j["void"] for j in judged):
+        return {"decision": "halt_inconclusive", "reason": "both baseline runs are void (budget/provider/ambiguous); NOT a website result; no replacement", "judged": judged, "rule": GATE_V2["id"]}
+    if any(j["room"] for j in judged):
+        return {"decision": "continue", "reason": "meaningful room to act at baseline: " + "; ".join(f"block {r['block']}: {j['criteria'] or 'none'}" for r, j in zip(base, judged)), "judged": judged, "rule": GATE_V2["id"]}
+    if any(j["void"] for j in judged):
+        return {"decision": "halt_inconclusive", "reason": "only one valid baseline run (the other is void) and it shows no room: not enough to call a ceiling; no replacement", "judged": judged, "rule": GATE_V2["id"]}
+    return {"decision": "halt_no_room", "reason": "neither valid baseline run shows room to act (ceiling at baseline, n=2); reported as such, not as a website result", "judged": judged, "rule": GATE_V2["id"]}
+
+
 def _sign_flip_p(diffs: list[float]) -> float:
+    """Exact two-sided sign-flip (randomisation) p-value for paired differences: the share of all 2^n sign assignments whose |sum| is at least the observed |sum|.
+    Zero differences and ties are handled by the enumeration itself; the value is exact (n <= 20 pairs here) and deliberately NOT rounded (6 consistent pairs -> exactly 0.03125)."""
     n = len(diffs)
     obs = abs(sum(diffs))
     hits = sum(1 for signs in itertools.product((1, -1), repeat=n) if abs(sum(s * d for s, d in zip(signs, diffs))) >= obs - 1e-12)
-    return round(hits / 2 ** n, 4)
+    return hits / 2 ** n
+
+
+CONTRASTS = (("modified", "unmodified", "H1_confirmatory"), ("labels_only", "unmodified", "H2_exploratory"), ("modified", "labels_only", "H3_exploratory"))
+METRICS = ("model_requests", "product_page_visits", "calculated_cost_usd", "elapsed_seconds", "recall")
+
+
+def _pairs(valid: list[dict], code: str, hi: str, lo: str):
+    out = []
+    for b in sorted({r["block"] for r in valid if r["task_code"] == code}):
+        h = next((r for r in valid if r["block"] == b and r["task_code"] == code and r["state"] == hi), None)
+        l = next((r for r in valid if r["block"] == b and r["task_code"] == code and r["state"] == lo), None)
+        if h and l:
+            out.append((l, h))                               # (reference, comparison)
+    return out
 
 
 def analyze(rows: list[dict], m: dict) -> dict:
+    """Paired-by-block descriptive analysis. VOID rows are excluded and listed. Only H1 (modified vs unmodified) can yield a verdict; H2/H3 and all secondary metrics are descriptive."""
     valid = [r for r in rows if not r["void"]]
-    out = {"n_rows": len(rows), "void_rows": [{"run_id": r["run_id"], "class": r["outcome_class"]} for r in rows if r["void"]], "mock": any(r.get("mock") for r in rows)}
-    for code in ("T1", "T4"):
-        pairs = []
-        for b in sorted({r["block"] for r in rows if r["task_code"] == code}):
-            u = next((r for r in valid if r["block"] == b and r["task_code"] == code and r["state"] == "unmodified"), None)
-            mo = next((r for r in valid if r["block"] == b and r["task_code"] == code and r["state"] == "modified"), None)
-            if u and mo:
-                pairs.append((u, mo))
-        d = lambda k: [mo[k] - u[k] for u, mo in pairs]
-        mean = lambda xs: round(sum(xs) / len(xs), 3) if xs else None
-        out[code] = {"valid_pairs": len(pairs), "delta_model_requests": d("model_requests"), "delta_product_page_visits": d("product_page_visits"), "delta_cost_usd": [round(x, 4) for x in d("calculated_cost_usd")],
-                     "mean_delta_requests": mean(d("model_requests")), "mean_delta_visits": mean(d("product_page_visits")), "pass_rate": {"unmodified": mean([float(u["passed"]) for u, _ in pairs]), "modified": mean([float(mo["passed"]) for _, mo in pairs])},
-                     "p_two_sided_sign_flip": _sign_flip_p([float(x) for x in d("model_requests")]) if pairs else None}
+    out = {"n_rows": len(rows), "void_rows": [{"run_id": r["run_id"], "class": r["outcome_class"]} for r in rows if r["void"]], "mock": any(r.get("mock") for r in rows), "contrasts": {}}
+    mean = lambda xs: round(sum(xs) / len(xs), 3) if xs else None
+    for hi, lo, label in CONTRASTS:
+        if hi not in ARMS[m["stage"]] or lo not in ARMS[m["stage"]]:
+            continue
+        res = {"label": label, "comparison": hi, "reference": lo}
+        for code in ("T1", "T4"):
+            pairs = _pairs(valid, code, hi, lo)
+            d = lambda k: [(h.get(k) or 0) - (l.get(k) or 0) for l, h in pairs]
+            res[code] = {"valid_pairs": len(pairs), "deltas": {k: [round(x, 4) for x in d(k)] for k in METRICS}, "mean_delta": {k: mean(d(k)) for k in METRICS},
+                         "pass_rate": {lo: mean([float(l["passed"]) for l, _ in pairs]), hi: mean([float(h["passed"]) for _, h in pairs])},
+                         "blocks_comparison_fewer_requests": sum(1 for x in d("model_requests") if x < 0), "p_two_sided_sign_flip_requests": _sign_flip_p([float(x) for x in d("model_requests")]) if pairs else None}
+        out["contrasts"][label] = res
+    # backwards-compatible handles used by the pilot / existing consumers
+    h1 = out["contrasts"]["H1_confirmatory"]
+    out["T1"] = {"valid_pairs": h1["T1"]["valid_pairs"], "delta_model_requests": h1["T1"]["deltas"]["model_requests"], "delta_product_page_visits": h1["T1"]["deltas"]["product_page_visits"],
+                 "mean_delta_requests": h1["T1"]["mean_delta"]["model_requests"], "mean_delta_visits": h1["T1"]["mean_delta"]["product_page_visits"],
+                 "pass_rate": {"unmodified": h1["T1"]["pass_rate"]["unmodified"], "modified": h1["T1"]["pass_rate"]["modified"]}, "p_two_sided_sign_flip": h1["T1"]["p_two_sided_sign_flip_requests"]}
+    out["T4"] = {"valid_pairs": h1["T4"]["valid_pairs"], "mean_delta_requests": h1["T4"]["mean_delta"]["model_requests"]}
     t1, rule = out["T1"], m.get("verdict_rule") or VERDICT_RULE
-    ctrl = out["T4"]
-    ctrl_ok = ctrl["valid_pairs"] == 0 or abs(ctrl["mean_delta_requests"]) < 2
+    ctrl_ok = all(c["T4"]["valid_pairs"] == 0 or abs(c["T4"]["mean_delta"]["model_requests"]) < 2 for c in out["contrasts"].values())
     if m["stage"] == "pilot" or t1["valid_pairs"] < rule["min_valid_pairs"]:
         verdict, why = "inconclusive", f"{t1['valid_pairs']} valid T1 pair(s); fewer than {rule['min_valid_pairs']} (or pilot stage): no inference"
-    elif (t1["mean_delta_requests"] <= -3 and t1["mean_delta_visits"] <= -3 and (t1["pass_rate"]["modified"] or 0) >= (t1["pass_rate"]["unmodified"] or 0) and t1["p_two_sided_sign_flip"] <= 0.07 and ctrl_ok):
+    elif (t1["mean_delta_requests"] <= -3 and t1["mean_delta_visits"] <= -2 and (t1["pass_rate"]["modified"] or 0) >= (t1["pass_rate"]["unmodified"] or 0)
+          and t1["p_two_sided_sign_flip"] <= 0.07 and ctrl_ok):
         verdict, why = "supports", "all pre-registered conditions met"
     elif t1["mean_delta_requests"] >= -1:
         verdict, why = "not_supported", "no meaningful reduction in model requests"
@@ -359,29 +494,40 @@ def analyze(rows: list[dict], m: dict) -> dict:
     return out
 
 
-def effect_record(m: dict, rows: list[dict], reaudit_report: dict) -> dict:
+def effect_record(m: dict, rows: list[dict], reaudits: dict) -> dict:
     an = analyze(rows, m)
-    life = {i["fingerprint"]: i["status"] for i in (reaudit_report["lifecycle"] or {"items": []})["items"]}
     mode = "mock" if an["mock"] else "live"
     return {"experiment_id": EXPERIMENT_ID, "stage": m["stage"], "mode": mode, "manifest_sha256": m["manifest_sha256"], "audit_id": m["audit"]["audit_id"], "recommendation_id": m["audit"]["recommendation_id"],
-            "addresses": m["audit"]["finding_fingerprints"], "n_pairs": an["T1"]["valid_pairs"], "metrics": {"T1": an["T1"], "T4_control": an["T4"]}, "verdict": an["verdict"], "verdict_reason": an["verdict_reason"],
-            "void_runs": an["void_rows"], "independent_reaudit": {"audit_id": reaudit_report["audit_id"], "lifecycle": life,
-                                                                     "note": "the modified state was re-audited by the product without labels; resolution is not an effect measurement"},
+            "addresses": m["audit"]["finding_fingerprints"], "n_pairs": an["T1"]["valid_pairs"], "metrics": {"contrasts": an["contrasts"]}, "verdict": an["verdict"], "verdict_reason": an["verdict_reason"],
+            "scope_of_verdict": "H1 only (recommendation as issued vs unmodified); decomposition contrasts are descriptive", "void_runs": an["void_rows"],
+            "independent_reaudits": {arm: {"audit_id": r["audit_id"], "lifecycle": {i["fingerprint"]: i["status"] for i in (r["lifecycle"] or {"items": []})["items"]},
+                                           "note": "the state was re-audited by the product without labels; resolution is not an effect measurement"} for arm, r in reaudits.items()},
             "caveats": ["calculated costs, not billed", "synthetic storefront, one model, one task", "dry-run/mock results are not measured effects" if mode == "mock" else "n is small; interpret as consistent-with, not proof"]}
+
+
+def reaudit(m: dict, baseline_report: dict, arm: str = "modified") -> dict:
+    """Serve an arm's state, probe it and compare with the stored baseline audit. Uses no label: lifecycle comes from what the probe observes."""
+    from ..scanner.serve import serve_app
+
+    async def go():
+        async with serve_app(core.ENVIRONMENTS["electronics-v1"].create_app(variant_of(m["frozen"]["states"][arm]["factors"]))) as base:
+            return build_report(await asyncio.to_thread(lambda: SiteProbe(base, allow_private_hosts=True).run()), previous=baseline_report, target=baseline_report["target"])
+    return asyncio.run(go())
 
 
 def finalize(m: dict, root: Path, baseline_report: dict) -> dict:
     out = Path(root) / m["stage"]
     rows = read_rows(out / "rows.jsonl")
-    rea = reaudit(m, baseline_report)
-    (out / "reaudit.json").write_text(json.dumps(rea, indent=1))
-    rec = effect_record(m, rows, rea)
+    reaudits = {arm: reaudit(m, baseline_report, arm) for arm in m["arms"] if arm != "unmodified"}
+    for arm, r in reaudits.items():
+        (out / f"reaudit-{arm}.json").write_text(json.dumps(r, indent=1))
+    rec = effect_record(m, rows, reaudits)
     (out / "effect-record.json").write_text(json.dumps(rec, indent=1))
     if m["stage"] == "pilot":
         (out / "pilot-gate.json").write_text(json.dumps(pilot_gate(rows), indent=1))
-    result = {"effect_record": "effect-record.json", "reaudit": "reaudit.json", "attached_view": None}
-    if rec["mode"] == "live" and rec["verdict"] in ("supports", "not_supported", "inconclusive") and m["stage"] == "main":
-        view = attach_measured_effects(baseline_report, rec)
+    result = {"effect_record": "effect-record.json", "reaudits": sorted(reaudits), "attached_view": None}
+    if rec["mode"] == "live" and m["stage"] == "main":
+        view = attach_measured_effects(baseline_report, {**rec, "metrics": rec["metrics"]})
         (out / "report-with-effects.json").write_text(json.dumps(view, indent=1))
         result["attached_view"] = "report-with-effects.json"
         result["original_report_sha256_unchanged"] = view["original_report_sha256"] == report_sha256(baseline_report)

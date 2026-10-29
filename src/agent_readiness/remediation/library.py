@@ -38,6 +38,13 @@ LIBRARY = (
              "Cards become denser; stock data must be accurate and fresh on list pages (cache invalidation); an in-stock filter needs the same data source.",
              ("model requests per task", "product-page visits", "answer correctness for stock-dependent tasks", "calculated cost"), (TASK007_BASIS,),
              change_id="availability-on-listing-cards", related=(("filter_absent", "availability"),)),
+    Template("offer-in-stock-filter", ("filter_absent", "availability"), "Offer an in-stock filter on listing pages",
+             "Add an 'In stock only' filter to category and search pages, backed by the same stock data as the cards.",
+             "When stock is readable but cannot be filtered on, a shopper (or agent) must still scan every result to collect the in-stock ones; a filter returns exactly the available set.",
+             "Fewer pages/results to scan for stock-dependent set-collection tasks; a shorter path to a complete answer.",
+             "One more control on the filter form; the filter must stay consistent with the card labels.",
+             ("model requests per task", "answer completeness (recall) for stock-dependent tasks", "calculated cost"), (),
+             change_id="in-stock-filter"),
     Template("show-sku-on-listing-cards", ("attribute_detail_only", "sku"), "Show the SKU on listing cards",
              "Print the SKU / product identifier on each listing and search card.",
              "Tasks that must report identifiers force a visit to every product page when the identifier is only on product pages.",
@@ -55,12 +62,13 @@ def objective_relevance(attribute: str, objective: str | None) -> str:
 
 
 def select(findings: list[dict], objective: str | None = None) -> list[dict]:
-    recs, by_fp = [], {f["fingerprint"]: f for f in findings}
+    recs, by_fp, consumed = [], {f["fingerprint"]: f for f in findings}, set()
     for t in LIBRARY:
         fp = f"{t.addresses[0]}:{t.addresses[1]}"
         f = by_fp.get(fp)
-        if f is None:
+        if f is None or fp in consumed:                  # a finding already covered as `related` by an earlier template is not recommended twice
             continue
+        consumed.update(f"{k}:{a}" for k, a in t.related)
         related = [by_fp[f"{k}:{a}"] for k, a in t.related if f"{k}:{a}" in by_fp]
         c = f["counts"]
         rel = objective_relevance(t.addresses[1], objective)

@@ -44,7 +44,16 @@
       "label": "Task 014 WebArena: schema probe 0.00362 + one run 0.244701",
       "usd": 0.248321,
       "source": "Reports 014c, 014d; runs/webarena-014/live/ledger.jsonl"
+    },
+    {
+      "id": "task015-pilot",
+      "label": "Task 015 two-run live pilot (modified PASS, unmodified FAIL)",
+      "usd": 0.214509,
+      "source": "collaboration/experiments/task015/pilot/results/ledger.jsonl; Report 015c"
     }
   ],
-  "runtime_ledgers": "Spend after Task 014 is recorded in the durable stage ledgers under runs/task015/*/ledger (private) and is counted by the Task 015 driver on top of the entries above; Task 015 pilot: US$0.214509 calculated (A$0.32 at the assumed rate), summarised in collaboration/experiments/task015/pilot/results/."
+  "recorded_runtime_stages": [
+    "pilot"
+  ],
+  "runtime_ledgers_note": "Spend after the pilot (stage ledgers under runs/task015/<stage>/ledger, private) is counted by the Task 015 driver on top of these entries; stages listed in recorded_runtime_stages are already included above and are not counted twice."
 }

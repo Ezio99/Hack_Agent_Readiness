@@ -1,0 +1,422 @@
+{
+ "manifest_version": "task015-manifest-v2",
+ "experiment_id": "task015-remediation",
+ "stage": "main",
+ "purpose": "controlled paired experiment: 18 task runs (6 blocks x 3 arms) + 6 negative-control runs (2 blocks x 3 arms)",
+ "created_at": "2026-10-29T04:44:34.475704+00:00",
+ "seed": 20261030,
+ "audit": {
+  "audit_id": "261464886011",
+  "report_sha256": "4153f0685286656c564a6ae0e76adc6336f65a7824d351c4b5fc00723e32b1c2",
+  "target": "demo-shop",
+  "finding_fingerprints": [
+   "attribute_detail_only:availability",
+   "filter_absent:availability"
+  ],
+  "recommendation_id": "rec-show-availability-on-listing-cards",
+  "change_id": "availability-on-listing-cards",
+  "validation_as_issued": "unvalidated",
+  "state_check": {
+   "reproduced": [
+    "attribute_detail_only:availability",
+    "filter_absent:availability"
+   ],
+   "fresh_audit_id": "1f1a5e19fa7e"
+  }
+ },
+ "frozen": {
+  "model": "muse-spark-1.3",
+  "endpoint": "https://api.meta.ai/v1",
+  "agent_profile": "suite-v2-compat1",
+  "agent_profile_sha256": "89ea40b4fea2f6cf5e992b5f927405eeca4bb537f5ede90b8a5a93e3940aa158",
+  "tasks": {
+   "T1": {
+    "task_id": "t1-anc-headphones-under-250-all",
+    "spec_sha256": "fa9eead427873379624127f89aa30dd0436006d74566e7fffa470e37ca7cf68d",
+    "limits": {
+     "max_steps": 12,
+     "timeout_seconds": 240,
+     "max_model_requests": 12
+    }
+   },
+   "T4": {
+    "task_id": "t4-policy-delivery-tessera-whisper",
+    "spec_sha256": "be9e1f72efef1555fff29346b7e72168ece74eb2d4f4d2042d8a17f5d1053784",
+    "limits": {
+     "max_steps": 12,
+     "timeout_seconds": 240,
+     "max_model_requests": 12
+    }
+   }
+  },
+  "oracle": {
+   "evaluator": "independent catalogue-only oracle/grader (suite core evaluate)",
+   "data_version": "electronics-v1+7c4eaccbb161"
+  },
+  "states": {
+   "unmodified": {
+    "factors": {
+     "availability": "detail",
+     "specs": "structured",
+     "sku": "listing"
+    },
+    "variant_id": "electronics-v1/availability-detail+specs-structured+sku-listing"
+   },
+   "labels_only": {
+    "factors": {
+     "availability": "listing",
+     "specs": "structured",
+     "sku": "listing",
+     "stockfilter": "off"
+    },
+    "variant_id": "electronics-v1/availability-listing+specs-structured+sku-listing+stockfilter-off"
+   },
+   "modified": {
+    "factors": {
+     "availability": "listing",
+     "specs": "structured",
+     "sku": "listing"
+    },
+    "variant_id": "electronics-v1/availability-listing+specs-structured+sku-listing"
+   }
+  },
+  "environment": "electronics-v1"
+ },
+ "code": {
+  "files_sha256": {
+   "src/agent_readiness/remediation/probe.py": "12b440a90facf14009a6e742a161de5d66b1955faba5acf52c0c39aa56c7a722",
+   "src/agent_readiness/remediation/findings.py": "8979311ab4b750137efc10554d304154c6dade99bb2402c375477fe3b63b111c",
+   "src/agent_readiness/remediation/library.py": "56a5c577fe2c1a8c91d4210e0319b037ed7525ad16bed93e7cc10f960219f618",
+   "src/agent_readiness/remediation/engine.py": "bda56cafe360f200e1f6ba21c0736071db2e86514c4df12c1200f83adfb3f67b",
+   "src/agent_readiness/remediation/experiment.py": "9887d16e6d59f988ffcae762d95087eb73fc920ec688cfd7fbccdf446c1f4bea",
+   "src/agent_readiness/spend_gate.py": "3666a8c6a0b4169a8700e2f09e4bb55a02a25301a0586a08ae24d75c1fa32235",
+   "src/agent_readiness/capture.py": "a3b9246e085e9d6e4608e3500572bb7a35f4d98689d6f4cf18b128054018ac13",
+   "src/agent_readiness/scanner/execute.py": "df1ca8681f5683b9e07afb60ccc3be1fc47bca76095eb5def4fff151cc3a2b79",
+   "src/agent_readiness/profiles/suite-v2-compat1.json": "c46fc314b7b37eef02b27351919865b92a16369d01246764250563fff6adeab6",
+   "src/agent_readiness/environments/electronics/tasks.py": "5039b3e17e536a3c1be3d37d903331f893c2ac2f9eecd79493ec651fa6b4877f",
+   "src/agent_readiness/environments/electronics/catalog.py": "6bedf8464efec1eb01970d3b30ff3479f6c3c57af6c843a5367dd702fed0ca62",
+   "src/agent_readiness/environments/electronics/variants.py": "f6bf3309916a72a82800d4f0cfb2863366cdcc3b3bb4f70adf8191c53ae2e851"
+  },
+  "git": {
+   "commit": "29e9312363eeda48ee413f34ee1b6ea90c925403",
+   "dirty": false
+  }
+ },
+ "limits": {
+  "per_request_usd": 0.05,
+  "per_run_usd": 0.5,
+  "max_requests_per_run": 12,
+  "image_upper_bound_tokens": 4000,
+  "stage_cap_aud": 6.0,
+  "stage_cap_usd": 4.0,
+  "usd_to_aud": 1.5,
+  "programme_ceiling_aud": 50.0
+ },
+ "budget_check": {
+  "spent_before_usd": 4.13783,
+  "spent_before_aud": 6.2067,
+  "remaining_before_aud": 43.7933,
+  "remaining_after_stage_cap_aud": 37.7933,
+  "basis": "calculated, not billed; ceiling is a limit, not an authorization"
+ },
+ "stopping_rules": {
+  "max_void_runs": 2,
+  "max_parser_rejections_per_block": 2,
+  "halt_on": [
+   "budget_stop",
+   "guard_violation",
+   "bound_violation",
+   "stage_cap",
+   "no_room_to_act_after_block_2"
+  ],
+  "retries": "never",
+  "replacements": "never"
+ },
+ "pilot_gate": null,
+ "gate": {
+  "id": "room-to-act-v2",
+  "applies_to": "the `unmodified` arm, T1, non-void runs only",
+  "room_if_any": {
+   "R1_incomplete_answer": "oracle reports >= 1 missing eligible product (recall < 1)",
+   "R2_oracle_fail_on_recall": "oracle verdict FAIL and recall < 1",
+   "R3_budget_exhausted_with_unchecked_candidates": "model requests >= 75% of the request limit (>= 9 of 12) or stop_reason request_limit, AND the oracle reports missing products",
+   "R5_wrong_inclusion": "the answer reported >= 1 ineligible product (for example an out-of-stock one): an oracle-measured error that stock visibility addresses",
+   "R4_substantial_task_effort": "model requests >= 9 (75% of the limit) OR product-page visits >= 5, AND no repeated-action loop and no tool-visibility gap in the run (so the effort is not a tool artefact)"
+  },
+  "never_counts": [
+   "budget_stop",
+   "provider_failure",
+   "ambiguous_timeout",
+   "guard_violation",
+   "interrupted runs (all void)"
+  ],
+  "interim_check": "after the `unmodified` T1 runs of blocks 1 and 2 exist: continue iff at least one of them shows room (R1-R4); if both are void -> halt as inconclusive (no replacement); if neither shows room -> halt as `no_room_to_act` (a ceiling finding)",
+  "limits": {
+   "request_fraction": 0.75,
+   "min_visits": 5
+  }
+ },
+ "verdict_rule": {
+  "scope": "H1 (modified - unmodified) only; H2/H3 are reported descriptively",
+  "min_valid_pairs": 5,
+  "supports": "mean(delta model_requests) <= -3 AND mean(delta product_page_visits) <= -2 AND modified pass-rate >= unmodified pass-rate AND two-sided exact sign-flip p <= 0.07 AND control |mean delta requests| < 2 (if >= 1 valid control pair)",
+  "not_supported": "mean(delta model_requests) >= -1 with >= min_valid_pairs",
+  "else": "inconclusive"
+ },
+ "causal_question": "Does applying the product's recommendation as issued (stock labels on listing cards plus an in-stock filter) change the outcome of the frozen stock-dependent set-collection task for the frozen agent on this storefront, and how much of any change is attributable to the labels alone versus the added filter?",
+ "hypotheses": {
+  "H1_confirmatory": "modified vs unmodified: fewer model requests per T1 run, with answer completeness not worse",
+  "H2_exploratory": "labels_only vs unmodified: some reduction from labels alone",
+  "H3_exploratory": "modified vs labels_only: an additional reduction from the filter",
+  "negative_control": "T4 (stock-independent) shows no arm-related shift: |mean delta model requests| < 2"
+ },
+ "arms": [
+  "unmodified",
+  "labels_only",
+  "modified"
+ ],
+ "prior_stage": {
+  "pilot_manifest_sha256": "25a22bfdba02363b0b31eecbd1c3834b5744372dcf35ec79c2c111a1d6ae08b3",
+  "pilot_results_sha256": {
+   "rows.jsonl": "98ffe4f7d472f93109ee3e007578c688bbbffb76d58f5a3ef702cefec9d3430f",
+   "pilot-gate.json": "f16a07de8d2c148090fa16d8c64259d46a2c2cee1b173358b013a926a553c0de",
+   "effect-record.json": "334466c23e658b0b05cd0a6617ccf9e8f8c4bf0a11fca8c2bbd78c109e0a1a44",
+   "ledger.jsonl": "402ac98e96175e7f9189ecbadb0f2f7fea5f947b21ae3becec9f54f313d883e3",
+   "status.json": "c3ca9253aa0bc1891b793f879535e762d97fafbe70d484fb5aa780db9ad023f5"
+  },
+  "original_gate_decision": "stop",
+  "original_gate_reason": "ceiling effect: 3 product-page visits, extra items []",
+  "erratum": "The original gate said `stop` ('ceiling effect') while the unmodified pilot run FAILED on recall 0.33 after exhausting its step budget: the 'ceiling effect' interpretation was wrong. The original result is preserved unchanged; the corrected gate (GATE_V2) applies prospectively to this stage only."
+ },
+ "cost_envelope": {
+  "expected_usd": [
+   1.62,
+   2.4,
+   3.18
+  ],
+  "expected_aud": [
+   2.43,
+   3.6,
+   4.77
+  ],
+  "worst_case_usd": 4.0,
+  "worst_case_aud": 6.0,
+  "worst_case_basis": "the ledger stage cap: reservations can never sum above it (further requests are refused, the run is void, the stage halts); if every request used its full reservation the stage would end at the cap",
+  "per_run_cost_assumptions_usd": {
+   "unmodified": [
+    0.12,
+    0.2
+   ],
+   "labels_only": [
+    0.05,
+    0.15
+   ],
+   "modified": [
+    0.04,
+    0.08
+   ],
+   "T4": [
+    0.06,
+    0.1
+   ]
+  },
+  "basis": "calculated at published prices from pilot/earlier observations; not a bill"
+ },
+ "schedule": [
+  {
+   "run_id": "main-01",
+   "block": 1,
+   "task_code": "T1",
+   "task_id": "t1-anc-headphones-under-250-all",
+   "state": "unmodified",
+   "variant_id": "electronics-v1/availability-detail+specs-structured+sku-listing"
+  },
+  {
+   "run_id": "main-02",
+   "block": 1,
+   "task_code": "T1",
+   "task_id": "t1-anc-headphones-under-250-all",
+   "state": "modified",
+   "variant_id": "electronics-v1/availability-listing+specs-structured+sku-listing"
+  },
+  {
+   "run_id": "main-03",
+   "block": 1,
+   "task_code": "T1",
+   "task_id": "t1-anc-headphones-under-250-all",
+   "state": "labels_only",
+   "variant_id": "electronics-v1/availability-listing+specs-structured+sku-listing+stockfilter-off"
+  },
+  {
+   "run_id": "main-04",
+   "block": 1,
+   "task_code": "T4",
+   "task_id": "t4-policy-delivery-tessera-whisper",
+   "state": "modified",
+   "variant_id": "electronics-v1/availability-listing+specs-structured+sku-listing"
+  },
+  {
+   "run_id": "main-05",
+   "block": 1,
+   "task_code": "T4",
+   "task_id": "t4-policy-delivery-tessera-whisper",
+   "state": "labels_only",
+   "variant_id": "electronics-v1/availability-listing+specs-structured+sku-listing+stockfilter-off"
+  },
+  {
+   "run_id": "main-06",
+   "block": 1,
+   "task_code": "T4",
+   "task_id": "t4-policy-delivery-tessera-whisper",
+   "state": "unmodified",
+   "variant_id": "electronics-v1/availability-detail+specs-structured+sku-listing"
+  },
+  {
+   "run_id": "main-07",
+   "block": 2,
+   "task_code": "T1",
+   "task_id": "t1-anc-headphones-under-250-all",
+   "state": "labels_only",
+   "variant_id": "electronics-v1/availability-listing+specs-structured+sku-listing+stockfilter-off"
+  },
+  {
+   "run_id": "main-08",
+   "block": 2,
+   "task_code": "T1",
+   "task_id": "t1-anc-headphones-under-250-all",
+   "state": "unmodified",
+   "variant_id": "electronics-v1/availability-detail+specs-structured+sku-listing"
+  },
+  {
+   "run_id": "main-09",
+   "block": 2,
+   "task_code": "T1",
+   "task_id": "t1-anc-headphones-under-250-all",
+   "state": "modified",
+   "variant_id": "electronics-v1/availability-listing+specs-structured+sku-listing"
+  },
+  {
+   "run_id": "main-10",
+   "block": 2,
+   "task_code": "T4",
+   "task_id": "t4-policy-delivery-tessera-whisper",
+   "state": "modified",
+   "variant_id": "electronics-v1/availability-listing+specs-structured+sku-listing"
+  },
+  {
+   "run_id": "main-11",
+   "block": 2,
+   "task_code": "T4",
+   "task_id": "t4-policy-delivery-tessera-whisper",
+   "state": "labels_only",
+   "variant_id": "electronics-v1/availability-listing+specs-structured+sku-listing+stockfilter-off"
+  },
+  {
+   "run_id": "main-12",
+   "block": 2,
+   "task_code": "T4",
+   "task_id": "t4-policy-delivery-tessera-whisper",
+   "state": "unmodified",
+   "variant_id": "electronics-v1/availability-detail+specs-structured+sku-listing"
+  },
+  {
+   "run_id": "main-13",
+   "block": 3,
+   "task_code": "T1",
+   "task_id": "t1-anc-headphones-under-250-all",
+   "state": "labels_only",
+   "variant_id": "electronics-v1/availability-listing+specs-structured+sku-listing+stockfilter-off"
+  },
+  {
+   "run_id": "main-14",
+   "block": 3,
+   "task_code": "T1",
+   "task_id": "t1-anc-headphones-under-250-all",
+   "state": "modified",
+   "variant_id": "electronics-v1/availability-listing+specs-structured+sku-listing"
+  },
+  {
+   "run_id": "main-15",
+   "block": 3,
+   "task_code": "T1",
+   "task_id": "t1-anc-headphones-under-250-all",
+   "state": "unmodified",
+   "variant_id": "electronics-v1/availability-detail+specs-structured+sku-listing"
+  },
+  {
+   "run_id": "main-16",
+   "block": 4,
+   "task_code": "T1",
+   "task_id": "t1-anc-headphones-under-250-all",
+   "state": "modified",
+   "variant_id": "electronics-v1/availability-listing+specs-structured+sku-listing"
+  },
+  {
+   "run_id": "main-17",
+   "block": 4,
+   "task_code": "T1",
+   "task_id": "t1-anc-headphones-under-250-all",
+   "state": "unmodified",
+   "variant_id": "electronics-v1/availability-detail+specs-structured+sku-listing"
+  },
+  {
+   "run_id": "main-18",
+   "block": 4,
+   "task_code": "T1",
+   "task_id": "t1-anc-headphones-under-250-all",
+   "state": "labels_only",
+   "variant_id": "electronics-v1/availability-listing+specs-structured+sku-listing+stockfilter-off"
+  },
+  {
+   "run_id": "main-19",
+   "block": 5,
+   "task_code": "T1",
+   "task_id": "t1-anc-headphones-under-250-all",
+   "state": "unmodified",
+   "variant_id": "electronics-v1/availability-detail+specs-structured+sku-listing"
+  },
+  {
+   "run_id": "main-20",
+   "block": 5,
+   "task_code": "T1",
+   "task_id": "t1-anc-headphones-under-250-all",
+   "state": "labels_only",
+   "variant_id": "electronics-v1/availability-listing+specs-structured+sku-listing+stockfilter-off"
+  },
+  {
+   "run_id": "main-21",
+   "block": 5,
+   "task_code": "T1",
+   "task_id": "t1-anc-headphones-under-250-all",
+   "state": "modified",
+   "variant_id": "electronics-v1/availability-listing+specs-structured+sku-listing"
+  },
+  {
+   "run_id": "main-22",
+   "block": 6,
+   "task_code": "T1",
+   "task_id": "t1-anc-headphones-under-250-all",
+   "state": "modified",
+   "variant_id": "electronics-v1/availability-listing+specs-structured+sku-listing"
+  },
+  {
+   "run_id": "main-23",
+   "block": 6,
+   "task_code": "T1",
+   "task_id": "t1-anc-headphones-under-250-all",
+   "state": "labels_only",
+   "variant_id": "electronics-v1/availability-listing+specs-structured+sku-listing+stockfilter-off"
+  },
+  {
+   "run_id": "main-24",
+   "block": 6,
+   "task_code": "T1",
+   "task_id": "t1-anc-headphones-under-250-all",
+   "state": "unmodified",
+   "variant_id": "electronics-v1/availability-detail+specs-structured+sku-listing"
+  }
+ ],
+ "schedule_sha256": "ec38cb82572d3f6b108bab2dd7a81effdd009eb823420d98916070b576c04f96",
+ "approval_required": "the owner approves this exact manifest_sha256 for this stage; pilot and main approvals are separate",
+ "manifest_sha256": "ee2f6e062f18912e1903fc8c446bf184933de66450179479e07d93f89a1947c5"
+}
