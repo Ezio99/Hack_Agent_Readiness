@@ -8,11 +8,13 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from .capture import PRICE_INPUT_PER_M, PRICE_OUTPUT_PER_M
 from .recorder import utcnow
 
 DEFAULT_CEILING_USD = 2.00
+VERIFIED_PRICES = (1.25, 4.25)      # https://dev.meta.ai/docs/pricing-rate-limits (muse-spark-1.3 Standard), verified 2026-10-28
 
 
 class Halt(Exception):
@@ -67,3 +69,19 @@ class Ledger:
 
     def mark_probe_ok(self) -> None:
         self._append({"kind": "probe_ok", "id": "probe", "usd": 0.0})
+
+
+def preflight(config, allow_model_calls: bool) -> str:
+    """Common gate for every live path: explicit flag, verified published prices, https endpoint, key present (`config` needs .base_url and .key_env). Returns the key; never logs it."""
+    if not allow_model_calls:
+        raise Halt("refusing: live calls need --allow-model-calls")
+    if (PRICE_INPUT_PER_M, PRICE_OUTPUT_PER_M) != VERIFIED_PRICES:
+        raise Halt("price constants differ from the verified published prices; re-verify before spending")
+    if urlsplit(config.base_url).scheme != "https":
+        raise Halt("endpoint must be https")
+    from .env import load_repo_env
+    load_repo_env()
+    key = os.environ.get(config.key_env, "")
+    if not key:
+        raise Halt(f"{config.key_env} is not set")
+    return key

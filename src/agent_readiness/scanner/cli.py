@@ -31,13 +31,12 @@ def register(sub) -> None:
 
 
 def main(args) -> None:
-    from .service.config import load_config
-    cfg = load_config()
-    if args.scanner_command == "live-validate":
+    if args.scanner_command == "live-validate":       # reads/writes only its own ledger: no scanner config, data dir or dev secret is created
         import json
         from ..agent import ModelConfig as LiveModelConfig
+        from ..ledger import DEFAULT_CEILING_USD
         from . import live
-        ledger = live.Ledger(args.dir, min(args.max_total_usd, live.CEILING_USD))
+        ledger = live.Ledger(args.dir, min(args.max_total_usd, DEFAULT_CEILING_USD))
         try:
             if args.stage == "status":
                 print(json.dumps({"committed_usd": ledger.committed(), "ceiling_usd": ledger.ceiling, "probe_ok": ledger.probe_succeeded(), "entries": ledger.entries()}, indent=1))
@@ -50,6 +49,8 @@ def main(args) -> None:
             print(f"HALT: {exc}")
             raise SystemExit(2)
         return
+    from .service.config import load_config
+    cfg = load_config()
     if args.scanner_command == "kill":
         cfg.data_dir.mkdir(parents=True, exist_ok=True)
         (cfg.kill_switch_path.write_text("on") if args.state == "on" else cfg.kill_switch_path.unlink(missing_ok=True))

@@ -7,16 +7,11 @@ import json
 import sys
 from pathlib import Path
 
-from .. import budget
-from ..ledger import Halt
-from ..suite import registry
-from . import experiment as ex
-from .engine import build_report, report_sha256
-from .probe import SiteProbe
-from .targets import DEFAULT_INITIAL, ManagedTarget
+# Heavy imports are local to the handlers so that `register()` (and therefore every `readiness ...` invocation) stays cheap.
 
 
 def _factors(spec: str | None) -> dict:
+    from .targets import DEFAULT_INITIAL
     out = dict(DEFAULT_INITIAL)
     for part in (spec or "").split(","):
         if part.strip():
@@ -27,6 +22,11 @@ def _factors(spec: str | None) -> dict:
 
 def audit_demo_target(factors: dict) -> dict:
     """Step 1 of the loop: the PRODUCT audits the (unmodified) managed target and generates the finding + recommendation ids the experiment will reference."""
+    from ..suite import registry
+    from . import experiment as ex
+    from .engine import build_report
+    from .probe import SiteProbe
+    from .targets import ManagedTarget
     registry.load_all()
     t = ManagedTarget("demo-shop", "Managed demo electronics storefront (electronics-v1)", dict(factors), [])
     t.start()
@@ -82,11 +82,12 @@ def register(sub) -> None:
 
 
 def audit(args) -> None:
-    import json as _json
-    previous = _json.loads(args.previous.read_text()) if args.previous else None
+    from .engine import build_report
+    from .probe import SiteProbe
+    previous = json.loads(args.previous.read_text()) if args.previous else None
     report = build_report(SiteProbe(args.url, allow_private_hosts=args.allow_private).run(), objective=args.objective, previous=previous)
     if args.out:
-        args.out.write_text(_json.dumps(report, indent=1))
+        args.out.write_text(json.dumps(report, indent=1))
     print(f"audit {report['audit_id']} of {report['target']}: {report['summary']['problems']} problem(s), {report['summary']['recommendations']} recommendation(s)")
     for f in report["findings"]:
         print(f"  [{f['category']}] {f['fingerprint']}: {f['summary']}")
@@ -95,12 +96,16 @@ def audit(args) -> None:
     if report["lifecycle"]:
         for i in report["lifecycle"]["items"]:
             print(f"  LIFECYCLE {i['fingerprint']}: {i['status'].upper()} — {i['current_summary']}")
-    return
 
 
 def main(args) -> None:
     if args.command == "audit":
-        return audit(args)
+        audit(args)
+        return
+    from .. import budget
+    from ..ledger import Halt
+    from . import experiment as ex
+    from .engine import report_sha256
     root = Path(args.root)
     try:
         if args.exp_command == "plan":

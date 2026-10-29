@@ -89,7 +89,7 @@ export function AuditPanel({ onError }: { onError: (e: unknown) => void }) {
       <form className="scan-form" onSubmit={(e) => { e.preventDefault(); void run(false); }}>
         <label htmlFor="audit-target">Target site</label>
         <select id="audit-target" value={target} onChange={(e) => setTarget(e.target.value)}>{targets.map((t) => <option key={t.id} value={t.id}>{t.id} — {t.description}</option>)}</select>
-        <label htmlFor="audit-objective">Shopper task (optional)</label>
+        <label htmlFor="audit-objective">Shopper task (optional — recommendations are marked task-relevant only when you provide one)</label>
         <input id="audit-objective" value={objective} onChange={(e) => setObjective(e.target.value)} maxLength={300} placeholder="e.g. the shopper task whose decisions the page should support" />
         <button type="submit" disabled={busy || !target}>{busy ? "Auditing…" : "Audit site"}</button>{" "}
         <button type="button" disabled={busy || !previous} onClick={() => void run(true)}>Re-audit and compare with the previous audit</button>

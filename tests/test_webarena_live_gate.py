@@ -175,7 +175,7 @@ def test_preflight_refuses_without_flag_key_or_with_changed_prices(monkeypatch):
     monkeypatch.setattr("agent_readiness.env.load_repo_env", lambda *a, **k: False)            # preflight (shared, scanner.live) loads the repo .env lazily
     with pytest.raises(Halt, match="not set"):
         live.preflight(cfg, True)
-    monkeypatch.setattr("agent_readiness.scanner.live.PRICE_INPUT_PER_M", 9.99)
+    monkeypatch.setattr("agent_readiness.ledger.PRICE_INPUT_PER_M", 9.99)
     with pytest.raises(Halt, match="verified published prices"):
         live.preflight(cfg, True)
 

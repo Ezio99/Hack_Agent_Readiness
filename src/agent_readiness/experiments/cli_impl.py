@@ -2,13 +2,17 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from ..ledger import Halt
-from . import analysis, design, driver, manifest as manifest_mod, schedule as schedule_mod
-from .ledger import ExperimentLedger
+if TYPE_CHECKING:
+    from .ledger import ExperimentLedger
+
+# Heavy imports are local to the handlers so that `register()` (and therefore every `readiness ...` invocation) stays cheap.
 
 
 def _ledger(args, mode: str, *, stage_ceiling=None, programme=None) -> ExperimentLedger:
+    from . import design
+    from .ledger import ExperimentLedger
     d = Path(args.out) / ("live" if mode == "live" else "mock")
     ceilings = {k: v["stage_ceiling_usd"] for k, v in design.STAGES.items()}
     if stage_ceiling is not None:
@@ -17,6 +21,7 @@ def _ledger(args, mode: str, *, stage_ceiling=None, programme=None) -> Experimen
 
 
 def preflight(sched: dict, ledger: ExperimentLedger) -> dict:
+    from . import design
     n = len(sched["entries"])
     lo, hi = design.EXPECTED_COST_PER_RUN_USD
     stage = sched["stage"]
@@ -27,6 +32,8 @@ def preflight(sched: dict, ledger: ExperimentLedger) -> dict:
 
 
 def main(args) -> None:
+    from ..ledger import Halt
+    from . import analysis, driver, manifest as manifest_mod, schedule as schedule_mod
     sched = schedule_mod.build_schedule(args.stage, args.seed)
     cmd = args.experiment_command
     if cmd == "schedule":

@@ -10,16 +10,14 @@ Guarantees enforced in code (and unit-tested with stubs; the tests never contact
 from __future__ import annotations
 
 import json
-import os
 import time
 from pathlib import Path
-from urllib.parse import urlsplit
 
 import httpx
 
 from ..agent import ModelConfig
 from ..capture import PRICE_INPUT_PER_M, PRICE_OUTPUT_PER_M
-from ..ledger import DEFAULT_CEILING_USD, Halt, Ledger, cost_of      # noqa: F401  (re-exported: shared primitives now live in agent_readiness.ledger)
+from ..ledger import DEFAULT_CEILING_USD, VERIFIED_PRICES, Halt, Ledger, cost_of, preflight      # noqa: F401  (re-exported: shared primitives now live in agent_readiness.ledger)
 from ..environments.electronics.variants import make_variant
 from ..probe import SAFE_HEADERS, STAGE_B_MAX_COMPLETION_TOKENS, STAGE_B_REASONING_EFFORT, STAGE_B_TIMEOUT_SECONDS, _find_cost, _schema_digest
 from ..recorder import Recorder, utcnow
@@ -30,27 +28,11 @@ from .schema import output_schemas
 CEILING_USD = DEFAULT_CEILING_USD
 PROBE_CAP_USD = 0.04
 RUN_RESERVE_USD = 0.48                      # 12 requests x US$0.04 per-request estimate ceiling
-VERIFIED_PRICES = (1.25, 4.25)              # https://dev.meta.ai/docs/pricing-rate-limits (muse-spark-1.3 Standard), verified 2026-10-28
 FIXTURES = ("t1-anc-headphones-under-250-all", "t2-compare-air14-vs-probook15", "t3-cheapest-monitor-27in-usbc-120hz", "t4-policy-delivery-tessera-whisper")
 VARIANT = ("listing", "structured")         # availability-listing+specs-structured
 GUARD_STOPS = {"diagnostic_fidelity_violation", "estimated_cost_limit", "infrastructure_error", "cancelled"}
 PROBE_PROMPT = ("Schema compatibility test only; no browser or website is involved. Return an output whose action list contains exactly one done action with "
                 "success=true and data {products: [{sku: \"PROBE-0\", price_cents: 100}]}. Fill the other fields briefly.")
-
-
-def preflight(config: ModelConfig, allow_model_calls: bool) -> str:
-    if not allow_model_calls:
-        raise Halt("refusing: live calls need --allow-model-calls")
-    if (PRICE_INPUT_PER_M, PRICE_OUTPUT_PER_M) != VERIFIED_PRICES:
-        raise Halt("price constants differ from the verified published prices; re-verify before spending")
-    if urlsplit(config.base_url).scheme != "https":
-        raise Halt("endpoint must be https")
-    from ..env import load_repo_env
-    load_repo_env()
-    key = os.environ.get(config.key_env, "")
-    if not key:
-        raise Halt(f"{config.key_env} is not set")
-    return key
 
 
 def run_probe(config: ModelConfig, ledger: Ledger, out: Path, *, allow_model_calls: bool, transport=None) -> dict:
