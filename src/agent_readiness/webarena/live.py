@@ -13,21 +13,19 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
-import re
 import time
 from pathlib import Path
-from urllib.parse import urlsplit
 
 import httpx
 
 from ..agent import ModelConfig, attempt, create_model, profile
 from ..capture import PRICE_INPUT_PER_M, PRICE_OUTPUT_PER_M
 from ..spend_gate import IMAGE_UPPER_BOUND_TOKENS, RequestGate, upper_bound_usd      # noqa: F401  (shared with the synthetic-suite runner; re-exported here)
-from ..env import load_repo_env, scrubbed_environment
+from ..env import scrubbed_environment
 from ..probe import SAFE_HEADERS, STAGE_B_MAX_COMPLETION_TOKENS, STAGE_B_REASONING_EFFORT, STAGE_B_TIMEOUT_SECONDS
 from ..recorder import Recorder, utcnow
-from ..scanner.live import VERIFIED_PRICES, Halt, Ledger, cost_of
+from ..ledger import Halt, Ledger, cost_of
+from ..scanner.live import preflight                      # noqa: F401  (also imported from here by remediation.experiment)
 from ..scanner.schema import hashes_for, output_schemas
 from .adapter import WAAnswer, WATask, WebArenaShopping
 from .har import NetworkCapture, sanitize_har
@@ -96,18 +94,7 @@ def scan_requests(trace_dir: Path, forbidden: list[str]) -> dict:
 
 
 # ---------- preflight ----------
-def preflight(config: ModelConfig, allow_model_calls: bool) -> str:
-    if not allow_model_calls:
-        raise Halt("refusing: live calls need --allow-model-calls")
-    if (PRICE_INPUT_PER_M, PRICE_OUTPUT_PER_M) != VERIFIED_PRICES:
-        raise Halt("price constants differ from the verified published prices; re-verify before spending")
-    if urlsplit(config.base_url).scheme != "https":
-        raise Halt("endpoint must be https")
-    load_repo_env()
-    key = os.environ.get(config.key_env, "")
-    if not key:
-        raise Halt(f"{config.key_env} is not set")
-    return key
+# `preflight` (flag, verified prices, https endpoint, key present) is the one shared implementation in scanner.live; re-exported here for existing callers.
 
 
 def check_site(base_url: str, ctrl_url: str | None = None, *, client: httpx.Client | None = None) -> dict:

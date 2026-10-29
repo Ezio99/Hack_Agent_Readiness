@@ -7,7 +7,6 @@ rescan that would test it. Nothing here claims that a design change helps; one m
 from __future__ import annotations
 
 import re
-from typing import Any
 
 HYPOTHESIS = "hypothesis_unvalidated"
 INFRA_STATUSES = {"infrastructure_error": "the harness or provider failed", "timeout": "the wall-clock limit was reached", "request_limit": "the model-request limit was reached",
@@ -169,7 +168,6 @@ def compare(a: dict, b: dict) -> dict:
     fa, fb = a["variant"]["factors"], b["variant"]["factors"]
     changed = {k: [fa[k], fb[k]] for k in fa if fa[k] != fb.get(k)}
     ea, eb = a["evaluation"], b["evaluation"]
-    metric = lambda path: [a["metrics"][path], b["metrics"][path]]
     delta = lambda k: round(b["metrics"][k] - a["metrics"][k], 6)
     caveats = ["Each side is a single scan; agent behaviour varies from run to run, so a difference here is not a validated effect of the changed factor."]
     if "mock" in (a["scan"]["mode"], b["scan"]["mode"]):

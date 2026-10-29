@@ -172,10 +172,10 @@ def test_preflight_refuses_without_flag_key_or_with_changed_prices(monkeypatch):
     with pytest.raises(Halt, match="allow-model-calls"):
         live.preflight(cfg, False)
     monkeypatch.delenv(cfg.key_env, raising=False)
-    monkeypatch.setattr(live, "load_repo_env", lambda *a, **k: False)
+    monkeypatch.setattr("agent_readiness.env.load_repo_env", lambda *a, **k: False)            # preflight (shared, scanner.live) loads the repo .env lazily
     with pytest.raises(Halt, match="not set"):
         live.preflight(cfg, True)
-    monkeypatch.setattr(live, "PRICE_INPUT_PER_M", 9.99)
+    monkeypatch.setattr("agent_readiness.scanner.live.PRICE_INPUT_PER_M", 9.99)
     with pytest.raises(Halt, match="verified published prices"):
         live.preflight(cfg, True)
 
@@ -195,7 +195,7 @@ def test_leak_scan_and_request_scan(tmp_path):
 
 def test_schema_probe_success_rejection_and_cap(tmp_path, monkeypatch):
     monkeypatch.setenv("META_MODEL_API_KEY", "stub-key")
-    monkeypatch.setattr(live, "load_repo_env", lambda *a, **k: False)
+    monkeypatch.setattr("agent_readiness.env.load_repo_env", lambda *a, **k: False)
     cfg = live.ModelConfig()
     good = {"evaluation_previous_goal": "x", "memory": "", "next_goal": "x", "thinking": "x", "current_plan_item": 0, "plan_update": None,
             "action": [{"done": {"data": {"task_type": "NAVIGATE", "status": "SUCCESS", "retrieved_data": None, "error_details": None}, "success": True}}]}
