@@ -1,0 +1,24 @@
+{
+ "category": "information_placement",
+ "expected": {
+  "affected_templates": [
+   "/workshops",
+   "/workshops/{}"
+  ],
+  "claim_kinds": [
+   "info_absent_on_template"
+  ],
+  "example_task": "Which beginner workshops under $50 still have seats?"
+ },
+ "extra_tokens": [],
+ "planted": [
+  {
+   "description": "decision-relevant workshop fields (price, date, seats left) exist only on the detail pages",
+   "kind": "detail_only_fields",
+   "where": "/workshops"
+  }
+ ],
+ "role": "demonstration",
+ "site_id": "site-1",
+ "summary": "Price, date, seats left, level and location appear only on workshop detail pages, never on the listing cards."
+}

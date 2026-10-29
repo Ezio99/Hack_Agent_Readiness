@@ -139,10 +139,13 @@ def test_meta_failures_keep_the_reservation_and_never_leak_the_key(tmp_path):
     assert led.committed() > 0 and [e["kind"] for e in led.entries()] == ["reserve"]
 
 
-def test_only_the_meta_module_may_use_the_network():
+def test_only_the_two_sanctioned_modules_may_use_the_network():
+    """llm/meta.py (model calls, behind the spend gate) and inspect/crawl.py (site inspection, behind the origin/SSRF/robots rules) are the only network-capable modules."""
+    allowed = {"llm/meta.py", "inspect/crawl.py"}
+    base = ROOT / "src" / "agent_readiness" / "investigate"
     offenders = []
-    for f in (ROOT / "src" / "agent_readiness" / "investigate").rglob("*.py"):
+    for f in base.rglob("*.py"):
         text = f.read_text()
-        if f.name != "meta.py" and any(w in text for w in ("import httpx", "import requests", "import socket", "urllib.request", "import aiohttp")):
-            offenders.append(f.name)
+        if f.relative_to(base).as_posix() not in allowed and any(w in text for w in ("import httpx", "import requests", "import socket", "urllib.request", "import aiohttp")):
+            offenders.append(f.relative_to(base).as_posix())
     assert offenders == []

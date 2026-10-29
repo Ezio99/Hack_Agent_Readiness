@@ -1,0 +1,23 @@
+{
+ "category": "unlabeled_icon_controls",
+ "expected": {
+  "affected_templates": [
+   "*"
+  ],
+  "claim_kinds": [
+   "control_unlabeled"
+  ],
+  "example_task": "What are the Sunday opening hours?"
+ },
+ "extra_tokens": [],
+ "planted": [
+  {
+   "description": "navigation and form controls have no text, aria-label or label; only icons or placeholders",
+   "kind": "unnamed_controls",
+   "where": "nav, /rooms, /catalogue, /rooms/{}"
+  }
+ ],
+ "role": "demonstration",
+ "site_id": "site-2",
+ "summary": "The primary navigation, room-detail links, catalogue search button and booking form controls are icon-only or placeholder-only with no accessible name."
+}
