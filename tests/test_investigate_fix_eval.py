@@ -159,6 +159,7 @@ def applied_run(tmp_path, post, name="e"):
     rec.recommend_stage(Context(run))
     pid = next(p.id for p in run.evidence.proposals.values() if p.basis == "verified_finding")
     ctx = Context(run, options={"fix": pid})
+    run.write_artifact("arm-config", trials_stage.arm_config(Context(run)))                 # the baseline stage freezes this; synthetic baselines do it here
     st = Stage("apply_fix", rec.apply_fix_stage, gate=True, manifest=rec.apply_manifest)
     r = Pipeline([st]).run(ctx)
     run.approve("apply_fix", r.manifest_sha256, "owner approves")
@@ -193,7 +194,7 @@ def test_a_patch_that_makes_the_answer_visible_on_the_start_page_invalidates_tha
     run = with_finding(tmp_path, name="inv")
     snap = freezer.load(run) and zoo.snapshot("site-1")
     cheat, _ = apply_patch(snap, {"ops": [{"op": "insert_text", "pages": ["/"], "css": "h1", "position": "after", "text": "12 Nov"}]})                  # provenance-legal (text exists on the site) but it hands out an answer
-    ok, excluded = ev.still_valid(run, cheat)
+    ok, excluded, _ = ev.still_valid(run, cheat)
     assert excluded and any("start page" in e["reason"] or "visible" in e["reason"] for e in excluded) and len(ok) < len(freezer.load(run)[0]["tasks"])
 
 
@@ -227,6 +228,6 @@ def test_an_agent_hitting_its_own_limits_is_a_failure_not_a_void_trial_and_does_
     manifest_, insts = freezer.load(run)[0], {i.spec.task_id: i for i in freezer.instances(run)}
     for t in manifest_["tasks"]:
         shutil.rmtree(run.dir / "artifacts" / "trials", ignore_errors=True)
-    out = trials_stage.run_arm(Context(run), label="baseline", snap=zoo.snapshot("site-1"), tasks=manifest_["tasks"], insts=insts, prefix="vtest", manifest_=trials_stage.manifest(Context(run)))
+    out = trials_stage.run_arm(Context(run), label="baseline", snap=zoo.snapshot("site-1"), tasks=manifest_["tasks"], insts=insts, prefix="vtest", manifest_=trials_stage.manifest(Context(run)), repeats=1)
     assert out["void"] == 0 and out["trials"] == len(manifest_["tasks"]) == len(calls)
     assert "request_limit" not in trials_stage.VOID_STATUSES and "timeout" not in trials_stage.VOID_STATUSES and "estimated_cost_limit" in trials_stage.VOID_STATUSES

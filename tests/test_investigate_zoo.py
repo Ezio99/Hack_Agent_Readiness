@@ -56,10 +56,11 @@ def test_nothing_an_investigator_can_see_reveals_a_sealed_diagnosis(sid):
 
 def test_blindness_guard_actually_detects_leaks_and_passes_clean_text():
     m = sealed.manifest("site-1")
-    for leak in (m["category"], m["summary"].upper(), m["planted"][0]["description"], "this is a planted problem", "information placement issue"):
+    for leak in (m["category"], m["summary"].upper(), m["planted"][0]["description"], "information placement issue"):
         with pytest.raises(sealed.BlindnessError):
             sealed.assert_blind(f"Prompt: please look at {leak} now")
     sealed.assert_blind("Listing cards show a title and a blurb. Detail pages show a price.")
+    sealed.assert_blind("Our trees were planted in 1990 along the avenue.")                       # ordinary site text containing a generic word must not abort a pipeline
 
 
 def test_site_ids_and_titles_are_opaque_and_sites_differ_structurally():

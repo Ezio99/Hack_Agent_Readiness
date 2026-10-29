@@ -59,11 +59,11 @@ def build(root: Path, run_id: str, site: str, *, mode: str, options: dict | None
         raise Halt(f"investigation {run_id} was created in {run.state['mode']} mode; it cannot be resumed as {mode}")
     cfg = opts.get("model_config") or ModelConfig()
     live = mode == "live"
-    ceiling = opts.get("stage_cap_usd", 3.0) + TASKGEN_RUN_CAP_USD + opts.get("investigate_cap_usd", investigator.RUN_CAP_USD)
+    ceiling = opts.get("total_cap_usd", 3.0)                       # ONE hard ceiling on the shared spend ledger for the whole investigation
     llm = LazyMeta(run, cfg, opts.get("allow_model_calls", False), TASKGEN_RUN_CAP_USD, ceiling) if live else None
     if live and "investigator_llm" not in opts:
         opts["investigator_llm"] = LazyMeta(run, cfg, opts.get("allow_model_calls", False), opts.get("investigate_cap_usd", investigator.RUN_CAP_USD), ceiling, name="investigate",
-                                            max_requests=opts.get("max_calls", investigator.DEFAULT_MAX_CALLS) + 3, transcript="investigator-llm-transcript")
+                                            max_requests=2 * (opts.get("max_calls", investigator.DEFAULT_MAX_CALLS) + 1), transcript="investigator-llm-transcript")
     snap = zoo.snapshot(site)
     stages = [Stage("inspect", lambda c: run_inspect(c, snap)),
               Stage("taskgen", taskgen_stage, spends=live, manifest=taskgen_manifest if live else None),

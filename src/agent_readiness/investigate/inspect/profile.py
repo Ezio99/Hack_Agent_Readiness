@@ -78,8 +78,11 @@ def observations(profile: dict, *, mode: str = "scripted", source: str = "rule:i
             {"listing": l["listing"], "detail_template": l["detail_template"], "fields": l["fields"], "not_in_listing": sorted(absent), "in_listing": sorted(present)}, [f"page:{l['listing']}"])
     for tmpl, items in sorted(profile["unnamed_controls"].items()):
         strong = [i for i in items if not i["weak_only"]]
-        add("controls_without_accessible_name", f"Template {tmpl}: {len(strong)} interactive control(s) have no accessible name and {len(items) - len(strong)} rely on a placeholder only.",
-            {"template": tmpl, "controls": items[:12], "count_no_name": len(strong), "count_placeholder_only": len(items) - len(strong)}, [f"page:{i['page']}" for i in items[:6]])
+        key = lambda i: (i["tag"], i["type"], i["href"], i["landmark"])
+        distinct = {key(i) for i in strong}                      # a navigation icon repeated on every page is ONE control, not one per page
+        add("controls_without_accessible_name", f"Template {tmpl}: {len(distinct)} distinct interactive control(s) have no accessible name ({len(strong)} occurrences across {len({i['page'] for i in strong})} page(s)) and "
+            f"{len(items) - len(strong)} occurrence(s) rely on a placeholder only.",
+            {"template": tmpl, "controls": items[:12], "count_no_name": len(strong), "distinct_no_name": len(distinct), "count_placeholder_only": len(items) - len(strong)}, [f"page:{i['page']}" for i in items[:6]])
     deep = {p: d for p, d in profile["depth"].items() if d >= 3}
     if deep:
         add("deep_pages", f"{len(deep)} page(s) are 3 or more link steps from the entry page: {', '.join(sorted(deep)[:6])}.", {"pages": deep}, [f"page:{p}" for p in sorted(deep)[:6]])

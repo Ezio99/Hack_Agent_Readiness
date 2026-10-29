@@ -72,20 +72,37 @@ class Compiled:
     evidence_texts: list[tuple[str | None, str]]  # (path or None=any page, text) that must have been shown to the model
     start_hint_pages: list[str] = field(default_factory=list)
     detail: dict = field(default_factory=dict)
+    distractors: list[str] = field(default_factory=list)       # other answers the site offers for the same question (an answer that also names one is a hedge, not an answer)
 
 
 def norm_answer(s: str) -> str:
-    return re.sub(r"[^\w$%.]+", " ", norm(str(s)).lower()).strip()
+    """Lower-case, collapse whitespace/punctuation; a '.' survives only between digits (decimals), so 'Spoon Carving.' matches 'Spoon Carving'."""
+    t = re.sub(r"(?<!\d)\.|\.(?!\d)", " ", norm(str(s)).lower())
+    return re.sub(r"[^\w$%.]+", " ", t).strip()
 
 
-def answer_match(truth: str, answer: str) -> bool:
-    """Exact after normalisation, or the truth appears as a whole phrase inside a SHORT sentence (<= truth length + 16 chars) — so 'It is $45 per day' passes but a list of alternatives does not."""
+HEDGE_WORDS = re.compile(r"(?<!\w)(or|either|maybe|perhaps|possibly|probably|unsure|between|neither|nor)(?!\w)|/")
+
+
+def _phrase(needle: str, hay: str):
+    return re.search(rf"(?<!\w){re.escape(needle)}(?!\w)", hay)
+
+
+def answer_match(truth: str, answer: str, distractors: list[str] | tuple[str, ...] = ()) -> bool:
+    """Exact after normalisation, or the truth appears as a whole phrase inside a SHORT sentence (<= truth length + 16 chars) that does NOT also name another answer the site offers for
+    this question (`distractors`). 'It is $45.' passes; '12 Nov or 14 Nov' and 'Silver Ring Making or Pottery Basics' do not (a hedge covers several answers, so it is not one)."""
     t, a = norm_answer(truth), norm_answer(answer)
     if not a:
         return False
     if a == t:
         return True
-    return len(a) <= len(t) + 16 and re.search(rf"(?<!\w){re.escape(t)}(?!\w)", a) is not None
+    if len(a) > len(t) + 16 or not _phrase(t, a):
+        return False
+    m = _phrase(t, a)
+    rest = (a[:m.start()] + " " + a[m.end():])
+    if HEDGE_WORDS.search(rest):                              # "X or something else", "either X", "maybe X", "X / Y": an answer that offers alternatives is a hedge even if the alternative is not a known candidate
+        return False
+    return not any((nd := norm_answer(d)) and nd != t and _phrase(nd, rest) for d in distractors)
 
 
 def quantity(value: str) -> tuple[float, str] | None:
@@ -144,13 +161,14 @@ def compile_criterion(c: Criterion | dict, profile: dict) -> Compiled:
             raise CriterionError(f"no fact labelled {c.label!r} on {c.page}")
         if len(vals) > 1:
             raise CriterionError(f"fact {c.label!r} on {c.page} has several different values (ambiguous)")
-        return Compiled("page_fact", "string", vals[0], [c.page], [(c.page, vals[0])])
+        others = sorted({f["value"] for p in profile["pages"].values() for f in p["facts"] if f["label"] == norm(c.label).lower()} - {vals[0]})
+        return Compiled("page_fact", "string", vals[0], [c.page], [(c.page, vals[0])], distractors=others)
     if isinstance(c, ReachPage):
         page = _page(profile, c.target)
         title = page["title"]
         if not title or sum(1 for p in profile["pages"].values() if p["title"] == title) != 1:
             raise CriterionError("target page has no unique title")
-        return Compiled("reach_page", "string", title, [c.target], [(c.target, title)])
+        return Compiled("reach_page", "string", title, [c.target], [(c.target, title)], distractors=sorted({p["title"] for q, p in profile["pages"].items() if q != c.target and p["title"]} - {title}))
     if isinstance(c, ItemSet):
         items = _items(profile, c.listing)
         hit, need = [], []
@@ -186,7 +204,7 @@ def compile_criterion(c: Criterion | dict, profile: dict) -> Compiled:
     win = ranked[0][1]
     wv = _fact(profile["pages"][win["href"]], c.label)[0]
     return Compiled("extremum", "string", win["name"], [c.listing] + ([win["href"]] if _needs_detail(win, wv) else []), [(None, win["name"])], [c.listing],
-                    {"items": len(items), "detail_visits_required": int(_needs_detail(win, wv))})
+                    {"items": len(items), "detail_visits_required": int(_needs_detail(win, wv))}, distractors=sorted({i["name"] for _, i in vals} - {win["name"]}))
 
 
 def _parse(c):
@@ -198,7 +216,8 @@ def grade(compiled: Compiled, answer) -> tuple[bool, dict]:
     """Independent grading from the compiled truth; the agent's own claims are never consulted. Returns (passed, details)."""
     if compiled.style == "string":
         a = answer if isinstance(answer, str) else ""
-        return answer_match(compiled.truth, a), {"expected_kind": compiled.kind}
+        ok = answer_match(compiled.truth, a, compiled.distractors)
+        return ok, {"expected_kind": compiled.kind, **({} if ok or not a else {"hedged": answer_match(compiled.truth, a) and not ok})}
     got = {norm_answer(x) for x in (answer if isinstance(answer, list) else []) if isinstance(x, str) and x.strip()}
     want = {norm_answer(x) for x in compiled.truth}
     tp = len(got & want)

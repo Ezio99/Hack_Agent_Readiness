@@ -327,7 +327,7 @@ def test_investigate_stage_skips_without_a_model_and_gates_live_spend_on_a_hash(
     r = Pipeline([st]).run(Context(live, options={"max_calls": 8}))
     assert r.status == "awaiting_approval"
     m = live.artifact(f"manifests/investigate-{r.manifest_sha256[:16]}")
-    assert m["max_tool_calls"] == 8 and m["max_requests"] == 11 and m["retries_per_request"] == 1 and m["run_cap_usd"] == 0.40 and len(m["prompt_sha256"]) == 64
+    assert m["max_tool_calls"] == 8 and m["max_requests"] == 18 and m["retries_per_request"] == 1 and m["run_cap_usd"] == 0.40 and len(m["prompt_sha256"]) == 64
     assert not (live.dir / "spend").exists()
     other = manifest(Context(live, options={"max_calls": 9}))
     assert live.manifest_sha256(other) != r.manifest_sha256                              # a different budget is a different, unapproved manifest

@@ -25,7 +25,7 @@ def manifests() -> dict[str, dict]:
 
 def tokens(site_id: str | None = None) -> set[str]:
     """Strings whose appearance in anything shown to a model would reveal a diagnosis: category ids, the planted summaries/descriptions, and the word 'planted'."""
-    out = {"planted"}
+    out: set[str] = set()                    # no bare generic word: ordinary site text (e.g. "trees were planted") must not abort a pipeline; only our own manifest strings are protected
     for sid, m in manifests().items():
         if site_id in (None, sid):
             out |= {m["category"], m["summary"], *(p["description"] for p in m["planted"]), *m.get("extra_tokens", [])}

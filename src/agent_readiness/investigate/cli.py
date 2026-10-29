@@ -42,7 +42,7 @@ def register(sub) -> None:
     rn.add_argument("--mode", choices=["mock", "live"], default="mock", help="mock: rule tasks + scripted agent (no key); live: Meta tasks + Meta agent, each spending stage needs your hash approval")
     rn.add_argument("--repeats", type=int, default=1)
     rn.add_argument("--n-tasks", type=int, default=8)
-    rn.add_argument("--stage-cap-usd", type=float, default=3.0)
+    rn.add_argument("--total-cap-usd", type=float, default=3.0, help="hard ceiling (USD, calculated) on ALL spend of this investigation: taskgen, both trial arms and the investigation")
     rn.add_argument("--fix", action="append", default=None, help="proposal id to apply to the local mirror and retest (needs your approval hash at apply_fix, then at post_trials); repeatable")
     rn.add_argument("--allow-model-calls", action="store_true")
     st = isub.add_parser("status", help="Show stages, outcome and pending approvals of an investigation")
@@ -80,7 +80,7 @@ def main(args) -> None:
         from ..ledger import Halt
         try:
             run, pipe, ctx = flow.build(args.root, args.id or f"{args.site}-{args.mode}", args.site, mode=args.mode,
-                                        options={"repeats": args.repeats, "n_tasks": args.n_tasks, "stage_cap_usd": args.stage_cap_usd, "allow_model_calls": args.allow_model_calls, "fix": args.fix})
+                                        options={"repeats": args.repeats, "n_tasks": args.n_tasks, "total_cap_usd": args.total_cap_usd, "allow_model_calls": args.allow_model_calls, "fix": args.fix})
             res = pipe.run(ctx)
         except Halt as exc:
             raise SystemExit(f"refused: {exc}")

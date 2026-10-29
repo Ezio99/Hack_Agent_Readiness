@@ -32,7 +32,7 @@ Results (local): fast suite **696 passed**; frozen/pin/CI-guard tests **133 pass
 - No placebo arm yet (a neutral patch of similar size) and no LLM-written patches: the recommendations are template-based; both are deferred as agreed.
 
 ## The smallest complete live experiment I can run tomorrow (needs your explicit approval, one exact hash per spending stage)
-**Site:** `site-5` (development twin; no blind-demonstration site is consumed). **Command:** `readiness investigate run site-5 --mode live --n-tasks 6 --repeats 1 --stage-cap-usd 1.5 --allow-model-calls`, re-run after each approval:
+**Site:** `site-5` (development twin; no blind-demonstration site is consumed). **Command:** `readiness investigate run site-5 --mode live --n-tasks 6 --repeats 1 --total-cap-usd 2.05 --allow-model-calls`, re-run after each approval:
 1. *(optional, A$0.04 worst case)* **L0** probe — decides strict-schema vs prompt-only JSON.
 2. **`taskgen`** (Meta proposes 6 tasks; ≤ 4 calls; cap US$0.15, expected ≈ US$0.03). Free review of `taskgen-report` before continuing.
 3. **`baseline_trials`** (6 frozen tasks × 1, Meta is the agent; expected ≈ US$0.55, historical US$0.08–0.10 per trial). Free review of `attribution`.
