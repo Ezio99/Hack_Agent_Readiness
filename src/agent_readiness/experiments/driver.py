@@ -14,7 +14,8 @@ from ..agent import ModelConfig
 from ..environments.electronics.variants import make_variant
 from ..recorder import utcnow
 from ..scanner.execute import execute_scan
-from ..scanner.live import Halt, preflight
+from ..ledger import Halt
+from ..scanner.live import preflight
 from ..suite import registry
 from . import design, manifest as manifest_mod, metrics, schedule as schedule_mod
 from .ledger import ExperimentLedger

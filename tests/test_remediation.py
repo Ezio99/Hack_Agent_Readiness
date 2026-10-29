@@ -45,6 +45,7 @@ def modified():
     return audit_variant("listing", "hidden")
 
 
+@pytest.mark.slow
 def test_baseline_detects_availability_absent_from_cards_but_present_on_product_pages(baseline):
     f = next(f for f in baseline["findings"] if f["fingerprint"] == "attribute_detail_only:availability")
     c = f["counts"]
@@ -64,6 +65,7 @@ def test_recommendation_is_selected_from_the_library_by_observed_evidence(baseli
     assert {r["template"] for r in baseline["recommendations"]} == {"show-availability-on-listing-cards", "show-sku-on-listing-cards"}      # SKU is also detail-only here
 
 
+@pytest.mark.slow
 def test_modified_site_is_recognised_as_resolved_by_an_independent_rescan(baseline, modified):
     assert "attribute_on_cards:availability" in fps(modified) and "attribute_detail_only:availability" not in fps(modified)
     assert not [r for r in modified["recommendations"] if r["template"] == "show-availability-on-listing-cards"]
@@ -74,6 +76,7 @@ def test_modified_site_is_recognised_as_resolved_by_an_independent_rescan(baseli
     assert items["attribute_detail_only:availability"]["evidence"][0]["type"] == "listing_card" and "no longer observed" in lc["statement"]
 
 
+@pytest.mark.slow
 def test_report_with_previous_embeds_lifecycle_and_history_and_distinguishes_resolution_from_effect(baseline):
     again = audit_variant("listing", "hidden", previous=baseline)
     assert again["lifecycle"]["resolved"] == 2 and again["lifecycle"]["previous_audit_id"] == baseline["audit_id"]
@@ -81,12 +84,14 @@ def test_report_with_previous_embeds_lifecycle_and_history_and_distinguishes_res
 
 
 @pytest.mark.parametrize("av,sku,expect_av,expect_sku", [("detail", "hidden", True, True), ("detail", "listing", True, False), ("listing", "hidden", False, True), ("listing", "listing", False, False)])
+@pytest.mark.slow
 def test_findings_follow_the_observed_site_in_every_combination(av, sku, expect_av, expect_sku):
     r = audit_variant(av, sku)
     assert ("attribute_detail_only:availability" in fps(r)) == expect_av and ("attribute_detail_only:sku" in fps(r)) == expect_sku
     assert ("attribute_on_cards:availability" in fps(r)) == (not expect_av) and ("attribute_on_cards:sku" in fps(r)) == (not expect_sku)
 
 
+@pytest.mark.slow
 def test_probe_is_not_tied_to_the_electronics_templates():
     """A differently structured shop (divs, other class names, other URL scheme, other wording) is analysed by the same rules."""
     def shop(stock_on_cards):

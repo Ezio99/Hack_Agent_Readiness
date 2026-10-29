@@ -68,7 +68,7 @@ export function AuditReportView({ report }: { report: AuditReport }) {
 export function AuditPanel({ onError }: { onError: (e: unknown) => void }) {
   const [targets, setTargets] = useState<{ id: string; description: string }[]>([]);
   const [target, setTarget] = useState("");
-  const [objective, setObjective] = useState("List every in-stock ANC headphone at or below A$250.00");
+  const [objective, setObjective] = useState("");
   const [report, setReport] = useState<AuditReport | null>(null);
   const [previous, setPrevious] = useState<AuditReport | null>(null);
   const [busy, setBusy] = useState(false);
@@ -76,7 +76,7 @@ export function AuditPanel({ onError }: { onError: (e: unknown) => void }) {
   const run = useCallback(async (withPrevious: boolean) => {
     setBusy(true);
     try {
-      const r = await call<AuditReport>("/api/audits", { method: "POST", json: { target_id: target, objective, ...(withPrevious && previous ? { previous_audit_id: previous.audit_id } : {}) } });
+      const r = await call<AuditReport>("/api/audits", { method: "POST", json: { target_id: target, ...(objective.trim() ? { objective: objective.trim() } : {}), ...(withPrevious && previous ? { previous_audit_id: previous.audit_id } : {}) } });
       setPrevious(r); setReport(r);
     } catch (e) { onError(e instanceof ApiError ? e : e); }
     setBusy(false);
@@ -89,8 +89,8 @@ export function AuditPanel({ onError }: { onError: (e: unknown) => void }) {
       <form className="scan-form" onSubmit={(e) => { e.preventDefault(); void run(false); }}>
         <label htmlFor="audit-target">Target site</label>
         <select id="audit-target" value={target} onChange={(e) => setTarget(e.target.value)}>{targets.map((t) => <option key={t.id} value={t.id}>{t.id} — {t.description}</option>)}</select>
-        <label htmlFor="audit-objective">Shopper task (optional)</label>
-        <input id="audit-objective" value={objective} onChange={(e) => setObjective(e.target.value)} maxLength={300} />
+        <label htmlFor="audit-objective">Shopper task (optional — recommendations are marked task-relevant only when you provide one)</label>
+        <input id="audit-objective" value={objective} onChange={(e) => setObjective(e.target.value)} maxLength={300} placeholder="e.g. the shopper task whose decisions the page should support" />
         <button type="submit" disabled={busy || !target}>{busy ? "Auditing…" : "Audit site"}</button>{" "}
         <button type="button" disabled={busy || !previous} onClick={() => void run(true)}>Re-audit and compare with the previous audit</button>
       </form>

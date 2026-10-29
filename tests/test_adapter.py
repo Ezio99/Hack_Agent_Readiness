@@ -55,6 +55,7 @@ async def test_meta_adapter_wire_contract_with_synthetic_response(tmp_path):
         assert list(recorder.path.glob("model-input-*.png"))[0].read_bytes() == base64.b64decode(PNG)
 
 
+@pytest.mark.slow
 def test_profile_and_tools_are_fixed_and_truth_is_not_in_prompt(tmp_path):
     prepare_browser_environment()
     from browser_use import Browser

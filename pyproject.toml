@@ -3,7 +3,10 @@ name = "agent-readiness"
 version = "0.1.0"
 description = "Interaction-dependent shopping benchmark"
 requires-python = ">=3.12,<3.13"
-dependencies = ["fastapi>=0.115", "uvicorn>=0.30", "jinja2>=3.1", "pydantic>=2.10", "pydantic-settings>=2.10", "browser-use==0.11.13", "playwright==1.58.0", "httpx>=0.28", "python-dotenv==1.2.4"]
+# pydantic-settings is never imported by this repository: the pinned browser-use 0.11.13 imports it without declaring it (see README), so it must stay.
+# beautifulsoup4 is imported directly by the site probe (remediation/probe.py); it was previously only present transitively.
+dependencies = ["fastapi>=0.115", "uvicorn>=0.30", "jinja2>=3.1", "pydantic>=2.10", "pydantic-settings>=2.10", "browser-use==0.11.13", "playwright==1.58.0", "httpx>=0.28",
+                "python-dotenv==1.2.4", "beautifulsoup4>=4.12"]
 
 [project.scripts]
 readiness = "agent_readiness.cli:main"
@@ -21,7 +24,7 @@ webarena = ["webarena-verified==1.2.3"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-markers = ["browser: real Chromium/CDP checks requiring loopback sockets"]
+markers = ["browser: real Chromium/CDP checks requiring loopback sockets", "slow: logic-level tests that still take >1.5 s (whole mock pipelines, plan() with live probes); excluded only from the fast development subset, never from CI"]
 
 [tool.setuptools.package-data]
 agent_readiness = ["templates/*.html", "profiles/*.json", "environments/electronics/templates/*.html"]

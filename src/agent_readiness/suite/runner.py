@@ -2,7 +2,6 @@
 independently and writes a versioned result record. Mode is always ``scripted_smoke`` - never confuse it with a model run."""
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient

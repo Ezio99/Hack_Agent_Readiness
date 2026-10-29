@@ -172,10 +172,10 @@ def test_preflight_refuses_without_flag_key_or_with_changed_prices(monkeypatch):
     with pytest.raises(Halt, match="allow-model-calls"):
         live.preflight(cfg, False)
     monkeypatch.delenv(cfg.key_env, raising=False)
-    monkeypatch.setattr(live, "load_repo_env", lambda *a, **k: False)
+    monkeypatch.setattr("agent_readiness.env.load_repo_env", lambda *a, **k: False)            # preflight (shared, scanner.live) loads the repo .env lazily
     with pytest.raises(Halt, match="not set"):
         live.preflight(cfg, True)
-    monkeypatch.setattr(live, "PRICE_INPUT_PER_M", 9.99)
+    monkeypatch.setattr("agent_readiness.ledger.PRICE_INPUT_PER_M", 9.99)
     with pytest.raises(Halt, match="verified published prices"):
         live.preflight(cfg, True)
 
@@ -195,7 +195,7 @@ def test_leak_scan_and_request_scan(tmp_path):
 
 def test_schema_probe_success_rejection_and_cap(tmp_path, monkeypatch):
     monkeypatch.setenv("META_MODEL_API_KEY", "stub-key")
-    monkeypatch.setattr(live, "load_repo_env", lambda *a, **k: False)
+    monkeypatch.setattr("agent_readiness.env.load_repo_env", lambda *a, **k: False)
     cfg = live.ModelConfig()
     good = {"evaluation_previous_goal": "x", "memory": "", "next_goal": "x", "thinking": "x", "current_plan_item": 0, "plan_update": None,
             "action": [{"done": {"data": {"task_type": "NAVIGATE", "status": "SUCCESS", "retrieved_data": None, "error_details": None}, "success": True}}]}
@@ -228,6 +228,7 @@ def test_authorized_limits_are_pinned_and_the_new_per_request_cap_admits_a_large
     assert r2.network_hits == 0
 
 
+@pytest.mark.slow
 def test_synthetic_suite_scan_can_use_the_same_durable_gate(tmp_path):
     """execute_scan(request_gate=...) reserves before and settles after every model request (mock provider: no network, no key)."""
     import asyncio as aio

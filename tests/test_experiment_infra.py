@@ -271,6 +271,7 @@ def test_stage1_analysis_never_attributes_to_a_factor_and_reports_signal():
     assert set(res["contrasts"]) == {"S1"} and not res["partial_schedule"]
 
 
+@pytest.mark.slow
 def test_null_scenario_is_inconclusive_and_never_equivalence():
     s, rows = rows_for(2, False)
     for r in rows:
@@ -282,6 +283,7 @@ def test_null_scenario_is_inconclusive_and_never_equivalence():
     assert "equivalen" in analysis.markdown(res)
 
 
+@pytest.mark.slow
 def test_supported_requires_review_consistency_and_complete_schedule():
     s, rows = rows_for(2, True)
     for r in rows:

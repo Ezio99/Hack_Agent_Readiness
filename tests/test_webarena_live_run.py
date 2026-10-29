@@ -70,7 +70,7 @@ def test_provider_failure_still_captures_har_runs_official_evaluation_and_keeps_
 
 def test_run_requires_a_successful_probe_when_live(tmp_path, monkeypatch):
     monkeypatch.setenv("META_MODEL_API_KEY", "stub-key")
-    monkeypatch.setattr(live, "load_repo_env", lambda *a, **k: False)
+    monkeypatch.setattr("agent_readiness.env.load_repo_env", lambda *a, **k: False)
 
     async def main():
         async with serve_app(stub_app()) as base:

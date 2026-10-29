@@ -16,3 +16,6 @@ node_modules/
 # Task 008 Stage B: development-only sanitized trace export (generated locally; NOT to be committed until reviewed and approved)
 dashboard/public/replays/
 scanner-data/
+
+# uv.lock is deliberately untracked (see STATUS.md); ignoring it prevents accidental `git add -A`
+uv.lock

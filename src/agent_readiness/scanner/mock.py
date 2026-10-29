@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import json
 from typing import Any
-from urllib.parse import urlsplit
 
 import httpx
 from fastapi.testclient import TestClient

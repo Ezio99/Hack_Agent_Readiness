@@ -1,7 +1,6 @@
 """Load WebArena Verified tasks and evaluate them with the official evaluator (private ground truth stays inside the official package)."""
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal

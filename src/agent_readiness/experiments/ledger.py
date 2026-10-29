@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..scanner.live import Halt, Ledger
+from ..ledger import Halt, Ledger
 from . import design
 
 
