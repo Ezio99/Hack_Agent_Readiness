@@ -94,6 +94,26 @@ class InvestigationRun:
     def artifact(self, name: str):
         return json.loads((self.dir / "artifacts" / (name if name.endswith(".json") else name + ".json")).read_text())
 
+    def write_private(self, name: str, obj) -> Path:
+        """Write-once PRIVATE file (mode 0600) under `private/`: evaluation truth that must never enter an agent or investigator prompt."""
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,60}", name):
+            raise ValueError("bad private file name")
+        path = self.dir / "private" / f"{name}.json"
+        if path.exists():
+            if canonical_hash(json.loads(path.read_text())) == canonical_hash(json.loads(json.dumps(obj, default=str))):
+                return path
+            raise ArtifactExists(f"private file {name!r} is write-once and already exists with different content")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, "w") as f:
+            f.write(json.dumps(obj, indent=2, sort_keys=True, default=str))
+            f.flush()
+            os.fsync(f.fileno())
+        return path
+
+    def private(self, name: str):
+        return json.loads((self.dir / "private" / f"{name}.json").read_text())
+
     def has_artifact(self, name: str) -> bool:
         return (self.dir / "artifacts" / (name if name.endswith(".json") else name + ".json")).exists()
 
