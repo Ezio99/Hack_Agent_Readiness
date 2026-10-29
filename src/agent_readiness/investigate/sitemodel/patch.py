@@ -21,7 +21,7 @@ from bs4 import BeautifulSoup
 from pydantic import BaseModel, Field, field_validator
 
 from ...suite.core import canonical_hash
-from ..inspect.pagemodel import internal_path, norm, parse_page, visible_text
+from ..inspect.pagemodel import accessible_name, internal_path, norm, parse_page, visible_text
 from .snapshot import Resource, Snapshot
 
 MAX_OPS, MAX_TEXT, MAX_INSERTED_BYTES, MAX_PAGES_PER_OP = 40, 200, 20_000, 30
@@ -59,6 +59,7 @@ class SetAttribute(_Op):
     op: Literal["set_attribute"] = "set_attribute"
     attr: Literal["aria-label", "alt", "title", "lang"]
     value: str
+    only_unnamed: bool = False                    # apply only to elements that currently have NO accessible name (never overrides an existing name)
 
     @field_validator("value")
     @classmethod
@@ -150,6 +151,8 @@ def apply_patch(snap: Snapshot, patch: Patch | dict) -> tuple[Snapshot, dict]:
                 for el in els:
                     if not provenance_ok(op.value, soup):
                         raise PatchError(f"op {i}: value {op.value!r} has no provenance on the site (not site text, page title or interface vocabulary)")
+                    if op.only_unnamed and accessible_name(el, soup)[0]:
+                        continue
                     el[op.attr] = op.value
                     changed += 1
                     texts.append(op.value)

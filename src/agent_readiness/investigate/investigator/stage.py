@@ -38,7 +38,7 @@ def investigate_stage(ctx: Context) -> dict:
     return {k: res[k] for k in ("finished", "incomplete", "tool_calls", "model_requests", "cost_usd")} | {"hypotheses": len(run.evidence.hypotheses), "findings": len(run.evidence.findings)}
 
 
-def report_stage(ctx: Context) -> dict:
+def report_stage(ctx: Context, *, final: bool = False) -> dict:
     run = ctx.run
     rep = build_report(run)
     inv = run.artifact("investigation") if run.has_artifact("investigation") else {"skipped": True}
@@ -48,8 +48,19 @@ def report_stage(ctx: Context) -> dict:
     rep["trials"] = {"by_attribution": _count(att.values(), "primary"), "void": sum(a["void"] for a in att.values()), "investigation": sum(a["partition"] == "investigation" for a in att.values()), "holdout": sum(a["partition"] == "holdout" for a in att.values()),
                      "note": "Holdout trials were never shown to the investigator. Void trials (provider/budget/infrastructure) are excluded from website evidence."}
     rep["tasks"] = {"count": len(manifest_["tasks"]), "by_kind": _count(manifest_["tasks"], "kind"), "by_source": _count(manifest_["tasks"], "source"), "generator": manifest_["generator"]}
-    run.write_artifact("report", rep)
+    if run.has_artifact("recommendations"):
+        rep["recommendations"] = run.artifact("recommendations")
+    if final and run.has_artifact("evaluation"):
+        ev = run.artifact("evaluation")
+        rep["evaluation"] = ev
+        rep["evaluation_statement"] = ("Measured effects are for the pre-registered rule, these frozen tasks, this agent profile/model and this patched mirror only. 'inconclusive' means the data neither show an improvement nor a regression. "
+                                       "A pattern no longer being observed (static re-check) is not an effect on agents.")
+    run.write_artifact("report-final" if final else "report", rep)
     return {"outcome": rep["outcome"], "supported_unpromoted": len(rep["supported_unpromoted"])}
+
+
+def final_report_stage(ctx: Context) -> dict:
+    return report_stage(ctx, final=True)
 
 
 def _count(rows, key):

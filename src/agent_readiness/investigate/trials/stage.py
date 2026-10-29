@@ -15,7 +15,8 @@ from ..pipeline import Context
 from ..taskgen import freeze as freezer
 from .runner import run_trial
 
-VOID_STATUSES = ("infrastructure_error", "timeout", "request_limit", "estimated_cost_limit", "diagnostic_fidelity_violation", "model_output_error", "cancelled")
+# VOID = the harness / provider / cost guard stopped the run. An agent that hits its OWN step, request or time limit failed the task; that is data (attribution `undetermined`), not a void trial, and never halts the stage.
+VOID_STATUSES = ("infrastructure_error", "estimated_cost_limit", "diagnostic_fidelity_violation", "model_output_error", "cancelled")
 
 
 def manifest(ctx: Context) -> dict:
@@ -28,29 +29,36 @@ def manifest(ctx: Context) -> dict:
             "retries": 0, "cost_basis": "calculated at published prices; not a bill"}
 
 
-def baseline_trials_stage(ctx: Context) -> dict:
+def run_arm(ctx: Context, *, label: str, snap, tasks: list[dict], insts: dict, prefix: str, manifest_: dict) -> dict:
+    """Run every given frozen task K times on `snap`; one attempt each, sequential, resumable from artifacts, live requests behind the reserve-before-send gate."""
     run, o = ctx.run, ctx.options
-    manifest_, snap = freezer.load(run)[0], load_snapshot(run)
-    insts = {i.spec.task_id: i for i in freezer.instances(run)}
     live = run.mode == "live"
     cfg = o.get("model_config") or ModelConfig()
     key = preflight(cfg, o.get("allow_model_calls", False)) if live else None
-    m = manifest(ctx)
-    ledger = run.ledger(m["stage_cap_usd"]) if live else None
+    ledger = run.ledger(manifest_["stage_cap_usd"]) if live else None
     done, void = [], []
     for rep in range(o.get("repeats", 1)):
-        for t in manifest_["tasks"]:
+        for t in tasks:
             tid = f"{t['task_id']}-r{rep + 1}"
-            if run.has_artifact(f"trials/baseline-{tid}"):
+            name = f"trials/{prefix}-{tid}"
+            if run.has_artifact(name):
                 done.append(tid)
                 continue
-            gate = RequestGate(ledger, tid, run_cap=m["run_cap_usd"], per_request_cap=m["per_request_cap_usd"], max_requests=m["max_requests_per_trial"]) if live else None
-            out = Path(run.dir) / "trial-data" / tid
-            rec = asyncio.run(run_trial(insts[t["task_id"]], snap, provider="live" if live else "mock", mock_behavior=o.get("mock_behavior", "correct"), output=out, model_config=cfg,
-                                        api_key=key, request_gate=gate, label="baseline"))
+            gate = RequestGate(ledger, f"{prefix}-{tid}", run_cap=manifest_["run_cap_usd"], per_request_cap=manifest_["per_request_cap_usd"], max_requests=manifest_["max_requests_per_trial"]) if live else None
+            out = Path(run.dir) / "trial-data" / f"{prefix}-{tid}"
+            rec = asyncio.run(run_trial(insts[t["task_id"]], snap, provider="live" if live else "mock", mock_behavior=o.get("mock_behavior", "correct"), output=out, model_config=cfg, api_key=key,
+                                        request_gate=gate, label=label))
             trial_dir = str(Path(rec.pop("artifact_path")).relative_to(run.dir))
-            run.write_artifact(f"trials/baseline-{tid}", {**rec, "task_id": t["task_id"], "partition": t["partition"], "repeat": rep + 1, "trial_id": tid, "trial_dir": trial_dir})
-            (void if rec["outcome"]["run_status"] in VOID_STATUSES else done).append(tid)
-            if live and rec["outcome"]["run_status"] in VOID_STATUSES:
-                raise Halt(f"trial {tid} ended with {rec['outcome']['run_status']}; stopping the stage (void trial, not a website result)")
+            run.write_artifact(name, {**rec, "task_id": t["task_id"], "partition": t["partition"], "repeat": rep + 1, "trial_id": tid, "trial_dir": trial_dir, "arm": label})
+            is_void = rec["outcome"]["run_status"] in VOID_STATUSES
+            (void if is_void else done).append(tid)
+            if live and is_void:
+                raise Halt(f"trial {prefix}-{tid} ended with {rec['outcome']['run_status']}; stopping the stage (void trial, not a website result)")
     return {"trials": len(done), "void": len(void)}
+
+
+def baseline_trials_stage(ctx: Context) -> dict:
+    run = ctx.run
+    manifest_, snap = freezer.load(run)[0], load_snapshot(run)
+    insts = {i.spec.task_id: i for i in freezer.instances(run)}
+    return run_arm(ctx, label="baseline", snap=snap, tasks=manifest_["tasks"], insts=insts, prefix="baseline", manifest_=manifest(ctx))

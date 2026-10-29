@@ -35,6 +35,7 @@ class Stage:
     spends: bool = False                                           # makes paid model calls or browser trials
     manifest: Callable[[Context], dict] | None = None              # what the owner approves (required when `spends` and mode == live, or when `gate` is set)
     gate: bool = False                                             # needs approval of `manifest` in every mode
+    skip: Callable[[Context], str | None] | None = None            # returns a reason to skip the stage entirely (no approval, nothing runs)
 
 
 @dataclass
@@ -65,6 +66,9 @@ class Pipeline:
             if st == "failed" and stage.spends:
                 return Result("failed", stage.name, error="a failed spending stage is not re-run automatically; inspect it and create a new investigation or reset deliberately")
             needs_gate = stage.gate or (stage.spends and run.mode == "live")
+            if stage.skip is not None and (why := stage.skip(ctx)):
+                run.set_status(stage.name, "done", summary={"skipped": True, "reason": why})
+                continue
             if needs_gate:
                 if stage.manifest is None:
                     raise ValueError(f"stage {stage.name!r} needs approval but defines no manifest")

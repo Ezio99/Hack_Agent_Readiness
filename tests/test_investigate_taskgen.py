@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_readiness.investigate import zoo
+from agent_readiness.investigate import flow, zoo
 from agent_readiness.investigate.inspect.profile import build_profile
 from agent_readiness.investigate.inspect.stage import run_inspect
 from agent_readiness.investigate.llm import RecordedClient, RecordingClient, ScriptedClient
@@ -55,7 +55,7 @@ def proposals_json(tasks):
 
 
 def make_run(tmp_path, sid="site-1", name="r"):
-    run = InvestigationRun.create(tmp_path, name, target=sid, mode="scripted", stages=("inspect", "taskgen", "freeze", "baseline_trials", "trace", "investigate", "report"))
+    run = InvestigationRun.create(tmp_path, name, target=sid, mode="scripted", stages=flow.STAGES)
     snap = zoo.snapshot(sid)
     Pipeline([Stage("inspect", lambda c: run_inspect(c, snap))]).run(Context(run))
     return run
