@@ -74,7 +74,7 @@ All figures calculated; AUD at 1.50. Limits are reservations enforced before sen
 **Pilot (2 runs):** T1 on the modified-state site and the unmodified-state site, one run each, sequential, through the product's scan path with the gate plugged in; continue only if the unmodified run shows room for the intervention to act (≥ 4 product-page visits or a stock-related answer error); otherwise stop and report the ceiling effect.
 **Experiment (after pilot review):** 6 randomized blocks: T1 × {unmodified, modified} = 12 runs, plus the stock-independent control task T4 × 2 blocks × {unmodified, modified} = 6 runs (n = 6 pairs makes a two-sided sign-flip p of 2/64 ≈ 0.03 attainable). Analysis as §7; the summary is attached to the audit report with `attach_measured_effects` (provenance, n, intervals, verdict), which is the only way a recommendation's validation can change.
 **Stop conditions:** stage cap, any bound violation, two infrastructure errors, two parser rejections per block, any fidelity violation, the pilot gate failing. No retries, no replacements.
-**Required offline step before any paid run (not yet built; ≈ 3–4 h, no spend):** a sequential pilot/experiment driver that applies each scheduled state to the managed target, runs the live scan under the `RequestGate` and an AUD-aware stage ledger, records rows, then audits before/after and attaches the measured effect. The arm labels live only in this experiment driver (design), never in the audit engine.
+**Driver (built offline, Report 015b):** a sequential pilot/experiment driver that applies each scheduled state to the managed target, runs the live scan under the `RequestGate` and an AUD-aware stage ledger, records rows, then audits before/after and attaches the measured effect. The arm labels live only in this experiment driver (design), never in the audit engine.
 
 ## 11. What is done and what remains
 | work | status |
@@ -84,7 +84,7 @@ All figures calculated; AUD at 1.50. Limits are reservations enforced before sen
 | Dashboard Site audit panel | **done** (Vitest) |
 | AUD budget module + ledger file; durable gate generalised and plugged into `execute_scan` | **done** |
 | Offline demonstration through the API | **done** (`scripts/remediation_loop_demo.py`, output in `collaboration/reports/015-offline-demo-output.txt`) |
-| Pilot/experiment driver with AUD stage ledger | **remaining** ≈ 3–4 h |
+| Pilot/experiment driver with AUD stage ledger | **done** (offline, tested; [Report 015b](../collaboration/reports/015b-pilot-driver-offline.md)); frozen pilot manifest committed under `collaboration/experiments/task015/pilot/` |
 | Paid pilot (2 runs), review, paid experiment (18 runs), analysis, baseline-vs-modified chart | **needs separate approval** ≈ 2–3 h + wall clock ≈ 40 min |
 | 3-minute demo assets | ≈ 2–3 h |
 Demo path (≈ 3 min): ① audit the unmodified site (findings with evidence, recommendation selected at runtime) → ② the owner applies the proposed change → ③ re-audit: finding recognised as **resolved** → ④ measured effect (from the experiment) or the honest "not measured yet" → ⑤ vision.

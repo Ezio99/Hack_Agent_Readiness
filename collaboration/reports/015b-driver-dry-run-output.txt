@@ -1,0 +1,70 @@
+{
+ "stage": "pilot",
+ "mode": "mock",
+ "manifest_sha256": "25a22bfdba02363b0b31eecbd1c3834b5744372dcf35ec79c2c111a1d6ae08b3",
+ "runs_attempted": 2,
+ "runs_scheduled": 2,
+ "halt": null,
+ "complete": true,
+ "spend": {
+  "stage_committed_usd": 0.1841,
+  "stage_committed_aud": 0.2762,
+  "stage_cap_usd": 1.0,
+  "stage_cap_aud": 1.5,
+  "programme_spent_aud": 6.1611,
+  "programme_remaining_aud": 43.8389,
+  "basis": "calculated, not billed",
+  "note": "MOCK dry run: calculated from mock tokens in a separate root; not real spend and not counted toward the programme"
+ },
+ "preflight": {
+  "ok": true,
+  "mode": "mock",
+  "stage_ledger": {
+   "stage_committed_usd": 0,
+   "stage_committed_aud": 0.0,
+   "stage_cap_usd": 1.0,
+   "stage_cap_aud": 1.5,
+   "programme_spent_aud": 5.885,
+   "programme_remaining_aud": 44.115,
+   "basis": "calculated, not billed"
+  }
+ },
+ "finalize": {
+  "effect_record": "effect-record.json",
+  "reaudit": "reaudit.json",
+  "attached_view": null
+ }
+}
+
+
+--- rows.jsonl (MOCK) ---
+{"run_id": "pilot-01", "block": 1, "task_code": "T1", "state": "modified", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 7, "product_page_visits": 5, "passed": true, "audit_id": "8770fb8a1d7a", "recommendation_id": "rec-show-availability-on-listing-cards", "finding_fingerprints": ["attribute_detail_only:availability", "filter_absent:availability"]}
+{"run_id": "pilot-02", "block": 1, "task_code": "T1", "state": "unmodified", "mock": true, "outcome_class": "completed", "void": false, "model_requests": 7, "product_page_visits": 5, "passed": true, "audit_id": "8770fb8a1d7a", "recommendation_id": "rec-show-availability-on-listing-cards", "finding_fingerprints": ["attribute_detail_only:availability", "filter_absent:availability"]}
+--- pilot-gate.json (MOCK) ---
+{
+ "decision": "continue",
+ "reason": "room to act: 5 product-page visits, extra items []",
+ "rule": "continue iff the unmodified-state T1 run is a valid completed run AND (>= 4 product-page visits OR the answer reported a not-eligible product); otherwise stop and report a ceiling effect (no replacement run)",
+ "note": "the pilot has one pair and supports NO inference about the effect"
+}
+--- effect-record.json (MOCK, abridged) ---
+{
+ "mode": "mock",
+ "verdict": "inconclusive",
+ "verdict_reason": "1 valid T1 pair(s); fewer than 4 (or pilot stage): no inference",
+ "audit_id": "8770fb8a1d7a",
+ "recommendation_id": "rec-show-availability-on-listing-cards",
+ "addresses": [
+  "attribute_detail_only:availability",
+  "filter_absent:availability"
+ ],
+ "n_pairs": 1,
+ "independent_reaudit": {
+  "audit_id": "0841f8babca8",
+  "lifecycle": {
+   "attribute_detail_only:availability": "resolved",
+   "filter_absent:availability": "resolved"
+  },
+  "note": "the modified state was re-audited by the product without labels; resolution is not an effect measurement"
+ }
+}
