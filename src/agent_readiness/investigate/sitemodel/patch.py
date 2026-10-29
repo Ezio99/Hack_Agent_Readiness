@@ -121,6 +121,23 @@ def _targets(snap: Snapshot, globs: list[str]) -> list[Resource]:
     return out
 
 
+def _node(soup: BeautifulSoup, container: str, wanted: str, text: str, href: str | None = None):
+    """Create the inserted node so the markup stays valid where it lands: a browser's HTML parser would move a <p> or <a> placed directly inside <tr>/<ul>/<ol> OUT of the row/list (foster
+    parenting), so the fix would not appear where the static check saw it. Rows get a <td>, lists an <li>."""
+    inner = soup.new_tag("a", href=href) if href else soup.new_tag(wanted)
+    inner.string = text
+    wrap = {"tr": "td", "ul": "li", "ol": "li"}.get(container)
+    if wrap is None:
+        return inner
+    outer = soup.new_tag(wrap)
+    outer.append(inner)
+    return outer
+
+
+def _container(el, position: str) -> str:
+    return (el.name if position in ("append", "prepend") else getattr(el.parent, "name", "")) or ""
+
+
 def apply_patch(snap: Snapshot, patch: Patch | dict) -> tuple[Snapshot, dict]:
     """Return (new snapshot, report). Raises PatchError on any rule violation; the input snapshot is never modified."""
     patch = patch if isinstance(patch, Patch) else Patch.model_validate(patch)
@@ -160,9 +177,7 @@ def apply_patch(snap: Snapshot, patch: Patch | dict) -> tuple[Snapshot, dict]:
                 if els and not provenance_ok(op.text, soup):
                     raise PatchError(f"op {i}: text {op.text!r} has no provenance on the site (not site text, page title or interface vocabulary)")
                 for el in els:
-                    n = soup.new_tag(op.tag)
-                    n.string = op.text
-                    place(el, n, op.position)
+                    place(el, _node(soup, _container(el, op.position), op.tag, op.text), op.position)
                     changed += 1
                     texts.append(op.text)
             elif isinstance(op, AddLink):
@@ -172,9 +187,7 @@ def apply_patch(snap: Snapshot, patch: Patch | dict) -> tuple[Snapshot, dict]:
                 if els and not provenance_ok(op.text, soup):
                     raise PatchError(f"op {i}: link text {op.text!r} has no provenance on the site")
                 for el in els:
-                    a = soup.new_tag("a", href=target)
-                    a.string = op.text
-                    place(el, a, op.position)
+                    place(el, _node(soup, _container(el, op.position), "a", op.text, href=target), op.position)
                     changed += 1
                     texts.append(op.text)
             else:                                                            # copy_field_to_listing
@@ -192,9 +205,7 @@ def apply_patch(snap: Snapshot, patch: Patch | dict) -> tuple[Snapshot, dict]:
                     text = f"{label_shown[:1].upper()}{label_shown[1:]}: {fact['value']}"
                     if norm(visible_text(el)).find(fact["value"]) >= 0:
                         continue                                              # already shown on the card
-                    n = soup.new_tag(op.tag)
-                    n.string = text
-                    el.append(n)
+                    el.append(_node(soup, el.name, op.tag, text))
                     changed += 1
                     texts.append(text)
         if changed == 0:

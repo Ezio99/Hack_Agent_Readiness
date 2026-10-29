@@ -32,6 +32,7 @@ def build_report(run: InvestigationRun) -> dict:
         "proposals": [{**p.model_dump(), "label": p.label, "auto_applicable": p.auto_applicable} for p in ev.proposals.values()],
         "effects": {"measured": [e.model_dump() for e in ev.effects.values() if e.measured],
                     "not_measured_pipeline_checks": [e.model_dump() for e in ev.effects.values() if not e.measured]},
-        "statement": ("Findings are website properties verified by deterministic checks. Novel hypotheses are unverified and can only back EXPERIMENTAL proposals. "
+        "statement": ("Findings are website properties verified by deterministic checks; the trials that support them show an ASSOCIATION (the pattern coincided with failed or inefficient runs that nothing else explains), not a proven cause - only the pre-registered retest after a fix speaks to cause. "
+                      "Novel hypotheses are unverified and can only back EXPERIMENTAL proposals. "
                       "A measured effect shows a change moved metrics on the measured tasks; it does not verify a hypothesis' mechanism."),
     }

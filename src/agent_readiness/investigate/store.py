@@ -28,8 +28,15 @@ class EvidenceStore:
         self.proposals: dict[str, Proposal] = {}
         self.effects: dict[str, Effect] = {}
         if self.path and self.path.exists():
-            for line in self.path.read_text().splitlines():
-                e = json.loads(line)
+            lines = self.path.read_text().splitlines()
+            for i, line in enumerate(lines):
+                try:
+                    e = json.loads(line)
+                except ValueError:
+                    if i == len(lines) - 1:                      # a crash mid-append leaves a truncated LAST line only; drop it (and the partial bytes) rather than make the run unloadable
+                        self.path.write_text("".join(l + "\n" for l in lines[:-1]))
+                        break
+                    raise
                 getattr(self, "_replay_" + e["event"])(e["data"])
 
     # -- persistence ---------------------------------------------------------------------------------------------------

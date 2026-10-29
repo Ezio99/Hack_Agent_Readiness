@@ -12,6 +12,7 @@ from statistics import mean
 RULE = {"id": "paired-signflip-v1", "min_pairs": 4, "alpha": 0.10, "pass_delta_floor": 0.25, "request_reduction_floor": 0.25, "primary": "evidence_backed_pass_rate", "secondary": "model_requests",
         "improvement": "mean pass delta >= +floor and p <= alpha, OR pass delta >= 0 and mean model requests fall by >= floor (relative) with p <= alpha on the request differences",
         "regression": "mean pass delta <= -floor and p <= alpha, OR pass delta <= 0 and mean model requests rise by >= floor (relative) with p <= alpha",
+        "holdout_guard": "an overall improvement is withdrawn when the held-out pairs get worse (and a regression when they improve): the fix was designed from the investigation tasks",
         "otherwise": "inconclusive", "void_policy": "a pair with any void trial in either arm is excluded and listed", "causal_scope": "measured on these frozen tasks, this agent profile and model, this snapshot and patch only"}
 
 
@@ -68,4 +69,11 @@ def compare(base: dict[str, list[dict]], patched: dict[str, list[dict]], partiti
     if "holdout" in sub and "investigation" in sub:
         sgn = lambda x: (x > 0) - (x < 0)
         consistent = sgn(sub["holdout"]["pass_delta"]) == sgn(sub["investigation"]["pass_delta"]) or sub["holdout"]["pass_delta"] == 0
+    # The fix was designed from the investigation tasks, so those pairs are favourable by construction (selection). An overall `improvement` therefore also requires that the HELD-OUT tasks do
+    # not point the other way; otherwise the claim is withdrawn to `inconclusive` and the contradiction is stated.
+    h = sub.get("holdout")
+    if verdict == "improvement" and h and (h["pass_delta"] < 0 or (h["pass_delta"] == 0 and h["mean_request_change"] > 0)):
+        verdict, why = "inconclusive", "pooled data meet the improvement rule, but the held-out tasks do not confirm it (they got worse); the investigation tasks were used to design the fix"
+    if verdict == "regression" and h and (h["pass_delta"] > 0):
+        verdict, why = "inconclusive", "pooled data meet the regression rule, but the held-out tasks improved"
     return {**out, "verdict": verdict, "reason": why, "pass_delta": round(mp, 4), "request_change": round(rel, 4), "mean_request_difference": round(mean(dr), 3), "p_pass": p_pass, "p_requests": p_req, "by_partition": sub, "holdout_consistent": consistent}

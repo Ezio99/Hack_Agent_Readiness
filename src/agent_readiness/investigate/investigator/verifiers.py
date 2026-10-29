@@ -17,7 +17,7 @@ from ..models import CLAIM_KINDS, Hypothesis, Provenance, Verification
 from ..taskgen.criteria import norm_answer
 
 ATTRIBUTION = {"info_absent_on_template": "website", "control_unlabeled": "website", "info_only_after_k_hops": "website", "error_response_on_path": "website",
-               "observation_missing_dom_content": "tool_interface", "step_overhead_vs_minimum": "undetermined", "repeated_navigation": "agent", "inconsistent_content_across_pages": "undetermined"}
+               "observation_missing_dom_content": "undetermined", "step_overhead_vs_minimum": "undetermined", "repeated_navigation": "agent", "inconsistent_content_across_pages": "undetermined"}
 
 
 @dataclass
@@ -27,6 +27,17 @@ class Result:
     evidence: list[str] = field(default_factory=list)
     support: list[str] = field(default_factory=list)
     structural_proof: bool = False
+
+
+def _one_per_task(ws, trial_ids: list[str]) -> list[str]:
+    """Independent support = distinct TASKS. Repeats of one task are the same evidence several times, never independent."""
+    seen, out = set(), []
+    for t in sorted(trial_ids):
+        task = ws.att[t]["task_id"]
+        if task not in seen:
+            seen.add(task)
+            out.append(f"trial:{t}")
+    return out
 
 
 def _valid_trials(ws):
@@ -110,23 +121,34 @@ def v_step_overhead_vs_minimum(ws, p):
     if len(v) < 2:
         return Result("unverifiable", "fewer than 2 non-void investigation trials")
     med = median(a["signals"]["extra_page_views"] for a in v.values())
-    sup = [f"trial:{t}" for t, a in sorted(v.items()) if a["signals"]["extra_page_views"] >= k]
+    sup = _one_per_task(ws, [t for t, a in sorted(v.items()) if a["signals"]["extra_page_views"] >= k])
     return Result("supported" if med >= k else "refuted", f"median extra page views over the minimum is {med} (threshold {k})", [], sup)
 
 
 def v_repeated_navigation(ws, p):
-    sup = [f"trial:{t}" for t, a in sorted(_valid_trials(ws).items()) if a["signals"]["revisited_pages"] or a["signals"]["max_identical_actions"] >= 3]
-    return Result("supported" if sup else "refuted", f"{len(sup)} trial(s) revisited pages or repeated an identical action 3+ times", [], sup)
+    sup = _one_per_task(ws, [t for t, a in sorted(_valid_trials(ws).items()) if a["signals"]["revisited_pages"] or a["signals"]["max_identical_actions"] >= 3])
+    return Result("supported" if sup else "refuted", f"{len(sup)} task(s) had a trial that revisited pages or repeated an identical action 3+ times", [], sup)
 
 
 def v_observation_missing_dom_content(ws, p):
-    sup = [f"trial:{t}" for t, a in sorted(_valid_trials(ws).items()) if a["primary"] == "tool_interface"]
-    return Result("supported" if sup else "refuted", f"{len(sup)} trial(s) loaded a page whose decisive text never reached the model's observation", [], sup)
+    sup = _one_per_task(ws, [t for t, a in sorted(_valid_trials(ws).items()) if a["primary"] == "tool_interface"])
+    return Result("supported" if sup else "refuted", f"{len(sup)} task(s) had a trial that loaded a page whose decisive text never reached the model's text observation (the screenshot is not inspected, so this is never promoted to a finding)", [], sup)
+
+
+def _linked_paths(ws) -> set[str]:
+    """Every internal path some captured page links to (agents also request paths they merely GUESS; those are not website errors)."""
+    out = set()
+    for p in ws.profile["pages"].values():
+        out |= {c["href"] for c in p["controls"] if c["href"]} | {l["href"] for l in p["links"] + p["nav_links"]}
+    return out
 
 
 def v_error_response_on_path(ws, p):
-    bad = sorted({e["path"] for t in ws.trials.values() for e in t["mirror"]["log"] if e["status"] >= 400})
-    return Result("supported" if bad else "refuted", f"{len(bad)} requested path(s) returned an error status", [f"page:{b}" for b in bad[:5]], [f"trial:{k}" for k, t in sorted(ws.trials.items()) if any(e["status"] >= 400 for e in t["mirror"]["log"])])
+    linked = _linked_paths(ws)
+    bad = sorted({e["path"] for t in ws.trials.values() for e in t["mirror"]["log"] if e["status"] >= 400 and e["path"] in linked})
+    guessed = sorted({e["path"] for t in ws.trials.values() for e in t["mirror"]["log"] if e["status"] >= 400 and e["path"] not in linked})
+    sup = _one_per_task(ws, [k for k, t in sorted(ws.trials.items()) if any(e["status"] >= 400 and e["path"] in linked for e in t["mirror"]["log"])])
+    return Result("supported" if bad else "refuted", f"{len(bad)} link target(s) on the site returned an error status ({len(guessed)} other failing request(s) were paths no page links to and are not counted)", [f"page:{b}" for b in bad[:5]], sup)
 
 
 def v_inconsistent_content_across_pages(ws, p):

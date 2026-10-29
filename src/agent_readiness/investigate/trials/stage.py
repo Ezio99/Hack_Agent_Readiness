@@ -19,25 +19,45 @@ from .runner import run_trial
 VOID_STATUSES = ("infrastructure_error", "estimated_cost_limit", "diagnostic_fidelity_violation", "model_output_error", "cancelled")
 
 
-def manifest(ctx: Context) -> dict:
+def arm_config(ctx: Context) -> dict:
+    """What every arm (baseline AND patched) must share. Written once, at the baseline; later arms read it and refuse conflicting options, so the patched trials can never run with a different
+    repeat count, model or agent profile than the baseline they are compared with."""
+    o, tm = ctx.options, ctx.run.artifact("tasks-manifest")
+    cfg = o.get("model_config") or ModelConfig()
+    return {"repeats": o.get("repeats", 1), "mock_behavior": o.get("mock_behavior", "correct"), "model": cfg.model, "endpoint": cfg.base_url, "agent_profile": tm["agent_profile"]}
+
+
+def shared_arm_config(ctx: Context) -> dict:
+    """The frozen configuration for a LATER arm. Options that disagree with it are refused (not silently ignored)."""
+    frozen = ctx.run.artifact("arm-config")
+    o = ctx.options
+    cfg = o.get("model_config") or ModelConfig()
+    for key, given in (("repeats", o.get("repeats")), ("model", cfg.model if o.get("model_config") else None), ("mock_behavior", o.get("mock_behavior"))):
+        if given is not None and given != frozen[key]:
+            raise ValueError(f"option {key}={given!r} differs from the baseline's frozen {key}={frozen[key]!r}; every arm must use the same configuration")
+    return frozen
+
+
+def manifest(ctx: Context, shared: dict | None = None) -> dict:
     tm = ctx.run.artifact("tasks-manifest")
     o = ctx.options
     cfg = o.get("model_config") or ModelConfig()
+    sc = shared or arm_config(ctx)
     return {"stage": "baseline_trials", "snapshot_sha256": tm["snapshot_sha256"], "tasks_manifest_sha256": freezer.canonical_hash(tm), "task_ids": [t["task_id"] for t in tm["tasks"]],
-            "repeats": o.get("repeats", 1), "agent_profile": tm["agent_profile"], "model": cfg.model, "endpoint": cfg.base_url, "run_cap_usd": o.get("run_cap_usd", 0.50),
-            "stage_cap_usd": o.get("stage_cap_usd", 3.0), "per_request_cap_usd": o.get("per_request_cap_usd", 0.05), "max_requests_per_trial": o.get("max_requests_per_trial", 16),
-            "retries": 0, "cost_basis": "calculated at published prices; not a bill"}
+            "repeats": sc["repeats"], "agent_profile": tm["agent_profile"], "model": sc["model"], "endpoint": sc["endpoint"], "run_cap_usd": o.get("run_cap_usd", 0.50),
+            "ledger_ceiling_usd": o.get("total_cap_usd", 3.0), "per_request_cap_usd": o.get("per_request_cap_usd", 0.05), "max_requests_per_trial": o.get("max_requests_per_trial", 16),
+            "retries": 0, "cost_basis": "calculated at published prices; not a bill", "ledger_note": "one shared spend ledger for the whole investigation (taskgen, both trial arms, investigation); this is its hard ceiling"}
 
 
-def run_arm(ctx: Context, *, label: str, snap, tasks: list[dict], insts: dict, prefix: str, manifest_: dict) -> dict:
+def run_arm(ctx: Context, *, label: str, snap, tasks: list[dict], insts: dict, prefix: str, manifest_: dict, repeats: int, mock_behavior: str = "correct") -> dict:
     """Run every given frozen task K times on `snap`; one attempt each, sequential, resumable from artifacts, live requests behind the reserve-before-send gate."""
     run, o = ctx.run, ctx.options
     live = run.mode == "live"
     cfg = o.get("model_config") or ModelConfig()
     key = preflight(cfg, o.get("allow_model_calls", False)) if live else None
-    ledger = run.ledger(manifest_["stage_cap_usd"]) if live else None
+    ledger = run.ledger(manifest_["ledger_ceiling_usd"]) if live else None
     done, void = [], []
-    for rep in range(o.get("repeats", 1)):
+    for rep in range(repeats):
         for t in tasks:
             tid = f"{t['task_id']}-r{rep + 1}"
             name = f"trials/{prefix}-{tid}"
@@ -61,4 +81,6 @@ def baseline_trials_stage(ctx: Context) -> dict:
     run = ctx.run
     manifest_, snap = freezer.load(run)[0], load_snapshot(run)
     insts = {i.spec.task_id: i for i in freezer.instances(run)}
-    return run_arm(ctx, label="baseline", snap=snap, tasks=manifest_["tasks"], insts=insts, prefix="baseline", manifest_=manifest(ctx))
+    sc = arm_config(ctx)
+    run.write_artifact("arm-config", sc)                      # write-once: resuming the baseline with different options raises instead of mixing configurations
+    return run_arm(ctx, label="baseline", snap=snap, tasks=manifest_["tasks"], insts=insts, prefix="baseline", manifest_=manifest(ctx), repeats=sc["repeats"], mock_behavior=sc["mock_behavior"])

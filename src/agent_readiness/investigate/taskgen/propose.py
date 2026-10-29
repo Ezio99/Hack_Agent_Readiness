@@ -54,6 +54,9 @@ class TaskProposals(BaseModel):
     tasks: list[TaskDraftModel]
 
 
+MAX_ITEMS_SHOWN = 30      # bound the prompt on large listings (the summary says how many items exist)
+
+
 RULES = """Rules:
 - Each task has a `question` a person would ask, a `start_path` (use "/" unless the site's entry page is elsewhere) and a `criterion` saying WHERE the answer is on the site. You never state the answer.
 - criterion kinds: page_fact{page,label} = the value of a labelled fact on one page; reach_page{target} = the title of a page the user must find; item_set{listing,conditions[{label,op,value}]} = names of the listed items whose own pages satisfy ALL conditions (some but not all items); extremum{listing,label,direction} = the listed item with the highest/lowest numeric value of a labelled fact.
@@ -77,7 +80,7 @@ def site_summary(profile: dict, max_pages: int = 40) -> dict:
                 if v:
                     vals.append(v[0])
             sample[label] = vals
-        listings.append({"listing": l["listing"], "heading": (pages[l["listing"]]["headings"] or [{"text": ""}])[0]["text"], "items": [{"name": i["name"], "path": i["href"]} for i in g["items"]], "fields_on_item_pages": sample})
+        listings.append({"listing": l["listing"], "heading": (pages[l["listing"]]["headings"] or [{"text": ""}])[0]["text"], "items": [{"name": i["name"], "path": i["href"]} for i in g["items"][:MAX_ITEMS_SHOWN]], "items_total": len(g["items"]), "fields_on_item_pages": sample})
     shown = sorted(pages, key=lambda p: (profile["depth"].get(p, 9), p))[:max_pages]
     other = [{"path": p, "facts": {f["label"]: f["value"] for f in pages[p]["facts"][:4]}} for p in shown if pages[p]["facts"] and p not in {i["path"] for l in listings for i in l["items"]}]
     return {"pages": [{"path": p, "title": pages[p]["title"], "clicks_from_entry": profile["depth"].get(p), "links_to": [l["href"] for l in pages[p]["links"] + pages[p]["nav_links"] if l["href"] in pages][:8]} for p in shown],

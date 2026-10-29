@@ -19,7 +19,7 @@ def manifest(ctx: Context) -> dict:
     cfg = ctx.options.get("model_config") or ModelConfig()
     ws = Workspace(ctx.run)
     n = ctx.options.get("max_calls", DEFAULT_MAX_CALLS)
-    return {"stage": "investigate", "provider": cfg.provider, "model": cfg.model, "endpoint": cfg.base_url.rstrip("/") + "/chat/completions", "max_tool_calls": n, "max_requests": n + 3,
+    return {"stage": "investigate", "provider": cfg.provider, "model": cfg.model, "endpoint": cfg.base_url.rstrip("/") + "/chat/completions", "max_tool_calls": n, "max_requests": 2 * (n + 1),
             "retries_per_request": 1, "run_cap_usd": ctx.options.get("investigate_cap_usd", RUN_CAP_USD), "per_request_cap_usd": 0.05, "prompt_sha256": canonical_hash([SYSTEM, first_user_message(ws, ctx.options.get("focus"))]),
             "attribution_sha256": canonical_hash(ctx.run.artifact("attribution")), "tasks_manifest_sha256": canonical_hash(ctx.run.artifact("tasks-manifest")), "cost_basis": "calculated upper bounds at published prices; not a bill"}
 

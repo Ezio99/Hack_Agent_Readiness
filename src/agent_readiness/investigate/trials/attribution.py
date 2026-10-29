@@ -72,6 +72,9 @@ def attribute(trial: dict, observations: list[dict], private: dict, profile: dic
         return res("success_unsupported", "correct answer, but the required evidence was not shown to the model", missing_count=len(ev.get("missing_evidence", [])))
     if not ev["answer_valid"] and out.get("answer") is not None:
         return res("agent", "the final answer did not match the required answer schema")
+    n_obs, n_steps = len(observations), len(trial["journey"])
+    if n_obs < n_steps:                                       # the trace is incomplete: absence of evidence in it proves nothing, so never blame the site or the interface from it
+        return res("undetermined", f"trace data incomplete ({n_obs} of {n_steps} model observations available); no attribution beyond the recorded outcome is possible", trace_complete=False)
     if private["min_hops"] + 2 > trial["metrics"]["limits"]["max_steps"]:
         return res("task_invalid", "the required navigation does not fit inside the task's own step limit")
     if sig["evidence_texts_shown"] and not sig["evidence_pages_unvisited"]:

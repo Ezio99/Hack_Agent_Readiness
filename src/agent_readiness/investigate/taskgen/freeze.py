@@ -59,7 +59,8 @@ def build(accepted: list[Accepted], *, snapshot_sha256: str, generator: dict, ag
         tasks.append({"task_id": tid, "question": a.draft.question, "start_path": a.draft.start_path, "kind": a.compiled.kind, "source": a.draft.source, "partition": part[a.fingerprint],
                       "outcome_type": "set" if a.compiled.style == "set" else "unique", "answer_schema": _answer_schema(a.compiled.style), "limits": asdict(lim), "criterion_sha256": canonical_hash(a.criterion)})
         private[tid] = {"criterion": a.criterion, "kind": a.compiled.kind, "style": a.compiled.style, "truth": a.compiled.truth, "evidence_paths": a.compiled.evidence_paths,
-                        "evidence_texts": [list(t) for t in a.compiled.evidence_texts], "detail": a.compiled.detail, "min_hops": max(a.hops.values(), default=0)}
+                        "evidence_texts": [list(t) for t in a.compiled.evidence_texts], "detail": a.compiled.detail, "min_hops": max(a.hops.values(), default=0),
+                        "distractors": a.compiled.distractors}
     tasks.sort(key=lambda t: t["task_id"])
     from ..evaluate.design import RULE
     manifest = {"schema": SCHEMA, "snapshot_sha256": snapshot_sha256, "agent_profile": agent_profile, "generator": generator, "seed": seed, "tasks": tasks, "evaluation_rule": RULE,
@@ -91,7 +92,7 @@ def variant_for(snapshot_sha256: str) -> Variant:
 
 
 def instance(entry: dict, priv: dict, snapshot_sha256: str) -> TaskInstance:
-    comp = Compiled(priv["kind"], priv["style"], priv["truth"], priv["evidence_paths"], [tuple(t) for t in priv["evidence_texts"]], detail=priv["detail"])
+    comp = Compiled(priv["kind"], priv["style"], priv["truth"], priv["evidence_paths"], [tuple(t) for t in priv["evidence_texts"]], detail=priv["detail"], distractors=priv.get("distractors", []))
     model: type[BaseModel] = (create_model("GeneratedAnswer", answers=(list[str], ...)) if comp.style == "set" else create_model("GeneratedAnswer", answer=(str, ...)))
     spec = TaskSpec(task_id=entry["task_id"], template_id=TEMPLATE_ID, version=VERSION, environment_id="generated-site", data_version=snapshot_sha256[:12], objective=entry["question"],
                     answer_schema=entry["answer_schema"], start_path=entry["start_path"], outcome_type=entry["outcome_type"], evidence_policy="The pages that contain the answer must have been shown to the agent.",
