@@ -108,10 +108,16 @@ def test_live_flow_stops_for_approval_at_taskgen_before_any_key_or_network(tmp_p
 
 
 @pytest.mark.browser
-def test_mock_flow_runs_end_to_end_through_the_cli_path(tmp_path):
+def test_mock_flow_runs_the_whole_chain_through_report_with_a_scripted_investigator(tmp_path):
     from agent_readiness.investigate import flow
-    run, pipe, ctx = flow.build(tmp_path, "m1", "site-4", mode="mock", options={"n_tasks": 4})
+    from agent_readiness.investigate.llm import ScriptedClient
+    from .test_investigate_investigator import scripted_model, step
+    inv = ScriptedClient(scripted_model([step("list_trials"), step("finish", hyps=[])]))
+    run, pipe, ctx = flow.build(tmp_path, "m1", "site-4", mode="mock", options={"n_tasks": 4, "investigator_llm": inv})
     res = pipe.run(ctx)
     assert res.status == "done" and all(run.status(s) == "done" for s in flow.STAGES)
     tasks = run.artifact("tasks-manifest")["tasks"]
     assert len(tasks) == 4 and all(run.artifact(f"trials/baseline-{t['task_id']}-r1")["evaluation"]["evidence_backed"] for t in tasks)
+    rep = run.artifact("report")
+    assert rep["outcome"] == "no_supported_issue" and rep["investigation"]["finished"] and rep["trials"]["by_attribution"] == {"success": 4} and rep["tasks"]["generator"]["mode"] == "none"
+    assert rep["mode"] == "mock" and any("MOCK" in n for n in rep["notices"])

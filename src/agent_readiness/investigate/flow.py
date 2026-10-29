@@ -16,11 +16,12 @@ from .llm import LLMRequest, RecordingClient
 from .llm.meta import MetaClient
 from .pipeline import Context, Pipeline, Stage
 from .run import InvestigationRun
+from .investigator import stage as investigator
 from .taskgen import propose
 from .taskgen.stage import freeze_stage, taskgen_stage
 from .trials import stage as trials
 
-STAGES = ("inspect", "taskgen", "freeze", "baseline_trials")
+STAGES = ("inspect", "taskgen", "freeze", "baseline_trials", "trace", "investigate", "report")
 TASKGEN_RUN_CAP_USD = 0.15
 
 
@@ -28,13 +29,14 @@ class LazyMeta:
     """Defers key lookup and client construction to the first call (i.e. until after approval); records the transcript privately."""
     mode = "live"
 
-    def __init__(self, run: InvestigationRun, cfg: ModelConfig, allow: bool, cap_usd: float, ledger_ceiling_usd: float):
+    def __init__(self, run: InvestigationRun, cfg: ModelConfig, allow: bool, cap_usd: float, ledger_ceiling_usd: float, *, name: str = "taskgen", max_requests: int = 4, transcript: str = "llm-transcript"):
         self.model, self._run, self._cfg, self._allow, self._cap, self._ceiling, self._client = cfg.model, run, cfg, allow, cap_usd, ledger_ceiling_usd, None
+        self._name, self._max_requests, self._transcript = name, max_requests, transcript
 
     def complete(self, request: LLMRequest):
         if self._client is None:
-            inner = MetaClient.live(self._cfg, self._run.ledger(self._ceiling), f"{self._run.state['id']}-taskgen", allow_model_calls=self._allow, run_cap_usd=self._cap, per_request_cap_usd=0.05, max_requests=4)
-            self._client = RecordingClient(inner, self._run.dir / "private" / "llm-transcript.jsonl")
+            inner = MetaClient.live(self._cfg, self._run.ledger(self._ceiling), f"{self._run.state['id']}-{self._name}", allow_model_calls=self._allow, run_cap_usd=self._cap, per_request_cap_usd=0.05, max_requests=self._max_requests)
+            self._client = RecordingClient(inner, self._run.dir / "private" / f"{self._transcript}.jsonl")
         return self._client.complete(request)
 
 
@@ -55,10 +57,17 @@ def build(root: Path, run_id: str, site: str, *, mode: str, options: dict | None
         raise Halt(f"investigation {run_id} was created in {run.state['mode']} mode; it cannot be resumed as {mode}")
     cfg = opts.get("model_config") or ModelConfig()
     live = mode == "live"
-    llm = LazyMeta(run, cfg, opts.get("allow_model_calls", False), TASKGEN_RUN_CAP_USD, opts.get("stage_cap_usd", 3.0) + TASKGEN_RUN_CAP_USD) if live else None
+    ceiling = opts.get("stage_cap_usd", 3.0) + TASKGEN_RUN_CAP_USD + opts.get("investigate_cap_usd", investigator.RUN_CAP_USD)
+    llm = LazyMeta(run, cfg, opts.get("allow_model_calls", False), TASKGEN_RUN_CAP_USD, ceiling) if live else None
+    if live and "investigator_llm" not in opts:
+        opts["investigator_llm"] = LazyMeta(run, cfg, opts.get("allow_model_calls", False), opts.get("investigate_cap_usd", investigator.RUN_CAP_USD), ceiling, name="investigate",
+                                            max_requests=opts.get("max_calls", investigator.DEFAULT_MAX_CALLS) + 3, transcript="investigator-llm-transcript")
     snap = zoo.snapshot(site)
     stages = [Stage("inspect", lambda c: run_inspect(c, snap)),
               Stage("taskgen", taskgen_stage, spends=live, manifest=taskgen_manifest if live else None),
               Stage("freeze", freeze_stage),
-              Stage("baseline_trials", trials.baseline_trials_stage, spends=True, manifest=trials.manifest)]
+              Stage("baseline_trials", trials.baseline_trials_stage, spends=True, manifest=trials.manifest),
+              Stage("trace", investigator.trace_stage),
+              Stage("investigate", investigator.investigate_stage, spends=True, manifest=investigator.manifest),
+              Stage("report", investigator.report_stage)]
     return run, Pipeline(stages), Context(run, llm=llm, options=opts)
