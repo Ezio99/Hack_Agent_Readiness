@@ -81,6 +81,13 @@ Generate candidate website changes (e.g., structured product attributes, filters
 ### Beyond e-commerce
 Extend the measurement framework to travel, services, documentation, public information, and authenticated workflows only where safe and permissioned. Define domain-specific oracles rather than pretending that one shopping score generalizes universally.
 
+### Adversarial Agent Readiness Arena (stretch / future research)
+- **Concept:** Two-agent red-team loop on a controlled, authorized website. A website adversary proposes changes intended to degrade AI-agent task performance; an independent benchmark/investigator reruns frozen tasks, measures effects, and diagnoses friction. Iterate under strict compute and round budgets.
+- **Constraints:** Preserve factual correctness and core human usability; no simply deleting products, breaking the site, or tampering with the evaluator. Use sandbox variants only, never unauthorized third-party modification.
+- **Research questions:** How robust are agents to plausible website degradation? Can the investigator discover novel friction beyond hardcoded detectors, distinguish agent failures from site causes, and suggest successful repairs?
+- **Evaluation integrity:** Keep held-out tasks and ideally a second agent/model; separate attacker-visible feedback from independent final evaluation to reduce benchmark gaming. Track performance, diagnosis accuracy, false positives, cost, and regressions.
+- **Priority:** Optional stretch only after the general autonomous investigator and end-to-end demo are stable. **Not part of Task 016; no implementation or paid runs authorized by this note.**
+
 ## Non-goals and guardrails
 
 - Do **not** present a generic LLM-generated SEO checklist as evidence-grounded diagnosis.
