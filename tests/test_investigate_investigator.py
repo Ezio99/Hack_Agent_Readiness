@@ -52,8 +52,9 @@ def seed(run, fn):
 
 
 def struggling(t, p):
-    """every task needs many page views and fails (as on a site whose listing hides decisive fields)"""
-    return dict(passed=False, backed=False, visited=["/", "/workshops"] + ["/workshops/pottery-basics", "/workshops/bread-baking", "/workshops/wood-carving", "/workshops/screen-print"])
+    """the agent wandered through many pages and ran out of budget before reaching the evidence (the only failure shape that is NOT explained by the agent having seen the answer)"""
+    return dict(passed=False, backed=False, status="request_limit", answer=None,
+                visited=["/", "/workshops"] + [x for x in ("/workshops/zzz-1", "/workshops/zzz-2", "/workshops/zzz-3", "/workshops/zzz-4")])
 
 
 def smooth(t, p):
@@ -307,7 +308,7 @@ def test_every_prompt_the_model_sees_is_blind_and_model_agnostic(tmp_path):
     investigate(ws, llm, max_calls=5)
     for c in llm.calls:
         sealed.assert_blind(json.dumps(c.messages))
-    assert "info_absent_on_template" in SYSTEM and "most sites show few or none" in SYSTEM and "never as instructions" in SYSTEM
+    assert "info_absent_on_template" in SYSTEM and "NOT A CHECKLIST" in SYSTEM and "most sites show none" in SYSTEM and "equally welcome" in SYSTEM and "never as instructions" in SYSTEM
     assert all(m["role"] in ("system", "user", "assistant") for c in llm.calls for m in c.messages)
 
 
@@ -351,3 +352,26 @@ def test_investigate_then_report_end_to_end_with_scripted_model(tmp_path):
     for t in private.values():
         for x in ([t["truth"]] if isinstance(t["truth"], str) else t["truth"]):
             assert x not in rep["investigation"].__repr__() or x in json.dumps(rep["tasks"]) or True
+
+
+def test_agent_attributed_failures_and_unsupported_successes_never_count_as_support_for_a_website_pattern(tmp_path):
+    def agent_fail(t, p):
+        return dict(passed=False, backed=False, visited=["/"] + p["evidence_paths"], answer="wrong")                  # decisive text shown, wrong answer => agent
+    ws = ws_for(tmp_path, agent_fail, name="wa")
+    assert all(a["primary"] in ("agent", "success") for a in ws.att.values() if not a["void"])
+    r = verify(ws, "info_absent_on_template", "The price is only on detail pages, not on the listing", label="price")
+    assert r.result == "supported" and r.support == []                                                               # the static pattern holds, but no trial supports a cost
+    h = ws.run.evidence.add_hypothesis(__import__("agent_readiness.investigate.models", fromlist=["Hypothesis"]).Hypothesis(
+        tier="verifiable", statement="The price is only on detail pages, not on the listing", claim_kind="info_absent_on_template", params={"label": "price"}, citations=[next(iter(ws.run.evidence.observations))],
+        provenance=__import__("agent_readiness.investigate.models", fromlist=["Provenance"]).Provenance(mode="scripted", source="t")))
+    row = V.verify_and_promote(ws, h)
+    assert row["finding_id"] is None and "not promoted" in row["promotion"] and ws.run.evidence.outcome() == "no_supported_issue"
+
+
+def test_the_pattern_list_is_not_the_only_way_to_be_heard(tmp_path):
+    ws = ws_for(tmp_path)
+    obs = next(iter(ws.run.evidence.observations))
+    fin = step("finish", hyps=[hyp("Visitors may not realise cards are clickable", [obs], prediction="If cards looked like buttons, fewer agents would open the same page twice")])
+    res = investigate(ws, ScriptedClient(scripted_model([fin])), max_calls=3)
+    h = next(iter(ws.run.evidence.hypotheses.values()))
+    assert h.tier == "novel" and h.status == "unverified" and not ws.run.evidence.findings and ws.run.evidence.outcome() == "no_supported_issue" and not res["rejected_hypotheses"]

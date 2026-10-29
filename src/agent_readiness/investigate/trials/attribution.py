@@ -74,8 +74,8 @@ def attribute(trial: dict, observations: list[dict], private: dict, profile: dic
         return res("agent", "the final answer did not match the required answer schema")
     if private["min_hops"] + 2 > trial["metrics"]["limits"]["max_steps"]:
         return res("task_invalid", "the required navigation does not fit inside the task's own step limit")
-    if sig["evidence_texts_shown"]:
-        return res("agent", "the decisive text was shown to the model, yet the answer was wrong or missing")
+    if sig["evidence_texts_shown"] and not sig["evidence_pages_unvisited"]:
+        return res("agent", "every required page was visited and the decisive text was shown to the model, yet the answer was wrong or missing")
     visited_ev = sig["evidence_pages_visited"]
     unv = sig["evidence_pages_unvisited"]
     for p in visited_ev:                                         # visited an evidence page but its text never reached the model

@@ -33,13 +33,18 @@ def _valid_trials(ws):
     return {k: a for k, a in ws.att.items() if not a["void"]}
 
 
+SUPPORTING_CLASSES = ("undetermined", "website", "tool_interface")
+
+
 def _impacted(ws, pred) -> list[str]:
-    """Support = investigation trials (one per task) that are non-void, were not clean successes or needed extra page views, and satisfy `pred`."""
+    """Support = one non-void investigation trial per task in which the claimed pattern plausibly COST something and nothing else explains the trial:
+    a clean success needing >= 2 extra page views, or a failure attributed to website / tool_interface / undetermined (e.g. budget spent before the evidence).
+    Trials attributed to the agent (the decisive text was shown, a named link was not followed, malformed answer), invalid tasks and right-answer-without-evidence runs never count."""
     out, seen = [], set()
     for k, a in sorted(_valid_trials(ws).items()):
         if a["task_id"] in seen or not pred(a):
             continue
-        if (not a["passed"]) or a["signals"]["extra_page_views"] >= 2 or a["primary"] != "success":
+        if a["primary"] in SUPPORTING_CLASSES or (a["primary"] == "success" and a["signals"]["extra_page_views"] >= 2):
             seen.add(a["task_id"])
             out.append(f"trial:{k}")
     return out
