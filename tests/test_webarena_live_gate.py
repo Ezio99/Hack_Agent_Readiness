@@ -226,3 +226,23 @@ def test_authorized_limits_are_pinned_and_the_new_per_request_cap_admits_a_large
     with pytest.raises(EstimatedCostLimit):
         run(r2.send(big))
     assert r2.network_hits == 0
+
+
+def test_synthetic_suite_scan_can_use_the_same_durable_gate(tmp_path):
+    """execute_scan(request_gate=...) reserves before and settles after every model request (mock provider: no network, no key)."""
+    import asyncio as aio
+    from agent_readiness.environments.electronics.variants import make_variant
+    from agent_readiness.scanner.execute import execute_scan
+    from agent_readiness.spend_gate import RequestGate as Gate
+    from agent_readiness.suite import registry
+    registry.load_all()
+    ledger = Ledger(tmp_path / "ledger", ceiling=0.60)
+    gate = Gate(ledger, "scan1")
+    rec = aio.run(execute_scan("t4-policy-delivery-tessera-whisper", make_variant(), provider="mock", output=tmp_path / "o", request_gate=gate))
+    n = rec["metrics"]["model_requests"]
+    assert n >= 2 and gate.request_count() == n and gate.unsettled() == [] and gate.violation is None
+    assert 0 < gate.run_committed() < 0.05 * n                     # settled to the (mock) actual cost, far below the reserved bounds
+    ledger2 = Ledger(tmp_path / "ledger2", ceiling=0.60)
+    tight = Gate(ledger2, "scan2", run_cap=0.03)                   # a run cap below one request's bound: nothing may be sent
+    rec2 = aio.run(execute_scan("t4-policy-delivery-tessera-whisper", make_variant(), provider="mock", output=tmp_path / "o2", request_gate=tight))
+    assert ledger2.entries() == [] and tight.request_count() == 0 and rec2["evaluation"]["passed"] is False      # every attempted request was refused before the network; nothing reserved or spent

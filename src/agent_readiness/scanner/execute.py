@@ -70,7 +70,7 @@ def calculated_cost(usage: list[dict]) -> float:
 
 
 async def execute_scan(task_id: str, variant: core.Variant, *, provider: str = "mock", mock_behavior: str = "correct", output: Path,
-                       model_config: ModelConfig | None = None, api_key: str | None = None, profile_id: str = PROFILE_ID) -> dict:
+                       model_config: ModelConfig | None = None, api_key: str | None = None, profile_id: str = PROFILE_ID, request_gate=None) -> dict:
     """Execute and evaluate one scan. Returns the PRIVATE result (full evaluation incl. reasons, journey, findings); callers must sanitize before sending it out."""
     if provider not in MODES:
         raise ValueError("provider must be mock or live")
@@ -101,6 +101,8 @@ async def execute_scan(task_id: str, variant: core.Variant, *, provider: str = "
                 "max_steps": spec.limits.max_steps,
                 "parameters": {"max_completion_tokens": effective["max_completion_tokens"], "reasoning_effort": effective["reasoning_effort"], "model": config.model},
             }
+            if request_gate is not None:             # durable per-request reserve-before-send ledger (agent_readiness.spend_gate); optional, default off
+                recorder.request_gate = request_gate
             scope = scrubbed_environment(config.key_env) if provider == "live" else None
             try:
                 if scope:
