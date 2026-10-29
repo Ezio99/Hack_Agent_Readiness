@@ -1,3 +1,5 @@
+> **DECISIONS 2026-10-29 (owner):** per-request reservation cap raised **US$0.04 → US$0.05**; run cap stays **US$0.50**, ledger ceiling **US$0.60**; max stays **16 requests** (the budget may stop the run earlier, accepted). **Exactly one paid schema probe, ≤US$0.04, is authorized; the live run is NOT.** If the probe fails: stop and report, no automatic retry or alternative schema.
+
 # Task 014 follow-up — PROPOSED live run plan: WebArena shopping task 286, one run (NOT APPROVED, NOT EXECUTED)
 
 **Status: proposal for review, 2026-10-29. No model call has been made or is authorized. Nothing in this document is run until the project owner approves this exact plan.** Baseline: [Report 014](../reports/014-webarena-magento-e2e.md) (PR #17, merged `8803674`), which validated only scripted/mock navigation on the real Magento site.
@@ -24,7 +26,7 @@ Can the frozen reference agent, starting from the normal storefront entry point 
 
 ## 4. Cost, ceiling, ledger
 - Verified prices: US$1.25 / US$4.25 per M input/output tokens (`docs`/`capture.py` constants; the preflight refuses to spend if they differ). Calculated cost, not a bill; the provider reports none.
-- Per request (estimate): Magento page text ≈ 8–9k prompt tokens measured (mock requests on the real pages) + screenshot (≈1–2k, unmeasured on Magento) + history, i.e. ≈ 10–13k input and 0.25–1k output ⇒ **≈ US$0.015–0.022**. Listing/search pages may be larger; per-request estimate cap stays at the existing US$0.04 (a request estimated above it is blocked pre-send).
+- Per request (estimate): Magento page text ≈ 8–9k prompt tokens measured (mock requests on the real pages) + screenshot (≈1–2k, unmeasured on Magento) + history, i.e. ≈ 10–13k input and 0.25–1k output ⇒ **≈ US$0.015–0.022**. Listing/search pages may be larger; per-request cap US$0.05 (raised from 0.04 by owner decision; a request whose upper bound exceeds it is blocked pre-send).
 - Expected run: 6–12 requests ⇒ **≈ US$0.10–0.25**. Worst case at the 16-request limit ⇒ ≈ US$0.35–0.45.
 - **Hard ceilings:** cumulative estimated cap for the run **US$0.50** (enforced before every request by the existing `estimated_cost_limit` guard); ledger ceiling for this programme step **US$0.60** (run reservation US$0.50 + optional schema probe US$0.04 + US$0.06 slack). The persistent append-only ledger (`scanner/live.py` `Ledger`: reserve-before-request, unsettled reservations count in full, an item can be attempted once, never auto-retried) is reused in a new directory `runs/webarena-014/live/` (Git-ignored). Programme-wide ledger headroom is unaffected beyond this US$0.60 (Task 012 committed US$0.718 of its US$6.00).
 - Total expected spend including probe ≈ US$0.15–0.30; **no spend above US$0.60 is possible by construction**.
@@ -36,7 +38,7 @@ Can the frozen reference agent, starting from the normal storefront entry point 
 3. *Post-run, no spend:* official evaluation on the original HAR, sanitized HAR copy, request-body scan, diagnostics, Report 014b.
 
 ## 6. Stop conditions
-The run stops at the first of: agent calls `done`; 16 steps; 16 model requests; 300 s; estimated per-request cost over US$0.04 (blocked pre-send); cumulative estimate over US$0.50; schema-fidelity violation; provider/HTTP error (no retry); two consecutive unparsable model outputs (Browser Use default); navigation outside the allowed origin (blocked by `allowed_domains`); container health failure mid-run (checked at start and end). Any guard-class stop halts everything and is reported as such; a wrong answer or running out of the agent's own budget is a result, not a halt.
+The run stops at the first of: agent calls `done`; 16 steps; 16 model requests; 300 s; per-request upper bound over US$0.05 (blocked pre-send); cumulative estimate over US$0.50; schema-fidelity violation; provider/HTTP error (no retry); two consecutive unparsable model outputs (Browser Use default); navigation outside the allowed origin (blocked by `allowed_domains`); container health failure mid-run (checked at start and end). Any guard-class stop halts everything and is reported as such; a wrong answer or running out of the agent's own budget is a result, not a halt.
 
 ## 7. Evidence and independent evaluation
 HAR via `NetworkCapture` (original kept private, sanitized copy via `sanitize_har`); the full Browser Use trace (requests, parser recovery, actions, tokens, timings); pre- and post-run container health and image digest; evaluator version/checksums. Outcome = the **official evaluator's** verdict on the original HAR; the agent's own `done(success)` is never used. Raw strict-JSON compliance vs compatibility-recovered responses are reported separately, as before.

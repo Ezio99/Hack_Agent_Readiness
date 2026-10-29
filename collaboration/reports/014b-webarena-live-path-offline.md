@@ -49,3 +49,8 @@
 
 ## Still unverified
 Provider acceptance of the `items: {}` answer schema (the probe); live-model behaviour; real-screenshot token cost on Magento; whether Muse Spark can solve 286; how the provider bills timeouts. No live path has been exercised against a real provider.
+
+## Decision update 2026-10-29 (owner) — documented change
+- **Per-request cap raised from US$0.04 to US$0.05** (`PER_REQUEST_CAP_USD` in `webarena/live.py`; it also feeds the guard's per-request estimate ceiling). New test `test_authorized_limits_are_pinned_and_the_new_per_request_cap_admits_a_larger_page` pins every authorized limit (0.05 / 0.50 / 0.60 / 16 requests / 16 steps / 300 s / 30 s / probe 0.04) and shows a ~US$0.043 page is refused at 0.04 and admitted at 0.05.
+- Run cap US$0.50, ledger ceiling US$0.60 and the 16-request maximum are unchanged; with a ≈US$0.037 bound per request the budget is expected to stop the run after ~13 requests, which is accepted. (This supersedes the "decide" items 1–2 above.)
+- Authorized: **one** schema probe, ≤US$0.04. Not authorized: the task 286 run, retries, other schemas.

@@ -211,3 +211,18 @@ def test_schema_probe_success_rejection_and_cap(tmp_path, monkeypatch):
         live.run_schema_probe(cfg, ledger2, tmp_path / "pc", allow_model_calls=True, transport=httpx.MockTransport(ok))
     with pytest.raises(Halt, match="allow-model-calls"):
         live.run_schema_probe(cfg, Ledger(tmp_path / "c"), tmp_path / "pd", allow_model_calls=False)
+
+
+def test_authorized_limits_are_pinned_and_the_new_per_request_cap_admits_a_larger_page(tmp_path):
+    assert (live.PER_REQUEST_CAP_USD, live.RUN_CAP_USD, live.LEDGER_CEILING_USD, live.MAX_REQUESTS, live.MAX_STEPS, live.RUN_TIMEOUT_S, live.REQUEST_TIMEOUT_S, live.PROBE_CAP_USD) \
+        == (0.05, 0.50, 0.60, 16, 16, 300, 30, 0.04)
+    big = body(user_chars=40_000)                                  # ~US$0.043 upper bound: refused under the old US$0.04 cap, admitted under US$0.05
+    ub, _ = upper_bound_usd(big)
+    assert 0.04 < ub <= 0.05
+    r = Rig(tmp_path, lambda req: ok_response(), per_request_cap=live.PER_REQUEST_CAP_USD)
+    run(r.send(big))
+    assert r.network_hits == 1
+    r2 = Rig(tmp_path / "old", lambda req: ok_response(), per_request_cap=0.04)
+    with pytest.raises(EstimatedCostLimit):
+        run(r2.send(big))
+    assert r2.network_hits == 0
