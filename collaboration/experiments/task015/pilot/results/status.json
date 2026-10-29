@@ -1,0 +1,31 @@
+{
+ "stage": "pilot",
+ "mode": "live",
+ "manifest_sha256": "25a22bfdba02363b0b31eecbd1c3834b5744372dcf35ec79c2c111a1d6ae08b3",
+ "runs_attempted": 2,
+ "runs_scheduled": 2,
+ "halt": null,
+ "complete": true,
+ "spend": {
+  "stage_committed_usd": 0.214509,
+  "stage_committed_aud": 0.3218,
+  "stage_cap_usd": 1.0,
+  "stage_cap_aud": 1.5,
+  "programme_spent_aud": 6.2067,
+  "programme_remaining_aud": 43.7933,
+  "basis": "calculated, not billed"
+ },
+ "preflight": {
+  "ok": true,
+  "mode": "live",
+  "stage_ledger": {
+   "stage_committed_usd": 0,
+   "stage_committed_aud": 0.0,
+   "stage_cap_usd": 1.0,
+   "stage_cap_aud": 1.5,
+   "programme_spent_aud": 5.885,
+   "programme_remaining_aud": 44.115,
+   "basis": "calculated, not billed"
+  }
+ }
+}

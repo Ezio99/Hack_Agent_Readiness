@@ -1,0 +1,63 @@
+{
+ "experiment_id": "task015-remediation",
+ "stage": "pilot",
+ "mode": "live",
+ "manifest_sha256": "25a22bfdba02363b0b31eecbd1c3834b5744372dcf35ec79c2c111a1d6ae08b3",
+ "audit_id": "8770fb8a1d7a",
+ "recommendation_id": "rec-show-availability-on-listing-cards",
+ "addresses": [
+  "attribute_detail_only:availability",
+  "filter_absent:availability"
+ ],
+ "n_pairs": 1,
+ "metrics": {
+  "T1": {
+   "valid_pairs": 1,
+   "delta_model_requests": [
+    -7
+   ],
+   "delta_product_page_visits": [
+    -3
+   ],
+   "delta_cost_usd": [
+    -0.1079
+   ],
+   "mean_delta_requests": -7.0,
+   "mean_delta_visits": -3.0,
+   "pass_rate": {
+    "unmodified": 0.0,
+    "modified": 1.0
+   },
+   "p_two_sided_sign_flip": 1.0
+  },
+  "T4_control": {
+   "valid_pairs": 0,
+   "delta_model_requests": [],
+   "delta_product_page_visits": [],
+   "delta_cost_usd": [],
+   "mean_delta_requests": null,
+   "mean_delta_visits": null,
+   "pass_rate": {
+    "unmodified": null,
+    "modified": null
+   },
+   "p_two_sided_sign_flip": null
+  }
+ },
+ "verdict": "inconclusive",
+ "verdict_reason": "1 valid T1 pair(s); fewer than 4 (or pilot stage): no inference",
+ "void_runs": [],
+ "independent_reaudit": {
+  "audit_id": "aaee1f0d78fb",
+  "lifecycle": {
+   "attribute_detail_only:availability": "resolved",
+   "filter_absent:availability": "resolved"
+  },
+  "note": "the modified state was re-audited by the product without labels; resolution is not an effect measurement"
+ },
+ "caveats": [
+  "calculated costs, not billed",
+  "synthetic storefront, one model, one task",
+  "n is small; interpret as consistent-with, not proof"
+ ]
+}
