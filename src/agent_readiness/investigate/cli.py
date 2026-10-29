@@ -28,6 +28,13 @@ def register(sub) -> None:
     pat.add_argument("snapshot", type=Path)
     pat.add_argument("patch_json", type=Path)
     pat.add_argument("--out", type=Path, required=True)
+    l0 = isub.add_parser("l0", help="L0 Meta capability probe (PROPOSAL: `plan` is offline; `run` needs the owner's approval hash and --allow-model-calls)")
+    lsub = l0.add_subparsers(dest="l0_command", required=True)
+    lsub.add_parser("plan", help="Print the exact probe manifest and its SHA-256 (no network, no key)")
+    lrun = lsub.add_parser("run", help="Execute the approved probe (paid; refuses without the exact approved hash)")
+    lrun.add_argument("--approved-sha256", required=True)
+    lrun.add_argument("--allow-model-calls", action="store_true")
+    lrun.add_argument("--out", type=Path, default=Path("investigations/l0-probe"))
     st = isub.add_parser("status", help="Show stages, outcome and pending approvals of an investigation")
     st.add_argument("run_dir", type=Path)
     ap = isub.add_parser("approve", help="Record the owner's approval of an exact stage manifest hash")
@@ -43,6 +50,20 @@ def main(args) -> None:
         from .demo import run_demo
         run, rep = run_demo(args.root, args.id)
         print(f"scripted demo finished: {run.dir}  outcome={rep['outcome']}  (mode={run.mode}; {rep['notices'][0]})")
+        return
+    if args.investigate_command == "l0":
+        from . import l0
+        if args.l0_command == "plan":
+            m = l0.manifest()
+            print(json.dumps(m, indent=1))
+            print(f"manifest sha256: {l0.manifest_sha256(m)}")
+            return
+        from ..ledger import Halt
+        try:
+            rep = l0.run(args.out, approved_sha256=args.approved_sha256, allow_model_calls=args.allow_model_calls)
+        except Halt as exc:
+            raise SystemExit(f"refused: {exc}")
+        print(json.dumps(rep["evaluation"], indent=1))
         return
     if args.investigate_command == "inspect":
         from .inspect.crawl import HttpFetcher, Limits, crawl
