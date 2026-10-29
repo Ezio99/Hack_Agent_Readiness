@@ -12,10 +12,11 @@ from .tasks import generate
 def _groups():
     """Command groups that own their parser and handler (one module per feature). The original single-site commands below stay here because tests patch `cli.run` / `cli.load_repo_env`."""
     from .experiments import cli_impl as experiments
+    from .investigate import cli as investigate
     from .remediation import cli_impl as remediation
     from .scanner import cli as scanner
     from .suite import cli as suite
-    return (scanner, suite, remediation, experiments)
+    return (scanner, suite, remediation, experiments, investigate)
 
 
 def main():
