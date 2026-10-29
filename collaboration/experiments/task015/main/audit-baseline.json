@@ -1,0 +1,355 @@
+{
+ "schema": "remediation-audit-v1",
+ "audit_id": "261464886011",
+ "created_at": "2026-10-29T04:44:32.672068+00:00",
+ "target": "demo-shop",
+ "objective": "Find every headphone in the store that has active noise cancelling (ANC), is currently in stock and costs A$250.00 or less. Report each product's SKU and price in integer cents.",
+ "taxonomy": {
+  "website_observations": "Facts measured on the site by the probe.",
+  "findings": "Rule-derived conclusions about website properties, each with evidence.",
+  "agent_execution": "What an agent did in a recorded scan and the independent evaluator's verdict; not a website finding.",
+  "recommendations": "Proposed interventions, selected by observed findings; unvalidated until measured.",
+  "lifecycle": "Whether a previously observed property is still observed after a change; resolution is not an effect measurement.",
+  "measured_effects": "Controlled-experiment results (n, metrics, intervals) with provenance; empty unless supplied."
+ },
+ "probe": {
+  "pages_fetched": 30,
+  "listing_pages": 6,
+  "product_template": "/p/{}",
+  "limits": {
+   "max_pages": 24,
+   "max_details": 6,
+   "max_depth": 2,
+   "javascript": false,
+   "methods": [
+    "GET"
+   ]
+  },
+  "errors": []
+ },
+ "website_observations": {
+  "attributes": {
+   "availability": {
+    "description": "stock / availability state",
+    "cards_examined": 54,
+    "cards_with_cue": 0,
+    "card_cue_rate": 0.0,
+    "details_examined": 6,
+    "details_with_cue": 6,
+    "detail_cue_rate": 1.0,
+    "listing_pages": 6
+   },
+   "sku": {
+    "description": "product SKU / identifier",
+    "cards_examined": 54,
+    "cards_with_cue": 54,
+    "card_cue_rate": 1.0,
+    "details_examined": 6,
+    "details_with_cue": 6,
+    "detail_cue_rate": 1.0,
+    "listing_pages": 6
+   }
+  },
+  "filters": [
+   {
+    "listing_url": "/",
+    "controls": [
+     "Search products [q]"
+    ],
+    "attribute_filters": {
+     "availability": false
+    }
+   },
+   {
+    "listing_url": "/",
+    "controls": [
+     "Search products [q]"
+    ],
+    "attribute_filters": {
+     "availability": false
+    }
+   },
+   {
+    "listing_url": "/c/headphones",
+    "controls": [
+     "Search products [q]",
+     "Brand [brand]",
+     "Maximum price (A$) [max_price]",
+     "Active noise cancelling [anc]",
+     "Type [form]",
+     "Sort by [sort]"
+    ],
+    "attribute_filters": {
+     "availability": false
+    }
+   },
+   {
+    "listing_url": "/c/laptops",
+    "controls": [
+     "Search products [q]",
+     "Brand [brand]",
+     "Maximum price (A$) [max_price]",
+     "Minimum memory [min_ram]",
+     "Sort by [sort]"
+    ],
+    "attribute_filters": {
+     "availability": false
+    }
+   }
+  ]
+ },
+ "findings": [
+  {
+   "fingerprint": "attribute_detail_only:availability",
+   "kind": "attribute_detail_only",
+   "attribute": "availability",
+   "category": "website_property",
+   "confidence": "observed",
+   "title": "availability is shown on product pages but not on listing cards",
+   "summary": "0 of 54 listing cards (across 6 listing pages) show stock / availability state; 6 of 6 sampled product pages do.",
+   "counts": {
+    "description": "stock / availability state",
+    "cards_examined": 54,
+    "cards_with_cue": 0,
+    "card_cue_rate": 0.0,
+    "details_examined": 6,
+    "details_with_cue": 6,
+    "detail_cue_rate": 1.0,
+    "listing_pages": 6
+   },
+   "evidence": [
+    {
+     "type": "listing_card",
+     "url": "/",
+     "card_index": 0,
+     "product_link": "/p/kestrel-gan-charger-65w",
+     "locator": "li < ul.grid < main#main.wrap < body",
+     "excerpt": "Accessories Kestrel GaN Charger 65W Kestrel SKU AC-4001 \u2605 4.5 Charger A$59.00",
+     "cue": null
+    },
+    {
+     "type": "listing_card",
+     "url": "/",
+     "card_index": 1,
+     "product_link": "/p/nordwave-beat-200",
+     "locator": "li < ul.grid < main#main.wrap < body",
+     "excerpt": "Headphones Nordwave Beat 200 Nordwave SKU HP-1009 \u2605 4.0 No ANC Over-ear A$89.00",
+     "cue": null
+    },
+    {
+     "type": "listing_card",
+     "url": "/",
+     "card_index": 2,
+     "product_link": "/p/kestrel-air-14",
+     "locator": "li < ul.grid < main#main.wrap < body",
+     "excerpt": "Laptops Kestrel Air 14 Kestrel SKU LT-2001 \u2605 4.6 14.0 inch 512 GB storage A$1,299.00",
+     "cue": null
+    },
+    {
+     "type": "product_page",
+     "url": "/p/kestrel-gan-charger-65w",
+     "locator": "p#availability.stock.in < article < main#main.wrap < body",
+     "cue": "In stock",
+     "title": "Kestrel GaN Charger 65W \u2014 Circuit & Co."
+    },
+    {
+     "type": "product_page",
+     "url": "/p/nordwave-beat-200",
+     "locator": "p#availability.stock.in < article < main#main.wrap < body",
+     "cue": "In stock",
+     "title": "Nordwave Beat 200 \u2014 Circuit & Co."
+    },
+    {
+     "type": "product_page",
+     "url": "/p/kestrel-air-14",
+     "locator": "p#availability.stock.in < article < main#main.wrap < body",
+     "cue": "In stock",
+     "title": "Kestrel Air 14 \u2014 Circuit & Co."
+    }
+   ]
+  },
+  {
+   "fingerprint": "attribute_on_cards:sku",
+   "kind": "attribute_on_cards",
+   "attribute": "sku",
+   "category": "website_property_positive",
+   "confidence": "observed",
+   "title": "sku is shown on listing cards",
+   "summary": "54 of 54 listing cards show product SKU / identifier.",
+   "counts": {
+    "description": "product SKU / identifier",
+    "cards_examined": 54,
+    "cards_with_cue": 54,
+    "card_cue_rate": 1.0,
+    "details_examined": 6,
+    "details_with_cue": 6,
+    "detail_cue_rate": 1.0,
+    "listing_pages": 6
+   },
+   "evidence": [
+    {
+     "type": "listing_card",
+     "url": "/",
+     "card_index": 0,
+     "product_link": "/p/kestrel-gan-charger-65w",
+     "locator": "li < ul.grid < main#main.wrap < body",
+     "excerpt": "Accessories Kestrel GaN Charger 65W Kestrel SKU AC-4001 \u2605 4.5 Charger A$59.00",
+     "cue": "SKU AC-4001"
+    },
+    {
+     "type": "listing_card",
+     "url": "/",
+     "card_index": 1,
+     "product_link": "/p/nordwave-beat-200",
+     "locator": "li < ul.grid < main#main.wrap < body",
+     "excerpt": "Headphones Nordwave Beat 200 Nordwave SKU HP-1009 \u2605 4.0 No ANC Over-ear A$89.00",
+     "cue": "SKU HP-1009"
+    },
+    {
+     "type": "listing_card",
+     "url": "/",
+     "card_index": 2,
+     "product_link": "/p/kestrel-air-14",
+     "locator": "li < ul.grid < main#main.wrap < body",
+     "excerpt": "Laptops Kestrel Air 14 Kestrel SKU LT-2001 \u2605 4.6 14.0 inch 512 GB storage A$1,299.00",
+     "cue": "SKU LT-2001"
+    }
+   ]
+  },
+  {
+   "fingerprint": "filter_absent:availability",
+   "kind": "filter_absent",
+   "attribute": "availability",
+   "category": "website_property",
+   "confidence": "observed",
+   "title": "No availability filter is offered on listing pages",
+   "summary": "6 listing pages offer filters (Active noise cancelling, Brand, Maximum price (A$), Minimum memory, Minimum refresh rate) but none for availability.",
+   "counts": {
+    "listing_pages_with_filters": 6
+   },
+   "evidence": [
+    {
+     "type": "filter_form",
+     "url": "/",
+     "controls": [
+      "Search products [q]"
+     ]
+    },
+    {
+     "type": "filter_form",
+     "url": "/",
+     "controls": [
+      "Search products [q]"
+     ]
+    }
+   ]
+  }
+ ],
+ "recommendations": [
+  {
+   "id": "rec-show-availability-on-listing-cards",
+   "template": "show-availability-on-listing-cards",
+   "title": "Show stock status on listing cards",
+   "status": "proposed",
+   "validation": "unvalidated",
+   "addresses": [
+    "attribute_detail_only:availability",
+    "filter_absent:availability"
+   ],
+   "change": "Print 'In stock' / 'Out of stock' on every listing, search and home card, and offer an in-stock filter on listing pages.",
+   "change_id": "availability-on-listing-cards",
+   "rationale": "Observed: 0 of 54 listing cards (across 6 listing pages) show stock / availability state; 6 of 6 sampled product pages do. 6 listing pages offer filters (Active noise cancelling, Brand, Maximum price (A$), Minimum memory, Minimum refresh rate) but none for availability. Mechanism: Stock state decides eligibility for many shopping tasks. When it is visible only after opening each product page, an agent (or a person) must open every candidate to learn it, or guess; showing it on the card makes the decision readable from the list.",
+   "task_relevance": "task_depends_on_attribute",
+   "expected_benefit": "Fewer product-page visits and model requests for tasks that depend on stock, and fewer answers that include unavailable items.",
+   "risks": "Cards become denser; stock data must be accurate and fresh on list pages (cache invalidation); an in-stock filter needs the same data source.",
+   "confidence": {
+    "level": "prior_evidence_other_site",
+    "basis": [
+     {
+      "ref": "collaboration/reports/007-availability-placement-pilot.md",
+      "kind": "prior_evidence_other_site",
+      "scope": "legacy synthetic storefront, 'most expensive in-stock product' task, n = 3 runs per cell, exploratory and descriptive; detail-only needed +2.7 to +6.0 model requests per run in scopes of rank >= 2",
+      "limits": "different site and task; one model; not a validated effect for the audited site"
+     }
+    ],
+    "statement": "Supported by descriptive evidence from a different site/task; NOT validated for this site."
+   },
+   "supporting_evidence": [
+    {
+     "type": "listing_card",
+     "url": "/",
+     "card_index": 0,
+     "product_link": "/p/kestrel-gan-charger-65w",
+     "locator": "li < ul.grid < main#main.wrap < body",
+     "excerpt": "Accessories Kestrel GaN Charger 65W Kestrel SKU AC-4001 \u2605 4.5 Charger A$59.00",
+     "cue": null
+    },
+    {
+     "type": "listing_card",
+     "url": "/",
+     "card_index": 1,
+     "product_link": "/p/nordwave-beat-200",
+     "locator": "li < ul.grid < main#main.wrap < body",
+     "excerpt": "Headphones Nordwave Beat 200 Nordwave SKU HP-1009 \u2605 4.0 No ANC Over-ear A$89.00",
+     "cue": null
+    },
+    {
+     "type": "listing_card",
+     "url": "/",
+     "card_index": 2,
+     "product_link": "/p/kestrel-air-14",
+     "locator": "li < ul.grid < main#main.wrap < body",
+     "excerpt": "Laptops Kestrel Air 14 Kestrel SKU LT-2001 \u2605 4.6 14.0 inch 512 GB storage A$1,299.00",
+     "cue": null
+    },
+    {
+     "type": "product_page",
+     "url": "/p/kestrel-gan-charger-65w",
+     "locator": "p#availability.stock.in < article < main#main.wrap < body",
+     "cue": "In stock",
+     "title": "Kestrel GaN Charger 65W \u2014 Circuit & Co."
+    },
+    {
+     "type": "product_page",
+     "url": "/p/nordwave-beat-200",
+     "locator": "p#availability.stock.in < article < main#main.wrap < body",
+     "cue": "In stock",
+     "title": "Nordwave Beat 200 \u2014 Circuit & Co."
+    },
+    {
+     "type": "filter_form",
+     "url": "/",
+     "controls": [
+      "Search products [q]"
+     ]
+    }
+   ],
+   "how_to_validate": {
+    "resolution_check": "re-audit and confirm finding attribute_detail_only:availability is no longer observed (and attribute_on_cards:availability is)",
+    "effect_measurement": "controlled rescan/experiment on the same task and catalogue measuring: model requests per task, product-page visits, answer correctness for stock-dependent tasks, calculated cost"
+   },
+   "evidence_counts": {
+    "cards_examined": 54,
+    "cards_with_cue": 0,
+    "details_examined": 6,
+    "details_with_cue": 6
+   }
+  }
+ ],
+ "agent_execution": null,
+ "discovery_candidates": [],
+ "lifecycle": null,
+ "measured_effects": {
+  "status": "not_measured",
+  "effects": []
+ },
+ "summary": {
+  "problems": 2,
+  "recommendations": 1,
+  "problem_fingerprints": [
+   "attribute_detail_only:availability",
+   "filter_absent:availability"
+  ]
+ },
+ "disclaimer": "Findings describe what the probe observed. Recommendations are proposals; none is claimed to improve agent outcomes until measured_effects says so."
+}
