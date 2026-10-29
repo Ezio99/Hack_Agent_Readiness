@@ -138,3 +138,13 @@ def test_tool_visibility_fix_works_in_the_webarena_runner_v2_but_not_v1():
     assert v2["official_verdict"]["passed"] and v2["model_requests"] == 4, v2
     v1 = run(make_reader(), profile_id="suite-v1-compat1")
     assert not v1["official_verdict"]["passed"] and v1["model_requests"] > v2["model_requests"]      # v1: the model never sees the link targets
+
+
+def test_sanitize_har_redacts_secrets_and_bodies(tmp_path):
+    from agent_readiness.webarena.har import sanitize_har
+    e = {"request": {"method": "POST", "url": "http://x/", "headers": [{"name": "Cookie", "value": "PHPSESSID=secret"}, {"name": "Accept", "value": "*/*"}], "postData": {"text": "form_key=abc"}},
+         "response": {"status": 200, "headers": [{"name": "Set-Cookie", "value": "a=b"}], "content": {"size": 4, "text": "body"}}}
+    (tmp_path / "a.har").write_text(json.dumps({"log": {"entries": [e]}}))
+    r = sanitize_har(tmp_path / "a.har", tmp_path / "b.har")
+    out = (tmp_path / "b.har").read_text()
+    assert r == {"entries": 1, "headers_redacted": 2} and "secret" not in out and "form_key=abc" not in out and '"text": ""' in out and "*/*" in out
