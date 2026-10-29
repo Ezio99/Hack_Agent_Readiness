@@ -47,6 +47,9 @@ def register(sub) -> None:
     rn.add_argument("--allow-model-calls", action="store_true")
     st = isub.add_parser("status", help="Show stages, outcome and pending approvals of an investigation")
     st.add_argument("run_dir", type=Path)
+    ex = isub.add_parser("export", help="Write a sanitized, read-only JSON of a run for the dashboard (no private criteria, answers, traces or credentials; tolerates incomplete runs)")
+    ex.add_argument("run_dir", type=Path)
+    ex.add_argument("--out", type=Path, required=True)
     ap = isub.add_parser("approve", help="Record the owner's approval of an exact stage manifest hash")
     ap.add_argument("run_dir", type=Path)
     ap.add_argument("--stage", required=True)
@@ -125,6 +128,14 @@ def main(args) -> None:
             raise SystemExit(f"patch refused: {exc}")
         new.save(args.out)
         print(json.dumps(rep, indent=2))
+        return
+    if args.investigate_command == "export":
+        from .export import ExportError, write_export
+        try:
+            data = write_export(args.run_dir, args.out)
+        except (ExportError, FileNotFoundError) as exc:
+            raise SystemExit(f"export refused: {exc}")
+        print(f"exported {data['run']['id']} -> {args.out}  complete={data['run']['complete']}  source={data['run']['report_source']}  modes={','.join(data['modes'])}")
         return
     run = InvestigationRun(args.run_dir)
     if args.investigate_command == "approve":
