@@ -1,0 +1,674 @@
+{
+  "effects": [
+    {
+      "id": "eff-db54d8c3da",
+      "measured": false,
+      "mode": "scripted",
+      "n_pairs": 5,
+      "note": "ILLUSTRATIVE (synthetic data): meets the pre-registered improvement rule",
+      "proposal_id": "prp-5c2e33ac94",
+      "verdict": "improvement"
+    }
+  ],
+  "evaluation": {
+    "reason": null,
+    "results": [
+      {
+        "by_partition": {
+          "holdout": {
+            "mean_request_change": -2,
+            "pairs": 1,
+            "pass_delta": 1.0
+          },
+          "investigation": {
+            "mean_request_change": -4.75,
+            "pairs": 4,
+            "pass_delta": 1.0
+          }
+        },
+        "effect_mode": "scripted",
+        "excluded": [
+          {
+            "reason": "void or missing trial in one arm",
+            "task_id": "syn-t5"
+          }
+        ],
+        "holdout_consistent": true,
+        "measured": false,
+        "p_pass": 0.0625,
+        "p_requests": 0.0625,
+        "pairs": 5,
+        "pass_delta": 1.0,
+        "proposal_id": "prp-5c2e33ac94",
+        "reason": "ILLUSTRATIVE (synthetic data): meets the pre-registered improvement rule",
+        "request_change": -0.4565,
+        "rule_preregistered_at_freeze": true,
+        "verdict": "improvement"
+      }
+    ],
+    "rule": {
+      "alpha": 0.1,
+      "causal_scope": "these frozen tasks, this profile and this patched mirror only",
+      "id": "paired-signflip-v1",
+      "min_pairs": 4,
+      "pass_delta_floor": 0.25,
+      "primary": "evidence_backed_pass_rate",
+      "request_reduction_floor": 0.25,
+      "secondary": "model_requests",
+      "void_policy": "a pair with any void trial in either arm is excluded and listed"
+    },
+    "state": "evaluated"
+  },
+  "exported_at": "2026-01-01T00:00:00+00:00",
+  "findings": [
+    {
+      "attribution": "website",
+      "hypothesis_id": "hyp-60a0b787e1",
+      "id": "fnd-d4ebaa2ebd",
+      "observation_ids": [
+        "obs-c926510cee",
+        "obs-fc733d3a20"
+      ],
+      "provenance": {
+        "mode": "scripted",
+        "source": "code:promote"
+      },
+      "statement": "Amenities are on detail pages but absent from listing cards.",
+      "structural_proof": false,
+      "support": [
+        {
+          "ref": "trial:syn-t1-r1",
+          "resolved": true
+        },
+        {
+          "ref": "trial:syn-t3-r1",
+          "resolved": true
+        }
+      ],
+      "unresolved_observation_ids": []
+    }
+  ],
+  "hypotheses": [
+    {
+      "claim_kind": "info_absent_on_template",
+      "id": "hyp-60a0b787e1",
+      "observation_ids": [
+        "obs-c926510cee",
+        "obs-fc733d3a20"
+      ],
+      "prediction": null,
+      "promoted": true,
+      "provenance": {
+        "mode": "scripted",
+        "source": "fixture:synthetic"
+      },
+      "statement": "Amenities are on detail pages but absent from listing cards.",
+      "status": "supported",
+      "tier": "verifiable",
+      "verification": {
+        "evidence": [
+          "obs-c926510cee",
+          "obs-fc733d3a20"
+        ],
+        "result": "supported",
+        "verifier": "fixture:info_absent_on_template"
+      }
+    },
+    {
+      "claim_kind": null,
+      "id": "hyp-0c22479d92",
+      "observation_ids": [
+        "obs-d50acc843a"
+      ],
+      "prediction": "If cards listed amenities, model requests on list-and-filter tasks would fall.",
+      "promoted": false,
+      "provenance": {
+        "mode": "scripted",
+        "source": "fixture:synthetic"
+      },
+      "statement": "Agents open every page because nothing on the listing suggests which cabin is worth opening.",
+      "status": "unverified",
+      "tier": "novel",
+      "verification": null
+    },
+    {
+      "claim_kind": "error_response_on_path",
+      "id": "hyp-1f7b81d0fe",
+      "observation_ids": [
+        "obs-c926510cee"
+      ],
+      "prediction": null,
+      "promoted": false,
+      "provenance": {
+        "mode": "scripted",
+        "source": "fixture:synthetic"
+      },
+      "statement": "The site returns errors on some paths.",
+      "status": "refuted",
+      "tier": "verifiable",
+      "verification": {
+        "evidence": [
+          "obs-c926510cee"
+        ],
+        "result": "refuted",
+        "verifier": "fixture:error_response_on_path"
+      }
+    }
+  ],
+  "investigation": {
+    "cost_usd": 0.0,
+    "finished": true,
+    "incomplete": false,
+    "mode": "scripted",
+    "model": "scripted-fixture",
+    "model_requests": 9,
+    "reason": null,
+    "rejected_hypotheses": 0,
+    "skipped": false,
+    "tool_calls": 7
+  },
+  "modes": [
+    "scripted"
+  ],
+  "notices": [
+    "SCRIPTED: model and agent behaviour in this run was written by a test fixture; it demonstrates the pipeline, not model capability."
+  ],
+  "observations": [
+    {
+      "id": "obs-c926510cee",
+      "kind": "listing_cards",
+      "provenance": {
+        "mode": "scripted",
+        "source": "fixture:synthetic"
+      },
+      "refs": [
+        "page:/cabins"
+      ],
+      "summary": "Listing cards show name and price, no amenity text (6 of 6 cards)."
+    },
+    {
+      "id": "obs-fc733d3a20",
+      "kind": "detail_pages",
+      "provenance": {
+        "mode": "scripted",
+        "source": "fixture:synthetic"
+      },
+      "refs": [
+        "page:/cabins/1"
+      ],
+      "summary": "Amenities appear only on cabin detail pages (6 of 6)."
+    },
+    {
+      "id": "obs-d50acc843a",
+      "kind": "trace_pattern",
+      "provenance": {
+        "mode": "scripted",
+        "source": "fixture:synthetic"
+      },
+      "refs": [
+        "trial:syn-t1-r1",
+        "trial:syn-t3-r1"
+      ],
+      "summary": "In 3 baseline trials the agent opened every cabin page before answering."
+    }
+  ],
+  "proposals": [
+    {
+      "approved": true,
+      "auto_applicable": true,
+      "basis": "verified_finding",
+      "change": {
+        "ops": [
+          "copy_field_to_listing"
+        ]
+      },
+      "expected_effect": "Fewer page views on amenity-dependent tasks.",
+      "id": "prp-5c2e33ac94",
+      "label": "VERIFIED-FINDING PROPOSAL (unvalidated until measured)",
+      "provenance": {
+        "mode": "scripted",
+        "source": "fixture:synthetic"
+      },
+      "risks": [
+        "Wider cards"
+      ],
+      "source_id": "fnd-d4ebaa2ebd",
+      "status": "applied",
+      "validation": "unvalidated"
+    },
+    {
+      "approved": false,
+      "auto_applicable": false,
+      "basis": "unverified_hypothesis",
+      "change": {
+        "manual": "Add a one-line cue to cards and compare request counts."
+      },
+      "expected_effect": "If cards listed amenities, model requests on list-and-filter tasks would fall.",
+      "id": "prp-01fcfe4827",
+      "label": "EXPERIMENTAL \u2014 based on an unverified hypothesis, not a verified finding",
+      "provenance": {
+        "mode": "scripted",
+        "source": "fixture:synthetic"
+      },
+      "risks": [
+        "Mechanism unverified"
+      ],
+      "source_id": "hyp-0c22479d92",
+      "status": "proposed",
+      "validation": "unvalidated"
+    }
+  ],
+  "run": {
+    "complete": true,
+    "created_at": "2026-01-01T00:00:00+00:00",
+    "id": "synthetic-demo",
+    "missing_artifacts": [],
+    "mode": "scripted",
+    "outcome": "findings",
+    "report_source": "report-final",
+    "target": "synthetic-cabin-site (fixture)"
+  },
+  "schema": "investigation-dashboard-v1",
+  "stages": [
+    {
+      "manifest_sha256": null,
+      "name": "inspect",
+      "reason": null,
+      "skipped": false,
+      "status": "done",
+      "summary": {
+        "synthetic": true
+      },
+      "updated_at": null
+    },
+    {
+      "manifest_sha256": null,
+      "name": "taskgen",
+      "reason": null,
+      "skipped": false,
+      "status": "done",
+      "summary": {
+        "synthetic": true
+      },
+      "updated_at": null
+    },
+    {
+      "manifest_sha256": null,
+      "name": "freeze",
+      "reason": null,
+      "skipped": false,
+      "status": "done",
+      "summary": {
+        "synthetic": true
+      },
+      "updated_at": null
+    },
+    {
+      "manifest_sha256": null,
+      "name": "baseline_trials",
+      "reason": null,
+      "skipped": false,
+      "status": "done",
+      "summary": {
+        "synthetic": true
+      },
+      "updated_at": null
+    },
+    {
+      "manifest_sha256": null,
+      "name": "trace",
+      "reason": null,
+      "skipped": false,
+      "status": "done",
+      "summary": {
+        "synthetic": true
+      },
+      "updated_at": null
+    },
+    {
+      "manifest_sha256": null,
+      "name": "investigate",
+      "reason": null,
+      "skipped": false,
+      "status": "done",
+      "summary": {
+        "synthetic": true
+      },
+      "updated_at": null
+    },
+    {
+      "manifest_sha256": null,
+      "name": "recommend",
+      "reason": null,
+      "skipped": false,
+      "status": "done",
+      "summary": {
+        "synthetic": true
+      },
+      "updated_at": null
+    },
+    {
+      "manifest_sha256": null,
+      "name": "report",
+      "reason": null,
+      "skipped": false,
+      "status": "done",
+      "summary": {
+        "synthetic": true
+      },
+      "updated_at": null
+    },
+    {
+      "manifest_sha256": null,
+      "name": "apply_fix",
+      "reason": null,
+      "skipped": false,
+      "status": "done",
+      "summary": {
+        "synthetic": true
+      },
+      "updated_at": null
+    },
+    {
+      "manifest_sha256": null,
+      "name": "post_trials",
+      "reason": null,
+      "skipped": false,
+      "status": "done",
+      "summary": {
+        "synthetic": true
+      },
+      "updated_at": null
+    },
+    {
+      "manifest_sha256": null,
+      "name": "evaluate",
+      "reason": null,
+      "skipped": false,
+      "status": "done",
+      "summary": {
+        "synthetic": true
+      },
+      "updated_at": null
+    },
+    {
+      "manifest_sha256": null,
+      "name": "final_report",
+      "reason": null,
+      "skipped": false,
+      "status": "done",
+      "summary": {
+        "synthetic": true
+      },
+      "updated_at": null
+    }
+  ],
+  "statement": "SYNTHETIC FIXTURE: findings are website properties; trials show an association; a measured effect needs live trials.",
+  "synthetic": true,
+  "tasks": [
+    {
+      "baseline": [
+        {
+          "attribution": "website",
+          "evidence_backed": false,
+          "mode": "scripted",
+          "model_requests": 11,
+          "page_views": 10,
+          "passed": false,
+          "repeat": 1,
+          "run_status": "completed",
+          "trial_id": "syn-t1-r1",
+          "void": false,
+          "why": "synthetic fixture attribution"
+        }
+      ],
+      "kind": "item_set",
+      "limits": {
+        "max_model_requests": 11,
+        "max_steps": 11,
+        "timeout_seconds": 240
+      },
+      "partition": "investigation",
+      "patched": {
+        "prp-5c2e33ac94": [
+          {
+            "evidence_backed": true,
+            "mode": "scripted",
+            "model_requests": 5,
+            "page_views": 4,
+            "passed": true,
+            "repeat": 1,
+            "run_status": "completed",
+            "trial_id": "syn-t1-r1",
+            "void": false
+          }
+        ]
+      },
+      "question": "Which listed cabins have a fireplace? List their names.",
+      "source": "rule",
+      "start_path": "/",
+      "task_id": "syn-t1"
+    },
+    {
+      "baseline": [
+        {
+          "attribution": "website",
+          "evidence_backed": false,
+          "mode": "scripted",
+          "model_requests": 9,
+          "page_views": 8,
+          "passed": false,
+          "repeat": 1,
+          "run_status": "completed",
+          "trial_id": "syn-t2-r1",
+          "void": false,
+          "why": "synthetic fixture attribution"
+        }
+      ],
+      "kind": "extremum",
+      "limits": {
+        "max_model_requests": 11,
+        "max_steps": 11,
+        "timeout_seconds": 240
+      },
+      "partition": "investigation",
+      "patched": {
+        "prp-5c2e33ac94": [
+          {
+            "evidence_backed": true,
+            "mode": "scripted",
+            "model_requests": 5,
+            "page_views": 4,
+            "passed": true,
+            "repeat": 1,
+            "run_status": "completed",
+            "trial_id": "syn-t2-r1",
+            "void": false
+          }
+        ]
+      },
+      "question": "Which cabin has the lowest nightly price?",
+      "source": "rule",
+      "start_path": "/",
+      "task_id": "syn-t2"
+    },
+    {
+      "baseline": [
+        {
+          "attribution": "undetermined",
+          "evidence_backed": false,
+          "mode": "scripted",
+          "model_requests": 11,
+          "page_views": 10,
+          "passed": false,
+          "repeat": 1,
+          "run_status": "request_limit",
+          "trial_id": "syn-t3-r1",
+          "void": false,
+          "why": "synthetic fixture attribution"
+        }
+      ],
+      "kind": "item_set",
+      "limits": {
+        "max_model_requests": 11,
+        "max_steps": 11,
+        "timeout_seconds": 240
+      },
+      "partition": "investigation",
+      "patched": {
+        "prp-5c2e33ac94": [
+          {
+            "evidence_backed": true,
+            "mode": "scripted",
+            "model_requests": 5,
+            "page_views": 4,
+            "passed": true,
+            "repeat": 1,
+            "run_status": "completed",
+            "trial_id": "syn-t3-r1",
+            "void": false
+          }
+        ]
+      },
+      "question": "Which cabins allow pets? List their names.",
+      "source": "rule",
+      "start_path": "/",
+      "task_id": "syn-t3"
+    },
+    {
+      "baseline": [
+        {
+          "attribution": "website",
+          "evidence_backed": false,
+          "mode": "scripted",
+          "model_requests": 8,
+          "page_views": 7,
+          "passed": false,
+          "repeat": 1,
+          "run_status": "completed",
+          "trial_id": "syn-t4-r1",
+          "void": false,
+          "why": "synthetic fixture attribution"
+        }
+      ],
+      "kind": "page_fact",
+      "limits": {
+        "max_model_requests": 11,
+        "max_steps": 11,
+        "timeout_seconds": 240
+      },
+      "partition": "investigation",
+      "patched": {
+        "prp-5c2e33ac94": [
+          {
+            "evidence_backed": true,
+            "mode": "scripted",
+            "model_requests": 5,
+            "page_views": 4,
+            "passed": true,
+            "repeat": 1,
+            "run_status": "completed",
+            "trial_id": "syn-t4-r1",
+            "void": false
+          }
+        ]
+      },
+      "question": "What is the check-in time for Pine Cabin?",
+      "source": "rule",
+      "start_path": "/",
+      "task_id": "syn-t4"
+    },
+    {
+      "baseline": [
+        {
+          "attribution": "infrastructure",
+          "evidence_backed": null,
+          "mode": "scripted",
+          "model_requests": 2,
+          "page_views": 1,
+          "passed": null,
+          "repeat": 1,
+          "run_status": "infrastructure_error",
+          "trial_id": "syn-t5-r1",
+          "void": true,
+          "why": "synthetic fixture attribution"
+        }
+      ],
+      "kind": "item_set",
+      "limits": {
+        "max_model_requests": 11,
+        "max_steps": 11,
+        "timeout_seconds": 240
+      },
+      "partition": "holdout",
+      "patched": {
+        "prp-5c2e33ac94": [
+          {
+            "evidence_backed": true,
+            "mode": "scripted",
+            "model_requests": 5,
+            "page_views": 4,
+            "passed": true,
+            "repeat": 1,
+            "run_status": "completed",
+            "trial_id": "syn-t5-r1",
+            "void": false
+          }
+        ]
+      },
+      "question": "Which cabins have a hot tub? List their names.",
+      "source": "rule",
+      "start_path": "/",
+      "task_id": "syn-t5"
+    },
+    {
+      "baseline": [
+        {
+          "attribution": "website",
+          "evidence_backed": false,
+          "mode": "scripted",
+          "model_requests": 7,
+          "page_views": 6,
+          "passed": false,
+          "repeat": 1,
+          "run_status": "completed",
+          "trial_id": "syn-t6-r1",
+          "void": false,
+          "why": "synthetic fixture attribution"
+        }
+      ],
+      "kind": "page_fact",
+      "limits": {
+        "max_model_requests": 11,
+        "max_steps": 11,
+        "timeout_seconds": 240
+      },
+      "partition": "holdout",
+      "patched": {
+        "prp-5c2e33ac94": [
+          {
+            "evidence_backed": true,
+            "mode": "scripted",
+            "model_requests": 5,
+            "page_views": 4,
+            "passed": true,
+            "repeat": 1,
+            "run_status": "completed",
+            "trial_id": "syn-t6-r1",
+            "void": false
+          }
+        ]
+      },
+      "question": "What is the cancellation window for Lake Cabin?",
+      "source": "rule",
+      "start_path": "/",
+      "task_id": "syn-t6"
+    }
+  ],
+  "trials": {
+    "baseline": 6,
+    "note": "Void trials (provider, budget, infrastructure, fidelity guard) are never website results and are excluded from comparisons.",
+    "patched": 6,
+    "void": 1
+  }
+}

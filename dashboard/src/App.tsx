@@ -4,15 +4,17 @@ import { Scopes } from "./pages/Scopes";
 import { Evidence } from "./pages/Evidence";
 import { ReplayPage } from "./pages/Replay";
 import { ScannerPage } from "./pages/Scanner";
+import { InvestigationPage } from "./pages/Investigation";
 import { provenance } from "./data/task007";
 
-export type Page = "overview" | "scopes" | "evidence" | "replay" | "scanner";
+export type Page = "overview" | "scopes" | "evidence" | "replay" | "scanner" | "investigation";
 const PAGES: { id: Page; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "scopes", label: "Scope comparison" },
   { id: "evidence", label: "Evidence & method" },
   { id: "replay", label: "Recorded replay" },
   { id: "scanner", label: "Protected scanner" },
+  { id: "investigation", label: "Investigation" },
 ];
 const fromHash = (): Page => {
   const h = window.location.hash.replace(/^#\/?/, "");
@@ -58,6 +60,7 @@ export default function App() {
         {page === "evidence" && <Evidence />}
         {page === "replay" && <ReplayPage />}
         {page === "scanner" && <ScannerPage />}
+        {page === "investigation" && <InvestigationPage />}
       </main>
       <footer className="site"><div className="wrap">
         <p>Controlled synthetic storefront (20 products) · Meta Muse Spark <code>{provenance.model}</code> reference agent · executed from commit <code>{provenance.executionCommit}</code> · costs are calculated estimates, not bills · no universal readiness score, no claims about real websites.</p>
