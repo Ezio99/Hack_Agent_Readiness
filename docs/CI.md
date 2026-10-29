@@ -30,14 +30,9 @@ Critical path = slowest browser shard (≈4 min) + gate (≈0.7 min). Runner-min
 | a shard drops a test in the partition unit test config | `tests/test_sharding.py` fails the logic job |
 | normal PR | all green, gate green |
 
-## Branch protection: settings the owner must configure
-`main` currently has **no protection** (the API returns 404). The workflow cannot enforce the gate by itself; a repository admin must set, in *Settings → Branches → Add branch ruleset / rule for `main`*:
-1. **Require a pull request before merging.**
-2. **Require status checks to pass before merging** and add exactly one required check: **`gate (required check)`** (the job name). Do **not** require the individual `logic n/2` / `browser n/4` checks: the gate already depends on them, and matrix names would break if the shard count changes.
-3. Optional: *Require branches to be up to date before merging* (strict; re-runs CI after each merge ahead of you).
-4. Optional: block force pushes and deletions of `main`.
-The check name only appears in the picker after the workflow has run once on a PR (it has, on PR #33). `test.yml` has no path filter, so the required check always reports. `dashboard.yml` is path-filtered and must **not** be made required.
-After merging, the nightly `full.yml` starts running on the default branch automatically (scheduled workflows run only from the default branch).
+## Branch protection (configured by the owner, 2026-10-29)
+Active repository ruleset `Main_Rule` on the default branch: **pull request required** (0 approvals), **required status check `gate (required check)`** (strict "up to date" policy off), **force pushes and deletion blocked**, no bypass actors. The individual `logic n/2` / `browser n/4` checks are deliberately not required (the gate depends on them; matrix names change with the shard count). `test.yml` has no path filter, so the required check always reports; `dashboard.yml` is path-filtered and must **not** be made required. A PR whose last CI run predates the gate (e.g. a branch opened before #33) must be updated with `main` so the gate runs. Optional hardening still available: enable the strict "require branches to be up to date" policy.
+The nightly `full.yml` (unsharded cross-check) runs from the default branch.
 
 ## Changing the shard count
 Edit the matrix and the `--num-shards` value in `test.yml`, and the expected counts in `scripts/ci_check_shards.py` (`SUITES`) and `tests/test_markers.py`; the guard tests fail if they disagree.
