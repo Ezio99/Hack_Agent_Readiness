@@ -6,6 +6,8 @@ specs:        how specifications are presented. structured = labelled specificat
                                               fragmented = the same facts written as marketing prose on the detail page; no chips on cards
 sku:          (Task 013, OPTIONAL factor; absent from the original four variants, whose ids and pages are unchanged)
               hidden = SKU only on product detail pages (the original behaviour)   listing = SKU also printed on every listing/search/home card
+stockfilter:  (Task 015, OPTIONAL factor; only meaningful with availability=listing) on = the in-stock filter exists (the original behaviour)  off = stock labels on cards but NO in-stock filter
+              (isolates the labels from the filter). Absent from every original variant id; their pages are unchanged.
 Neither level is assumed better. The variant is selected by server configuration only; it never appears in URLs, headers or page text."""
 from __future__ import annotations
 
@@ -22,14 +24,18 @@ DESCRIPTIONS = {
     ("specs", "fragmented"): "the same specification facts written as prose on detail pages; no attribute chips on cards",
     ("sku", "hidden"): "SKU shown on product detail pages only",
     ("sku", "listing"): "SKU also shown on every listing, search and home card",
+    ("stockfilter", "off"): "stock labels on cards but no in-stock filter (availability=listing only)",
 }
 
 
-def make_variant(availability: str = "listing", specs: str = "structured", sku: str = "hidden") -> Variant:
-    if availability not in FACTORS["availability"] or specs not in FACTORS["specs"] or sku not in ("hidden", "listing"):
-        raise ValueError(f"unknown factor level: availability={availability!r} specs={specs!r} sku={sku!r}")
+def make_variant(availability: str = "listing", specs: str = "structured", sku: str = "hidden", stock_filter: str = "on") -> Variant:
+    if availability not in FACTORS["availability"] or specs not in FACTORS["specs"] or sku not in ("hidden", "listing") or stock_filter not in ("on", "off"):
+        raise ValueError(f"unknown factor level: availability={availability!r} specs={specs!r} sku={sku!r} stock_filter={stock_filter!r}")
+    if stock_filter == "off" and availability != "listing":
+        raise ValueError("stock_filter=off is only meaningful with availability=listing (detail-only availability has no filter at all)")
     factors = (("availability", availability), ("specs", specs))
-    return Variant(ENVIRONMENT_ID, factors + ((("sku", sku),) if sku != "hidden" else ()))     # sku=hidden keeps the original variant id
+    extra = ((("sku", sku),) if sku != "hidden" else ()) + ((("stockfilter", "off"),) if stock_filter == "off" else ())
+    return Variant(ENVIRONMENT_ID, factors + extra)     # defaults keep the original variant ids
 
 
 def all_variants() -> list[Variant]:

@@ -27,6 +27,8 @@ def baseline_report():
 def plan(stage="pilot", seed=7, **kw):
     rep = baseline_report()
     rid = next(r["id"] for r in rep["recommendations"] if r["change_id"] == "availability-on-listing-cards")
+    if stage == "main":
+        kw.setdefault("prior_stage", {"original_gate_decision": "stop"})
     return rep, ex.build_manifest(stage, rep, rid, DEFAULT_INITIAL, seed, **kw)
 
 
@@ -71,19 +73,25 @@ def test_manifest_freezes_everything_before_execution_and_references_the_product
     assert m["limits"]["per_request_usd"] == 0.05 and m["limits"]["per_run_usd"] == 0.50 and m["limits"]["stage_cap_aud"] == 1.50 and m["limits"]["stage_cap_usd"] == 1.0 and m["limits"]["usd_to_aud"] == 1.5
     assert m["stopping_rules"]["retries"] == "never" and m["stopping_rules"]["replacements"] == "never" and m["pilot_gate"] and m["seed"] == 7
     assert [(e["task_code"]) for e in m["schedule"]] == ["T1", "T1"] and {e["state"] for e in m["schedule"]} == {"unmodified", "modified"}
-    assert m["manifest_sha256"] == ex.manifest_hash(m) and set(m["code"]["files_sha256"]) == set(ex.FROZEN_FILES)
-    assert m["budget_check"]["remaining_before_aud"] == pytest.approx(44.115, abs=1e-2) and m["budget_check"]["remaining_after_stage_cap_aud"] == pytest.approx(42.615, abs=1e-2)
+    assert m["manifest_sha256"] == ex.manifest_hash(m) and set(m["code"]["files_sha256"]) == set(ex.FROZEN_FILES) and m["cost_envelope"]["worst_case_aud"] == 1.5
+    assert m["budget_check"]["remaining_before_aud"] == pytest.approx(43.7933, abs=1e-2) and m["budget_check"]["remaining_after_stage_cap_aud"] == pytest.approx(42.2933, abs=1e-2)
 
 
 def test_main_schedule_is_seeded_balanced_and_deterministic():
-    _, a = plan("main", 11)
-    _, b = plan("main", 11)
-    _, c = plan("main", 12)
-    assert a["schedule"] == b["schedule"] and a["schedule_sha256"] != c["schedule_sha256"] and len(a["schedule"]) == 18
-    assert sum(e["task_code"] == "T1" for e in a["schedule"]) == 12 and sum(e["task_code"] == "T4" for e in a["schedule"]) == 6
+    _, a = plan("main", 11, prior_stage={"x": 1})
+    _, b = plan("main", 11, prior_stage={"x": 1})
+    _, c = plan("main", 12, prior_stage={"x": 1})
+    assert a["schedule"] == b["schedule"] and a["schedule_sha256"] != c["schedule_sha256"] and len(a["schedule"]) == 24 and a["arms"] == ["unmodified", "labels_only", "modified"]
+    assert sum(e["task_code"] == "T1" for e in a["schedule"]) == 18 and sum(e["task_code"] == "T4" for e in a["schedule"]) == 6
+    orders = []
     for blk in range(1, 7):
-        e = [x for x in a["schedule"] if x["block"] == blk and x["task_code"] == "T1"]
-        assert sorted(x["state"] for x in e) == ["modified", "unmodified"]
+        t1 = [x["state"] for x in a["schedule"] if x["block"] == blk and x["task_code"] == "T1"]
+        assert sorted(t1) == ["labels_only", "modified", "unmodified"]
+        orders.append(tuple(t1))
+    assert len(set(orders)) == 6                                                  # all six orderings occur once: every arm appears exactly twice in each position
+    for pos in range(3):
+        assert sorted(o[pos] for o in orders).count("modified") == 2
+    assert {x["block"] for x in a["schedule"] if x["task_code"] == "T4"} == {1, 2}
 
 
 def test_manifest_is_write_once_and_tamper_evident(tmp_path):
@@ -129,7 +137,7 @@ def test_live_needs_the_exact_hash_the_flag_the_pilot_for_main_and_unchanged_cod
     with pytest.raises(Halt, match="allow-model-calls"):
         ex.preflight(m, m["manifest_sha256"], "live", False, sl)
     _, mm = plan("main", 3)
-    with pytest.raises(Halt, match="completed pilot"):
+    with pytest.raises(Halt, match="recorded pilot"):
         ex.preflight(mm, mm["manifest_sha256"], "live", True, ex.StageLedger(tmp_path, "main", mm))     # a pilot approval is not a main approval
     real = ex.code_hashes()
     monkeypatch.setattr(ex, "code_hashes", lambda: {**real, ex.FROZEN_FILES[0]: "0" * 64})
@@ -140,13 +148,16 @@ def test_live_needs_the_exact_hash_the_flag_the_pilot_for_main_and_unchanged_cod
 def test_every_stage_ledger_counts_toward_the_programme_ceiling(tmp_path):
     _, pm = plan()
     _, mm = plan("main", 5)
-    pilot, main = ex.StageLedger(tmp_path, "pilot", pm), ex.StageLedger(tmp_path, "main", mm)
+    bud = {**budget.load(), "recorded_runtime_stages": []}                     # a stage not yet written into the programme ledger file
+    pilot, main = ex.StageLedger(tmp_path, "pilot", pm, bud), ex.StageLedger(tmp_path, "main", mm, bud)
     pilot.ledger.reserve("pilot-x", 0.40)
     assert main.others_committed_usd() == pytest.approx(0.40) and pilot.others_committed_usd() == 0.0
     s = main.summary()
-    assert s["programme_spent_aud"] == pytest.approx(5.885 + 0.60, abs=1e-2) and s["stage_cap_aud"] == 7.5
+    assert s["programme_spent_aud"] == pytest.approx(6.2067 + 0.60, abs=1e-2) and s["stage_cap_aud"] == 6.0
     pilot.ledger.reserve("pilot-y", 0.30)
-    assert main.summary()["programme_spent_aud"] == pytest.approx(5.885 + 1.05, abs=1e-2)
+    assert main.summary()["programme_spent_aud"] == pytest.approx(6.2067 + 1.05, abs=1e-2)
+    recorded = ex.StageLedger(tmp_path, "main", mm)                            # the real programme ledger already contains the executed pilot: never counted twice
+    assert recorded.others_committed_usd() == 0.0 and recorded.summary()["programme_spent_aud"] == pytest.approx(6.2067, abs=1e-2)
 
 
 def test_budget_and_provider_stops_are_void_never_website_results(tmp_path):
@@ -218,27 +229,39 @@ def test_pilot_gate_rules():
     assert void["decision"] == "stop" and "NOT a website result" in void["reason"]
 
 
-def make_rows(m, deltas, cls_override=None):
+def make_rows(m, deltas):
     rows = []
     for e in m["schedule"]:
         if e["task_code"] == "T1":
             base = 10
-            req = base if e["state"] == "unmodified" else base + deltas[e["block"] - 1]
-            rows.append({**e, "void": False, "model_requests": req, "product_page_visits": req - 3, "passed": True, "calculated_cost_usd": req * 0.01, "outcome_class": "completed", "mock": False})
+            req = {"unmodified": base, "modified": base + deltas[e["block"] - 1], "labels_only": base + deltas[e["block"] - 1] / 2}.get(e["state"], base)
+            rows.append({**e, "void": False, "model_requests": req, "product_page_visits": req - 3, "passed": True, "recall": 1.0, "elapsed_seconds": req * 4.0, "calculated_cost_usd": req * 0.01,
+                         "outcome_class": "completed", "mock": False})
         else:
-            rows.append({**e, "void": False, "model_requests": 6, "product_page_visits": 3, "passed": True, "calculated_cost_usd": 0.06, "outcome_class": "completed", "mock": False})
+            rows.append({**e, "void": False, "model_requests": 6, "product_page_visits": 3, "passed": True, "recall": 1.0, "elapsed_seconds": 20.0, "calculated_cost_usd": 0.06, "outcome_class": "completed", "mock": False})
     return rows
 
 
 def test_analysis_verdicts_follow_the_pre_registered_rule():
     _, m = plan("main", 1)
-    assert ex.analyze(make_rows(m, [-4, -5, -4, -3, -6, -4]), m)["verdict"] == "supports"
+    sup = ex.analyze(make_rows(m, [-4, -5, -4, -3, -6, -4]), m)
+    assert sup["verdict"] == "supports" and sup["contrasts"]["H1_confirmatory"]["T1"]["valid_pairs"] == 6 and sup["contrasts"]["H2_exploratory"]["T1"]["mean_delta"]["model_requests"] < 0
     assert ex.analyze(make_rows(m, [0, 1, 0, -1, 0, 0]), m)["verdict"] == "not_supported"
     assert ex.analyze(make_rows(m, [-2, -1, -3, 0, -2, 1]), m)["verdict"] == "inconclusive"
     few = ex.analyze([r for r in make_rows(m, [-4] * 6) if r["block"] <= 2], m)
-    assert few["verdict"] == "inconclusive" and "fewer than 4" in few["verdict_reason"]
+    assert few["verdict"] == "inconclusive" and "fewer than 5" in few["verdict_reason"]
+    bad_ctrl = make_rows(m, [-4] * 6)
+    for r in bad_ctrl:
+        if r["task_code"] == "T4" and r["state"] == "modified":
+            r["model_requests"] = 12                                           # the negative control shifts with the arm: the effect claim must not be supported
+    assert ex.analyze(bad_ctrl, m)["verdict"] == "inconclusive" and not ex.analyze(bad_ctrl, m)["control_ok"]
+    void_rows = make_rows(m, [-4] * 6)
+    for r in void_rows[:6]:
+        r["void"], r["outcome_class"] = True, "provider_failure"
+    an = ex.analyze(void_rows, m)
+    assert len(an["void_rows"]) == 6 and an["T1"]["valid_pairs"] < 6                                      # voids are excluded, never counted as results
     pilot_m = plan()[1]
-    assert ex.analyze(make_rows(pilot_m, [-5]), pilot_m)["verdict"] == "inconclusive"                  # a pilot never supports an effect claim
+    assert ex.analyze([{**r, "state": s} for r, s in zip(make_rows(plan("main", 1)[1], [-5] * 6)[:2], ("unmodified", "modified"))], pilot_m)["verdict"] == "inconclusive"      # a pilot never supports an effect claim
 
 
 def test_dry_run_pilot_end_to_end_records_references_and_never_attaches_mock_results(tmp_path):
@@ -252,7 +275,8 @@ def test_dry_run_pilot_end_to_end_records_references_and_never_attaches_mock_res
     fin = ex.finalize(m, tmp_path, rep)
     rec = json.loads((tmp_path / "pilot" / "effect-record.json").read_text())
     assert rec["mode"] == "mock" and rec["audit_id"] == rep["audit_id"] and rec["recommendation_id"] == m["audit"]["recommendation_id"] and rec["verdict"] == "inconclusive"
-    assert rec["independent_reaudit"]["lifecycle"]["attribute_detail_only:availability"] == "resolved" and "not an effect measurement" in rec["independent_reaudit"]["note"]
+    ra = rec["independent_reaudits"]["modified"]
+    assert ra["lifecycle"]["attribute_detail_only:availability"] == "resolved" and "not an effect measurement" in ra["note"]
     assert fin["attached_view"] is None and report_sha256(rep) == before
     with pytest.raises(ValueError, match="only LIVE"):
         attach_measured_effects(rep, {**rec, "addresses": rec["addresses"]})

@@ -73,7 +73,9 @@ def derive_findings(obs: SiteObservations) -> list[dict]:
             out.append({"fingerprint": f"filter_present:{attr}", "kind": "filter_present", "attribute": attr, "category": "website_property_positive", "confidence": "observed",
                         "title": f"A {attr} filter is offered on listing pages", "summary": f"{len(fl)} listing pages offer a filter for {attr}.", "counts": {"listing_pages_with_filter": len(fl)},
                         "evidence": [{"type": "filter_form", "url": f.listing_url, "controls": [c for c in f.controls if FILTER_HINT[attr].search(c)][:3]} for f in fl[:2]]})
-        if any(f["fingerprint"] == f"attribute_detail_only:{attr}" for f in out):
+        st = stats[attr]
+        shown_somewhere = st["details_examined"] >= MIN_DETAILS and (st["card_cue_rate"] >= CARD_PRESENT_MIN or st["detail_cue_rate"] >= DETAIL_PRESENT_MIN)
+        if shown_somewhere:                              # independent of where the attribute is shown: a filter for it is either offered or not
             with_filters = [f for f in obs.filters if f.controls]
             if with_filters and not any(f.attribute_filters.get(attr) for f in obs.filters):
                 out.append({"fingerprint": f"filter_absent:{attr}", "kind": "filter_absent", "attribute": attr, "category": "website_property", "confidence": "observed",

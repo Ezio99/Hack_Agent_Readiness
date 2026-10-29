@@ -14,7 +14,7 @@ from ..environments.electronics.catalog import ENVIRONMENT_ID
 from ..environments.electronics.variants import make_variant
 from ..suite import core, registry
 
-CHANGES = {"availability-on-listing-cards": ("availability", "listing"), "sku-on-listing-cards": ("sku", "listing")}      # library change ids -> operator action
+CHANGES = {"availability-on-listing-cards": ("availability", "listing"), "sku-on-listing-cards": ("sku", "listing"), "in-stock-filter": ("stockfilter", "on")}      # library change ids -> operator action
 DEFAULT_INITIAL = {"availability": "detail", "specs": "structured", "sku": "listing"}
 
 
@@ -40,7 +40,7 @@ class ManagedTarget:
 
     def _app(self):
         registry.load_all()
-        return core.ENVIRONMENTS[ENVIRONMENT_ID].create_app(make_variant(self.factors["availability"], self.factors["specs"], self.factors["sku"]))
+        return core.ENVIRONMENTS[ENVIRONMENT_ID].create_app(make_variant(self.factors["availability"], self.factors["specs"], self.factors["sku"], self.factors.get("stockfilter", "on")))
 
     def start(self) -> None:
         self._switch = _Switch(self._app())
@@ -66,13 +66,14 @@ class ManagedTarget:
             raise KeyError(change_id)
         factor, level = CHANGES[change_id]
         self.factors = {**self.factors, factor: level}
-        self._switch.app = self._app()
+        if self._switch is not None:
+            self._switch.app = self._app()
         if change_id not in self.applied:
             self.applied.append(change_id)
         return {"target_id": self.id, "applied": list(self.applied)}
 
     def current_variant(self):
-        return make_variant(self.factors["availability"], self.factors["specs"], self.factors["sku"])
+        return make_variant(self.factors["availability"], self.factors["specs"], self.factors["sku"], self.factors.get("stockfilter", "on"))
 
 
 class TargetRegistry:
