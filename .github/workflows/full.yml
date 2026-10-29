@@ -1,0 +1,33 @@
+name: Full unsharded regression (cross-check)
+# The complete suite in one job, exactly as it ran before sharding. Scheduled daily and runnable by hand; it does not gate merges.
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  full:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      ANONYMIZED_TELEMETRY: "false"
+      BROWSER_USE_CLOUD_SYNC: "false"
+      BROWSER_USE_DISABLE_EXTENSIONS: "1"
+      BROWSER_USE_CONFIG_DIR: ${{ github.workspace }}/artifacts/browser-config
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock
+      - name: Install locked dependencies and fresh package
+        run: |
+          python -m pip install -r requirements.lock
+          python -m pip install --no-deps --no-build-isolation -e .
+          python -m pip check
+          python -m playwright install --with-deps chromium
+      - run: python -m pytest -q --basetemp=artifacts/browser-tests
+      - name: Credential-free CLI smoke
+        run: readiness smoke --output runs
