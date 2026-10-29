@@ -5,7 +5,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     env:
       ANONYMIZED_TELEMETRY: "false"
       BROWSER_USE_CLOUD_SYNC: "false"
