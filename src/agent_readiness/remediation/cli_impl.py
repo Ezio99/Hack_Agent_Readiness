@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 from .. import budget
-from ..scanner.live import Halt
+from ..ledger import Halt
 from ..suite import registry
 from . import experiment as ex
 from .engine import build_report, report_sha256
@@ -49,7 +49,58 @@ def prior_stage_from(results_dir: Path) -> dict:
                        "The original result is preserved unchanged; the corrected gate (GATE_V2) applies prospectively to this stage only."}
 
 
+COMMANDS = ("audit", "remediation-experiment")
+
+
+def register(sub) -> None:
+    aud = sub.add_parser("audit", help="Task 015: black-box site audit (observed properties, findings, evidence-linked recommendations). No model call, no cost. Only audit sites you operate or may test.")
+    aud.add_argument("url")
+    aud.add_argument("--objective", help="optional shopper task text; marks recommendations as task-relevant when it depends on the attribute")
+    aud.add_argument("--previous", type=Path, help="a previous audit report (JSON) to compute the re-audit lifecycle against")
+    aud.add_argument("--out", type=Path, help="write the full JSON report here")
+    aud.add_argument("--allow-private", action="store_true", help="permit loopback/private-network targets (your own dev or staging site); refused by default as an SSRF guard")
+    rx = sub.add_parser("remediation-experiment", help="Task 015 pilot/experiment driver (plan | run | status). Live runs need the exact manifest-hash approval and --allow-model-calls.")
+    rxs = rx.add_subparsers(dest="exp_command", required=True)
+    rp = rxs.add_parser("plan", help="audit the unmodified demo site, then freeze a manifest (free; no provider call)")
+    rp.add_argument("--stage", choices=["pilot", "main"], required=True)
+    rp.add_argument("--root", default="runs/task015")
+    rp.add_argument("--seed", type=int, default=20261029)
+    rp.add_argument("--audit", help="existing audit report JSON (default: audit the managed demo target now)")
+    rp.add_argument("--pilot-results", default="collaboration/experiments/task015/pilot/results", help="main stage: directory of the executed pilot's results (carried as provenance, never re-decided)")
+    rp.add_argument("--recommendation", help="recommendation id from the audit (default: the first applicable one)")
+    rp.add_argument("--initial", help="operator initial site state, e.g. availability=detail,specs=structured,sku=listing")
+    rr = rxs.add_parser("run", help="execute a frozen manifest (mock by default)")
+    rr.add_argument("--manifest", required=True)
+    rr.add_argument("--audit", required=True)
+    rr.add_argument("--root", default="runs/task015")
+    rr.add_argument("--mode", choices=["mock", "live"], default="mock")
+    rr.add_argument("--approve-manifest-sha256")
+    rr.add_argument("--allow-model-calls", action="store_true")
+    rs = rxs.add_parser("status", help="ledger + rows of a stage")
+    rs.add_argument("--manifest", required=True)
+    rs.add_argument("--root", default="runs/task015")
+
+
+def audit(args) -> None:
+    import json as _json
+    previous = _json.loads(args.previous.read_text()) if args.previous else None
+    report = build_report(SiteProbe(args.url, allow_private_hosts=args.allow_private).run(), objective=args.objective, previous=previous)
+    if args.out:
+        args.out.write_text(_json.dumps(report, indent=1))
+    print(f"audit {report['audit_id']} of {report['target']}: {report['summary']['problems']} problem(s), {report['summary']['recommendations']} recommendation(s)")
+    for f in report["findings"]:
+        print(f"  [{f['category']}] {f['fingerprint']}: {f['summary']}")
+    for r in report["recommendations"]:
+        print(f"  RECOMMEND ({r['validation']}) {r['title']} -> {r['change']}")
+    if report["lifecycle"]:
+        for i in report["lifecycle"]["items"]:
+            print(f"  LIFECYCLE {i['fingerprint']}: {i['status'].upper()} — {i['current_summary']}")
+    return
+
+
 def main(args) -> None:
+    if args.command == "audit":
+        return audit(args)
     root = Path(args.root)
     try:
         if args.exp_command == "plan":

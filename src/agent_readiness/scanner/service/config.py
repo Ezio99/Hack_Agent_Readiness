@@ -22,7 +22,6 @@ class ScannerConfig:
     live_enabled: bool = False                                   # live Meta inference; NEVER enabled by tests; needs approval, key and budget
     live_budget_usd: float = 0.0                                 # global ceiling of RESERVED estimated cost for live scans; 0 = live disabled
     live_api_key_env: str = "META_MODEL_API_KEY"
-    scan_timeout_grace_seconds: int = 30
 
     @property
     def db_path(self) -> Path:

@@ -9,6 +9,15 @@ from .runner import run
 from .tasks import generate
 
 
+def _groups():
+    """Command groups that own their parser and handler (one module per feature). The original single-site commands below stay here because tests patch `cli.run` / `cli.load_repo_env`."""
+    from .experiments import cli_impl as experiments
+    from .remediation import cli_impl as remediation
+    from .scanner import cli as scanner
+    from .suite import cli as suite
+    return (scanner, suite, remediation, experiments)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Agent Readiness shopping experiment")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -21,83 +30,9 @@ def main():
     probe.add_argument("--key-env", default="META_MODEL_API_KEY")
     probe.add_argument("--output", type=Path, default=Path("runs"))
     probe.add_argument("--allow-model-calls", action="store_true", help="Use only after explicit spending approval")
-    suite = sub.add_parser("suite", help="Task 010 task suite (credential-free): list, describe, scripted smoke")
-    ssub = suite.add_subparsers(dest="suite_command", required=True)
-    ssub.add_parser("list", help="List environments, variants and task instances")
-    show = ssub.add_parser("show", help="Print a task's PUBLIC spec (never its truth)")
-    show.add_argument("task_id")
-    smoke = ssub.add_parser("smoke", help="Run the scripted navigator + independent evaluator (NOT a model run)")
-    smoke.add_argument("--task", default="all", help="task id or 'all'")
-    smoke.add_argument("--variant", help="e.g. availability=detail,specs=fragmented (default: the environment's default variant)")
-    smoke.add_argument("--all-variants", action="store_true")
-    smoke.add_argument("--output", type=Path, help="write result.json records here (default: print only)")
-    senv = sub.add_parser("serve-env", help="Serve a task-suite environment variant locally for manual browsing")
-    senv.add_argument("--environment", default="electronics-v1")
-    senv.add_argument("--variant", help="e.g. availability=detail,specs=fragmented")
-    senv.add_argument("--port", type=int, default=8001)
-    aud = sub.add_parser("audit", help="Task 015: black-box site audit (observed properties, findings, evidence-linked recommendations). No model call, no cost. Only audit sites you operate or may test.")
-    aud.add_argument("url")
-    aud.add_argument("--objective", help="optional shopper task text; marks recommendations as task-relevant when it depends on the attribute")
-    aud.add_argument("--previous", type=Path, help="a previous audit report (JSON) to compute the re-audit lifecycle against")
-    aud.add_argument("--out", type=Path, help="write the full JSON report here")
-    aud.add_argument("--allow-private", action="store_true", help="permit loopback/private-network targets (your own dev or staging site); refused by default as an SSRF guard")
-    rx = sub.add_parser("remediation-experiment", help="Task 015 pilot/experiment driver (plan | run | status). Live runs need the exact manifest-hash approval and --allow-model-calls.")
-    rxs = rx.add_subparsers(dest="exp_command", required=True)
-    rp = rxs.add_parser("plan", help="audit the unmodified demo site, then freeze a manifest (free; no provider call)")
-    rp.add_argument("--stage", choices=["pilot", "main"], required=True)
-    rp.add_argument("--root", default="runs/task015")
-    rp.add_argument("--seed", type=int, default=20261029)
-    rp.add_argument("--audit", help="existing audit report JSON (default: audit the managed demo target now)")
-    rp.add_argument("--pilot-results", default="collaboration/experiments/task015/pilot/results", help="main stage: directory of the executed pilot's results (carried as provenance, never re-decided)")
-    rp.add_argument("--recommendation", help="recommendation id from the audit (default: the first applicable one)")
-    rp.add_argument("--initial", help="operator initial site state, e.g. availability=detail,specs=structured,sku=listing")
-    rr = rxs.add_parser("run", help="execute a frozen manifest (mock by default)")
-    rr.add_argument("--manifest", required=True)
-    rr.add_argument("--audit", required=True)
-    rr.add_argument("--root", default="runs/task015")
-    rr.add_argument("--mode", choices=["mock", "live"], default="mock")
-    rr.add_argument("--approve-manifest-sha256")
-    rr.add_argument("--allow-model-calls", action="store_true")
-    rs = rxs.add_parser("status", help="ledger + rows of a stage")
-    rs.add_argument("--manifest", required=True)
-    rs.add_argument("--root", default="runs/task015")
-    scn = sub.add_parser("scanner", help="Task 011 protected scanner (mock by default; live inference is gated and off)")
-    scsub = scn.add_subparsers(dest="scanner_command", required=True)
-    sserve = scsub.add_parser("serve", help="Run the scanner API (loopback by default)")
-    sserve.add_argument("--host", default="127.0.0.1")
-    sserve.add_argument("--port", type=int, default=8100)
-    sserve.add_argument("--demo-target", action="store_true", help="also register the managed demo storefront 'demo-shop' as an audit target (initial state: stock only on product pages)")
-    sinv = scsub.add_parser("invite", help="Create an invitation code (shown once; only its hash is stored)")
-    sinv.add_argument("--label", required=True)
-    sinv.add_argument("--days", type=float, default=7)
-    sinv.add_argument("--redemptions", type=int, default=1)
-    sinv.add_argument("--scans", type=int, default=5, help="scan quota per redeemed session")
-    srev = scsub.add_parser("revoke", help="Revoke an invitation (and its sessions)")
-    srev.add_argument("invitation_id")
-    scsub.add_parser("invitations", help="List invitations (hashes never shown)")
-    skill = scsub.add_parser("kill", help="Turn the kill switch on/off (blocks new scans, cancels running ones on a live server via the admin API)")
-    skill.add_argument("state", choices=["on", "off"])
-    lv = scsub.add_parser("live-validate", help="APPROVED bounded live Muse Spark validation (probe first, then 4 fixtures); private outputs under runs/")
-    lv.add_argument("stage", choices=["status", "probe", "run"])
-    lv.add_argument("--allow-model-calls", action="store_true")
-    lv.add_argument("--max-total-usd", type=float, default=2.00)
-    lv.add_argument("--dir", type=Path, default=Path("runs/live-validation-011"))
-    ex = sub.add_parser("experiment", help="Task 012 experiment infrastructure (mock by default; live needs an approved schedule hash)")
-    exsub = ex.add_subparsers(dest="experiment_command", required=True)
-    for name in ("manifest", "schedule", "preflight", "run", "analyze", "status"):
-        c = exsub.add_parser(name)
-        c.add_argument("--stage", type=int, choices=[1, 2], default=1)
-        c.add_argument("--seed", type=int)
-        c.add_argument("--out", type=Path, default=Path("runs/experiment-012"))
-        if name == "run":
-            c.add_argument("--mode", choices=["mock", "live"], default="mock")
-            c.add_argument("--allow-model-calls", action="store_true")
-            c.add_argument("--approved-schedule-hash")
-            c.add_argument("--approved-manifest-hash")
-            c.add_argument("--acknowledge-previous-halt", action="store_true")
-            c.add_argument("--mock-plan", type=Path, help="JSON {run_id: mock behaviour} for mock demonstrations")
-            c.add_argument("--programme-ceiling-usd", type=float)
-            c.add_argument("--stage-ceiling-usd", type=float)
+    groups = _groups()
+    for group in groups:
+        group.register(sub)
     pilot = sub.add_parser("pilot", help="Task 006 sequential, resumable, auditable pilot driver")
     psub = pilot.add_subparsers(dest="pilot_command", required=True)
     for pname in ("plan", "status", "run", "resume"):
@@ -145,110 +80,9 @@ def main():
             cmd.add_argument("--max-cumulative-estimated-cost-usd", type=float,
                              help="Diagnostic: block a request that would push the summed worst-case estimates over this")
     args = parser.parse_args()
-    if args.command == "experiment":
-        from .experiments import cli_impl
-        cli_impl.main(args)
-        return
-    if args.command == "remediation-experiment":
-        from .remediation import cli_impl
-        cli_impl.main(args)
-        return
-    if args.command == "audit":
-        import json as _json
-        from .remediation.engine import build_report
-        from .remediation.probe import SiteProbe
-        previous = _json.loads(args.previous.read_text()) if args.previous else None
-        report = build_report(SiteProbe(args.url, allow_private_hosts=args.allow_private).run(), objective=args.objective, previous=previous)
-        if args.out:
-            args.out.write_text(_json.dumps(report, indent=1))
-        print(f"audit {report['audit_id']} of {report['target']}: {report['summary']['problems']} problem(s), {report['summary']['recommendations']} recommendation(s)")
-        for f in report["findings"]:
-            print(f"  [{f['category']}] {f['fingerprint']}: {f['summary']}")
-        for r in report["recommendations"]:
-            print(f"  RECOMMEND ({r['validation']}) {r['title']} -> {r['change']}")
-        if report["lifecycle"]:
-            for i in report["lifecycle"]["items"]:
-                print(f"  LIFECYCLE {i['fingerprint']}: {i['status'].upper()} — {i['current_summary']}")
-        return
-    if args.command == "scanner":
-        from .scanner.service.config import load_config
-        cfg = load_config()
-        if args.scanner_command == "live-validate":
-            import json as _json
-            from .agent import ModelConfig as LiveModelConfig
-            from .scanner import live
-            ledger = live.Ledger(args.dir, min(args.max_total_usd, live.CEILING_USD))
-            try:
-                if args.stage == "status":
-                    print(_json.dumps({"committed_usd": ledger.committed(), "ceiling_usd": ledger.ceiling, "probe_ok": ledger.probe_succeeded(), "entries": ledger.entries()}, indent=1))
-                elif args.stage == "probe":
-                    rec = live.run_probe(LiveModelConfig(), ledger, args.dir / "probe", allow_model_calls=args.allow_model_calls)
-                    print(_json.dumps({k: rec.get(k) for k in ("success", "failure_class", "http_status", "finish_reason", "usage", "calculated_cost_usd", "grading", "error")}, indent=1, default=str))
-                else:
-                    print(_json.dumps(live.run_fixtures(LiveModelConfig(), ledger, args.dir, allow_model_calls=args.allow_model_calls), indent=1))
-            except live.Halt as exc:
-                print(f"HALT: {exc}")
-                raise SystemExit(2)
-            return
-        if args.scanner_command == "kill":
-            cfg.data_dir.mkdir(parents=True, exist_ok=True)
-            (cfg.kill_switch_path.write_text("on") if args.state == "on" else cfg.kill_switch_path.unlink(missing_ok=True))
-            print(f"kill switch {args.state} (new scans {'blocked' if args.state == 'on' else 'allowed'})")
-            return
-        from .scanner.service.store import Store
-        store = Store(cfg)
-        if args.scanner_command == "invite":
-            inv, code = store.create_invitation(args.label, args.days, args.redemptions, args.scans)
-            print(f"invitation {inv}\ncode: {code}   (shown once; give it to one person; expires in {args.days:g} days)")
-        elif args.scanner_command == "revoke":
-            store.revoke_invitation(args.invitation_id)
-            print("revoked")
-        elif args.scanner_command == "invitations":
-            for i in store.list_invitations():
-                print(i["id"], i["label"], f"redeemed {i['redeemed']}/{i['max_redemptions']}", "REVOKED" if i["revoked"] else "")
-        else:
-            import uvicorn
-            from .scanner.service.api import create_scanner_app
-            print(f"Scanner API at http://{args.host}:{args.port}/ — live inference {'ENABLED' if cfg.live_available else 'disabled'}; data in {cfg.data_dir}")
-            from .remediation.targets import TargetRegistry
-            targets = TargetRegistry.demo().start() if args.demo_target else None
-            try:
-                uvicorn.run(create_scanner_app(cfg, targets=targets), host=args.host, port=args.port, log_level="warning")
-            finally:
-                if targets:
-                    targets.stop()
-        return
-    if args.command in {"suite", "serve-env"}:
-        from .suite import core as suite_core, registry as suite_registry, runner as suite_runner
-        suite_registry.load_all()
-        if args.command == "serve-env":
-            import uvicorn
-            variant = suite_runner.parse_variant(args.environment, args.variant)
-            print(f"Serving {variant.variant_id} (data {suite_core.ENVIRONMENTS[args.environment].data_version}) at http://127.0.0.1:{args.port}/")
-            uvicorn.run(suite_core.ENVIRONMENTS[args.environment].create_app(variant), host="127.0.0.1", port=args.port, log_level="warning")
-            return
-        if args.suite_command == "list":
-            for env in suite_core.ENVIRONMENTS.values():
-                print(f"{env.environment_id}  data {env.data_version}")
-                for v in env.variants():
-                    print(f"  variant {v.variant_id}" + ("  (default)" if v == env.default_variant() else ""))
-            for inst in suite_core.all_instances():
-                print(f"{inst.spec.task_id:48} {inst.spec.outcome_type:10} {inst.spec.template_id} v{inst.spec.version}")
-        elif args.suite_command == "show":
-            print(json.dumps(suite_registry.get_instance(args.task_id).spec.public(), indent=2))
-        else:
-            tasks = suite_registry.instances() if args.task == "all" else [suite_registry.get_instance(args.task)]
-            env = suite_core.ENVIRONMENTS["electronics-v1"]
-            variants = env.variants() if args.all_variants else [suite_runner.parse_variant("electronics-v1", args.variant)]
-            failed = 0
-            for variant in variants:
-                for inst in tasks:
-                    r = suite_runner.run_scripted(inst, variant, args.output)
-                    e = r["evaluation"]
-                    failed += not (e["passed"] and e["evidence_backed"])
-                    print(f"{'PASS' if e['passed'] else 'FAIL'} evidence={'ok' if e['evidence_backed'] else 'MISSING'} {variant.variant_id} {inst.spec.task_id} ({r['page_requests']} page requests) [scripted smoke]")
-            raise SystemExit(1 if failed else 0)
-        return
+    for group in groups:
+        if args.command in group.COMMANDS:
+            return group.main(args)
     if args.command == "pilot":
         from . import pilot as pilot_driver
         if args.state_dir is None:

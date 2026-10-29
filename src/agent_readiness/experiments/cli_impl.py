@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from ..scanner.live import Halt
+from ..ledger import Halt
 from . import analysis, design, driver, manifest as manifest_mod, schedule as schedule_mod
 from .ledger import ExperimentLedger
 
@@ -59,3 +59,25 @@ def main(args) -> None:
     except Halt as exc:
         print(f"HALT: {exc}"); raise SystemExit(2)
     print(json.dumps({k: rep[k] for k in ("mode", "banner", "stage", "completed", "halted", "halt_reason", "not_started", "partial", "ledger")}, indent=1))
+
+
+COMMANDS = ("experiment",)
+
+
+def register(sub) -> None:
+    ex = sub.add_parser("experiment", help="Task 012 experiment infrastructure (mock by default; live needs an approved schedule hash)")
+    exsub = ex.add_subparsers(dest="experiment_command", required=True)
+    for name in ("manifest", "schedule", "preflight", "run", "analyze", "status"):
+        c = exsub.add_parser(name)
+        c.add_argument("--stage", type=int, choices=[1, 2], default=1)
+        c.add_argument("--seed", type=int)
+        c.add_argument("--out", type=Path, default=Path("runs/experiment-012"))
+        if name == "run":
+            c.add_argument("--mode", choices=["mock", "live"], default="mock")
+            c.add_argument("--allow-model-calls", action="store_true")
+            c.add_argument("--approved-schedule-hash")
+            c.add_argument("--approved-manifest-hash")
+            c.add_argument("--acknowledge-previous-halt", action="store_true")
+            c.add_argument("--mock-plan", type=Path, help="JSON {run_id: mock behaviour} for mock demonstrations")
+            c.add_argument("--programme-ceiling-usd", type=float)
+            c.add_argument("--stage-ceiling-usd", type=float)
