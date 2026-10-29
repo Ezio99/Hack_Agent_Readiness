@@ -177,9 +177,9 @@ def test_budget_is_tracked_in_aud_with_original_usd_records_and_a_documented_rat
     s = budget.summary(ledger)
     assert ledger["entries"] and all("usd" in e and "source" in e for e in ledger["entries"])           # original USD records retained
     assert s["usd_to_aud"] == 1.50 and ledger["assumptions"]["basis"] and ledger["programme_ceiling_aud"] == 50.0 and ledger["ceiling_is_authorization"] is False
-    assert s["spent_usd"] == pytest.approx(3.9233, abs=1e-3) and s["spent_aud"] == pytest.approx(5.885, abs=1e-2) and s["remaining_aud"] == pytest.approx(44.115, abs=1e-2)
-    assert budget.check_stage(8.0)["remaining_after_cap_aud"] == pytest.approx(36.115, abs=1e-2)
+    assert s["spent_usd"] == pytest.approx(4.1378, abs=1e-3) and s["spent_aud"] == pytest.approx(6.2067, abs=1e-2) and s["remaining_aud"] == pytest.approx(43.7933, abs=1e-2)      # includes the executed Task 015 pilot
+    assert budget.check_stage(8.0)["remaining_after_cap_aud"] == pytest.approx(35.7933, abs=1e-2)
     with pytest.raises(ValueError):
         budget.check_stage(45.0)
     monkeypatch.setenv(budget.RATE_ENV, "1.60")
-    assert budget.summary(ledger)["spent_aud"] == pytest.approx(3.9233 * 1.6, abs=1e-2)
+    assert budget.summary(ledger)["spent_aud"] == pytest.approx(4.1378 * 1.6, abs=1e-2)
