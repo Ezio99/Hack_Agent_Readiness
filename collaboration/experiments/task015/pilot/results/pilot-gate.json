@@ -1,0 +1,6 @@
+{
+ "decision": "stop",
+ "reason": "ceiling effect: 3 product-page visits, extra items []",
+ "rule": "continue iff the unmodified-state T1 run is a valid completed run AND (>= 4 product-page visits OR the answer reported a not-eligible product); otherwise stop and report a ceiling effect (no replacement run)",
+ "note": "the pilot has one pair and supports NO inference about the effect"
+}
