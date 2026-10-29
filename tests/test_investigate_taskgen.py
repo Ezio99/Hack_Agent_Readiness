@@ -55,7 +55,7 @@ def proposals_json(tasks):
 
 
 def make_run(tmp_path, sid="site-1", name="r"):
-    run = InvestigationRun.create(tmp_path, name, target=sid, mode="scripted", stages=("inspect", "taskgen", "freeze"))
+    run = InvestigationRun.create(tmp_path, name, target=sid, mode="scripted", stages=("inspect", "taskgen", "freeze", "baseline_trials", "trace", "investigate", "report"))
     snap = zoo.snapshot(sid)
     Pipeline([Stage("inspect", lambda c: run_inspect(c, snap))]).run(Context(run))
     return run
@@ -316,5 +316,5 @@ def test_prompts_are_blind_and_taskgen_code_is_domain_neutral(tmp_path):
     with pytest.raises(sealed.BlindnessError):
         propose.build_prompt(poisoned, 4)
     shop = re.compile(r"\b(sku|in stock|out of stock|add to cart|checkout|availability|basket)\b", re.I)
-    for f in (SRC / "taskgen").glob("*.py"):
+    for f in [*(SRC / "taskgen").glob("*.py"), *(SRC / "trials").glob("*.py"), *(SRC / "investigator").glob("*.py")]:
         assert not shop.search(re.sub(r'""".*?"""', "", f.read_text(), flags=re.S)), f.name

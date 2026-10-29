@@ -27,6 +27,8 @@ def build_report(run: InvestigationRun) -> dict:
             "novel": [{**h.model_dump(), "label": "NOVEL HYPOTHESIS — UNVERIFIED (not a finding)"} for h in novel],
         },
         "findings": [f.model_dump() for f in ev.findings.values()],
+        "supported_unpromoted": [{"hypothesis_id": h.id, "statement": h.statement, "claim_kind": h.claim_kind, "note": "pattern verified by deterministic code, but its behavioural impact on agents is not established (insufficient independent support or non-website attribution): NOT a finding"}
+                                 for h in ev.hypotheses.values() if h.status == "supported" and not any(f.hypothesis_id == h.id for f in ev.findings.values())],
         "proposals": [{**p.model_dump(), "label": p.label, "auto_applicable": p.auto_applicable} for p in ev.proposals.values()],
         "effects": {"measured": [e.model_dump() for e in ev.effects.values() if e.measured],
                     "not_measured_pipeline_checks": [e.model_dump() for e in ev.effects.values() if not e.measured]},

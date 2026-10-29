@@ -110,6 +110,7 @@ async def run_trial(instance: core.TaskInstance, snapshot: Snapshot, *, provider
     events = [json.loads(l) for l in (recorder.path / "trace.jsonl").read_text().splitlines()] if (recorder.path / "trace.jsonl").exists() else []
     observations, journey = build_journey(events)
     evaluation = core.evaluate(instance, answer, variant, observations if events else [])
+    recorder.write("observations.json", [{"path": o.path, "text": o.text} for o in observations])        # private: what the model was shown, for attribution
     usage = att.get("usage") or []
     record.update({
         "outcome": {"run_status": status, "stop_reason": stop_reason, "errors": errors, "answer": answer},

@@ -48,8 +48,8 @@ def baseline_trials_stage(ctx: Context) -> dict:
             out = Path(run.dir) / "trial-data" / tid
             rec = asyncio.run(run_trial(insts[t["task_id"]], snap, provider="live" if live else "mock", mock_behavior=o.get("mock_behavior", "correct"), output=out, model_config=cfg,
                                         api_key=key, request_gate=gate, label="baseline"))
-            rec.pop("artifact_path", None)
-            run.write_artifact(f"trials/baseline-{tid}", {**rec, "task_id": t["task_id"], "partition": t["partition"], "repeat": rep + 1})
+            trial_dir = str(Path(rec.pop("artifact_path")).relative_to(run.dir))
+            run.write_artifact(f"trials/baseline-{tid}", {**rec, "task_id": t["task_id"], "partition": t["partition"], "repeat": rep + 1, "trial_id": tid, "trial_dir": trial_dir})
             (void if rec["outcome"]["run_status"] in VOID_STATUSES else done).append(tid)
             if live and rec["outcome"]["run_status"] in VOID_STATUSES:
                 raise Halt(f"trial {tid} ended with {rec['outcome']['run_status']}; stopping the stage (void trial, not a website result)")
