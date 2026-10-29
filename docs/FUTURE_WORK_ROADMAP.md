@@ -97,3 +97,5 @@ Optimize for **decision-relevant information gained per unit of time and spend**
 ## Development velocity log (reported; not a performance benchmark)
 
 - **2026-10-29 — Task 015b:** owner reports approximately **35 minutes** for the offline experiment driver and associated work: PR #22 security/integration review and fixes, frozen pilot manifest, dry run, and **32 additional Python tests** (590 → 622). PR #24 opened; paid pilot not run at the time of this record. This is an owner-reported elapsed time, not independently timed or a claim of scientific validity.
+
+- **2026-10-29 — Task 015c:** owner reports approximately **11 minutes** for the authorized two-run live pilot, results analysis/reporting, and PR #25. Modified PASS (4 requests), unmodified FAIL (11 requests); calculated pilot spend A$0.32. Original pilot gate remained `stop` and was recognized as mislabeling an incomplete baseline result as a ceiling effect. One pair, not a causal effect estimate. Time is owner-reported, not independently timed.
