@@ -3,7 +3,7 @@ keyboard/accessibility basics and the Browser Use agent view. Scripted runs are 
 import re
 
 import pytest
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import expect, sync_playwright
 
 from agent_readiness.environments.electronics import catalog as C
 from agent_readiness.environments.electronics.scripted import solve
@@ -69,10 +69,14 @@ def test_a_visitor_can_browse_search_filter_sort_page_and_use_policy_links(brows
         assert prices == sorted(prices) and len(prices) == 8
         page.get_by_label("In stock only").check()
         page.get_by_role("button", name="Apply").click()
-        assert page.locator(".card .stock.out").count() == 0 and page.locator(".card").count() == 5
+        page.wait_for_load_state("load")
+        expect(page.locator(".card")).to_have_count(5)                  # wait for the filtered page to render before reading it (parallel CI shards exposed a race here)
+        assert page.locator(".card .stock.out").count() == 0
         page.goto(base + "/c/headphones")
         page.get_by_role("link", name="Next page →").click()
-        assert "page=2" in page.url and page.locator(".card").count() == 2
+        page.wait_for_url("**page=2**")
+        expect(page.locator(".card")).to_have_count(2)
+        assert "page=2" in page.url
         page.go_back(); page.go_forward()
         assert "page=2" in page.url
         page.get_by_role("link", name="Lumio Hush 3").click() if page.get_by_role("link", name="Lumio Hush 3").count() else page.goto(base + "/p/lumio-hush-3")
