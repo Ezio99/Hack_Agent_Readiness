@@ -61,7 +61,8 @@ def build(accepted: list[Accepted], *, snapshot_sha256: str, generator: dict, ag
         private[tid] = {"criterion": a.criterion, "kind": a.compiled.kind, "style": a.compiled.style, "truth": a.compiled.truth, "evidence_paths": a.compiled.evidence_paths,
                         "evidence_texts": [list(t) for t in a.compiled.evidence_texts], "detail": a.compiled.detail, "min_hops": max(a.hops.values(), default=0)}
     tasks.sort(key=lambda t: t["task_id"])
-    manifest = {"schema": SCHEMA, "snapshot_sha256": snapshot_sha256, "agent_profile": agent_profile, "generator": generator, "seed": seed, "tasks": tasks,
+    from ..evaluate.design import RULE
+    manifest = {"schema": SCHEMA, "snapshot_sha256": snapshot_sha256, "agent_profile": agent_profile, "generator": generator, "seed": seed, "tasks": tasks, "evaluation_rule": RULE,
                 "counts": {"investigation": sum(t["partition"] == "investigation" for t in tasks), "holdout": sum(t["partition"] == "holdout" for t in tasks)},
                 "rejections": rejections or [], "criteria_sha256": canonical_hash(private)}
     return manifest, private

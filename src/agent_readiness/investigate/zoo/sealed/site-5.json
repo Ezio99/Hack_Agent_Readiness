@@ -1,0 +1,24 @@
+{
+ "category": "information_placement",
+ "expected": {
+  "affected_templates": [
+   "/tools",
+   "/tools/{}"
+  ],
+  "claim_kinds": [
+   "info_absent_on_template"
+  ],
+  "example_task": "Which tools have a daily fee below $7 and copies available?"
+ },
+ "extra_tokens": [],
+ "planted": [
+  {
+   "description": "borrowing-relevant tool fields (fee, deposit, copies available) exist only on the individual tool pages",
+   "kind": "detail_only_fields",
+   "where": "/tools"
+  }
+ ],
+ "role": "development",
+ "site_id": "site-5",
+ "summary": "Daily fee, deposit, condition, copies available and next available date appear only on the tool pages, never on the listing cards."
+}

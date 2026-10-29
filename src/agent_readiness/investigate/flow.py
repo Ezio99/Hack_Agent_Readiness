@@ -16,12 +16,14 @@ from .llm import LLMRequest, RecordingClient
 from .llm.meta import MetaClient
 from .pipeline import Context, Pipeline, Stage
 from .run import InvestigationRun
+from .evaluate import stage as evaluator
 from .investigator import stage as investigator
+from .recommend import stage as recommend
 from .taskgen import propose
 from .taskgen.stage import freeze_stage, taskgen_stage
 from .trials import stage as trials
 
-STAGES = ("inspect", "taskgen", "freeze", "baseline_trials", "trace", "investigate", "report")
+STAGES = ("inspect", "taskgen", "freeze", "baseline_trials", "trace", "investigate", "recommend", "report", "apply_fix", "post_trials", "evaluate", "final_report")
 TASKGEN_RUN_CAP_USD = 0.15
 
 
@@ -69,5 +71,10 @@ def build(root: Path, run_id: str, site: str, *, mode: str, options: dict | None
               Stage("baseline_trials", trials.baseline_trials_stage, spends=True, manifest=trials.manifest),
               Stage("trace", investigator.trace_stage),
               Stage("investigate", investigator.investigate_stage, spends=True, manifest=investigator.manifest),
-              Stage("report", investigator.report_stage)]
+              Stage("recommend", recommend.recommend_stage),
+              Stage("report", investigator.report_stage),
+              Stage("apply_fix", recommend.apply_fix_stage, gate=True, manifest=recommend.apply_manifest, skip=lambda c: None if recommend.fix_ids(c) else "no proposal selected with --fix"),
+              Stage("post_trials", evaluator.post_trials_stage, spends=True, manifest=evaluator.post_manifest, skip=lambda c: None if evaluator._applied(c) else "no fix was applied"),
+              Stage("evaluate", evaluator.evaluate_stage),
+              Stage("final_report", investigator.final_report_stage)]
     return run, Pipeline(stages), Context(run, llm=llm, options=opts)

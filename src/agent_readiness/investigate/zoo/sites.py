@@ -98,4 +98,24 @@ def site_4() -> dict:
     return files
 
 
-BUILDERS = {"site-1": site_1, "site-2": site_2, "site-3": site_3, "site-4": site_4}
+# --- site-5: tool-lending library (development twin) ---------------------------------------------------------------------------------------------------------------------------
+TOOLS = [("cordless-drill", "Cordless Drill", "18V drill and driver set.", "$6", "$40", "Good", "3", "4 Nov"), ("circular-saw", "Circular Saw", "7-inch corded saw.", "$9", "$60", "Excellent", "1", "9 Nov"),
+         ("tile-cutter", "Tile Cutter", "Manual cutter for floor tiles.", "$8", "$50", "Fair", "0", "15 Nov"), ("pressure-washer", "Pressure Washer", "2000 psi electric washer.", "$14", "$80", "Good", "2", "6 Nov"),
+         ("ladder-3m", "Extension Ladder", "3 metre aluminium ladder.", "$5", "$30", "Excellent", "4", "3 Nov"), ("hedge-trimmer", "Hedge Trimmer", "Cordless 60 cm trimmer.", "$7", "$45", "Good", "0", "12 Nov"),
+         ("wet-vac", "Wet and Dry Vacuum", "20 litre workshop vacuum.", "$6", "$35", "Fair", "2", "5 Nov"), ("sander", "Orbital Sander", "Random orbital sander.", "$5", "$25", "Excellent", "3", "7 Nov")]
+
+
+def site_5() -> dict:
+    nav = '<nav><a href="/">Home</a><a href="/tools">Tools</a><a href="/about">About</a><a href="/faq">Borrowing rules</a><a href="/contact">Contact</a></nav>'
+    files = {"/": page("Lakeview Tool Library", '<h1>Lakeview Tool Library</h1><p>Borrow tools for a few days instead of buying them.</p><p><a href="/tools">Browse the tools</a></p>', nav),
+             "/about": page("About the library", "<h1>About</h1><p>A neighbourhood tool library run by volunteers since 2021.</p>", nav),
+             "/faq": page("Borrowing rules", "<h1>Borrowing rules</h1><h2>Late returns</h2><p>A late return costs $2 per extra day.</p><h2>Membership</h2><p>Membership is free for residents.</p>", nav),
+             "/contact": page("Contact", "<h1>Contact</h1><p>Email: tools@lakeview.example</p><p>Phone: 02 5550 0144</p>", nav)}
+    cards = "".join(f'<li class="card"><a href="/tools/{s}"><h3>{n}</h3></a><p>{b}</p></li>' for s, n, b, *_ in TOOLS)
+    files["/tools"] = page("Tools", f"<h1>Tools</h1><ul>{cards}</ul>", nav)
+    for s, n, b, fee, dep, cond, copies, nxt in TOOLS:
+        files[f"/tools/{s}"] = page(n, f"<h1>{n}</h1><p>{b}</p>" + _dl([("Daily fee", fee), ("Deposit", dep), ("Condition", cond), ("Copies available", copies), ("Next available", nxt)]) + '<p><a href="/tools">Back to tools</a></p>', nav)
+    return files
+
+
+BUILDERS = {"site-1": site_1, "site-2": site_2, "site-3": site_3, "site-4": site_4, "site-5": site_5}

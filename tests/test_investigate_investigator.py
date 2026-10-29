@@ -25,10 +25,10 @@ def frozen(tmp_path, sid="site-1", name="r"):
     return run
 
 
-def fake_trial(run, task, priv, *, passed, backed, visited, status="completed", answer="(not sure)", shown=True, answer_valid=True, max_steps=None, tag="r1"):
+def fake_trial(run, task, priv, *, passed, backed, visited, status="completed", answer="(not sure)", shown=True, answer_valid=True, max_steps=None, tag="r1", prefix="baseline"):
     tid = f"{task['task_id']}-{tag}"
     profile = run.artifact("site-profile")
-    d = run.dir / "trial-data" / tid / "x"
+    d = run.dir / "trial-data" / f"{prefix}-{tid}" / "x"
     d.mkdir(parents=True)
     obs = [{"path": p, "text": (profile["pages"][p]["text"] if shown and p in profile["pages"] else "")} for p in visited]
     (d / "observations.json").write_text(json.dumps(obs))
@@ -38,7 +38,7 @@ def fake_trial(run, task, priv, *, passed, backed, visited, status="completed", 
            "journey": [{"step": i + 1, "path": p, "query": "", "actions": [{"name": "navigate", "params": {"url": p}}], "executed": [{"result": "ok", "error": None}]} for i, p in enumerate(visited)],
            "mirror": {"log": [{"method": "GET", "path": p, "status": 200} for p in visited], "blocked": []}, "task_id": task["task_id"], "partition": task["partition"], "repeat": 1,
            "trial_id": tid, "trial_dir": str(d.relative_to(run.dir))}
-    run.write_artifact(f"trials/baseline-{tid}", rec)
+    run.write_artifact(f"trials/{prefix}-{tid}", rec)
     return tid
 
 
