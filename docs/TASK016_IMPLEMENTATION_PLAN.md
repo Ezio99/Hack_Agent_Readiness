@@ -1,6 +1,6 @@
 # Task 016 — Implementation plan: general-purpose autonomous website investigator
 
-**Status: PROPOSAL, revision 2 (owner feedback incorporated 2026-10-29). Overall direction approved for planning; nothing is implemented, and no spending is authorized.** Written 2026-10-29 on `main` (`10f4247`) after a focused audit. No paid call, deployment, merge or destructive operation has been made or is requested. Issue: #28. Submission deadline (per handoff): 2026-11-04 9 PM EST (timezone unconfirmed).
+**Status: PROPOSAL, revision 2 (owner feedback incorporated 2026-10-29). Overall direction approved for planning; nothing is implemented, and no spending is authorized.** Written 2026-10-29 on `main` (`10f4247`) after a focused audit. No paid call, deployment, merge or destructive operation has been made or is requested. Issue: #28. 
 
 ## Revision 2 — changes after owner review of PR #32
 **Approved by the owner:** overall direction; mirror-first controlled experiments (D2); the scope deferrals (rendered snapshots, `form_state`, cross-profile control, service endpoint); mirror-only fixes (D9); the diagnostics-overlay approach (D11); preserving frozen files (D5/§12); the site zoo. The A$6 per-investigation figure is a **planning ceiling, not a spending authorization**. CI optimization was done first as PR #33 (see `docs/CI.md`); PR #31 stays open until #33 is verified and merged.
@@ -154,7 +154,7 @@ Each milestone ends with the fast suite green and a short report. Live work happ
 | M7 | CLI polish; read-only dashboard Investigation page; docs/STATUS/COLD_START | 1 d | Secondary |
 | M8 | (stretch) service endpoint for registered targets; rendered snapshots; placebo arm in live runs | — | Only if time remains |
 
-**Time protection.** ≈10 days of work against 6 calendar days to 2026-11-04. Therefore: (1) L2 is scheduled no later than **2026-11-02** and nothing in M7/M8 may displace it; (2) if the plan slips, the first things dropped are M8, then the dashboard page (M7), then the placebo/holdout *live* arms — never L1/L2 or the blind protocol; (3) minimum viable demonstration if time collapses: M1–M5 + L1 + L2 (investigation and report, with before/after only where a proposal was approved and time permits). I will re-estimate after M2 and after L1 and tell you early.
+**Deadline (owner, 2026-10-29).** Internal project deadline: **2026-11-04 23:59 Australia/Sydney (AEDT)**. The official submission deadline is 2026-11-05 Sydney time; that day is deliberately reserved as buffer. This plan does not assume the official deadline has changed (to be verified against the official rules). Working back from 11-04 23:59 AEDT: M1 done (PR #34); M2 2026-10-30; M3–M5 2026-10-31 → 11-01; **L1** (first live slice, needs approval) by 2026-11-01; M6 by 11-02; **L2 (the three blind demonstrations) no later than 2026-11-03 Sydney time** so that 11-04 is for scoring, report, replay assets and polish. Time protection: (1) nothing in M7/M8 may displace L1/L2; (2) if the plan slips the first things dropped are M8, then the dashboard page (M7), then the live holdout/placebo arms — never L1/L2 or the blind protocol; (3) minimum viable demonstration if time collapses: M1–M5 + L1 + L2. I will re-estimate after M2 and after L1 and tell you early.
 
 ## 7. Risks
 
@@ -217,4 +217,4 @@ The §14 proposal was built and measured before any Task 016 coding. Result (3 c
 4. **Verdict thresholds (D10):** I will put exact numbers in the pre-registered manifest for approval at L1; objections welcome now (default: paired pass-rate delta ≥ +0.25 with sign-flip p ≤ 0.10, or ≥25 % fewer requests at equal pass rate).
 5. **Experimental proposals:** OK that an approved experimental proposal is tested with the same trial budget logic and reported as "measured effect of the change; hypothesis unverified"?
 6. **Branching/PRs:** one PR per milestone from `task016-*` branches, merged by you? (This plan lives in PR #32.)
-7. **Deadline timezone** (2026-11-04 9 PM EST — confirm); it fixes the L2 window (currently no later than 2026-11-02).
+7. ~~Deadline timezone~~ — settled by the owner: internal deadline 2026-11-04 23:59 Australia/Sydney; 11-05 is buffer (see §6). Still to verify: the official rules' exact deadline.

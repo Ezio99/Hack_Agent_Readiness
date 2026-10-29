@@ -1,0 +1,13 @@
+{
+ "category": "clean_control",
+ "expected": {
+  "affected_templates": [],
+  "claim_kinds": [],
+  "example_task": "Which easy recipes cook in under 40 minutes?"
+ },
+ "extra_tokens": [],
+ "planted": [],
+ "role": "demonstration",
+ "site_id": "site-3",
+ "summary": "No planted issue: decision fields are shown on listing cards, all controls are named, policy is linked from the footer."
+}

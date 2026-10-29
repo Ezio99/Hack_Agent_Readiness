@@ -13,6 +13,21 @@ def register(sub) -> None:
     demo = isub.add_parser("demo", help="Scripted end-to-end run of the pipeline plumbing (NOT a model run, no website)")
     demo.add_argument("--root", type=Path, default=Path("investigations"))
     demo.add_argument("--id", default="scripted-demo")
+    ins = isub.add_parser("inspect", help="Crawl (or load a zoo site) into a content-hashed snapshot and print its neutral observations")
+    src = ins.add_mutually_exclusive_group(required=True)
+    src.add_argument("--zoo", help="a local zoo site id, e.g. site-1 (offline)")
+    src.add_argument("--url", help="a site you operate or have permission to test (network; needs --permission-ack)")
+    ins.add_argument("--permission-ack", action="store_true", help="confirm you operate this site or have permission to crawl it")
+    ins.add_argument("--allow-private-hosts", action="store_true", help="allow loopback/private addresses (your own network only)")
+    ins.add_argument("--max-pages", type=int, default=60)
+    ins.add_argument("--out", type=Path, help="write the snapshot directory here")
+    mir = isub.add_parser("mirror", help="Serve a saved snapshot read-only on loopback")
+    mir.add_argument("snapshot", type=Path)
+    mir.add_argument("--port", type=int, default=8100)
+    pat = isub.add_parser("patch", help="Apply a patch file to a saved snapshot, producing a new snapshot (the original is untouched)")
+    pat.add_argument("snapshot", type=Path)
+    pat.add_argument("patch_json", type=Path)
+    pat.add_argument("--out", type=Path, required=True)
     st = isub.add_parser("status", help="Show stages, outcome and pending approvals of an investigation")
     st.add_argument("run_dir", type=Path)
     ap = isub.add_parser("approve", help="Record the owner's approval of an exact stage manifest hash")
@@ -28,6 +43,41 @@ def main(args) -> None:
         from .demo import run_demo
         run, rep = run_demo(args.root, args.id)
         print(f"scripted demo finished: {run.dir}  outcome={rep['outcome']}  (mode={run.mode}; {rep['notices'][0]})")
+        return
+    if args.investigate_command == "inspect":
+        from .inspect.crawl import HttpFetcher, Limits, crawl
+        from .inspect.profile import build_profile, observations
+        if args.zoo:
+            from . import zoo
+            snap = zoo.snapshot(args.zoo)
+        else:
+            if not args.permission_ack:
+                raise SystemExit("refusing: crawling a live site needs --permission-ack (only sites you operate or have permission to test)")
+            snap = crawl(HttpFetcher(args.url, allow_private_hosts=args.allow_private_hosts), Limits(max_pages=args.max_pages))
+        if args.out:
+            snap.save(args.out)
+        print(f"snapshot {snap.sha256}  pages={len(snap.pages())}  fidelity={snap.meta.get('fidelity', {}).get('level')}")
+        for o in observations(build_profile(snap), mode="scripted" if args.zoo else "live"):
+            print(f"- [{o.kind}] {o.summary}")
+        return
+    if args.investigate_command == "mirror":
+        import uvicorn
+        from .sitemodel.server import Mirror
+        from .sitemodel.snapshot import Snapshot
+        snap = Snapshot.load(args.snapshot)
+        print(f"Serving snapshot {snap.sha256[:12]} read-only at http://127.0.0.1:{args.port}/")
+        uvicorn.run(Mirror(snap), host="127.0.0.1", port=args.port, log_level="warning")
+        return
+    if args.investigate_command == "patch":
+        from .sitemodel.patch import PatchError, apply_patch
+        from .sitemodel.snapshot import Snapshot
+        snap = Snapshot.load(args.snapshot)
+        try:
+            new, rep = apply_patch(snap, json.loads(args.patch_json.read_text()))
+        except (PatchError, ValueError) as exc:
+            raise SystemExit(f"patch refused: {exc}")
+        new.save(args.out)
+        print(json.dumps(rep, indent=2))
         return
     run = InvestigationRun(args.run_dir)
     if args.investigate_command == "approve":

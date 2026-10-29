@@ -1,0 +1,23 @@
+{
+ "category": "buried_policy",
+ "expected": {
+  "affected_templates": [
+   "/plan/permits/{}"
+  ],
+  "claim_kinds": [
+   "info_only_after_k_hops"
+  ],
+  "example_task": "Is a permit required for the Ridge Loop?"
+ },
+ "extra_tokens": [],
+ "planted": [
+  {
+   "description": "permit requirement is three navigation steps from the entry page and unlinked from trail pages",
+   "kind": "deep_information",
+   "where": "/plan/permits/day-use"
+  }
+ ],
+ "role": "development",
+ "site_id": "site-4",
+ "summary": "The day-use permit rule sits three links deep and trail pages only mention that permit rules apply, without linking to them."
+}
