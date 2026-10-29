@@ -24,7 +24,7 @@ webarena = ["webarena-verified==1.2.3"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-markers = ["browser: real Chromium/CDP checks requiring loopback sockets"]
+markers = ["browser: real Chromium/CDP checks requiring loopback sockets", "slow: logic-level tests that still take >1.5 s (whole mock pipelines, plan() with live probes); excluded only from the fast development subset, never from CI"]
 
 [tool.setuptools.package-data]
 agent_readiness = ["templates/*.html", "profiles/*.json", "environments/electronics/templates/*.html"]

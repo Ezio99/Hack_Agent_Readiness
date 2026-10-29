@@ -62,6 +62,7 @@ def go(m, root, runner, **kw):
     return asyncio.run(ex.run_stage(m, root, mode=kw.pop("mode", "mock"), runner=runner, **kw))
 
 
+@pytest.mark.slow
 def test_manifest_freezes_everything_before_execution_and_references_the_product_ids():
     rep, m = plan()
     assert m["audit"]["audit_id"] == rep["audit_id"] and m["audit"]["recommendation_id"] == "rec-show-availability-on-listing-cards"
@@ -77,6 +78,7 @@ def test_manifest_freezes_everything_before_execution_and_references_the_product
     assert m["budget_check"]["remaining_before_aud"] == pytest.approx(43.7933, abs=1e-2) and m["budget_check"]["remaining_after_stage_cap_aud"] == pytest.approx(42.2933, abs=1e-2)
 
 
+@pytest.mark.slow
 def test_main_schedule_is_seeded_balanced_and_deterministic():
     _, a = plan("main", 11, prior_stage={"x": 1})
     _, b = plan("main", 11, prior_stage={"x": 1})
@@ -94,6 +96,7 @@ def test_main_schedule_is_seeded_balanced_and_deterministic():
     assert {x["block"] for x in a["schedule"] if x["task_code"] == "T4"} == {1, 2}
 
 
+@pytest.mark.slow
 def test_manifest_is_write_once_and_tamper_evident(tmp_path):
     _, m = plan()
     p = tmp_path / "m.json"
@@ -108,6 +111,7 @@ def test_manifest_is_write_once_and_tamper_evident(tmp_path):
         ex.load_manifest(p)
 
 
+@pytest.mark.slow
 def test_planning_refuses_a_different_site_than_the_one_audited():
     rep = baseline_report()
     rid = next(r["id"] for r in rep["recommendations"] if r["change_id"] == "availability-on-listing-cards")
@@ -117,6 +121,7 @@ def test_planning_refuses_a_different_site_than_the_one_audited():
         ex.build_manifest("pilot", rep, "rec-made-up", DEFAULT_INITIAL, 1)
 
 
+@pytest.mark.slow
 def test_planning_refuses_a_stage_that_would_break_the_programme_ceiling(monkeypatch):
     rep = baseline_report()
     rid = next(r["id"] for r in rep["recommendations"] if r["change_id"] == "availability-on-listing-cards")
@@ -127,6 +132,7 @@ def test_planning_refuses_a_stage_that_would_break_the_programme_ceiling(monkeyp
         ex.build_manifest("pilot", rep, rid, DEFAULT_INITIAL, 1)
 
 
+@pytest.mark.slow
 def test_live_needs_the_exact_hash_the_flag_the_pilot_for_main_and_unchanged_code(tmp_path, monkeypatch):
     _, m = plan()
     sl = ex.StageLedger(tmp_path, "pilot", m)
@@ -145,6 +151,7 @@ def test_live_needs_the_exact_hash_the_flag_the_pilot_for_main_and_unchanged_cod
         ex.preflight(m, m["manifest_sha256"], "mock", False, sl)
 
 
+@pytest.mark.slow
 def test_every_stage_ledger_counts_toward_the_programme_ceiling(tmp_path):
     _, pm = plan()
     _, mm = plan("main", 5)
@@ -160,6 +167,7 @@ def test_every_stage_ledger_counts_toward_the_programme_ceiling(tmp_path):
     assert recorded.others_committed_usd() == 0.0 and recorded.summary()["programme_spent_aud"] == pytest.approx(6.2067, abs=1e-2)
 
 
+@pytest.mark.slow
 def test_budget_and_provider_stops_are_void_never_website_results(tmp_path):
     _, m = plan("main", 2)
     sched = [e["run_id"] for e in m["schedule"]]
@@ -172,6 +180,7 @@ def test_budget_and_provider_stops_are_void_never_website_results(tmp_path):
     assert an["T1"]["valid_pairs"] == 0 and an["void_rows"][0]["class"] == "budget_stop"
 
 
+@pytest.mark.slow
 def test_two_provider_failures_halt_and_nothing_is_replaced_or_retried(tmp_path):
     _, m = plan("main", 4)
     s = [e["run_id"] for e in m["schedule"]]
@@ -186,6 +195,7 @@ def test_two_provider_failures_halt_and_nothing_is_replaced_or_retried(tmp_path)
     assert [r["run_id"] for r in rows] == s[:2] and all(r["outcome_class"] == "provider_failure" and r["void"] for r in rows)       # failures stay recorded as such; no replacement entries
 
 
+@pytest.mark.slow
 def test_interruption_is_recorded_void_keeps_reservations_and_is_not_retried(tmp_path):
     _, m = plan("main", 6)
     s = [e["run_id"] for e in m["schedule"]]
@@ -199,6 +209,7 @@ def test_interruption_is_recorded_void_keeps_reservations_and_is_not_retried(tmp
     assert runner.calls == [] and Ledger(tmp_path / "main" / "ledger").attempted(s[1])
 
 
+@pytest.mark.slow
 def test_parser_rejections_and_guard_violations_halt(tmp_path):
     _, m = plan("main", 8)
     s = [e["run_id"] for e in m["schedule"]]
@@ -209,6 +220,7 @@ def test_parser_rejections_and_guard_violations_halt(tmp_path):
     assert r2["halt"]["reason"] == "guard_violation"
 
 
+@pytest.mark.slow
 def test_stage_cap_in_aud_stops_a_real_mock_run_before_any_request_leaves(tmp_path, monkeypatch):
     monkeypatch.setitem(ex.STAGES["pilot"], "stage_cap_aud", 0.03)              # US$0.02: below one request's upper bound (~US$0.035)
     _, m = plan("pilot", 9)
@@ -242,6 +254,7 @@ def make_rows(m, deltas):
     return rows
 
 
+@pytest.mark.slow
 def test_analysis_verdicts_follow_the_pre_registered_rule():
     _, m = plan("main", 1)
     sup = ex.analyze(make_rows(m, [-4, -5, -4, -3, -6, -4]), m)
@@ -264,6 +277,7 @@ def test_analysis_verdicts_follow_the_pre_registered_rule():
     assert ex.analyze([{**r, "state": s} for r, s in zip(make_rows(plan("main", 1)[1], [-5] * 6)[:2], ("unmodified", "modified"))], pilot_m)["verdict"] == "inconclusive"      # a pilot never supports an effect claim
 
 
+@pytest.mark.slow
 def test_dry_run_pilot_end_to_end_records_references_and_never_attaches_mock_results(tmp_path):
     rep, m = plan("pilot", 21)
     r = go(m, tmp_path, ex.execute_scan)                                                                # the real mock provider through the real scanner and gate
@@ -283,6 +297,7 @@ def test_dry_run_pilot_end_to_end_records_references_and_never_attaches_mock_res
     assert json.loads((tmp_path / "pilot" / "pilot-gate.json").read_text())["decision"] in ("continue", "stop")
 
 
+@pytest.mark.slow
 def test_live_effect_attaches_as_a_derived_view_without_rewriting_the_audit(tmp_path):
     rep, m = plan("main", 5)
     rows = make_rows(m, [-4, -5, -4, -3, -6, -4])
@@ -298,6 +313,7 @@ def test_live_effect_attaches_as_a_derived_view_without_rewriting_the_audit(tmp_
     assert rec["validation"] == "unvalidated" and rec["measured_validation"] == "measured_supports" and view["measured_effects"]["effects"][0]["audit_id"] == rep["audit_id"]
 
 
+@pytest.mark.slow
 def test_cli_plan_prints_the_exact_paid_command_and_live_run_without_approval_halts(tmp_path, capsys, monkeypatch):
     from agent_readiness import cli
     monkeypatch.setattr(sys, "argv", ["readiness", "remediation-experiment", "plan", "--stage", "pilot", "--root", str(tmp_path), "--seed", "3"])

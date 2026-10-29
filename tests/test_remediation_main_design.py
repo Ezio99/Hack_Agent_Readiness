@@ -58,6 +58,7 @@ def test_stock_filter_factor_isolates_labels_from_the_filter_without_touching_or
     assert len({v.variant_id for v in originals}) == 4 and not any("stockfilter" in v.variant_id for v in originals)
 
 
+@pytest.mark.slow
 def test_product_recognises_the_labels_only_state_and_recommends_the_remaining_change():
     base = audit_factors(U)
     mid = audit_factors(C, previous=base)
@@ -129,6 +130,7 @@ def test_interim_gate_decisions():
 from tests.test_remediation_experiment import go, plan, scripted_runner                                   # noqa: E402  (reuse the stub runner helpers)
 
 
+@pytest.mark.slow
 def test_main_stage_halts_after_block_two_when_the_baseline_leaves_no_room(tmp_path):
     _, m = plan("main", 31)
     easy = {e["run_id"]: {"requests": 4, "visits": 2} for e in m["schedule"] if e["task_code"] == "T1" and e["state"] == "unmodified"}      # baseline solves it cheaply and completely
@@ -139,6 +141,7 @@ def test_main_stage_halts_after_block_two_when_the_baseline_leaves_no_room(tmp_p
     assert max(r["block"] for r in rows) <= 2 and all(not r["void"] for r in rows)                          # a ceiling is reported as such, not as a website result
 
 
+@pytest.mark.slow
 def test_main_stage_continues_when_a_baseline_run_shows_room_and_completes_without_replacements(tmp_path):
     _, m = plan("main", 32)
     table = {e["run_id"]: {"passed": False, "requests": 11, "visits": 3, "extra": []} for e in m["schedule"] if e["task_code"] == "T1" and e["state"] == "unmodified"}
@@ -148,6 +151,7 @@ def test_main_stage_continues_when_a_baseline_run_shows_room_and_completes_witho
     assert len({x["run_id"] for x in rows}) == 24
 
 
+@pytest.mark.slow
 def test_main_manifest_freezes_the_corrected_design_and_carries_the_original_pilot_result(tmp_path):
     from agent_readiness.remediation import cli_impl
     prior = cli_impl.prior_stage_from(PILOT / "results")

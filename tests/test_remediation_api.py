@@ -23,6 +23,7 @@ def product(tmp_path):
     targets.stop()
 
 
+@pytest.mark.slow
 def test_full_workflow_through_the_api(product):
     c, h, _ = product
     assert c.get("/api/targets", headers=h).json()["targets"] == [{"id": "demo-shop", "description": "Managed demo electronics storefront (electronics-v1)", "managed": True}]
@@ -49,6 +50,7 @@ def test_full_workflow_through_the_api(product):
     assert c.get(f"/api/audits/{after['audit_id']}", headers=h).json()["audit_id"] == after["audit_id"]
 
 
+@pytest.mark.slow
 def test_api_boundaries(product):
     c, h, app = product
     post = lambda body, headers=h: c.post("/api/audits", headers=headers, json=body)

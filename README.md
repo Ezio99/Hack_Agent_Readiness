@@ -37,7 +37,8 @@ readiness scanner invite --label me && readiness scanner serve --demo-target    
 uv run python scripts/remediation_loop_demo.py         # audit -> recommend -> operator change -> independent re-audit, over the API
 readiness remediation-experiment run --manifest collaboration/experiments/task015/pilot/manifest.json \
   --audit collaboration/experiments/task015/pilot/audit-baseline.json --root runs/dry --mode mock   # mock dry run only
-python -m pytest -m 'not browser' -q && python -m pytest -m browser -q
+scripts/dev-tests.sh            # fast development loop (~35 s, 531 tests; excludes `browser` and `slow`)
+python -m pytest -q             # the complete suite (what CI runs: `-m "not browser"` then `-m browser`; ~14 min)
 ```
 
 ## Live (paid) runs

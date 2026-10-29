@@ -62,6 +62,7 @@ def verdict_of(deltas, **kw):
     return ex.analyze(rows, m)
 
 
+@pytest.mark.slow
 def test_verdict_uses_the_predeclared_rule_and_threshold_exactly():
     six = verdict_of([-4, -5, -4, -3, -6, -4])
     assert six["verdict"] == "supports" and six["T1"]["p_two_sided_sign_flip"] == 0.03125
@@ -78,12 +79,14 @@ def test_verdict_uses_the_predeclared_rule_and_threshold_exactly():
     assert no_effect["verdict"] == "not_supported" and no_effect["T1"]["p_two_sided_sign_flip"] == 1.0
 
 
+@pytest.mark.slow
 def test_pass_rate_must_not_be_worse_for_support():
     worse = verdict_of([-4, -5, -4, -3, -6, -4], passed=False)
     assert worse["verdict"] == "inconclusive" and worse["T1"]["pass_rate"]["modified"] == 0.0
 
 
 @pytest.mark.parametrize("pairs", [0, 1, 2, 3, 4])
+@pytest.mark.slow
 def test_fewer_than_five_valid_pairs_is_always_inconclusive_whatever_the_p_value(pairs, monkeypatch):
     _, m = plan("main", 1)
     rows = [r for r in make_rows(m, [-9, -9, -9, -9, -9, -9]) if r["block"] <= pairs]        # enormous, perfectly consistent effect
@@ -92,6 +95,7 @@ def test_fewer_than_five_valid_pairs_is_always_inconclusive_whatever_the_p_value
     assert an["verdict"] == "inconclusive" and "fewer than 5" in an["verdict_reason"]
 
 
+@pytest.mark.slow
 def test_void_pairs_reduce_the_pair_count_and_can_force_inconclusive():
     _, m = plan("main", 1)
     rows = make_rows(m, [-9] * 6)
@@ -105,6 +109,7 @@ def test_void_pairs_reduce_the_pair_count_and_can_force_inconclusive():
 
 
 # ---------- the gate is prospective-only and never touches the verdict ----------
+@pytest.mark.slow
 def test_the_verdict_function_cannot_depend_on_the_gate():
     src = inspect.getsource(ex.analyze) + inspect.getsource(ex.effect_record) + inspect.getsource(ex._pairs)
     assert "room_to_act" not in src and "interim_gate" not in src and "GATE_V2" not in src
@@ -131,6 +136,7 @@ def test_run_status_classification_and_voiding(status, klass):
 
 
 # ---------- halts are final; interim edge cases ----------
+@pytest.mark.slow
 def test_a_halted_stage_cannot_be_resumed_by_simply_running_the_command_again(tmp_path):
     _, m = plan("main", 41)
     s = [e["run_id"] for e in m["schedule"]]
@@ -143,6 +149,7 @@ def test_a_halted_stage_cannot_be_resumed_by_simply_running_the_command_again(tm
     assert len(ex.read_rows(tmp_path / "main" / "rows.jsonl")) == 2
 
 
+@pytest.mark.slow
 def test_no_room_and_budget_halts_are_final_too(tmp_path):
     _, m = plan("main", 42)
     easy = {e["run_id"]: {"requests": 4, "visits": 2} for e in m["schedule"] if e["task_code"] == "T1" and e["state"] == "unmodified"}
@@ -156,6 +163,7 @@ def test_no_room_and_budget_halts_are_final_too(tmp_path):
         go(m, tmp_path / "b", scripted_runner({}))
 
 
+@pytest.mark.slow
 def test_a_run_that_started_but_left_no_row_is_recovered_as_void_and_halts_the_stage(tmp_path):
     _, m = plan("main", 43)
     first = m["schedule"][0]["run_id"]

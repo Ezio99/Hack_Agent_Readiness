@@ -109,6 +109,7 @@ def test_page_and_depth_budget_bound_the_number_of_requests():
     assert count["n"] <= 10 + 6                                                         # page cap (+ at most max_details extra fetches)
 
 
+@pytest.mark.slow
 def test_audit_api_never_accepts_a_url_or_label_and_does_not_expose_internal_addresses(tmp_path):
     from fastapi.testclient import TestClient
     from agent_readiness.remediation.targets import TargetRegistry

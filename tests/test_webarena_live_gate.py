@@ -228,6 +228,7 @@ def test_authorized_limits_are_pinned_and_the_new_per_request_cap_admits_a_large
     assert r2.network_hits == 0
 
 
+@pytest.mark.slow
 def test_synthetic_suite_scan_can_use_the_same_durable_gate(tmp_path):
     """execute_scan(request_gate=...) reserves before and settles after every model request (mock provider: no network, no key)."""
     import asyncio as aio
