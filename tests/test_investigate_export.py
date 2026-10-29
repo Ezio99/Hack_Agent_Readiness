@@ -129,3 +129,19 @@ def test_cli_export_writes_file(full, tmp_path, capsys, monkeypatch):
 def test_stages_are_exported_in_pipeline_order(full):
     names = [s["name"] for s in export_run(full)["stages"]]
     assert names[:4] == ["inspect", "taskgen", "freeze", "baseline_trials"] and names[-1] == "final_report"
+
+
+def test_fixture_numbers_are_rederivable_from_its_own_trial_rows():
+    """The synthetic before/after figures must follow from the displayed trials under the real pre-registered rule, and be labelled illustrative."""
+    from agent_readiness.investigate.evaluate import design
+    d = json.loads(FIXTURE.read_text())
+    (r,) = d["evaluation"]["results"]
+    pid = r["proposal_id"]
+    row = lambda t: {"void": t["void"], "passed": bool(t["passed"]), "evidence_backed": bool(t["evidence_backed"]), "model_requests": t["model_requests"], "primary": "x", "page_views": t["page_views"]}
+    base = {t["task_id"]: [row(x) for x in t["baseline"]] for t in d["tasks"]}
+    post = {t["task_id"]: [row(x) for x in t["patched"][pid]] for t in d["tasks"]}
+    c = design.compare(base, post, {t["task_id"]: t["partition"] for t in d["tasks"]}, design.RULE)
+    for k in ("verdict", "pairs", "pass_delta", "request_change", "p_pass", "p_requests", "holdout_consistent"):
+        assert r[k] == c[k], k
+    assert r["by_partition"] == c["by_partition"] and [e["task_id"] for e in r["excluded"]] == [e["task_id"] for e in c["excluded"]]
+    assert r["measured"] is False and r["reason"].startswith("ILLUSTRATIVE") and d["synthetic"] is True

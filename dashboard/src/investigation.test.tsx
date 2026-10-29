@@ -24,7 +24,7 @@ describe("investigation export parsing", () => {
     expect(tally(t5.baseline)).toMatchObject({ usable: 0, void: 1 });
     const pid = Object.keys(d.tasks[0].patched)[0];
     const c = compare(d.tasks, pid);
-    expect(c.tasks).toBe(5); expect(c.skipped).toBe(1); expect(c.baseline.passed).toBe(2); expect(c.patched.passed).toBe(5);
+    expect(c.tasks).toBe(5); expect(c.skipped).toBe(1); expect(c.baseline.passed).toBe(0); expect(c.patched.passed).toBe(5);
   });
 });
 
@@ -41,6 +41,17 @@ describe("investigation view", () => {
     expect(h).toContain("Which listed cabins have a fireplace?");
     expect(h).toContain(">void<");
     expect(h).toContain("Amenities appear only on cabin detail pages");     // finding evidence resolved to the observation text
+  });
+  it("synthetic before/after numbers are internally consistent and labelled illustrative", () => {
+    const d = base();
+    const r = d.evaluation.results[0], c = compare(d.tasks, r.proposal_id);
+    expect(r.pairs).toBe(c.tasks);
+    expect(r.pass_delta).toBeCloseTo(c.patched.passed / c.patched.usable - c.baseline.passed / c.baseline.usable, 4);
+    expect(r.request_change).toBeCloseTo((c.patched.requests! - c.baseline.requests!) / c.baseline.requests!, 3);
+    expect(r.by_partition!.investigation.pairs + r.by_partition!.holdout.pairs).toBe(r.pairs);
+    expect(r.excluded.map((e) => e.task_id)).toEqual(["syn-t5"]);
+    const h = html(d);
+    expect(h).toContain("ILLUSTRATIVE — synthetic numbers"); expect(h).toContain("ILLUSTRATIVE (synthetic data)"); expect(h).toContain("SYNTHETIC FIXTURE");
   });
   it("never presents scripted effects as measured", () => {
     const h = html(base());

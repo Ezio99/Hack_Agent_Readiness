@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from agent_readiness.investigate.evaluate import design
 from agent_readiness.investigate.export import export_run
 from agent_readiness.investigate.flow import STAGES
 from agent_readiness.investigate.models import Hypothesis, Observation, Effect, Proposal, Provenance, Verification
@@ -16,7 +17,7 @@ TASKS = [("syn-t1", "investigation", "item_set", "Which listed cabins have a fir
          ("syn-t3", "investigation", "item_set", "Which cabins allow pets? List their names."), ("syn-t4", "investigation", "page_fact", "What is the check-in time for Pine Cabin?"),
          ("syn-t5", "holdout", "item_set", "Which cabins have a hot tub? List their names."), ("syn-t6", "holdout", "page_fact", "What is the cancellation window for Lake Cabin?")]
 LIMITS = {"max_steps": 11, "max_model_requests": 11, "timeout_seconds": 240}
-BASE = {"syn-t1": ("completed", False, 11), "syn-t2": ("completed", False, 9), "syn-t3": ("request_limit", False, 11), "syn-t4": ("completed", True, 4), "syn-t5": ("infrastructure_error", False, 2), "syn-t6": ("completed", True, 4)}
+BASE = {"syn-t1": ("completed", False, 11), "syn-t2": ("completed", False, 9), "syn-t3": ("request_limit", False, 11), "syn-t4": ("completed", False, 8), "syn-t5": ("infrastructure_error", False, 2), "syn-t6": ("completed", False, 7)}
 POST = {t: ("completed", True, 5) for t, *_ in TASKS}
 
 
@@ -59,9 +60,11 @@ def build(root: Path, *, complete: bool = True) -> Path:
         for t, *_ in TASKS:
             status, passed, req = POST[t]
             _trial(run, f"patched-{p1.id}-{t}-r1", f"{t}-r1", t, 1, "patched", status, passed, req)
-        res = {"verdict": "improvement", "reason": "pass rate 0.33 -> 1.00 on 5 usable pairs (synthetic numbers)", "pairs": 5, "pass_delta": 0.67, "request_change": -0.45, "p_pass": 0.06, "p_requests": 0.06, "holdout_consistent": True,
-               "by_partition": {"investigation": {"pairs": 3, "pass_delta": 1.0}, "holdout": {"pairs": 1, "pass_delta": 0.0}}, "rule_preregistered_at_freeze": True, "excluded": [{"task_id": "syn-t5", "reason": "void baseline trial"}]}
-        ev.add_effect(Effect(proposal_id=p1.id, verdict="improvement", metrics={"pass_delta": 0.67}, n_pairs=5, note=res["reason"], provenance=SCRIPTED))
+        arm = lambda src: {t: [{"void": src[t][0] == "infrastructure_error", "passed": src[t][1], "evidence_backed": src[t][1], "model_requests": src[t][2], "primary": "x", "page_views": src[t][2]}] for t, *_ in TASKS}
+        cmp_ = design.compare(arm(BASE), arm(POST), {t: p for t, p, *_ in TASKS}, design.RULE)           # the numbers come from the real pre-registered rule applied to the rows above, not typed in
+        res = {**{k: cmp_[k] for k in ("verdict", "pairs", "pass_delta", "request_change", "p_pass", "p_requests", "holdout_consistent", "by_partition", "excluded")},
+               "reason": f"ILLUSTRATIVE (synthetic data): {cmp_['reason']}", "rule_preregistered_at_freeze": True}
+        ev.add_effect(Effect(proposal_id=p1.id, verdict=res["verdict"], metrics={"pass_delta": res["pass_delta"]}, n_pairs=res["pairs"], note=res["reason"], provenance=SCRIPTED))
         run.write_artifact("evaluation", {"evaluated": True, "rule": {"id": "paired-signflip-v1", "primary": "evidence_backed_pass_rate", "secondary": "model_requests", "alpha": 0.1, "min_pairs": 4, "pass_delta_floor": 0.25,
                                                                          "request_reduction_floor": 0.25, "void_policy": "a pair with any void trial in either arm is excluded and listed", "causal_scope": "these frozen tasks, this profile and this patched mirror only"},
                            "results": {p1.id: res}})

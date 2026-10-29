@@ -118,7 +118,7 @@ function ResultCard({ d, r }: { d: InvestigationExport; r: EvalResult }) {
   const tone = r.verdict === "improvement" ? "good" : r.verdict === "regression" ? "bad" : "info";
   return (
     <section className="card" aria-label={`Baseline versus patched for ${r.proposal_id}`}>
-      <h4>Patch <code>{short(r.proposal_id)}</code> <Pill tone={r.verdict === "improvement" ? "pass" : r.verdict === "regression" ? "fail" : "neutral"}>{r.verdict}</Pill>{" "}
+      <h4>Patch <code>{short(r.proposal_id)}</code>{d.synthetic ? <> <span className="mode mode-scripted">ILLUSTRATIVE — synthetic numbers</span></> : null} <Pill tone={r.verdict === "improvement" ? "pass" : r.verdict === "regression" ? "fail" : "neutral"}>{r.verdict}</Pill>{" "}
         {r.measured ? <span className="mode mode-live">MEASURED (live)</span> : <span className="mode mode-unmeasured">NOT MEASURED — {r.effect_mode ? MODE_LABEL[r.effect_mode].toLowerCase() : "no"} evidence, a pipeline check only</span>}</h4>
       <figure className="paired" role="group" aria-label={`Evidence-backed pass rate: baseline ${pct(b.passed, b.usable)}, patched ${pct(p.passed, p.usable)}`}>
         <figcaption>Evidence-backed pass rate on {c.tasks} usable task{c.tasks === 1 ? "" : "s"} (descriptive)</figcaption>

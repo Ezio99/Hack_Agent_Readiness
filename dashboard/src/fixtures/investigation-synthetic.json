@@ -1,11 +1,11 @@
 {
   "effects": [
     {
-      "id": "eff-fd6a6f15fe",
+      "id": "eff-db54d8c3da",
       "measured": false,
       "mode": "scripted",
       "n_pairs": 5,
-      "note": "pass rate 0.33 -> 1.00 on 5 usable pairs (synthetic numbers)",
+      "note": "ILLUSTRATIVE (synthetic data): meets the pre-registered improvement rule",
       "proposal_id": "prp-5c2e33ac94",
       "verdict": "improvement"
     }
@@ -16,30 +16,32 @@
       {
         "by_partition": {
           "holdout": {
+            "mean_request_change": -2,
             "pairs": 1,
-            "pass_delta": 0.0
+            "pass_delta": 1.0
           },
           "investigation": {
-            "pairs": 3,
+            "mean_request_change": -4.75,
+            "pairs": 4,
             "pass_delta": 1.0
           }
         },
         "effect_mode": "scripted",
         "excluded": [
           {
-            "reason": "void baseline trial",
+            "reason": "void or missing trial in one arm",
             "task_id": "syn-t5"
           }
         ],
         "holdout_consistent": true,
         "measured": false,
-        "p_pass": 0.06,
-        "p_requests": 0.06,
+        "p_pass": 0.0625,
+        "p_requests": 0.0625,
         "pairs": 5,
-        "pass_delta": 0.67,
+        "pass_delta": 1.0,
         "proposal_id": "prp-5c2e33ac94",
-        "reason": "pass rate 0.33 -> 1.00 on 5 usable pairs (synthetic numbers)",
-        "request_change": -0.45,
+        "reason": "ILLUSTRATIVE (synthetic data): meets the pre-registered improvement rule",
+        "request_change": -0.4565,
         "rule_preregistered_at_freeze": true,
         "verdict": "improvement"
       }
@@ -536,12 +538,12 @@
     {
       "baseline": [
         {
-          "attribution": "success",
-          "evidence_backed": true,
+          "attribution": "website",
+          "evidence_backed": false,
           "mode": "scripted",
-          "model_requests": 4,
-          "page_views": 3,
-          "passed": true,
+          "model_requests": 8,
+          "page_views": 7,
+          "passed": false,
           "repeat": 1,
           "run_status": "completed",
           "trial_id": "syn-t4-r1",
@@ -622,12 +624,12 @@
     {
       "baseline": [
         {
-          "attribution": "success",
-          "evidence_backed": true,
+          "attribution": "website",
+          "evidence_backed": false,
           "mode": "scripted",
-          "model_requests": 4,
-          "page_views": 3,
-          "passed": true,
+          "model_requests": 7,
+          "page_views": 6,
+          "passed": false,
           "repeat": 1,
           "run_status": "completed",
           "trial_id": "syn-t6-r1",
