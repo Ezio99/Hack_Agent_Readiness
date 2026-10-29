@@ -1,5 +1,7 @@
 # Report 012b — Task 012 Stage 1 LIVE results (Muse Spark `muse-spark-1.3`)
 
+> **Addendum (post-Task 013, docs only; results above unchanged):** Task 013 ([plan](../../docs/TASK013_T1_DIAGNOSIS_AND_EXPERIMENT_PLAN.md), [Report 013](013-t1-diagnosis.md)) confirmed the `find_elements`/`search_page` visibility gap in Browser Use 0.11.13 (only a count line reaches the model) and added the `suite-v2-compat1` reference agent, T1 evidence v2 (SKU text required) and an optional `sku` listing factor. These resolve the "Candidate interventions" and the evidence-spec gap noted below **offline only**: the fix has not been validated with a live model, and Stage 1 was run with the frozen `suite-v1-compat1` configuration. Task 013 Part A is deferred by user decision and Parts B/C are not to be executed; the options in the Recommendation section are therefore superseded as a plan, though the observations stand. No paid call is authorized.
+
 **LIVE results**, single execution of the approved schedule at commit `7e9bf61`, schedule hash `96e459ad…fc99fec`, manifest hash `0ef0386c…03b04`. 8/8 runs completed, no halt, no retry, no replacement. Private artifacts (traces, per-run results, ledger) are in Git-ignored `runs/experiment-012/live/`; nothing is published. Calculated cost, not billed. **Stage 1 is a feasibility/sensitivity test: V0 (listing + structured) vs V3 (detail-only availability + fragmented specs) changes both factors, n=1 per cell — no factor attribution and no statistical claim is made.**
 
 ## Ledger / execution
