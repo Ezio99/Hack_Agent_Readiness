@@ -19,3 +19,5 @@ scanner-data/
 
 # uv.lock is deliberately untracked (see STATUS.md); ignoring it prevents accidental `git add -A`
 uv.lock
+
+investigations/
