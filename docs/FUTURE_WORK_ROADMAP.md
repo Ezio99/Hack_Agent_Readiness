@@ -93,3 +93,7 @@ Extend the measurement framework to travel, services, documentation, public info
 ## Prioritization principle
 
 Optimize for **decision-relevant information gained per unit of time and spend**, not for exhausting the budget or minimizing cost at all costs. Before any paid experiment, state the uncertainty, the decision it will inform, the cheapest credible design, predeclared stop conditions, and the applicable per-request/run/stage/programme limits. The A$50 budget is a ceiling, **not spending authorization**.
+
+## Development velocity log (reported; not a performance benchmark)
+
+- **2026-10-29 — Task 015b:** owner reports approximately **35 minutes** for the offline experiment driver and associated work: PR #22 security/integration review and fixes, frozen pilot manifest, dry run, and **32 additional Python tests** (590 → 622). PR #24 opened; paid pilot not run at the time of this record. This is an owner-reported elapsed time, not independently timed or a claim of scientific validity.
