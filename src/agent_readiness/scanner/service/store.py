@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS scans (id TEXT PRIMARY KEY, session_id TEXT NOT NULL,
   mock_behavior TEXT, status TEXT NOT NULL, created_at REAL NOT NULL, started_at REAL, finished_at REAL, reserved_usd REAL NOT NULL DEFAULT 0, actual_usd REAL,
   idempotency_key TEXT, error TEXT, UNIQUE(session_id, idempotency_key));
 CREATE TABLE IF NOT EXISTS ledger (id INTEGER PRIMARY KEY AUTOINCREMENT, scan_id TEXT NOT NULL, kind TEXT NOT NULL, usd REAL NOT NULL, ts REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS audits (id TEXT PRIMARY KEY, session_id TEXT NOT NULL, invitation_id TEXT NOT NULL, target_id TEXT NOT NULL, previous_id TEXT, created_at REAL NOT NULL,
+  with_scan INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS attempts (id INTEGER PRIMARY KEY AUTOINCREMENT, client TEXT NOT NULL, ts REAL NOT NULL);
 """
 ACTIVE = ("queued", "running")
@@ -182,3 +184,27 @@ class Store:
 
     def result_path(self, scan_id: str) -> Path:
         return self.config.results_dir / scan_id
+
+    # ---- site audits (probe + recommendations; no model call, no cost) ---------------------------------------------------------------
+    def audit_path(self, audit_id: str) -> Path:
+        return self.config.results_dir / "audits" / f"{audit_id}.json"
+
+    def audits_count(self, session_id: str) -> int:
+        with self._conn() as c:
+            return c.execute("SELECT COUNT(*) FROM audits WHERE session_id=?", (session_id,)).fetchone()[0]
+
+    def save_audit(self, session: dict, target_id: str, previous_id: str | None, report: dict, with_scan: bool) -> None:
+        path = self.audit_path(report["audit_id"])
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(report, indent=1))
+        with self.tx() as c:
+            c.execute("INSERT INTO audits VALUES (?,?,?,?,?,?,?)", (report["audit_id"], session["id"], session["invitation_id"], target_id, previous_id, time.time(), int(with_scan)))
+
+    def get_audit(self, audit_id: str) -> dict | None:
+        with self._conn() as c:
+            r = c.execute("SELECT * FROM audits WHERE id=?", (audit_id,)).fetchone()
+        return dict(r) if r else None
+
+    def audits_of(self, invitation_id: str) -> list[dict]:
+        with self._conn() as c:
+            return [dict(r) for r in c.execute("SELECT * FROM audits WHERE invitation_id=? ORDER BY created_at DESC", (invitation_id,))]

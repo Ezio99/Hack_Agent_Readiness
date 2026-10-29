@@ -1,0 +1,26 @@
+
+=== 1. BASELINE AUDIT  (audit 6aa443389020, target 'demo-shop')
+  [website_property] attribute_detail_only:availability: 0 of 54 listing cards (across 6 listing pages) show stock / availability state; 6 of 6 sampled product pages do.
+  [website_property_positive] attribute_on_cards:sku: 54 of 54 listing cards show product SKU / identifier.
+  [website_property] filter_absent:availability: 6 listing pages offer filters (Active noise cancelling, Brand, Maximum price (A$), Minimum memory, Minimum refresh rate) but none for availability.
+  RECOMMENDATION [unvalidated, prior_evidence_other_site] Show stock status on listing cards
+     change: Print 'In stock' / 'Out of stock' on every listing, search and home card, and offer an in-stock filter on listing pages.
+     why: Observed: 0 of 54 listing cards (across 6 listing pages) show stock / availability state; 6 of 6 sampled product pages do. 6 listing pages offer filters (Active noise cancelling, Brand, Maximum price (A$), Minimum memory, Minimum …
+     expected benefit: Fewer product-page visits and model requests for tasks that depend on stock, and fewer answers that include unavailable items.
+     confidence: Supported by descriptive evidence from a different site/task; NOT validated for this site.
+  AGENT EXECUTION (mock scan): PASS; evidence-backed: True; run status completed; 7 model requests, 7 page views, 29.48 s, calculated cost US$0.09205 (mock scan).; 5 distinct product pages opened in 5 steps.
+     inferred: The agent opened 5 product pages while the audited listing cards lack availability. This is consistent with per-product lookups of availability, but the agent's…
+  measured effects: not_measured
+
+--- operator applies the recommended change 'availability-on-listing-cards' to the managed site ---
+{'target_id': 'demo-shop', 'applied': ['availability-on-listing-cards']}
+
+=== 2. INDEPENDENT RESCAN  (audit 73ef94cd2e27, target 'demo-shop')
+  [website_property_positive] attribute_on_cards:availability: 54 of 54 listing cards show stock / availability state.
+  [website_property_positive] attribute_on_cards:sku: 54 of 54 listing cards show product SKU / identifier.
+  [website_property_positive] filter_present:availability: 4 listing pages offer a filter for availability.
+  AGENT EXECUTION (mock scan): PASS; evidence-backed: True; run status completed; 7 model requests, 7 page views, 3.06 s, calculated cost US$0.09205 (mock scan).; 5 distinct product pages opened in 5 steps.
+  LIFECYCLE attribute_detail_only:availability: RESOLVED — 54 of 54 listing cards show stock / availability state.
+  LIFECYCLE filter_absent:availability: RESOLVED — 4 listing pages offer a filter for availability.
+  note: Resolution means the property is no longer observed by the probe. It does not show that agent outcomes improved; see measured_effects.
+  measured effects: not_measured

@@ -2,11 +2,14 @@
 
 Public:   GET /api/health, GET /api/registry, POST /api/session (redeem)
 Private:  GET /api/session, POST /api/scans, GET /api/scans, GET /api/scans/{id}, GET /api/compare   (owner only; other users' scan ids look like 404)
-Admin:    POST /api/admin/kill (X-Admin-Token)
+Audits:   GET /api/targets, POST /api/audits, GET /api/audits, GET /api/audits/{id}   (probe + recommendations; no model call, no cost; registered targets only)
+Admin:    POST /api/admin/kill, POST /api/admin/targets/{id}/changes (X-Admin-Token)
 Only pre-registered tasks and environment variants can be scanned; there is no field that accepts a URL, prompt, origin or agent instruction."""
 from __future__ import annotations
 
+import asyncio
 import hmac
+import tempfile
 import time
 from collections import defaultdict, deque
 
@@ -16,6 +19,9 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.types import ASGIApp, Receive, Scope, Send
 
+from ...remediation.engine import build_report
+from ...remediation.probe import SiteProbe
+from ...remediation.targets import CHANGES, TargetRegistry
 from ...suite import core, registry
 from ..diagnostics import compare as compare_scans
 from ..execute import execute_scan
@@ -37,6 +43,20 @@ class NewScan(BaseModel):
     variant_id: str = Field(max_length=100)
     mode: str = Field(default="mock", max_length=10)
     mock_behavior: str | None = Field(default=None, max_length=20)
+
+
+class NewAudit(BaseModel):
+    model_config = ConfigDict(extra="forbid")        # a registered target id only: no URL, no variant, no labels
+    target_id: str = Field(max_length=60)
+    objective: str | None = Field(default=None, max_length=300)
+    task_id: str | None = Field(default=None, max_length=100)
+    with_scan: bool = False                          # also run a MOCK agent scan of task_id on the target and attach its execution evidence
+    previous_audit_id: str | None = Field(default=None, max_length=40)
+
+
+class Change(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    change_id: str = Field(max_length=60)
 
 
 class Kill(BaseModel):
@@ -67,7 +87,7 @@ class BodyLimit:
         return await self.app(scope, limited, send)
 
 
-def create_scanner_app(config: ScannerConfig, runner=execute_scan, store: Store | None = None, manager: ScanManager | None = None) -> FastAPI:
+def create_scanner_app(config: ScannerConfig, runner=execute_scan, store: Store | None = None, manager: ScanManager | None = None, targets: TargetRegistry | None = None) -> FastAPI:
     registry.load_all()
     store = store or Store(config)
     store.recover_interrupted()
@@ -75,6 +95,9 @@ def create_scanner_app(config: ScannerConfig, runner=execute_scan, store: Store 
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, title="Agent Readiness scanner")
     app.state.store, app.state.manager, app.state.config = store, manager, config
     hits: dict[str, deque] = defaultdict(deque)
+    targets = targets or TargetRegistry()
+    app.state.targets = targets
+    scan_lock = asyncio.Lock()
 
     app.add_middleware(BodyLimit, limit=config.max_body_bytes)
     if config.cors_origins:
@@ -188,6 +211,73 @@ def create_scanner_app(config: ScannerConfig, runner=execute_scan, store: Store 
             return compare_scans(pa, pb)
         except ValueError as exc:
             raise HTTPException(422, str(exc))
+
+    @app.get("/api/targets")
+    async def list_targets(session: dict = Depends(current_session)):
+        return {"targets": targets.listing()}
+
+    def owned_audit(audit_id: str, session: dict) -> dict:
+        row = store.get_audit(audit_id)
+        if row is None or row["invitation_id"] != session["invitation_id"]:
+            raise HTTPException(404, "Audit not found.")
+        return row
+
+    def load_report(audit_id: str) -> dict:
+        import json as _json
+        return _json.loads(store.audit_path(audit_id).read_text())
+
+    @app.post("/api/audits", status_code=201)
+    async def create_audit(body: NewAudit, session: dict = Depends(current_session)):
+        if manager.killed():
+            raise HTTPException(503, "Scanning is paused by the operator.")
+        target = targets.get(body.target_id)
+        if target is None:
+            raise HTTPException(422, "Unknown target: only registered targets can be audited.")
+        if store.audits_count(session["id"]) >= 50:
+            raise HTTPException(429, "Audit limit for this session reached.")
+        task_ids = {i.spec.task_id: i for i in core.all_instances()}
+        objective = body.objective
+        if body.task_id is not None:
+            if body.task_id not in task_ids:
+                raise HTTPException(422, "Unknown task.")
+            objective = objective or task_ids[body.task_id].spec.objective
+        if body.with_scan and body.task_id is None:
+            raise HTTPException(422, "with_scan needs a task_id.")
+        previous = None
+        if body.previous_audit_id:
+            prow = owned_audit(body.previous_audit_id, session)
+            if prow["target_id"] != body.target_id:
+                raise HTTPException(409, "The previous audit is of a different target.")
+            previous = load_report(body.previous_audit_id)
+        obs = await asyncio.to_thread(lambda: SiteProbe(target.base_url).run())
+        scan = None
+        if body.with_scan:
+            async with scan_lock:                                              # one browser scan at a time
+                with tempfile.TemporaryDirectory() as tmp:
+                    scan = await execute_scan(body.task_id, target.current_variant(), provider="mock", output=__import__("pathlib").Path(tmp))
+            scan.pop("artifact_path", None)
+        report = build_report(obs, objective=objective, scan=scan, previous=previous, target=body.target_id)
+        store.save_audit(session, body.target_id, body.previous_audit_id, report, scan is not None)
+        return report
+
+    @app.get("/api/audits")
+    async def list_audits(session: dict = Depends(current_session)):
+        return {"audits": [{"audit_id": r["id"], "target_id": r["target_id"], "previous_audit_id": r["previous_id"], "created_at": r["created_at"], "with_scan": bool(r["with_scan"])}
+                           for r in store.audits_of(session["invitation_id"])]}
+
+    @app.get("/api/audits/{audit_id}")
+    async def get_audit(audit_id: str, session: dict = Depends(current_session)):
+        owned_audit(audit_id, session)
+        return load_report(audit_id)
+
+    @app.post("/api/admin/targets/{target_id}/changes")
+    async def apply_change(target_id: str, body: Change, x_admin_token: str | None = Header(default=None)):
+        if not config.admin_token or not x_admin_token or not hmac.compare_digest(x_admin_token, config.admin_token):
+            raise HTTPException(403, "Forbidden.")
+        target = targets.get(target_id)
+        if target is None or body.change_id not in CHANGES:
+            raise HTTPException(422, "Unknown target or change.")
+        return await asyncio.to_thread(target.apply, body.change_id)
 
     @app.post("/api/admin/kill")
     async def kill(body: Kill, x_admin_token: str | None = Header(default=None)):

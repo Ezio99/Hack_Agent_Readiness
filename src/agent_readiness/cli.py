@@ -35,11 +35,17 @@ def main():
     senv.add_argument("--environment", default="electronics-v1")
     senv.add_argument("--variant", help="e.g. availability=detail,specs=fragmented")
     senv.add_argument("--port", type=int, default=8001)
+    aud = sub.add_parser("audit", help="Task 015: black-box site audit (observed properties, findings, evidence-linked recommendations). No model call, no cost. Only audit sites you operate or may test.")
+    aud.add_argument("url")
+    aud.add_argument("--objective", help="optional shopper task text; marks recommendations as task-relevant when it depends on the attribute")
+    aud.add_argument("--previous", type=Path, help="a previous audit report (JSON) to compute the re-audit lifecycle against")
+    aud.add_argument("--out", type=Path, help="write the full JSON report here")
     scn = sub.add_parser("scanner", help="Task 011 protected scanner (mock by default; live inference is gated and off)")
     scsub = scn.add_subparsers(dest="scanner_command", required=True)
     sserve = scsub.add_parser("serve", help="Run the scanner API (loopback by default)")
     sserve.add_argument("--host", default="127.0.0.1")
     sserve.add_argument("--port", type=int, default=8100)
+    sserve.add_argument("--demo-target", action="store_true", help="also register the managed demo storefront 'demo-shop' as an audit target (initial state: stock only on product pages)")
     sinv = scsub.add_parser("invite", help="Create an invitation code (shown once; only its hash is stored)")
     sinv.add_argument("--label", required=True)
     sinv.add_argument("--days", type=float, default=7)
@@ -122,6 +128,23 @@ def main():
         from .experiments import cli_impl
         cli_impl.main(args)
         return
+    if args.command == "audit":
+        import json as _json
+        from .remediation.engine import build_report
+        from .remediation.probe import SiteProbe
+        previous = _json.loads(args.previous.read_text()) if args.previous else None
+        report = build_report(SiteProbe(args.url).run(), objective=args.objective, previous=previous)
+        if args.out:
+            args.out.write_text(_json.dumps(report, indent=1))
+        print(f"audit {report['audit_id']} of {report['target']}: {report['summary']['problems']} problem(s), {report['summary']['recommendations']} recommendation(s)")
+        for f in report["findings"]:
+            print(f"  [{f['category']}] {f['fingerprint']}: {f['summary']}")
+        for r in report["recommendations"]:
+            print(f"  RECOMMEND ({r['validation']}) {r['title']} -> {r['change']}")
+        if report["lifecycle"]:
+            for i in report["lifecycle"]["items"]:
+                print(f"  LIFECYCLE {i['fingerprint']}: {i['status'].upper()} — {i['current_summary']}")
+        return
     if args.command == "scanner":
         from .scanner.service.config import load_config
         cfg = load_config()
@@ -162,7 +185,13 @@ def main():
             import uvicorn
             from .scanner.service.api import create_scanner_app
             print(f"Scanner API at http://{args.host}:{args.port}/ — live inference {'ENABLED' if cfg.live_available else 'disabled'}; data in {cfg.data_dir}")
-            uvicorn.run(create_scanner_app(cfg), host=args.host, port=args.port, log_level="warning")
+            from .remediation.targets import TargetRegistry
+            targets = TargetRegistry.demo().start() if args.demo_target else None
+            try:
+                uvicorn.run(create_scanner_app(cfg, targets=targets), host=args.host, port=args.port, log_level="warning")
+            finally:
+                if targets:
+                    targets.stop()
         return
     if args.command in {"suite", "serve-env"}:
         from .suite import core as suite_core, registry as suite_registry, runner as suite_runner

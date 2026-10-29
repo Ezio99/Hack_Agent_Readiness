@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AuditPanel } from "./Audit";
 import { ApiError, call, configured, factorsOf, getToken, setToken, type Finding, type Registry, type ScanResult, type ScanSummary } from "../lib/scannerApi";
 
 const CATEGORY: Record<string, string> = {
@@ -170,6 +171,7 @@ export function ScannerPage() {
           {scans.length === 0 ? <p className="muted">None yet.</p> : (
             <ul>{scans.map((s) => <li key={s.scan_id}><button type="button" className="linklike" onClick={() => void open(s.scan_id)}>{s.task_id}</button> · {s.variant_id.split("/")[1]} · {s.mode.toUpperCase()} · {s.status}</li>)}</ul>
           )}
+          <AuditPanel onError={fail} />
           <p><button type="button" onClick={() => { setToken(null); setAuthed(false); setCurrent(null); setScans([]); }}>End session</button></p>
         </>
       )}
