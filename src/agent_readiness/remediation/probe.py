@@ -5,7 +5,9 @@ sits in a repeated 'card' element that also contains a price. Cards, detail page
 Only use it on sites you operate or have permission to test."""
 from __future__ import annotations
 
+import ipaddress
 import re
+import socket
 from collections import defaultdict
 from dataclasses import dataclass, field
 from urllib.parse import urldefrag, urljoin, urlsplit
@@ -16,6 +18,20 @@ from bs4 import BeautifulSoup, Tag
 PRICE = re.compile(r"(?:A\$|US\$|\$|€|£|AUD|USD)\s?\d[\d,]*(?:\.\d{1,2})?")
 STATIC_EXT = (".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".woff", ".woff2", ".pdf", ".zip", ".xml", ".json", ".webp")
 MIN_GROUP = 3
+MAX_BODY_BYTES = 1_000_000
+MAX_REDIRECTS = 3
+
+
+def assert_public_host(host: str) -> None:
+    """Refuse hosts that resolve to loopback / private / link-local / reserved / multicast addresses (SSRF defence). Applied unless the caller explicitly allows private hosts."""
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except socket.gaierror as exc:
+        raise ValueError(f"host {host!r} does not resolve") from exc
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0].split("%")[0])
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast or ip.is_unspecified:
+            raise ValueError(f"host {host!r} resolves to a non-public address; pass allow_private_hosts=True only for sites on your own network")
 
 
 @dataclass(frozen=True)
@@ -90,24 +106,49 @@ class SiteObservations:
 
 
 class SiteProbe:
-    def __init__(self, base_url: str, *, client: httpx.Client | None = None, max_pages: int = 24, max_details: int = 6, max_depth: int = 2, timeout: float = 10.0):
+    def __init__(self, base_url: str, *, client: httpx.Client | None = None, max_pages: int = 24, max_details: int = 6, max_depth: int = 2, timeout: float = 10.0,
+                 allow_private_hosts: bool = False):
         parts = urlsplit(base_url)
-        if parts.scheme not in ("http", "https") or not parts.netloc:
-            raise ValueError("base_url must be an http(s) URL")
+        if parts.scheme not in ("http", "https") or not parts.netloc or parts.username or parts.password:
+            raise ValueError("base_url must be an http(s) URL without credentials")
+        self.allow_private = allow_private_hosts
+        if not allow_private_hosts:
+            assert_public_host(parts.hostname or "")
         self.origin = f"{parts.scheme}://{parts.netloc}"
         self.base = base_url
         self.max_pages, self.max_details, self.max_depth = max_pages, max_details, max_depth
         self._own = client is None
-        self.client = client or httpx.Client(timeout=timeout, follow_redirects=True, headers={"User-Agent": "agent-readiness-audit/1 (site owner testing)"})
+        self.client = client or httpx.Client(timeout=timeout, follow_redirects=False, headers={"User-Agent": "agent-readiness-audit/1 (site owner testing)"})
         self.errors: list[str] = []
 
     def _get(self, url: str) -> tuple[int, str]:
+        """GET with redirects followed manually and only within the origin, a body cap, and (unless allowed) a public-address check on every hop."""
         try:
-            r = self.client.get(url)
-            ctype = r.headers.get("content-type", "")
-            return r.status_code, (r.text[:1_000_000] if "html" in ctype else "")
-        except httpx.HTTPError as exc:
-            self.errors.append(f"{url}: {type(exc).__name__}")
+            for _ in range(MAX_REDIRECTS + 1):
+                p = urlsplit(url)
+                if f"{p.scheme}://{p.netloc}" != self.origin:
+                    self.errors.append("a redirect or link left the audited origin and was not followed")
+                    return 0, ""
+                if not self.allow_private:
+                    assert_public_host(p.hostname or "")
+                with self.client.stream("GET", url, follow_redirects=False) as r:
+                    if r.status_code in (301, 302, 303, 307, 308) and r.headers.get("location"):
+                        url = urljoin(url, r.headers["location"])
+                        continue
+                    ctype = r.headers.get("content-type", "")
+                    if "html" not in ctype:
+                        return r.status_code, ""
+                    body, size = [], 0
+                    for chunk in r.iter_bytes():
+                        size += len(chunk)
+                        body.append(chunk)
+                        if size >= MAX_BODY_BYTES:
+                            break
+                    return r.status_code, b"".join(body)[:MAX_BODY_BYTES].decode(r.encoding or "utf-8", errors="replace")
+            self.errors.append(f"{urlsplit(url).path or '/'}: too many redirects")
+            return 0, ""
+        except (httpx.HTTPError, ValueError) as exc:
+            self.errors.append(f"{urlsplit(url).path or '/'}: {type(exc).__name__}")
             return 0, ""
 
     def _same_origin_links(self, soup: BeautifulSoup, url: str) -> list[str]:

@@ -249,7 +249,8 @@ def create_scanner_app(config: ScannerConfig, runner=execute_scan, store: Store 
             if prow["target_id"] != body.target_id:
                 raise HTTPException(409, "The previous audit is of a different target.")
             previous = load_report(body.previous_audit_id)
-        obs = await asyncio.to_thread(lambda: SiteProbe(target.base_url).run())
+        # registered operator targets only (loopback demo servers); a caller-supplied URL can never reach the probe
+        obs = await asyncio.to_thread(lambda: SiteProbe(target.base_url, allow_private_hosts=True).run())
         scan = None
         if body.with_scan:
             async with scan_lock:                                              # one browser scan at a time

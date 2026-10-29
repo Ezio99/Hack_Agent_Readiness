@@ -11,6 +11,7 @@ Report sections are kept apart on purpose (acceptance criterion: do not blur the
 No input names a variant, an experimental arm or an expected outcome."""
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 from datetime import datetime, timezone
@@ -30,6 +31,21 @@ TAXONOMY = {
 }
 
 
+def _redact(text: str, origin: str) -> str:
+    return text.replace(origin, "<target>")
+
+
+def _relativize(value, origin: str):
+    """Evidence URLs are reported relative to the audited site: the service never discloses the address it fetched from."""
+    if isinstance(value, str):
+        return (value[len(origin):] or "/") if value.startswith(origin) else value.replace(origin, "<target>")
+    if isinstance(value, list):
+        return [_relativize(v, origin) for v in value]
+    if isinstance(value, dict):
+        return {k: _relativize(v, origin) for k, v in value.items()}
+    return value
+
+
 def _id(origin: str, findings: list[dict]) -> str:
     return hashlib.sha256(json.dumps([origin, sorted(f["fingerprint"] for f in findings), datetime.now(timezone.utc).isoformat()]).encode()).hexdigest()[:12]
 
@@ -41,12 +57,14 @@ def build_report(obs: SiteObservations, *, objective: str | None = None, scan: d
     report = {
         "schema": SCHEMA, "audit_id": _id(obs.origin, findings), "created_at": datetime.now(timezone.utc).isoformat(), "target": target or obs.origin,
         "objective": objective, "taxonomy": TAXONOMY,
-        "probe": {"pages_fetched": obs.pages_fetched, "listing_pages": len(obs.listing_pages), "product_template": obs.product_template, "limits": obs.limits, "errors": obs.errors[:5]},
+        "probe": {"pages_fetched": obs.pages_fetched, "listing_pages": len(obs.listing_pages), "product_template": obs.product_template, "limits": obs.limits, "errors": [_redact(e, obs.origin) for e in obs.errors[:5]]},
         "website_observations": {"attributes": attribute_stats(obs), "filters": [{"listing_url": f.listing_url, "controls": f.controls[:10], "attribute_filters": f.attribute_filters} for f in obs.filters if f.controls][:4]},
         "findings": findings, "recommendations": recs, "agent_execution": None, "discovery_candidates": [], "lifecycle": None, "measured_effects": {"status": "not_measured", "effects": []},
         "summary": {"problems": len(problems), "recommendations": len(recs), "problem_fingerprints": [f["fingerprint"] for f in problems]},
         "disclaimer": "Findings describe what the probe observed. Recommendations are proposals; none is claimed to improve agent outcomes until measured_effects says so.",
     }
+    report = _relativize(report, obs.origin)
+    report["target"] = target or obs.origin               # the id of a registered target, or (CLI, operator's own site) the audited origin
     if scan is not None:
         report["agent_execution"] = execution_evidence(scan, obs.product_template, findings, objective)
         report["discovery_candidates"] = discovery.discover(scan, obs.product_template, findings)
@@ -84,17 +102,27 @@ def lifecycle(previous: dict, current: dict) -> dict:
             "resolved": sum(i["status"] == "resolved" for i in items), "persisting": sum(i["status"] == "persisting" for i in items)}
 
 
+def report_sha256(report: dict) -> str:
+    return hashlib.sha256(json.dumps(report, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
 def attach_measured_effects(report: dict, experiment: dict) -> dict:
-    """Attach a controlled experiment's summary (from the experiment analysis) with provenance. Required keys: experiment_id, addresses (finding fingerprints), n_pairs, metrics.
-    A recommendation's validation becomes `measured_supports` / `measured_not_supported` / `measured_inconclusive` according to the supplied `verdict`; otherwise unchanged."""
-    for key in ("experiment_id", "addresses", "n_pairs", "metrics", "verdict"):
+    """Return a DERIVED view of `report` with a controlled experiment's summary attached. The original report is never modified and the recommendation's original
+    `validation` ("unvalidated" as issued) is never rewritten: the measurement appears as `measured_validation` plus the effect record, which must reference the report's own
+    audit id and a recommendation id it contains. Required keys: mode (must be 'live'), experiment_id, audit_id, recommendation_id, addresses, n_pairs, metrics, verdict (supports | not_supported | inconclusive)."""
+    for key in ("experiment_id", "audit_id", "recommendation_id", "addresses", "n_pairs", "metrics", "verdict"):
         if key not in experiment:
             raise ValueError(f"experiment summary lacks {key!r}")
+    if experiment.get("mode") != "live":
+        raise ValueError("only LIVE experiment results are measured effects; mock / dry-run output must never be attached")
     if experiment["verdict"] not in ("supports", "not_supported", "inconclusive"):
         raise ValueError("verdict must be supports, not_supported or inconclusive")
-    report["measured_effects"]["effects"].append({**experiment, "provenance": "controlled experiment summary supplied by the experiment analysis; not produced by the audit"})
-    report["measured_effects"]["status"] = "measured"
-    for r in report["recommendations"]:
-        if set(r["addresses"]) & set(experiment["addresses"]):
-            r["validation"] = f"measured_{experiment['verdict']}" if experiment["verdict"] != "inconclusive" else "measured_inconclusive"
-    return report
+    if experiment["audit_id"] != report["audit_id"] or experiment["recommendation_id"] not in {r["id"] for r in report["recommendations"]}:
+        raise ValueError("the experiment does not reference this report's audit id and one of its recommendation ids")
+    view = copy.deepcopy(report)
+    view["original_report_sha256"] = report_sha256(report)
+    view["measured_effects"] = {"status": "measured", "effects": [{**experiment, "provenance": "controlled experiment summary supplied by the experiment analysis; not produced by the audit"}]}
+    for r in view["recommendations"]:
+        if r["id"] == experiment["recommendation_id"]:
+            r["measured_validation"] = f"measured_{experiment['verdict']}"
+    return view

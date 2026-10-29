@@ -40,6 +40,7 @@ def main():
     aud.add_argument("--objective", help="optional shopper task text; marks recommendations as task-relevant when it depends on the attribute")
     aud.add_argument("--previous", type=Path, help="a previous audit report (JSON) to compute the re-audit lifecycle against")
     aud.add_argument("--out", type=Path, help="write the full JSON report here")
+    aud.add_argument("--allow-private", action="store_true", help="permit loopback/private-network targets (your own dev or staging site); refused by default as an SSRF guard")
     scn = sub.add_parser("scanner", help="Task 011 protected scanner (mock by default; live inference is gated and off)")
     scsub = scn.add_subparsers(dest="scanner_command", required=True)
     sserve = scsub.add_parser("serve", help="Run the scanner API (loopback by default)")
@@ -133,7 +134,7 @@ def main():
         from .remediation.engine import build_report
         from .remediation.probe import SiteProbe
         previous = _json.loads(args.previous.read_text()) if args.previous else None
-        report = build_report(SiteProbe(args.url).run(), objective=args.objective, previous=previous)
+        report = build_report(SiteProbe(args.url, allow_private_hosts=args.allow_private).run(), objective=args.objective, previous=previous)
         if args.out:
             args.out.write_text(_json.dumps(report, indent=1))
         print(f"audit {report['audit_id']} of {report['target']}: {report['summary']['problems']} problem(s), {report['summary']['recommendations']} recommendation(s)")

@@ -26,7 +26,7 @@ def audit_variant(av, sku="hidden", specs="structured", objective=OBJECTIVE, pre
 
     async def go():
         async with serve_app(core.ENVIRONMENTS["electronics-v1"].create_app(make_variant(av, specs, sku))) as base:
-            obs = await asyncio.to_thread(lambda: SiteProbe(base).run())
+            obs = await asyncio.to_thread(lambda: SiteProbe(base, allow_private_hosts=True).run())
             return build_report(obs, objective=objective, previous=previous)
     return asyncio.run(go())
 
@@ -105,7 +105,7 @@ def test_probe_is_not_tied_to_the_electronics_templates():
 
     async def go(flag):
         async with serve_app(shop(flag)) as base:
-            return build_report(await asyncio.to_thread(lambda: SiteProbe(base).run()), objective="find an item that is in stock")
+            return build_report(await asyncio.to_thread(lambda: SiteProbe(base, allow_private_hosts=True).run()), objective="find an item that is in stock")
     base_r, mod_r = asyncio.run(go(False)), asyncio.run(go(True))
     assert "attribute_detail_only:availability" in fps(base_r) and base_r["recommendations"][0]["template"] == "show-availability-on-listing-cards"
     assert "attribute_detail_only:availability" not in fps(mod_r) and lifecycle(base_r, mod_r)["items"][0]["status"] == "resolved"
@@ -121,7 +121,7 @@ def test_insufficient_coverage_is_reported_not_guessed():
         async def home():
             return "<html><body><h1>One page, no products</h1></body></html>"
         async with serve_app(app) as base:
-            return build_report(await asyncio.to_thread(lambda: SiteProbe(base).run()))
+            return build_report(await asyncio.to_thread(lambda: SiteProbe(base, allow_private_hosts=True).run()))
     r = asyncio.run(go())
     assert fps(r) == {"insufficient_coverage:site"} and r["recommendations"] == []
     prev = {"audit_id": "x", "findings": [{"fingerprint": "attribute_detail_only:availability", "kind": "attribute_detail_only", "attribute": "availability", "category": "website_property", "summary": "s", "evidence": []}]}
@@ -145,16 +145,21 @@ def test_taxonomy_keeps_observations_agent_evidence_proposals_and_measurements_a
     assert all(f["confidence"] == "observed" for f in baseline["findings"]) and all(r["status"] == "proposed" and r["validation"] == "unvalidated" for r in baseline["recommendations"])
 
 
-def test_measured_effects_are_attached_only_with_provenance_and_change_validation(baseline):
-    rep = json.loads(json.dumps(baseline))
-    with pytest.raises(ValueError):
-        attach_measured_effects(rep, {"experiment_id": "x"})
-    with pytest.raises(ValueError):
-        attach_measured_effects(rep, {"experiment_id": "x", "addresses": [], "n_pairs": 1, "metrics": {}, "verdict": "proven"})
-    attach_measured_effects(rep, {"experiment_id": "task015-pilot", "addresses": ["attribute_detail_only:availability"], "n_pairs": 4, "metrics": {"model_requests": {"delta": -3.2}}, "verdict": "inconclusive"})
-    rec = next(r for r in rep["recommendations"] if r["template"] == "show-availability-on-listing-cards")
-    other = next(r for r in rep["recommendations"] if r["template"] == "show-sku-on-listing-cards")
-    assert rep["measured_effects"]["status"] == "measured" and rec["validation"] == "measured_inconclusive" and other["validation"] == "unvalidated"
+def test_measured_effects_are_a_derived_view_that_never_rewrites_the_original(baseline):
+    rec = next(r for r in baseline["recommendations"] if r["template"] == "show-availability-on-listing-cards")
+    before = engine.report_sha256(baseline)
+    ok = {"mode": "live", "experiment_id": "task015-pilot", "audit_id": baseline["audit_id"], "recommendation_id": rec["id"], "addresses": rec["addresses"], "n_pairs": 4,
+          "metrics": {"model_requests": {"delta": -3.2}}, "verdict": "inconclusive"}
+    for bad in ({"experiment_id": "x"}, {**ok, "verdict": "proven"}, {**ok, "mode": "mock"}, {**ok, "audit_id": "someone-else"}, {**ok, "recommendation_id": "rec-made-up"}):
+        with pytest.raises(ValueError):
+            attach_measured_effects(baseline, bad)
+    view = attach_measured_effects(baseline, ok)
+    assert engine.report_sha256(baseline) == before and baseline["measured_effects"]["status"] == "not_measured"        # the original observation is untouched
+    got = next(r for r in view["recommendations"] if r["id"] == rec["id"])
+    assert got["validation"] == "unvalidated" and got["measured_validation"] == "measured_inconclusive"                # as issued vs as measured, side by side
+    assert view["original_report_sha256"] == before and view["measured_effects"]["status"] == "measured" and view["findings"] == baseline["findings"]
+    other = next(r for r in view["recommendations"] if r["id"] != rec["id"])
+    assert "measured_validation" not in other
 
 
 def test_trace_driven_discovery_emits_candidates_without_recommendations():
