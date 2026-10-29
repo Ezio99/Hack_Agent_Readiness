@@ -4,13 +4,13 @@
 >
 > Read this before proposing changes, writing code, or making architectural decisions. This document provides orientation, not a complete specification. Always inspect the current repository and relevant task documents.
 
-## Current execution handoff — 2026-10-29 (Task 015f consolidation; Task 016 not started)
+## Current execution handoff — 2026-10-29 (Task 015 stack + 015f merged; Task 016 next, not started)
 
-**Read first:** [STATUS.md](STATUS.md) (authoritative current state), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (layers, execution paths, frozen/pinned artifacts, audit classification, debt, what Task 016 can reuse), then the active task. Earlier handoff text is archived verbatim in [docs/archive/COLD_START-handoff-through-2026-10-29.md](docs/archive/COLD_START-handoff-through-2026-10-29.md).
+**Read first:** [collaboration/TASK016_HANDOFF.md](collaboration/TASK016_HANDOFF.md) (fresh-session handoff, start here), [STATUS.md](STATUS.md) (authoritative current state), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (layers, execution paths, frozen/pinned artifacts, audit classification, debt, what Task 016 can reuse), then the active task. Earlier handoff text is archived verbatim in [docs/archive/COLD_START-handoff-through-2026-10-29.md](docs/archive/COLD_START-handoff-through-2026-10-29.md).
 
 **Product direction (user-clarified):** Agent Readiness is a **developer-facing diagnostic platform**: *baseline scan → identify friction → recommend a change → modify the site → rescan → measure whether it helped.* Recommendations originate from the product's own observed evidence (never hand-picked), are labelled unvalidated until a controlled experiment measures them, and negative or inconclusive results are preserved. Do not manufacture failures, blame the website for agent/tool problems, or call a resolved finding an improvement.
 
-**State in one paragraph:** `main` has Tasks 003–014 and the Task 015 spec; an open PR stack (#22 → #24 → #25 → #26 → Task 015f) holds the Task 015 product, driver, executed two-run pilot and the verified main-stage proposal. The 24-run main stage is **on hold (not approved)**. Programme budget A$50 (limit, not authorization); spent ≈ A$6.21 calculated. **No paid call is authorized.** WebArena/Magento (Task 014) is an experimental environment supporting the platform, not a replacement.
+**State in one paragraph:** `main` has everything through Task 015f (the Task 015 product, driver, executed two-run pilot, verified main-stage proposal and the consolidation were merged bottom-up). The 24-run main stage is **on hold (not approved)**. Programme budget A$50 (limit, not authorization); spent ≈ A$6.21 calculated. **No paid call is authorized.** WebArena/Magento (Task 014) is an experimental environment supporting the platform. **Next: Task 016** (issue #28) — start with a focused audit and plan, then stop for review.
 
 **Standing constraints:** never print/commit `META_MODEL_API_KEY` or `.env`; no paid inference or merge without the owner's explicit approval of the exact plan/hash; keep scripted/mock/recorded/live evidence distinct; frozen manifests, pilot evidence, byte-pinned legacy code and the budget ledger are never rewritten; `uv.lock` is deliberately untracked.
 
@@ -64,11 +64,7 @@ The distinction matters:
 - Check official competition requirements before making eligibility claims.
 - Meta AI technology must have a meaningful, demonstrable role in the submitted system.
 
-The experimental harness and Meta integration have been demonstrated in bounded runs; the current priority is a safe, demonstrable diagnostic dashboard and replay.
-
-The current state is recorded in `STATUS.md` and the active task; verify repository state rather than inferring completion from older sections.
-
-As of 2026-10-27 the credential-free foundation is merged (PR #1, task `003-hackathon-first-agent-run.md`). The active milestone is authenticated Meta compatibility validation followed by one independently evaluated trial, specified in `collaboration/tasks/004-first-live-meta-trial.md` (proposed; **no model call is authorized until the user approves model, endpoint, test sequence and limits**). Tasks 001 and 002 are historical pre-event specifications. Credentials come from `META_MODEL_API_KEY` in the environment or a repository-root `.env`; never expose the value.
+Meta integration, the experimental harness, the site-audit/recommendation product and an executed two-run pilot exist (see `STATUS.md`); the current development priority is **Task 016** (general-purpose autonomous investigation, issue #28). Verify repository state rather than inferring completion from older sections. Early milestones (Tasks 001–007) are historical: `collaboration/tasks/001`/`002` are pre-event specifications.
 
 ## 4. Where to find information
 
