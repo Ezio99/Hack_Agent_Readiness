@@ -1,6 +1,6 @@
 # Report 015d — offline validation of the proposed Task 015 main stage (no live call)
 
-**Date:** 2026-10-29. Companion to [docs/TASK015_MAIN_STAGE_PROPOSAL.md](../../docs/TASK015_MAIN_STAGE_PROPOSAL.md). **No model call, no key use, no spend.** Proposed manifest SHA-256 `ee2f6e062f18912e1903fc8c446bf184933de66450179479e07d93f89a1947c5` (frozen at commit `29e9312`, clean tree).
+**Date:** 2026-10-29. Companion to [docs/TASK015_MAIN_STAGE_PROPOSAL.md](../../docs/TASK015_MAIN_STAGE_PROPOSAL.md). **No model call, no key use, no spend.** Originally proposed manifest SHA-256 `ee2f6e062f18912e1903fc8c446bf184933de66450179479e07d93f89a1947c5 (SUPERSEDED, never approved or run — see Report 015e)` (frozen at commit `29e9312`, clean tree).
 
 ## Built (offline)
 | item | where |
