@@ -179,11 +179,11 @@ def test_two_provider_failures_halt_and_nothing_is_replaced_or_retried(tmp_path)
     r = go(m, tmp_path, runner)
     assert r["halt"]["reason"] == "max_void_runs" and runner.calls == s[:2] and r["runs_attempted"] == 2 and not r["complete"]
     again = scripted_runner({})
-    go(m, tmp_path, again)                                                    # resuming: the two attempted runs are never repeated; the rest may run only because no rule is violated now
-    assert not set(again.calls) & set(s[:2])
+    with pytest.raises(Halt, match="halted"):                                 # a halt is final: re-running the command does not continue the stage
+        go(m, tmp_path, again)
+    assert again.calls == []
     rows = ex.read_rows(tmp_path / "main" / "rows.jsonl")
-    assert [r["run_id"] for r in rows if r["outcome_class"] == "provider_failure"] == s[:2]       # failures stay recorded as such; no replacement entries exist
-    assert len({r["run_id"] for r in rows}) == len(rows)
+    assert [r["run_id"] for r in rows] == s[:2] and all(r["outcome_class"] == "provider_failure" and r["void"] for r in rows)       # failures stay recorded as such; no replacement entries
 
 
 def test_interruption_is_recorded_void_keeps_reservations_and_is_not_retried(tmp_path):
@@ -194,9 +194,9 @@ def test_interruption_is_recorded_void_keeps_reservations_and_is_not_retried(tmp
     rows = ex.read_rows(tmp_path / "main" / "rows.jsonl")
     assert rows[-1]["run_id"] == s[1] and rows[-1]["void"] and "interrupted" in rows[-1]["attribution"]
     runner = scripted_runner({})
-    go(m, tmp_path, runner)
-    assert s[0] not in runner.calls and s[1] not in runner.calls                  # neither the finished nor the interrupted run is repeated
-    assert Ledger(tmp_path / "main" / "ledger").attempted(s[1])
+    with pytest.raises(Halt, match="halted"):                                 # an interruption is also a final halt: neither the finished nor the interrupted run is repeated
+        go(m, tmp_path, runner)
+    assert runner.calls == [] and Ledger(tmp_path / "main" / "ledger").attempted(s[1])
 
 
 def test_parser_rejections_and_guard_violations_halt(tmp_path):

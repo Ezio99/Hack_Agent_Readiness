@@ -49,7 +49,8 @@ CAUSAL_QUESTION = ("Does applying the product's recommendation as issued (stock 
                    "agent on this storefront, and how much of any change is attributable to the labels alone versus the added filter?")
 HYPOTHESES = {"H1_confirmatory": "modified vs unmodified: fewer model requests per T1 run, with answer completeness not worse",
               "H2_exploratory": "labels_only vs unmodified: some reduction from labels alone", "H3_exploratory": "modified vs labels_only: an additional reduction from the filter",
-              "negative_control": "T4 (stock-independent) shows no arm-related shift: |mean delta model requests| < 2"}
+              "negative_control": "T4 (stock-independent) shows no arm-related shift: |mean delta model requests| < 2",
+              "negative_control_limits": "A coarse diagnostic only: 2 blocks per arm can flag a LARGE unrelated shift; passing it does NOT rule out confounding, drift or unrelated effects, and failing it only blocks a `supports` verdict"}
 VERDICT_RULE = {"scope": "H1 (modified - unmodified) only; H2/H3 are reported descriptively", "min_valid_pairs": 5,
                 "supports": "mean(delta model_requests) <= -3 AND mean(delta product_page_visits) <= -2 AND modified pass-rate >= unmodified pass-rate AND two-sided exact sign-flip p <= 0.07 AND control |mean delta requests| < 2 (if >= 1 valid control pair)",
                 "not_supported": "mean(delta model_requests) >= -1 with >= min_valid_pairs", "else": "inconclusive"}
@@ -60,7 +61,7 @@ GATE_V2 = {"id": "room-to-act-v2", "applies_to": "the `unmodified` arm, T1, non-
                            "R5_wrong_inclusion": "the answer reported >= 1 ineligible product (for example an out-of-stock one): an oracle-measured error that stock visibility addresses",
                            "R4_substantial_task_effort": "model requests >= 9 (75% of the limit) OR product-page visits >= 5, AND no repeated-action loop and no tool-visibility gap in the run (so the effort is not a tool artefact)"},
            "never_counts": ["budget_stop", "provider_failure", "ambiguous_timeout", "guard_violation", "interrupted runs (all void)"],
-           "interim_check": "after the `unmodified` T1 runs of blocks 1 and 2 exist: continue iff at least one of them shows room (R1-R4); if both are void -> halt as inconclusive (no replacement); if neither shows room -> halt as `no_room_to_act` (a ceiling finding)",
+           "interim_check": "after the `unmodified` T1 runs of blocks 1 and 2 exist: continue iff at least one of them shows room (R1-R5); if both are void, or one is void and the other shows no room -> halt as inconclusive (no replacement); if both are valid and neither shows room -> halt as `no_room_to_act` (a ceiling finding)", "role": "prospective continue/halt criterion only; it never enters the effect verdict",
            "limits": {"request_fraction": 0.75, "min_visits": 5}}
 PILOT_GATE = "continue iff the unmodified-state T1 run is a valid completed run AND (>= 4 product-page visits OR the answer reported a not-eligible product); otherwise stop and report a ceiling effect (no replacement run)"
 FROZEN_FILES = ("src/agent_readiness/remediation/probe.py", "src/agent_readiness/remediation/findings.py", "src/agent_readiness/remediation/library.py", "src/agent_readiness/remediation/engine.py",
@@ -302,6 +303,9 @@ async def run_stage(m: dict, root: Path, *, mode: str, approved_sha: str | None 
     out = root / m["stage"]
     out.mkdir(parents=True, exist_ok=True)
     sl = StageLedger(root, m["stage"], m)
+    halt_file = out / "halt.json"
+    if halt_file.exists():
+        raise Halt(f"this stage already halted ({json.loads(halt_file.read_text()).get('reason')}); a halt is final: continuing needs a new approval (a new manifest), not a re-run of the command")
     pre = preflight(m, approved_sha, mode, allow_model_calls, sl)
     registry.load_all()
     key = None
@@ -311,6 +315,15 @@ async def run_stage(m: dict, root: Path, *, mode: str, approved_sha: str | None 
     rows = read_rows(rows_path)
     attempted = {r["run_id"] for r in rows}
     halt = None
+    for entry in m["schedule"]:                                               # crash recovery: a run marker without a row means the driver died mid-run => void row + final halt
+        if entry["run_id"] not in attempted and sl.ledger.attempted(entry["run_id"]):
+            row = {**entry, "mode": mode, "outcome_class": "provider_failure", "void": True, "attribution": "driver crash/kill during the run (no result was recorded); not attributable to the website",
+                   "audit_id": m["audit"]["audit_id"], "recommendation_id": m["audit"]["recommendation_id"], "unsettled_reservations": []}
+            append_jsonl(rows_path, row)
+            rows.append(row)
+            attempted.add(entry["run_id"])
+            halt_file.write_text(json.dumps({"reason": "crash_recovered", "run_id": entry["run_id"]}))
+            raise Halt(f"run {entry['run_id']} has a ledger marker but no recorded result (driver crash); recorded as void and the stage is halted for review")
     voids = len([r for r in rows if r["void"]])
     for entry in m["schedule"]:
         if entry["run_id"] in attempted or sl.ledger.attempted(entry["run_id"]):
@@ -327,6 +340,7 @@ async def run_stage(m: dict, root: Path, *, mode: str, approved_sha: str | None 
             append_jsonl(rows_path, {**entry, "mode": mode, "outcome_class": "provider_failure", "void": True, "attribution": f"driver interrupted ({type(exc).__name__}); not attributable to the website",
                                      "audit_id": m["audit"]["audit_id"], "recommendation_id": m["audit"]["recommendation_id"], "unsettled_reservations": gate.unsettled()})
             halt = {"reason": "interrupted", "run_id": entry["run_id"]}
+            halt_file.write_text(json.dumps(halt))
             raise
         cls = classify(record, gate)
         row = row_from(entry, record, cls, m, mode, gate)
@@ -349,6 +363,8 @@ async def run_stage(m: dict, root: Path, *, mode: str, approved_sha: str | None 
                 halt = {"reason": "no_room_to_act_after_block_2" if g["decision"] == "halt_no_room" else "baseline_inconclusive", "run_id": entry["run_id"], "note": g["reason"]}
             if g["decision"] != "pending":
                 (out / "interim-gate.json").write_text(json.dumps(g, indent=1))
+    if halt:
+        halt_file.write_text(json.dumps(halt))
     done = {r["run_id"] for r in read_rows(rows_path)}
     result = {"stage": m["stage"], "mode": mode, "manifest_sha256": m["manifest_sha256"], "runs_attempted": len(done), "runs_scheduled": len(m["schedule"]), "halt": halt,
               "complete": len(done) == len(m["schedule"]) and not halt,
@@ -413,14 +429,18 @@ def interim_gate(rows: list[dict]) -> dict:
         return {"decision": "halt_inconclusive", "reason": "both baseline runs are void (budget/provider/ambiguous); NOT a website result; no replacement", "judged": judged, "rule": GATE_V2["id"]}
     if any(j["room"] for j in judged):
         return {"decision": "continue", "reason": "meaningful room to act at baseline: " + "; ".join(f"block {r['block']}: {j['criteria'] or 'none'}" for r, j in zip(base, judged)), "judged": judged, "rule": GATE_V2["id"]}
+    if any(j["void"] for j in judged):
+        return {"decision": "halt_inconclusive", "reason": "only one valid baseline run (the other is void) and it shows no room: not enough to call a ceiling; no replacement", "judged": judged, "rule": GATE_V2["id"]}
     return {"decision": "halt_no_room", "reason": "neither valid baseline run shows room to act (ceiling at baseline, n=2); reported as such, not as a website result", "judged": judged, "rule": GATE_V2["id"]}
 
 
 def _sign_flip_p(diffs: list[float]) -> float:
+    """Exact two-sided sign-flip (randomisation) p-value for paired differences: the share of all 2^n sign assignments whose |sum| is at least the observed |sum|.
+    Zero differences and ties are handled by the enumeration itself; the value is exact (n <= 20 pairs here) and deliberately NOT rounded (6 consistent pairs -> exactly 0.03125)."""
     n = len(diffs)
     obs = abs(sum(diffs))
     hits = sum(1 for signs in itertools.product((1, -1), repeat=n) if abs(sum(s * d for s, d in zip(signs, diffs))) >= obs - 1e-12)
-    return round(hits / 2 ** n, 4)
+    return hits / 2 ** n
 
 
 CONTRASTS = (("modified", "unmodified", "H1_confirmatory"), ("labels_only", "unmodified", "H2_exploratory"), ("modified", "labels_only", "H3_exploratory"))
