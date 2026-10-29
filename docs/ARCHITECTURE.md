@@ -2,8 +2,8 @@
 
 Baseline: the tip of the Task 015 PR stack (#26, commit `1f75277`) — the only tree that contains all current code. Companion: [Report 015f](../collaboration/reports/015f-consolidation.md) (what changed, metrics, test results). Historical snapshots are in [archive/](archive/).
 
-## 1. Integration baseline (stacked PRs)
-`main` (`d8132e9`) ← **#22** Task 015 product ← **#24** pilot/experiment driver ← **#25** pilot results ← **#26** corrected main-stage proposal + verification ← **Task 015f** (this work). **#23** (future-work roadmap, one docs file) is independent. A scratch-worktree dry run merged #22 → #24 → #25 → #26 → #23 into `main` with no conflicts (59 files, +6,174/−101 vs `main`). Recommended order: merge bottom-up with merge commits (squashing would orphan the stacked bases) and retarget the next PR to `main` after each lands. Nothing is merged without the owner's approval; 015f touches no existing PR branch.
+## 1. Integration baseline
+Originally the Task 015 work was a stack of open PRs: `main` ← #22 ← #24 ← #25 ← #26 ← #29 (this consolidation). A scratch-worktree dry run showed they merged without conflicts (59 files, +6,174/−101 for #22–#26), and on 2026-10-29 the owner authorised merging them bottom-up with merge commits; all five are now in `main`. #23 (future-work roadmap, one docs file) is independent and still open. Task 016 starts from this merged `main`; see [collaboration/TASK016_HANDOFF.md](../collaboration/TASK016_HANDOFF.md).
 
 ## 2. Layers (dependency direction: top depends on bottom)
 ```
