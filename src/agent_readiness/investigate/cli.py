@@ -35,6 +35,15 @@ def register(sub) -> None:
     lrun.add_argument("--approved-sha256", required=True)
     lrun.add_argument("--allow-model-calls", action="store_true")
     lrun.add_argument("--out", type=Path, default=Path("investigations/l0-probe"))
+    rn = isub.add_parser("run", help="Run the investigation flow (inspect -> taskgen -> freeze -> baseline trials) on a local zoo site; resumable")
+    rn.add_argument("site", help="zoo site id, e.g. site-4")
+    rn.add_argument("--id", default=None, help="investigation id (default: <site>-<mode>)")
+    rn.add_argument("--root", type=Path, default=Path("investigations"))
+    rn.add_argument("--mode", choices=["mock", "live"], default="mock", help="mock: rule tasks + scripted agent (no key); live: Meta tasks + Meta agent, each spending stage needs your hash approval")
+    rn.add_argument("--repeats", type=int, default=1)
+    rn.add_argument("--n-tasks", type=int, default=8)
+    rn.add_argument("--stage-cap-usd", type=float, default=3.0)
+    rn.add_argument("--allow-model-calls", action="store_true")
     st = isub.add_parser("status", help="Show stages, outcome and pending approvals of an investigation")
     st.add_argument("run_dir", type=Path)
     ap = isub.add_parser("approve", help="Record the owner's approval of an exact stage manifest hash")
@@ -64,6 +73,22 @@ def main(args) -> None:
         except Halt as exc:
             raise SystemExit(f"refused: {exc}")
         print(json.dumps(rep["evaluation"], indent=1))
+        return
+    if args.investigate_command == "run":
+        from . import flow
+        from ..ledger import Halt
+        try:
+            run, pipe, ctx = flow.build(args.root, args.id or f"{args.site}-{args.mode}", args.site, mode=args.mode,
+                                        options={"repeats": args.repeats, "n_tasks": args.n_tasks, "stage_cap_usd": args.stage_cap_usd, "allow_model_calls": args.allow_model_calls})
+            res = pipe.run(ctx)
+        except Halt as exc:
+            raise SystemExit(f"refused: {exc}")
+        print(f"{run.state['id']}: {res.status}" + (f" at {res.stage}" if res.stage else ""))
+        if res.status == "awaiting_approval":
+            print(f"stage {res.stage} needs your approval of manifest sha256 {res.manifest_sha256}\n  manifest: {run.dir}/artifacts/manifests/{res.stage}-{res.manifest_sha256[:16]}.json\n"
+                  f"  approve: readiness investigate approve {run.dir} --stage {res.stage} --sha256 {res.manifest_sha256} --note '<who approved what>'  then re-run this command" + (" --allow-model-calls" if args.mode == "live" else ""))
+        elif res.status == "failed":
+            raise SystemExit(f"failed at {res.stage}: {res.error}")
         return
     if args.investigate_command == "inspect":
         from .inspect.crawl import HttpFetcher, Limits, crawl

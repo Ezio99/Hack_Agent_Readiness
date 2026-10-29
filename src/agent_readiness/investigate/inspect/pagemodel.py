@@ -132,7 +132,22 @@ def _facts(root: Tag) -> list[dict]:
     return out
 
 
-def _item_groups(main: Tag, base_path: str) -> list[dict]:
+def _item_name(item: Tag, anchor: Tag | None, soup: BeautifulSoup) -> str:
+    """A repeated item's visible name: its link text, else its first heading, else the first cell of a table row, else the leading words of its text."""
+    name = (accessible_name(anchor, soup)[0] or "") if anchor is not None else ""
+    if name and name != visible_text(item) or name and not item.find(["h1", "h2", "h3", "h4"]):
+        return name[:120]
+    h = item.find(re.compile(r"^h[1-6]$"))
+    if h is not None and visible_text(h):
+        return visible_text(h)[:120]
+    if item.name == "tr":
+        cell = item.find(["th", "td"])
+        if cell is not None and visible_text(cell):
+            return visible_text(cell)[:120]
+    return (name or visible_text(item)[:60]).strip()
+
+
+def _item_groups(main: Tag, base_path: str, soup: BeautifulSoup) -> list[dict]:
     """Repeated sibling elements with the same tag/class signature that each carry a link to a distinct same-origin page (cards, list rows, table rows)."""
     groups = []
     for parent in main.find_all(True):
@@ -146,7 +161,8 @@ def _item_groups(main: Tag, base_path: str) -> list[dict]:
                 anchors = ([e] if e.name == "a" and e.get("href") else []) + e.find_all("a", href=True)
                 hrefs = [h for a in anchors if (h := internal_path(a["href"], base_path))]
                 if hrefs:
-                    items.append({"href": hrefs[0], "text": visible_text(e)[:300], "facts": _facts(e), "locator": locator(e)})
+                    first = next((a for a in anchors if internal_path(a["href"], base_path)), None)
+                    items.append({"href": hrefs[0], "name": _item_name(e, first, soup), "text": visible_text(e)[:300], "facts": _facts(e), "locator": locator(e)})
             if len(items) >= 3 and len({i["href"] for i in items}) >= 3 and landmark_of(parent) not in ("nav", "header", "footer"):
                 groups.append({"locator": locator(parent), "signature": f"{sig[0]}.{'.'.join(sig[1])}", "items": items})
     # keep outermost non-overlapping groups: drop a group whose item hrefs are a subset of an earlier larger one
@@ -203,5 +219,5 @@ def parse_page(path: str, html: str) -> dict:
         "text": visible_text(main)[:4000], "text_len": len(visible_text(soup)), "links": links, "nav_links": nav_links, "controls": controls, "forms": forms,
         "images": [{"src": i.get("src"), "alt": i.get("alt") if i.has_attr("alt") else None} for i in soup.find_all("img")],
         "tables": [{"headers": [visible_text(h) for h in t.find_all("th")][:10], "rows": len(t.find_all("tr"))} for t in soup.find_all("table")],
-        "facts": _facts(main), "item_groups": _item_groups(main, path), "structured_data": jsonld[:3],
+        "facts": _facts(main), "item_groups": _item_groups(main, path, soup), "structured_data": jsonld[:3],
     }
