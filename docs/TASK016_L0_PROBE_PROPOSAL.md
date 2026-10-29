@@ -15,7 +15,7 @@ Implementation: `src/agent_readiness/investigate/l0.py`; offline tests: `tests/t
 | worst-case cost (calculated upper bound, incl. the spend gate's safety margins) | **US$0.0284 = A$0.043** at 1 USD = 1.50 AUD (real cost is expected to be lower; usage is reported by the provider) |
 | hard caps enforced by the durable gate (reserve-before-send) | per request US$0.03; whole probe **US$0.10 = A$0.15**; 6 requests. Your stated ceiling for L0 is A$0.30; I propose staying at A$0.15 |
 | programme check | `budget.check_stage(A$0.15)` against the A$43.79 remaining; the budget ledger is **not** edited by the run; a ledger entry is added only afterwards, with your agreement, from the calculated usage |
-| approval manifest SHA-256 | `c9760a2a390481beb36b8faf63579d30b60f68875009fdb5ceaede99b1878149` (`readiness investigate l0 plan` prints the manifest and this hash; it changes if any prompt, schema, cap, model or endpoint changes) |
+| approval manifest SHA-256 | `4a3af8a9d23126637701fe368367132e196f8906cf0c8dfccf273ae965e83817` (`readiness investigate l0 plan` prints the manifest and this hash; it changes if any prompt, schema, cap, model or endpoint changes) |
 
 ### The six requests (what each tests)
 1. **P1 strict echo** — `response_format: json_schema (strict)` on a trivial plain request: does structured output work outside the browser agent?
@@ -41,9 +41,9 @@ Implementation: `src/agent_readiness/investigate/l0.py`; offline tests: `tests/t
 `investigations/l0-probe/l0-report.json` (criteria, per-request latency, usage, calculated cost) and `l0-raw-private.json` (raw model text; git-ignored, not committed). Only aggregate results would be quoted in a report. Spend is recorded in `investigations/l0-probe/spend/ledger.jsonl` before each request.
 
 ## What I need from you to run it
-1. Your explicit approval of **this manifest hash** (`c9760a2a390481beb36b8faf63579d30b60f68875009fdb5ceaede99b1878149`) and cap (hard cap A$0.15 / US$0.10), e.g. "approved: L0 probe c9760a2a390481beb36b8faf63579d30b60f68875009fdb5ceaede99b1878149, cap A$0.15".
+1. Your explicit approval of **this manifest hash** (`4a3af8a9d23126637701fe368367132e196f8906cf0c8dfccf273ae965e83817`) and cap (hard cap A$0.15 / US$0.10), e.g. "approved: L0 probe 4a3af8a9d23126637701fe368367132e196f8906cf0c8dfccf273ae965e83817, cap A$0.15".
 2. Confirmation that `META_MODEL_API_KEY` is set in the environment (or untracked `.env`) on this machine.
-Then: `readiness investigate l0 run --approved-sha256 c9760a2a390481beb36b8faf63579d30b60f68875009fdb5ceaede99b1878149 --allow-model-calls`. If anything in the manifest changes before then, the hash changes and a fresh approval is required.
+Then: `readiness investigate l0 run --approved-sha256 4a3af8a9d23126637701fe368367132e196f8906cf0c8dfccf273ae965e83817 --allow-model-calls`. If anything in the manifest changes before then, the hash changes and a fresh approval is required.
 
 ## Why before M3/M5
 M3's task proposals and M5's investigator both rely on structured output and on resisting instructions embedded in page text. Knowing this for ≈A$0.04 (worst case) avoids designing around a capability the hosted model may not have. If you prefer, L0 can be merged into L1 (first live slice) instead; I recommend keeping it separate because it is 100× cheaper and decides the prompt format.

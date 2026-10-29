@@ -121,7 +121,7 @@ def manifest(config: ModelConfig | None = None) -> dict:
             "prices_usd_per_million_tokens": {"input": PRICE_INPUT_PER_M, "output": PRICE_OUTPUT_PER_M}, "requests": reqs, "retries": 0, "sampling": "provider defaults (no temperature set)",
             "caps": {"per_request_usd": PER_REQUEST_CAP_USD, "run_usd": RUN_CAP_USD, "max_requests": len(reqs)},
             "worst_case_total_usd": round(total, 5), "worst_case_total_aud": round(total * rate, 4), "run_cap_aud": round(RUN_CAP_USD * rate, 4), "usd_to_aud": rate,
-            "inputs": "synthetic (invented bike-repair booking site); no zoo site, no real site, no sealed content", "cost_basis": "calculated upper bounds at published prices; not a bill"}
+            "inputs": "synthetic (invented bike-repair booking site); no zoo site, no real site, no private-diagnosis content", "cost_basis": "calculated upper bounds at published prices; not a bill"}
 
 
 def manifest_sha256(m: dict | None = None) -> str:

@@ -24,13 +24,14 @@ def test_manifests_cover_two_friction_categories_a_clean_control_and_a_developme
 
 
 def test_no_investigator_facing_module_can_read_the_sealed_manifests():
+    """Outside the zoo package the only permitted contact is `from ...zoo.sealed import assert_blind` (the guard prompt builders must call); manifests/tokens are unreachable."""
+    guard_import = re.compile(r"^from \.+(?:investigate\.)?zoo\.sealed import (assert_blind|BlindnessError)(, (assert_blind|BlindnessError))*\s*$", re.M)
     offenders = []
     for f in ROOT.rglob("*.py"):
         rel = f.relative_to(ROOT).parts
-        if rel[0] == "zoo" and rel[-1] in ("sealed.py",):
+        if rel[0] == "zoo":
             continue
-        txt = f.read_text()
-        if "sealed" in txt.lower() and not (rel[0] == "zoo" and rel[-1] == "__init__.py"):       # zoo/__init__ mentions it only in a docstring
+        if "sealed" in guard_import.sub("", f.read_text()).lower():
             offenders.append(str(f.relative_to(ROOT)))
     assert offenders == [], offenders
     for pkg in INVESTIGATOR_FACING:
