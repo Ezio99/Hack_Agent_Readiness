@@ -73,3 +73,24 @@ class NetworkCapture:
                 pass
         if self._pw is not None:
             await self._pw.stop()
+
+
+SENSITIVE_HEADERS = {"cookie", "set-cookie", "authorization", "proxy-authorization", "x-m2-customer-auto-login"}
+
+
+def sanitize_har(src: Path, dst: Path) -> dict:
+    """Write a storable copy of a captured HAR: sensitive headers redacted, response bodies dropped (sizes kept), post data replaced by its length.
+    The official evaluator must run on the ORIGINAL HAR (it reads bodies); this copy is for inspection/archival only and remains private (site content is not for publication)."""
+    har = json.loads(Path(src).read_text())
+    redacted = 0
+    for e in har["log"]["entries"]:
+        for part in (e["request"], e["response"]):
+            for h in part["headers"]:
+                if h["name"].lower() in SENSITIVE_HEADERS:
+                    h["value"], redacted = "[redacted]", redacted + 1
+        e["response"]["content"]["text"] = ""
+        if "postData" in e["request"]:
+            e["request"]["postData"]["text"] = f"[{len(e['request']['postData']['text'])} chars removed]"
+    Path(dst).parent.mkdir(parents=True, exist_ok=True)
+    Path(dst).write_text(json.dumps(har))
+    return {"entries": len(har["log"]["entries"]), "headers_redacted": redacted}
