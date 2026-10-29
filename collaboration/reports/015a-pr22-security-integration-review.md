@@ -32,4 +32,4 @@ A session holder sends `{target_id, objective?, task_id?, with_scan?, previous_a
 - Dashboard: the panel renders only when `/api/targets` returns targets; the public build (no scanner API) is unchanged; `check:dist` hygiene tests still hold.
 
 ## Tests
-`tests/test_remediation_security.py` (8 groups, 13 cases), plus the updated `tests/test_remediation.py` and `tests/test_remediation_api.py`: **33 passed**. Full-suite results are in the PR description.
+`tests/test_remediation_security.py` (8 groups, 13 cases), plus the updated `tests/test_remediation.py` and `tests/test_remediation_api.py`: **33 passed**. Full suite (after the driver was added): 622 passed.
