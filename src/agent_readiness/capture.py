@@ -46,6 +46,10 @@ class FidelityViolation(RuntimeError):
     """A diagnostic request does not match the experiment definition; it is blocked before the network."""
 
 
+class GateRefused(RuntimeError):
+    """A request gate (durable ledger) refused to reserve spend for this request."""
+
+
 class EstimatedCostLimit(FidelityViolation):
     """Sending this request would push the cumulative estimated spend over the cap; blocked before the network."""
 
@@ -268,6 +272,7 @@ class ResponseCapture:
         self.estimated_sent_usd = 0.0     # sum of worst-case estimates of requests that were allowed onto the network
         self.requests: list[dict] = []
         self.records: list[dict] = []
+        self.gate = getattr(recorder, "request_gate", None)   # optional durable per-request spend gate (WebArena live path); None for every other run
         self._started: list[float] = []
         self._claimed = 0
 
@@ -299,6 +304,12 @@ class ResponseCapture:
                                 f"full {estimate['output_tokens_cap']}-token allowance) > cap US${cap}")
             fidelity["cumulative_estimated_before_usd"] = round(self.estimated_sent_usd, 5)
             if cost_problem:
+                fidelity["cost_limit"] = cost_problem
+        if self.gate is not None and not problems and not cost_problem:
+            try:
+                fidelity["reservation"] = self.gate.reserve(index, body, fidelity.get("estimate"))     # durable BEFORE the network
+            except GateRefused as exc:
+                cost_problem = str(exc)
                 fidelity["cost_limit"] = cost_problem
         blocked = bool(problems or cost_problem)
         self.last_block = "fidelity" if problems else "cost" if cost_problem else None
@@ -359,6 +370,9 @@ class ResponseCapture:
         else:
             record["error_body"] = (payload if payload is not None else response.text[:MAX_ERROR_BODY_CHARS])
         self.records.append(record)
+        if self.gate is not None:
+            sent = [i + 1 for i, r in enumerate(self.requests) if not r.get("blocked_before_network")]
+            record["settlement"] = self.gate.settle(sent[index - 1] if index - 1 < len(sent) else index, record)     # request index (blocked requests have no response)
         self.recorder.write(f"model-response-{index:02d}.json", record)
         summary = {k: v for k, v in record.items() if k not in {"content", "error_body"}}
         self.recorder.event("model_http_response", file=f"model-response-{index:02d}.json", **summary)
