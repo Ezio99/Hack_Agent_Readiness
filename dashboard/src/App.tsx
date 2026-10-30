@@ -44,7 +44,7 @@ export default function App() {
             <p className="brand">Agent Readiness <span className="tag">diagnostic dashboard</span></p>
             <p className="sub">{page === "investigation" ? "Can AI agents use this website? Investigate, recommend, change the site, and measure the impact." : "What a Meta Muse Spark shopping agent did on a controlled storefront, why, and what a site owner could change."}</p>
           </div>
-          <p className="badge" role="note">{page === "investigation" ? "Investigation report · evidence mode is labelled on the page" : "Recorded experiment data · Task 007 · not live inference"}</p>
+          <p className="badge" role="note">{page === "investigation" ? "Evidence mode labelled on every result" : "Recorded experiment data · Task 007 · not live inference"}</p>
         </div>
         <nav className="wrap" aria-label="Sections">
           <ul className="tabs">

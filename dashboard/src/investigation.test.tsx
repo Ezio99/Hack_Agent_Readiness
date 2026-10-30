@@ -296,3 +296,45 @@ describe("investigation-first journey", () => {
     }
   });
 });
+
+describe("PR 54: product-led first screen, equal verdicts, disclosure and honest wording", () => {
+  const pub = () => structuredClone(publicFixture) as unknown as InvestigationExport;
+  const depthBefore = (h: string, marker: string, from: string) => { const seg = h.slice(h.indexOf(from), h.indexOf(marker, h.indexOf(from))); return (seg.match(/<details/g) ?? []).length - (seg.match(/<\/details>/g) ?? []).length; };
+  it("leads with the value proposition and the three-step workflow, then the headline metrics labelled exploratory", () => {
+    const h = html(pub());
+    expect(h.indexOf("Make your website ready for AI agents")).toBeLessThan(h.indexOf("12 → 4"));
+    for (const t of ["Inspect", "Recommend", "Controlled retest", "exploratory · n = 1 per arm · owner-selected change", "12 → 4", "13 → 4".slice(0, 0) + "unmodified repeat → patched"]) expect(h).toContain(t);
+    expect(h).toContain("−67%");                                                      // (12 - 4) / 12 on the synthetic fixture, computed from the rows
+  });
+  it("shows the frozen and the exploratory verdict with equal prominence in the hero and again in step 5, outside any collapsed section", () => {
+    const h = html(pub());
+    expect(h).toContain('class="vchip"'); expect(h).toContain("Frozen rule"); expect(h).toContain("Exploratory rule");
+    const heroEnd = h.indexOf('id="inv-website"');
+    expect(h.slice(0, heroEnd)).toContain("inconclusive"); expect(h.slice(0, heroEnd)).toContain("Consistent with the hypothesis");
+    expect(depthBefore(h, 'aria-label="Frozen pre-registered verdict"', 'id="inv-impact"')).toBe(0);
+    expect(depthBefore(h, 'aria-label="Exploratory verdict"', 'id="inv-impact"')).toBe(0);
+  });
+  it("keeps owner provenance and a control flip outside collapsed sections; details hold the rules, frozen specifics and spend", () => {
+    const d = pub();
+    d.evaluation.exploratory!.tasks.patched["task-3"] = { requests: 11, page_views: 10, pass: true };
+    const h = html(d);
+    expect(depthBefore(h, "A control task changed outcome", 'id="inv-impact"')).toBe(0);
+    expect(depthBefore(h, "EXPERIMENTAL — OWNER-SELECTED", 'id="inv-recommendations"')).toBe(0);
+    for (const s of ["Rules and checks: noise estimate", "Frozen rule details: pairs, p-values", "Hypotheses that are not findings: full records"]) expect(h).toContain(`<summary>${s}`);
+    expect(h).not.toContain("<details open");
+  });
+  it("replaces generic verified-findings boilerplate when there are no verified findings, and keeps the report statement when there are", () => {
+    const h = html(pub());
+    expect(h).toContain("No verified findings in this run. The results above are for an owner-selected exploratory change");
+    expect(h).not.toContain("Findings are website properties verified by deterministic checks");
+    const v = html(base());
+    expect(v).not.toContain("No verified findings in this run"); expect(v).toContain("SYNTHETIC FIXTURE: findings are website properties");
+  });
+  it("renders negative controls compactly and keeps the role labels", () => {
+    const h = html(pub());
+    expect(h).toContain("Negative controls on detail pages"); expect(h).toContain("Detail-page control"); expect(h).toContain("Same-shape control"); expect(h).toContain("Affected");
+  });
+  it("the step rail marks one step as current", () => {
+    expect(html(pub())).toMatch(/aria-current="step"/);
+  });
+});
