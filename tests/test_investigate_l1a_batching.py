@@ -251,3 +251,133 @@ def test_baseline_trial_gates_are_built_with_the_manifest_stage_cap_and_halt_whe
     with pytest.raises(Halt, match="void trial"):
         ts.baseline_trials_stage(ctx2)
     assert len(gates) == 1 and led.committed() <= 2.05
+
+
+# ------------------------------------------------------------------------------------------------------------ crash window: request reserved/sent, result not persisted
+from agent_readiness.investigate.taskgen.stage import AmbiguousBatchAttempt, recover_batch
+
+
+class Killed(Seq):
+    """Simulates the process dying (BaseException, not caught by the stage) during batch `at`: optionally AFTER the ledger reserved (and optionally settled) the request."""
+
+    def __init__(self, run, plan, at=0, reserve=True, settle=False):
+        super().__init__(plan)
+        self.run, self.at, self.reserve, self.settle = run, at, reserve, settle
+
+    def complete(self, request):
+        if len(self.calls) == self.at:
+            self.calls.append(request)
+            led = self.run.ledger(2.05)
+            if self.reserve:
+                led.reserve(f"{self.run.state['id']}-taskgen:req{self.at + 1:02d}", 0.03)
+                if self.settle:
+                    led.settle(f"{self.run.state['id']}-taskgen:req{self.at + 1:02d}", 0.011)
+            raise SystemExit("killed")
+        return super().complete(request)
+
+
+def never(request):
+    raise AssertionError("an ambiguous batch must NOT be re-sent")
+
+
+def test_the_attempt_marker_is_durable_before_the_request_leaves(tmp_path):
+    run = make_run(tmp_path)
+    seen = []
+
+    class Spy(Seq):
+        def complete(self, request):
+            marker = run.dir / "private" / f"taskgen-attempt-{len(self.calls)}.json"
+            seen.append(marker.exists() and json.loads(marker.read_text()))
+            return super().complete(request)
+    stage(run, Spy([GOOD, OTHER, GOOD]))
+    assert all(m and m["request_sha256"] and "reserved_before" in m for m in seen) and len(seen) == 3                 # written before each of the three sends
+
+
+@pytest.mark.parametrize("settle", [False, True])
+def test_a_request_reserved_but_not_persisted_is_never_re_sent_until_the_owner_decides(tmp_path, settle):
+    run = make_run(tmp_path)
+    with pytest.raises(SystemExit):
+        stage(run, Killed(run, [GOOD, OTHER, GOOD], at=0, settle=settle))                                       # killed after reserve (and, in one case, after the response was settled)
+    assert (run.dir / "private" / "taskgen-attempt-0.json").exists() and not (run.dir / "private" / "taskgen-batch-0.json").exists()
+    resend = Seq([never])
+    with pytest.raises(AmbiguousBatchAttempt, match="NOT re-sent automatically") as ei:                         # restart: refuses, sends nothing
+        taskgen_stage(Context(run, llm=resend, options={"n_tasks": 4}))
+    assert resend.calls == [] and "recover-batch" in str(ei.value) and isinstance(ei.value, Halt)
+    with pytest.raises(AmbiguousBatchAttempt):                                                                  # and again: the refusal is stable, nothing changes until the owner acts
+        taskgen_stage(Context(run, llm=Seq([never]), options={"n_tasks": 4}))
+    rec = recover_batch(run, 0, note="owner: abandon batch 0, accept the unknown cost")
+    assert rec["status"] == "abandoned" and rec["meta"]["note"].startswith("owner") and rec["drafts"] == []
+    cont = Seq([OTHER, GOOD])                                                                                 # explicit recovery: ONLY the two remaining batches are requested
+    res = stage(run, cont)
+    assert len(cont.calls) == 2 and res["accepted"] >= 4
+    assert [c["status"] for c in run.artifact("taskgen-report")["model_calls"]] == ["abandoned", "ok", "ok"]
+    assert [c.messages[1]["content"] for c in cont.calls] == [r.messages[1]["content"] for r in propose.batch_requests(run.artifact("site-profile"))[1:]]
+
+
+def test_a_crash_before_any_reservation_is_provably_safe_and_resumes_automatically(tmp_path):
+    run = make_run(tmp_path)
+    with pytest.raises(SystemExit):
+        stage(run, Killed(run, [GOOD, OTHER, GOOD], at=0, reserve=False))                                       # died before the gate reserved anything: the request never left
+    assert (run.dir / "private" / "taskgen-attempt-0.json").exists()
+    again = Seq([GOOD, OTHER, GOOD])
+    res = stage(run, again)
+    assert len(again.calls) == 3 and res["accepted"] >= 4                                                      # all three batches requested, none refused as ambiguous
+
+
+def test_a_crash_in_a_later_batch_keeps_the_finished_ones_and_flags_only_the_ambiguous_one(tmp_path):
+    run = make_run(tmp_path)
+    run.ledger(2.05).reserve(f"{run.state['id']}-taskgen:req01", 0.03)                                          # batch 0's request, reserved and answered normally
+    with pytest.raises(SystemExit):
+        stage(run, Killed(run, [GOOD, OTHER, GOOD], at=1, reserve=False))
+    # killed in batch 1 after reserving: add that reservation as the dying process would have
+    run.ledger(2.05).reserve(f"{run.state['id']}-taskgen:req02", 0.03)
+    assert (run.dir / "private" / "taskgen-batch-0.json").exists() and (run.dir / "private" / "taskgen-attempt-1.json").exists()
+    rest = Seq([never])
+    with pytest.raises(AmbiguousBatchAttempt, match="batch 1"):
+        taskgen_stage(Context(run, llm=rest, options={"n_tasks": 4}))
+    assert rest.calls == []
+
+
+def test_recovery_is_explicit_and_refuses_when_there_is_nothing_to_recover(tmp_path):
+    run = make_run(tmp_path)
+    with pytest.raises(ValueError, match="no attempt marker"):
+        recover_batch(run, 0, note="x")
+    stage(run, Seq([GOOD, OTHER, GOOD]))
+    with pytest.raises(ValueError, match="already has a persisted result"):
+        recover_batch(run, 0, note="x")
+    run2 = make_run(tmp_path, name="r2")
+    with pytest.raises(SystemExit):
+        stage(run2, Killed(run2, [GOOD], at=0, reserve=False))
+    with pytest.raises(ValueError, match="note"):
+        recover_batch(run2, 0, note="  ")
+
+
+def test_cli_recover_batch_requires_abandon_and_a_note_and_never_resends(tmp_path, monkeypatch, capsys):
+    from agent_readiness.cli import main as cli_main
+    run = make_run(tmp_path)
+    with pytest.raises(SystemExit):
+        stage(run, Killed(run, [GOOD], at=0))
+    argv = lambda *a: monkeypatch.setattr("sys.argv", ["readiness", "investigate", "recover-batch", str(run.dir), *a])
+    argv("--batch", "0", "--note", "n")                                                                         # --abandon is mandatory
+    with pytest.raises(SystemExit):
+        cli_main()
+    argv("--batch", "0", "--abandon")                                                                           # --note is mandatory
+    with pytest.raises(SystemExit):
+        cli_main()
+    assert not (run.dir / "private" / "taskgen-batch-0.json").exists()
+    argv("--batch", "0", "--abandon", "--note", "owner decided")
+    cli_main()
+    assert "recorded as abandoned" in capsys.readouterr().out and json.loads((run.dir / "private" / "taskgen-batch-0.json").read_text())["status"] == "abandoned"
+    argv("--batch", "0", "--abandon", "--note", "again")
+    with pytest.raises(SystemExit, match="recovery refused"):
+        cli_main()
+
+
+def test_the_ambiguous_request_still_counts_toward_the_three_request_limit(tmp_path):
+    led = Ledger(tmp_path, ceiling=2.05)
+    led.reserve("r-taskgen:req01", 0.03)                                                                        # the abandoned batch's reservation stays in the durable ledger
+    gate = RequestGate(led, "r-taskgen", per_request_cap=0.05, run_cap=0.15, max_requests=3)
+    gate.reserve(2, _body(100))
+    gate.reserve(3, _body(100))
+    with pytest.raises(GateRefused, match="request-count cap"):
+        gate.reserve(4, _body(100))                                                                             # a re-send of batch 0 would be a fourth request: impossible inside the approved manifest

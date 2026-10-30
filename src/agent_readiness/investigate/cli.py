@@ -50,6 +50,11 @@ def register(sub) -> None:
     ex = isub.add_parser("export", help="Write a sanitized, read-only JSON of a run for the dashboard (no private criteria, answers, traces or credentials; tolerates incomplete runs)")
     ex.add_argument("run_dir", type=Path)
     ex.add_argument("--out", type=Path, required=True)
+    rb = isub.add_parser("recover-batch", help="Explicitly abandon a taskgen batch whose request was reserved/sent but whose result was never persisted (an interrupted run). It is never re-sent automatically.")
+    rb.add_argument("run_dir", type=Path)
+    rb.add_argument("--batch", type=int, required=True)
+    rb.add_argument("--abandon", action="store_true", required=True, help="record the batch as abandoned (the request stays counted in the ledger; no re-send)")
+    rb.add_argument("--note", required=True, help="who decided what")
     ap = isub.add_parser("approve", help="Record the owner's approval of an exact stage manifest hash")
     ap.add_argument("run_dir", type=Path)
     ap.add_argument("--stage", required=True)
@@ -136,6 +141,14 @@ def main(args) -> None:
         except (ExportError, FileNotFoundError) as exc:
             raise SystemExit(f"export refused: {exc}")
         print(f"exported {data['run']['id']} -> {args.out}  complete={data['run']['complete']}  source={data['run']['report_source']}  modes={','.join(data['modes'])}")
+        return
+    if args.investigate_command == "recover-batch":
+        from .taskgen.stage import recover_batch
+        try:
+            rec = recover_batch(InvestigationRun(args.run_dir), args.batch, note=args.note)
+        except (ValueError, FileNotFoundError) as exc:
+            raise SystemExit(f"recovery refused: {exc}")
+        print(f"batch {args.batch} recorded as {rec['status']}; re-run the stage to continue with the remaining batches (the ambiguous request stays counted in the ledger)")
         return
     run = InvestigationRun(args.run_dir)
     if args.investigate_command == "approve":
