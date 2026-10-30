@@ -44,7 +44,7 @@ export function TaskTable({ d }: { d: InvestigationExport }) {
   const hasControl = d.tasks.some((t) => Object.keys(t.placebo ?? {}).length > 0);
   if (!d.tasks.length) return <p className="muted">No frozen tasks in this export (the task stages had not completed).</p>;
   return (
-    <div className="table-wrap">
+    <div className="table-wrap" role="region" aria-label="Task outcomes table (scrollable)" tabIndex={0}>
       <table className="runs">
         <caption className="sr-only">Task outcomes per arm</caption>
         <thead><tr><th scope="col">Task</th><th scope="col">Set</th><th scope="col">{hasControl ? "Historical baseline" : "Baseline"}</th>{hasControl ? <th scope="col">Unmodified repeat (control)</th> : null}{pids.map((p) => <th scope="col" key={p}>Patched <code>{short(p)}</code></th>)}</tr></thead>
@@ -126,7 +126,7 @@ function ResultCard({ d, r }: { d: InvestigationExport; r: EvalResult }) {
       <section className="card">
       <h4>Patch <code>{short(r.proposal_id)}</code>{d.synthetic ? <> <span className="mode mode-scripted">ILLUSTRATIVE — synthetic numbers</span></> : null} <Pill tone={r.verdict === "improvement" ? "pass" : r.verdict === "regression" ? "fail" : "neutral"}>{r.verdict}</Pill>{" "}
         {r.measured ? <span className="mode mode-live">MEASURED (live)</span> : <span className="mode mode-unmeasured">NOT MEASURED — {r.effect_mode ? MODE_LABEL[r.effect_mode].toLowerCase() : "no"} evidence, a pipeline check only</span>}</h4>
-      <figure className="paired" role="group" aria-label={`Evidence-backed pass rate: baseline ${pct(b.passed, b.usable)}, patched ${pct(p.passed, p.usable)}`}>
+      <figure className="paired" aria-label={`Evidence-backed pass rate: baseline ${pct(b.passed, b.usable)}, patched ${pct(p.passed, p.usable)}`}>
         <figcaption>Evidence-backed pass rate on {c.tasks} usable task{c.tasks === 1 ? "" : "s"} (descriptive)</figcaption>
         <Bar label="Baseline" cls="B" value={b.usable ? b.passed / b.usable : 0} text={`${b.passed}/${b.usable}`} />
         <Bar label="Patched" cls="A" value={p.usable ? p.passed / p.usable : 0} text={`${p.passed}/${p.usable}`} />
@@ -172,7 +172,7 @@ export function ThreeArmChart({ d, x }: { d: InvestigationExport; x: Exploratory
       {detail.length ? (
         <section className="card armwide" aria-label="Negative controls on detail pages">
           <h4>Negative controls on detail pages <span className="muted">(not expected to change)</span></h4>
-          <div className="table-wrap"><table className="runs compact">
+          <div className="table-wrap" role="region" aria-label="Negative controls table (scrollable)" tabIndex={0}><table className="runs compact">
             <caption className="sr-only">Detail-page controls: historical baseline and patched</caption>
             <thead><tr><th scope="col">Task</th><th scope="col">Historical baseline</th><th scope="col">Patched</th></tr></thead>
             <tbody>{detail.map(({ task_id, role }) => <tr key={task_id}><th scope="row"><Pill tone="neutral">{role}</Pill> {q.get(task_id) ?? task_id}</th><td>{cell("baseline", task_id)}</td><td>{cell("patched", task_id)}</td></tr>)}</tbody>
@@ -312,7 +312,7 @@ export function EffortBars({ d }: { d: InvestigationExport }) {
   if (!rows.length) return null;
   const top = Math.max(1, ...rows.map((x) => x.t.limits?.max_model_requests ?? x.r!.model_requests!));
   return (
-    <figure className="paired effort" role="group" aria-label="Baseline model requests per task">
+    <figure className="paired effort" aria-label="Baseline model requests per task">
       <figcaption>Model requests per task in the baseline run (limit {rows[0].t.limits?.max_model_requests ?? "—"})</figcaption>
       {rows.map(({ t, r }) => (
         <div key={t.task_id} className="bar-row">
@@ -374,7 +374,7 @@ export function ChangeSection({ d, proposalId }: { d: InvestigationExport; propo
       {x ? (
         <section aria-label="Tasks this change can affect">
           <h4>Tasks this change can affect</h4>
-          <div className="table-wrap"><table className="runs">
+          <div className="table-wrap" role="region" aria-label="Affected tasks table (scrollable)" tabIndex={0}><table className="runs">
             <caption className="sr-only">Affected tasks: baseline, unmodified repeat and patched</caption>
             <thead><tr><th scope="col">Task</th><th scope="col">Historical baseline</th><th scope="col">Unmodified repeat (control)</th><th scope="col">Patched</th></tr></thead>
             <tbody>{roles(x).filter((r) => r.role === "Affected").map(({ task_id }) => (
@@ -395,6 +395,7 @@ export function Hero({ d }: { d: InvestigationExport }) {
   const bt = tally(d.tasks.flatMap((t) => t.baseline));
   return (
     <header className="hero2">
+      <div className="hero-copy">
       <p className="eyebrow">Agent Readiness</p>
       <h1>Make your website ready for AI agents</h1>
       <p className="lead">We watch an AI agent try to use your site, find where it struggles, test a change on a controlled copy, and measure whether it helped.</p>
@@ -403,6 +404,7 @@ export function Hero({ d }: { d: InvestigationExport }) {
         <li><span className="n">2</span><strong>Recommend</strong><span>Evidence-linked suggestions, labelled by who found or chose them.</span></li>
         <li><span className="n">3</span><strong>Controlled retest</strong><span>The change is applied to a copy and measured against controls.</span></li>
       </ol>
+      </div>
       {x ? (
         <div className="herometrics">
           <p className="eyebrow">Example result from this run · exploratory · n = 1 per arm · owner-selected change</p>
@@ -457,7 +459,7 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
       <nav className="steprail" aria-label="Report journey"><ol>{STEPS.map(([id, label]) => <li key={id}><button type="button" aria-current={active === id ? "step" : undefined} className={active === id ? "on" : ""} onClick={() => goTo(id)}>{label}</button></li>)}</ol></nav>
 
       <section id="inv-website" aria-labelledby="inv-website-h">
-        <h3 id="inv-website-h" className="step">1 · The website being evaluated</h3>
+        <h2 id="inv-website-h" className="step">1 · The website being evaluated</h2>
         {d.storefront?.state === "ok" ? <>
           <p className="muted">A controlled test site built for this project (not a real business). Browse the pages exactly as captured and given to the agent.</p>
           <StorefrontBrowser pages={d.storefront.original.pages} />
@@ -473,7 +475,7 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
       </section>
 
       <section id="inv-analysis" aria-labelledby="inv-analysis-h">
-        <h3 id="inv-analysis-h" className="step">2 · What the agent did on each task</h3>
+        <h2 id="inv-analysis-h" className="step">2 · What the agent did on each task</h2>
         <p className="muted">One browsing agent (frozen configuration) attempted every task. Effort is the number of model requests and pages viewed; success needs evidence-backed correctness, graded independently of the agent.</p>
         <EffortBars d={d} />
         <h3>Task outcomes</h3>
@@ -481,7 +483,7 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
       </section>
 
       <section id="inv-recommendations" aria-labelledby="inv-recommendations-h">
-        <h3 id="inv-recommendations-h" className="step">3 · Findings and recommendations</h3>
+        <h2 id="inv-recommendations-h" className="step">3 · Findings and recommendations</h2>
         {owner ? <Callout title="Owner-selected experiment" tone="warn"><p>The change tested below was chosen by the site owner. It is labelled <strong>EXPERIMENTAL</strong> and is <strong>not</strong> an investigator-verified finding. Neither the investigator’s pattern nor the owner’s change is presented as a verified cause.</p></Callout> : null}
         <ProvenanceSplit d={d} />
         <Findings d={d} />
@@ -490,12 +492,12 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
       </section>
 
       <section id="inv-changes" aria-labelledby="inv-changes-h">
-        <h3 id="inv-changes-h" className="step">4 · The website change</h3>
+        <h2 id="inv-changes-h" className="step">4 · The website change</h2>
         <ChangeSection d={d} proposalId={selected} />
       </section>
 
       <section id="inv-impact" aria-labelledby="inv-impact-h">
-        <h3 id="inv-impact-h" className="step">5 · Measured impact</h3>
+        <h2 id="inv-impact-h" className="step">5 · Measured impact</h2>
         <h3>Baseline versus patched</h3>
         <Comparison d={d} />
         <Spend d={d} />

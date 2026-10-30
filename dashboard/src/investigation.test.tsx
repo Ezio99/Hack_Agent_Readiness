@@ -338,3 +338,20 @@ describe("PR 54: product-led first screen, equal verdicts, disclosure and honest
     expect(html(pub())).toMatch(/aria-current="step"/);
   });
 });
+
+describe("PR 54 accessibility regressions (found by an axe-core run)", () => {
+  const h = () => html(structuredClone(publicFixture) as unknown as InvestigationExport);
+  it("uses one h1 and h2 step headings (no skipped heading level)", () => {
+    const out = h();
+    expect(out.match(/<h1[ >]/g)).toHaveLength(1);
+    expect(out.match(/<h2 id="inv-[a-z]+-h" class="step"/g)).toHaveLength(5);
+    expect(out).not.toMatch(/<h3 id="inv-[a-z]+-h"/);
+  });
+  it("scrollable tables are keyboard-reachable regions with distinct names, and figures carry no invalid role", () => {
+    const out = h();
+    const regions = [...out.matchAll(/<div class="table-wrap" role="region" aria-label="([^"]+)" tabindex="0"/g)].map((m) => m[1]);
+    expect(regions.length).toBeGreaterThanOrEqual(3); expect(new Set(regions).size).toBe(regions.length);
+    expect(out).not.toMatch(/<figure[^>]*role="group"/);
+    expect(out).not.toMatch(/<div class="table-wrap">/);
+  });
+});
