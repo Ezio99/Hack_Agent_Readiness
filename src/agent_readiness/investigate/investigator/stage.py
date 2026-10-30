@@ -99,6 +99,9 @@ def report_stage(ctx: Context, *, final: bool = False) -> dict:
         rep["evaluation"] = ev
         rep["evaluation_statement"] = ("Measured effects are for the pre-registered rule, these frozen tasks, this agent profile/model and this patched mirror only. 'inconclusive' means the data neither show an improvement nor a regression. "
                                        "A pattern no longer being observed (static re-check) is not an effect on agents.")
+        if ev.get("exploratory"):
+            rep["exploratory_statement"] = (ev["exploratory"]["label"] + ". The frozen-rule verdict above is reported unchanged and is not replaced. The proposal tested was chosen by the owner; it is not an investigator-verified finding. "
+                                            f"Exploratory verdict: {ev['exploratory']['verdict']} (n = 1 trial per task per arm).")
     run.write_artifact("report-final" if final else "report", rep)
     return {"outcome": rep["outcome"], "supported_unpromoted": len(rep["supported_unpromoted"])}
 

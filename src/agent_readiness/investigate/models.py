@@ -124,8 +124,11 @@ class Proposal(BaseModel):
 
     @property
     def label(self) -> str:
-        return ("VERIFIED-FINDING PROPOSAL (unvalidated until measured)" if self.basis == "verified_finding"
-                else "EXPERIMENTAL — based on an unverified hypothesis, not a verified finding")
+        if self.basis == "verified_finding":
+            return "VERIFIED-FINDING PROPOSAL (unvalidated until measured)"
+        if self.provenance.source.startswith("owner:"):
+            return "EXPERIMENTAL — OWNER-SELECTED change; not an investigator-verified finding"
+        return "EXPERIMENTAL — based on an unverified hypothesis, not a verified finding"
 
     @model_validator(mode="after")
     def _id(self):

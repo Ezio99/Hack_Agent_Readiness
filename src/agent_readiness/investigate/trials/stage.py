@@ -52,34 +52,49 @@ def manifest(ctx: Context, shared: dict | None = None) -> dict:
             "cost_basis": "calculated at published prices; not a bill", "ledger_note": "one shared spend ledger for the whole investigation (taskgen, both trial arms, investigation); this is its hard ceiling"}
 
 
-def run_arm(ctx: Context, *, label: str, snap, tasks: list[dict], insts: dict, prefix: str, manifest_: dict, repeats: int, mock_behavior: str = "correct", stage_cap: float | None = None) -> dict:
-    """Run every given frozen task K times on `snap`; one attempt each, sequential, resumable from artifacts, live requests behind the reserve-before-send gate."""
+def run_plan(ctx: Context, steps: list[dict], *, manifest_: dict, verify=None) -> dict:
+    """Run an ORDERED list of trials, one attempt each, sequential, resumable from artifacts, live requests behind the reserve-before-send gate. Each step: `label`, `prefix`, `snap`, `inst`,
+    `task` (frozen task dict), `repeat`, `scopes` (list of (run ids, cap, name) enforced by the gate across several trials). `verify(rec, step)` may raise `Halt` after a trial (e.g. a control that
+    is not identical to the baseline). The order given is the order executed."""
     run, o = ctx.run, ctx.options
     live = run.mode == "live"
     cfg = o.get("model_config") or ModelConfig()
     key = preflight(cfg, o.get("allow_model_calls", False)) if live else None
     ledger = run.ledger(manifest_["ledger_ceiling_usd"]) if live else None
-    done, void = [], []
+    done, void, executed = [], [], []
+    for st in steps:
+        t, prefix, rep = st["task"], st["prefix"], st["repeat"]
+        tid = f"{t['task_id']}-r{rep}"
+        name = f"trials/{prefix}-{tid}"
+        if run.has_artifact(name):
+            done.append(tid)
+            continue
+        scopes = list(st.get("scopes") or [])
+        legacy = len(scopes) == 1 and scopes[0][2] == "stage"                       # the baseline's single, unnamed-arm stage cap keeps its original wiring; named scopes go through `extra_scopes`
+        gate = RequestGate(ledger, f"{prefix}-{tid}", run_cap=manifest_["run_cap_usd"], per_request_cap=manifest_["per_request_cap_usd"], max_requests=manifest_["max_requests_per_trial"],
+                           scope_run_ids=scopes[0][0] if legacy else None, scope_cap=scopes[0][1] if legacy else None, extra_scopes=() if legacy else tuple(scopes)) if live else None
+        out = Path(run.dir) / "trial-data" / f"{prefix}-{tid}"
+        rec = asyncio.run(run_trial(st["inst"], st["snap"], provider="live" if live else "mock", mock_behavior=o.get("mock_behavior", "correct"), output=out, model_config=cfg, api_key=key,
+                                    request_gate=gate, label=st["label"]))
+        trial_dir = str(Path(rec.pop("artifact_path")).relative_to(run.dir))
+        run.write_artifact(name, {**rec, "task_id": t["task_id"], "partition": t["partition"], "repeat": rep, "trial_id": tid, "trial_dir": trial_dir, "arm": st["label"]})
+        executed.append(f"{prefix}-{tid}")
+        is_void = rec["outcome"]["run_status"] in VOID_STATUSES
+        (void if is_void else done).append(tid)
+        if live and is_void:
+            raise Halt(f"trial {prefix}-{tid} ended with {rec['outcome']['run_status']}; stopping the stage (void trial, not a website result)")
+        if verify is not None:
+            verify(rec, st)
+    return {"trials": len(done), "void": len(void), "executed": executed}
+
+
+def run_arm(ctx: Context, *, label: str, snap, tasks: list[dict], insts: dict, prefix: str, manifest_: dict, repeats: int, mock_behavior: str = "correct", stage_cap: float | None = None) -> dict:
+    """Run every given frozen task K times on `snap`; one attempt each, sequential, resumable from artifacts, live requests behind the reserve-before-send gate."""
     scope = frozenset(f"{prefix}-{t['task_id']}-r{r + 1}" for r in range(repeats) for t in tasks)      # every trial gate of THIS stage; the stage cap spans all of them
-    for rep in range(repeats):
-        for t in tasks:
-            tid = f"{t['task_id']}-r{rep + 1}"
-            name = f"trials/{prefix}-{tid}"
-            if run.has_artifact(name):
-                done.append(tid)
-                continue
-            gate = RequestGate(ledger, f"{prefix}-{tid}", run_cap=manifest_["run_cap_usd"], per_request_cap=manifest_["per_request_cap_usd"], max_requests=manifest_["max_requests_per_trial"],
-                               scope_run_ids=scope if stage_cap is not None else None, scope_cap=stage_cap) if live else None
-            out = Path(run.dir) / "trial-data" / f"{prefix}-{tid}"
-            rec = asyncio.run(run_trial(insts[t["task_id"]], snap, provider="live" if live else "mock", mock_behavior=o.get("mock_behavior", "correct"), output=out, model_config=cfg, api_key=key,
-                                        request_gate=gate, label=label))
-            trial_dir = str(Path(rec.pop("artifact_path")).relative_to(run.dir))
-            run.write_artifact(name, {**rec, "task_id": t["task_id"], "partition": t["partition"], "repeat": rep + 1, "trial_id": tid, "trial_dir": trial_dir, "arm": label})
-            is_void = rec["outcome"]["run_status"] in VOID_STATUSES
-            (void if is_void else done).append(tid)
-            if live and is_void:
-                raise Halt(f"trial {prefix}-{tid} ended with {rec['outcome']['run_status']}; stopping the stage (void trial, not a website result)")
-    return {"trials": len(done), "void": len(void)}
+    steps = [{"label": label, "prefix": prefix, "snap": snap, "inst": insts[t["task_id"]], "task": t, "repeat": rep + 1, "scopes": [(scope, stage_cap, "stage")] if stage_cap is not None else []}
+             for rep in range(repeats) for t in tasks]
+    out = run_plan(ctx, steps, manifest_=manifest_)
+    return {"trials": out["trials"], "void": out["void"]}
 
 
 def baseline_trials_stage(ctx: Context) -> dict:

@@ -44,6 +44,7 @@ def register(sub) -> None:
     rn.add_argument("--n-tasks", type=int, default=8)
     rn.add_argument("--total-cap-usd", type=float, default=3.0, help="hard ceiling (USD, calculated) on ALL spend of this investigation: taskgen, both trial arms and the investigation")
     rn.add_argument("--fix", action="append", default=None, help="proposal id to apply to the local mirror and retest (needs your approval hash at apply_fix, then at post_trials); repeatable")
+    rn.add_argument("--post-plan", type=Path, default=None, help="JSON retest plan for an owner-selected exploratory fix: placebo tasks, affected tasks and controls (see the pre-registration)")
     rn.add_argument("--allow-model-calls", action="store_true")
     st = isub.add_parser("status", help="Show stages, outcome and pending approvals of an investigation")
     st.add_argument("run_dir", type=Path)
@@ -59,6 +60,15 @@ def register(sub) -> None:
     fk.add_argument("source_dir", type=Path)
     fk.add_argument("--id", required=True, help="id of the new run")
     fk.add_argument("--root", type=Path, default=Path("investigations"))
+    fk.add_argument("--carry-investigation", action="store_true", help="also carry a COMPLETED investigator's result (verified evidence prefix + artifacts) so later stages report it; the investigator is not re-run")
+    po = isub.add_parser("propose-owner", help="Free, offline: record an owner-selected EXPLORATORY proposal (owner-authored unverified hypothesis + validated patch). Never a finding; still needs apply_fix approval")
+    po.add_argument("run_dir", type=Path)
+    po.add_argument("--owner", required=True, help="who selects this change")
+    po.add_argument("--claim-kind", default="info_absent_on_template")
+    po.add_argument("--label", required=True, help="field label for the patch template (e.g. 'daily fee')")
+    po.add_argument("--hypothesis", required=True)
+    po.add_argument("--prediction", required=True, help="falsifiable prediction")
+    po.add_argument("--cite", action="append", required=True, help="existing observation id (repeatable)")
     ap = isub.add_parser("approve", help="Record the owner's approval of an exact stage manifest hash")
     ap.add_argument("run_dir", type=Path)
     ap.add_argument("--stage", required=True)
@@ -92,7 +102,8 @@ def main(args) -> None:
         from ..ledger import Halt
         try:
             run, pipe, ctx = flow.build(args.root, args.id or f"{args.site}-{args.mode}", args.site, mode=args.mode,
-                                        options={"repeats": args.repeats, "n_tasks": args.n_tasks, "total_cap_usd": args.total_cap_usd, "allow_model_calls": args.allow_model_calls, "fix": args.fix})
+                                        options={"repeats": args.repeats, "n_tasks": args.n_tasks, "total_cap_usd": args.total_cap_usd, "allow_model_calls": args.allow_model_calls, "fix": args.fix,
+                                                  **({"post_plan": json.loads(args.post_plan.read_text())} if args.post_plan else {})})
             res = pipe.run(ctx)
         except Halt as exc:
             raise SystemExit(f"refused: {exc}")
@@ -153,12 +164,21 @@ def main(args) -> None:
     if args.investigate_command == "fork":
         from .fork import fork, load_fork
         try:
-            d = fork(args.source_dir, args.root, args.id)
+            d = fork(args.source_dir, args.root, args.id, carry_investigation=args.carry_investigation)
         except (ValueError, FileExistsError) as exc:
             raise SystemExit(f"fork refused: {exc}")
         prov = load_fork(InvestigationRun(d))
         print(f"forked {prov['source_run']} -> {d}\n  imported {len(prov['imported_sha256'])} files; imported_files_sha256 {prov['imported_files_sha256'][:16]}...; spending history carried over: "
               f"committed US${prov['source_ledger']['committed_usd']}\n  NOT imported: approvals, evidence store, investigator output. Next (free): re-run the same `run` command with --id {args.id} to reach the investigate approval gate.")
+        return
+    if args.investigate_command == "propose-owner":
+        from .owner import add_owner_proposal
+        run = InvestigationRun(args.run_dir)
+        try:
+            p = add_owner_proposal(run, owner=args.owner, claim_kind=args.claim_kind, params={"label": args.label}, hypothesis=args.hypothesis, prediction=args.prediction, cites=args.cite)
+        except ValueError as exc:
+            raise SystemExit(f"proposal refused: {exc}")
+        print(f"{p.id}  {p.label}\n  patch_sha256 {p.change['patch_sha256']}  (not applied; apply_fix needs your exact-manifest approval)")
         return
     if args.investigate_command == "recover-batch":
         from .taskgen.stage import recover_batch

@@ -26,6 +26,8 @@ PATTERNS = ("artifacts/taskgen-report.json", "artifacts/tasks-manifest.json", "a
             "artifacts/manifests/baseline_trials-*.json", "private/criteria.json", "private/accepted-drafts.json", "private/taskgen-batch-*.json", "private/taskgen-attempt-*.json",
             "private/llm-transcript.jsonl", "calls/taskgen.jsonl", "trial-data/**/*")
 LEDGER = "spend/ledger.jsonl"
+CARRY_PATTERNS = ("artifacts/investigation.json", "artifacts/recommendations.json", "artifacts/site-profile.json", "snapshot/**/*")      # with --carry-investigation: the investigator's result, the site profile and
+# the snapshot are carried (hash-verified) so an owner-selected proposal can be recorded before any stage runs; evidence.jsonl is carried as a verified PREFIX
 
 
 def _sha(path: Path) -> str:
@@ -53,8 +55,10 @@ def _ledger_summary(path: Path) -> dict:
             "outstanding_reserved_usd": outstanding, "committed_usd": round(sum(settled.values()) + outstanding, 6)}
 
 
-def fork(source_dir: Path, root: Path, new_id: str) -> Path:
-    """Create the fork. Reads the source only; refuses an incomplete source or an existing target."""
+def fork(source_dir: Path, root: Path, new_id: str, *, carry_investigation: bool = False) -> Path:
+    """Create the fork. Reads the source only; refuses an incomplete source or an existing target. `carry_investigation` also carries a COMPLETED investigator's result (its evidence store as a hash-verified
+    prefix, its investigation and recommendation artifacts) so the later stages of the fork (owner-selected proposal, apply_fix, post_trials, evaluate) report it; `investigate` and `recommend` are then
+    marked imported-done. The investigator is never re-run."""
     from .flow import STAGES
     src = InvestigationRun(Path(source_dir))
     st = src.state
@@ -66,6 +70,11 @@ def fork(source_dir: Path, root: Path, new_id: str) -> Path:
     if (Path(root) / new_id).exists():
         raise FileExistsError(f"{new_id!r} already exists")
     files = _files(src.dir)
+    if carry_investigation:
+        inv0 = src.artifact("investigation") if src.has_artifact("investigation") else None
+        if src.state["stages"].get("investigate", {}).get("status") != "done" or not inv0 or inv0.get("status") != "completed" or not (src.dir / "evidence.jsonl").exists():
+            raise ValueError("--carry-investigation needs a source whose investigator stage completed (status `completed`) and an evidence store")
+        files = sorted(set(files) | {str(p.relative_to(src.dir)) for pat in CARRY_PATTERNS for p in src.dir.glob(pat) if p.is_file()})
     needed = {"artifacts/tasks-manifest.json", "private/criteria.json"}
     if not needed <= set(files) or not any(f.startswith("artifacts/trials/") for f in files):
         raise ValueError("the source run lacks its frozen tasks, private criteria or baseline trials")
@@ -80,6 +89,11 @@ def fork(source_dir: Path, root: Path, new_id: str) -> Path:
         imported[rel] = _sha(dst)
         if imported[rel] != _sha(src.dir / rel):
             raise RuntimeError(f"copy of {rel} does not match the source")
+    carried = None
+    if carry_investigation:
+        lines = (src.dir / "evidence.jsonl").read_text().splitlines()
+        shutil.copy2(src.dir / "evidence.jsonl", new.dir / "evidence.jsonl")
+        carried = {"evidence_lines": len(lines), "evidence_prefix_sha256": hashlib.sha256(("\n".join(lines) + "\n").encode()).hexdigest(), "investigation_status": src.artifact("investigation")["status"]}
     led_src = src.dir / LEDGER
     if led_src.exists():
         (new.dir / "spend").mkdir(exist_ok=True)
@@ -91,10 +105,11 @@ def fork(source_dir: Path, root: Path, new_id: str) -> Path:
             "imported_files_sha256": canonical_hash(imported), "tasks_manifest_sha256": canonical_hash(src.artifact("tasks-manifest")), "snapshot_sha256": profile.get("snapshot_sha256") or src.artifact("tasks-manifest")["snapshot_sha256"],
             "source_ledger": summary, "source_approvals_not_inherited": [{"stage": a["stage"], "manifest_sha256": a["manifest_sha256"]} for a in src.approvals()],
             "source_investigation": ({"status": inv.get("status"), "incomplete": inv.get("incomplete"), "model_requests": inv.get("model_requests"), "cost_usd": inv.get("cost_usd")} if inv else None),
-            "not_imported": ["approvals", "evidence store", "investigator artifacts / transcripts / reports", "evaluation", "recommendations"],
+            "carried_investigation": carried,
+            "not_imported": ["approvals", "investigator transcripts / private files", "reports", "evaluation"] + ([] if carried else ["evidence store", "investigator artifacts", "recommendations"]),
             "note": "paid taskgen and baseline trials were NOT re-run; their results and the full spending history were imported. Every paid stage of this fork needs a fresh exact-manifest approval."}
     (new.dir / "fork.json").write_text(json.dumps(prov, indent=2, sort_keys=True))
-    for stage in IMPORTED_STAGES:
+    for stage in IMPORTED_STAGES + (("investigate", "recommend") if carry_investigation else ()):
         new.set_status(stage, "done", summary={"imported_from": st["id"], "imported_files_sha256": prov["imported_files_sha256"]})
     return new.dir
 
@@ -116,6 +131,11 @@ def verify_fork(run: InvestigationRun) -> dict | None:
     lines = (run.dir / LEDGER).read_text().splitlines() if (run.dir / LEDGER).exists() else []
     if n and (len(lines) < n or hashlib.sha256(("\n".join(lines[:n]) + "\n").encode()).hexdigest() != want):
         raise Halt("fork integrity: the imported spending history is not an intact prefix of this run's ledger")
+    c = prov.get("carried_investigation")
+    if c:
+        ev = (run.dir / "evidence.jsonl").read_text().splitlines() if (run.dir / "evidence.jsonl").exists() else []
+        if len(ev) < c["evidence_lines"] or hashlib.sha256(("\n".join(ev[:c["evidence_lines"]]) + "\n").encode()).hexdigest() != c["evidence_prefix_sha256"]:
+            raise Halt("fork integrity: the carried investigator evidence is not an intact prefix of this run's evidence store")
     if run.has_artifact("site-profile") and run.artifact("site-profile")["snapshot_sha256"] != prov["snapshot_sha256"]:
         raise Halt("fork integrity: the re-derived snapshot differs from the imported one")
     return prov
@@ -128,4 +148,4 @@ def provenance_summary(run: InvestigationRun) -> dict | None:
         return None
     return {"source_run": prov["source_run"], "source_run_json_sha256": prov["source_run_json_sha256"], "imported_files_sha256": prov["imported_files_sha256"], "tasks_manifest_sha256": prov["tasks_manifest_sha256"],
             "snapshot_sha256": prov["snapshot_sha256"], "imported_spend_committed_usd": prov["source_ledger"]["committed_usd"], "imported_ledger_sha256": prov["source_ledger"]["sha256"],
-            "source_approvals_not_inherited": prov["source_approvals_not_inherited"], "source_investigation": prov["source_investigation"], "paid_stages_rerun": False}
+            "source_approvals_not_inherited": prov["source_approvals_not_inherited"], "source_investigation": prov["source_investigation"], "carried_investigation": prov.get("carried_investigation"), "paid_stages_rerun": False}
