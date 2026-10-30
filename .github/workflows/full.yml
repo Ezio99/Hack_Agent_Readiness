@@ -28,6 +28,7 @@ jobs:
           python -m pip install --no-deps --no-build-isolation -e .
           python -m pip check
           python -m playwright install --with-deps chromium
+      - run: mkdir -p artifacts   # pytest --basetemp needs its parent to exist on a fresh checkout (it is git-ignored); without it the first tests error at setup
       - run: python -m pytest -q --basetemp=artifacts/browser-tests
       - name: Credential-free CLI smoke
         run: readiness smoke --output runs
