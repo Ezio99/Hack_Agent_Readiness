@@ -178,3 +178,33 @@ describe("EXP-B journey: three arms, two verdicts", () => {
     expect(renderToStaticMarkup(<InvestigationPage />)).toContain("Load EXP-B synthetic example");
   });
 });
+
+describe("EXP-B headline, control flip, holdout flag and spend", () => {
+  const expb = () => structuredClone(expbFixture) as unknown as InvestigationExport;
+  it("shows the affected-task request reductions (unmodified repeat → patched)", () => {
+    const h = html(expb());
+    expect(h).toContain("12 → 4"); expect(h).toContain("13 → 4"); expect(h).toContain("unmodified repeat → patched");
+  });
+  it("calls out a control whose pass status changed without changing the verdict", () => {
+    const d = expb();
+    d.evaluation.exploratory!.tasks.patched["syn-t3"] = { requests: 11, page_views: 10, pass: true };
+    const h = html(d);
+    expect(h).toContain("A control task changed outcome"); expect(h).toContain("same-shape control"); expect(h).toContain("tolerance"); expect(h).toContain("does not change the verdict");
+    expect(html(expb())).not.toContain("A control task changed outcome");
+  });
+  it("explains the holdout flag from the partitions' pass changes, without claiming the holdout got worse", () => {
+    const d = expb();
+    const r = d.evaluation.results[0];
+    r.holdout_consistent = false; r.by_partition = { investigation: { pairs: 4, pass_delta: 0 }, holdout: { pairs: 2, pass_delta: 1 } };
+    const h = html(d);
+    expect(h).toContain("investigation 0.00 (4 pairs)"); expect(h).toContain("holdout +1.00 (2 pairs)"); expect(h).toContain("different signs"); expect(h).toContain("does not by itself mean the holdout got worse");
+  });
+  it("shows calculated spend by arm labelled as not a bill, and nothing when the ledger is missing", () => {
+    const d = expb();
+    d.spend = { state: "ok", committed_usd: 1.5344, ceiling_usd: 2.05, remaining_usd: 0.5156, open_reservations: 0, by_arm_usd: { baseline: 0.6, patched: 0.4, placebo: 0.46, other: 0.07 } };
+    const h = html(d);
+    expect(h).toContain("not a bill"); expect(h).toContain("US$1.5344"); expect(h).toContain("placebo US$0.4600"); expect(h).toContain("task generation + investigator");
+    d.spend = { state: "missing" };
+    expect(html(d)).not.toContain("not a bill");
+  });
+});

@@ -32,6 +32,7 @@ export interface InvestigationExport {
   observations: Observation[]; hypotheses: Hypothesis[]; findings: Finding[]; proposals: Proposal[]; evaluation: Evaluation; effects: Effect[];
   investigation: { skipped: boolean | null; reason: string | null; finished: boolean | null; incomplete: boolean | null; tool_calls: number | null; model_requests: number | null; model: string | null; mode: string | null; cost_usd: number | null; rejected_hypotheses: number };
   statement: string | null;
+  spend?: { state: "ok" | "missing"; basis?: string; committed_usd?: number; ceiling_usd?: number | null; remaining_usd?: number | null; open_reservations?: number; by_arm_usd?: Record<string, number>; by_trial_usd?: Record<string, number> };
 }
 
 export type Parsed = { ok: true; data: InvestigationExport } | { ok: false; error: string };

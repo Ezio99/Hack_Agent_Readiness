@@ -344,6 +344,9 @@
     "target": "synthetic-cabin-site (fixture)"
   },
   "schema": "investigation-dashboard-v1",
+  "spend": {
+    "state": "missing"
+  },
   "stages": [
     {
       "manifest_sha256": null,

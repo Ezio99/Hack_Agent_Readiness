@@ -113,3 +113,4 @@ h3.step { font-size: 1.3rem; border-bottom: 3px solid var(--required); padding-b
 .verdicts .card { margin: 0; } .verdict-frozen { border-top-color: #8793a3; } .verdict-exploratory { border-top-color: var(--b); }
 .verdict-good { border-top-color: var(--good); } .verdict-bad { border-top-color: var(--bad); } .verdict-warn { border-top-color: #c28a00; }
 .pill-warn { color: var(--warn); background: var(--warn-bg); border-color: #e8cf8b; } .pill-neutral { color: var(--muted); background: #eceff3; border-color: var(--line); }
+.headline { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; padding: 0; margin: 1rem 0; } .headline .card { margin: 0; border-top-color: var(--a); } .headline .big { font-size: 2rem; font-weight: 800; color: var(--a); }

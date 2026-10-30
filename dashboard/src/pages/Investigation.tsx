@@ -131,7 +131,7 @@ function ResultCard({ d, r }: { d: InvestigationExport; r: EvalResult }) {
       <dl className="facts">
         <dt>Pre-registered rule</dt><dd>{r.rule_preregistered_at_freeze ? "fixed before any trial ran" : "not recorded as pre-registered"}</dd>
         <dt>Pairs · pass Δ · request Δ</dt><dd>{r.pairs ?? "—"} · {num(r.pass_delta)} · {num(r.request_change)} (p = {num(r.p_pass)} / {num(r.p_requests)})</dd>
-        <dt>Holdout consistent</dt><dd>{r.holdout_consistent == null ? "—" : r.holdout_consistent ? "yes" : "no — the holdout tasks do not agree"}</dd>
+        <dt>Holdout consistent</dt><dd>{r.holdout_consistent == null ? "—" : r.holdout_consistent ? "yes" : "no"}{r.by_partition ? <span className="muted"> — pass change: {Object.entries(r.by_partition).map(([k, v]) => `${k} ${v.pass_delta == null ? "—" : (v.pass_delta > 0 ? "+" : "") + v.pass_delta.toFixed(2)} (${v.pairs} pairs)`).join(" · ")}. “No” means the two partitions’ pass changes have different signs; it does not by itself mean the holdout got worse, and it only withdraws an <em>improvement</em> verdict when the holdout pass rate fell.</span> : null}</dd>
         <dt>Reason</dt><dd>{r.reason ?? "—"}</dd>
         {r.excluded.length ? <><dt>Excluded</dt><dd>{r.excluded.map((e) => `${e.task_id}: ${e.reason}`).join("; ")}</dd></> : null}
       </dl>
@@ -166,6 +166,30 @@ export function ThreeArmChart({ d, x }: { d: InvestigationExport; x: Exploratory
   );
 }
 
+/** Headline request changes (unmodified repeat → patched) for the affected tasks, and any control whose pass status differs between arms. Derived only from the exported rows. */
+export function Headline({ d, x }: { d: InvestigationExport; x: Exploratory }) {
+  const q = new Map(d.tasks.map((t) => [t.task_id, t.question]));
+  const aff = roles(x).filter((r) => r.role === "Affected");
+  const flips = roles(x).filter((r) => r.role !== "Affected").flatMap(({ task_id, role }) => {
+    const b = x.tasks.baseline[task_id], c = x.tasks.placebo[task_id], p = x.tasks.patched[task_id];
+    if (!p) return [];
+    const was = c ?? b;
+    return was && was.pass !== p.pass ? [{ task_id, role, was, p, vs: c ? "unmodified repeat" : "historical baseline" }] : [];
+  });
+  return (
+    <>
+      <ul className="headline" aria-label="Affected-task request changes">
+        {aff.map(({ task_id }) => <li key={task_id} className="card"><span className="big">{x.tasks.placebo[task_id]?.requests ?? "—"} → {x.tasks.patched[task_id]?.requests ?? "—"}</span> model requests<br /><span className="muted">{q.get(task_id) ?? task_id} (unmodified repeat → patched)</span></li>)}
+      </ul>
+      {flips.map((f) => (
+        <Callout key={f.task_id} title="A control task changed outcome" tone="warn">
+          <p><strong>{q.get(f.task_id) ?? f.task_id}</strong> ({f.role.toLowerCase()}, <code>{f.task_id}</code>) went from <strong>{f.was.pass ? "pass" : "fail"}</strong> ({f.was.requests} requests, {f.vs}) to <strong>{f.p.pass ? "pass" : "fail"}</strong> ({f.p.requests} requests, patched).
+            Its request count moved within the pre-registered tolerance, and the exploratory rules test controls on request counts only, so this does not change the verdict. With one trial per arm it cannot be separated from run-to-run variation, and it is not evidence either way about the change.</p>
+        </Callout>))}
+    </>
+  );
+}
+
 export function ExploratoryPanel({ d, x }: { d: InvestigationExport; x: Exploratory }) {
   const v = EXPLORATORY_VERDICT[x.verdict] ?? { label: x.verdict, tone: "info" as const };
   const frozen = d.evaluation.results[0];
@@ -185,6 +209,7 @@ export function ExploratoryPanel({ d, x }: { d: InvestigationExport; x: Explorat
           {x.reasons.map((r) => <p key={r} className="muted">{r}</p>)}
         </section>
       </div>
+      <Headline d={d} x={x} />
       <ThreeArmChart d={d} x={x} />
       <dl className="facts">
         <dt>Noise estimate</dt><dd>{x.noise_estimate_requests ?? "—"} request(s): the largest gap between an unmodified repeat and its historical trial</dd>
@@ -219,6 +244,16 @@ export function Proposals({ d }: { d: InvestigationExport }) {
           <p className="muted">Expected: {p.expected_effect}{p.risks.length ? ` · Risks: ${p.risks.join("; ")}` : ""}</p>
         </li>))}
     </ul>
+  );
+}
+
+export function Spend({ d }: { d: InvestigationExport }) {
+  const s = d.spend;
+  if (!s || s.state !== "ok") return null;
+  const usd = (x: number | null | undefined) => (typeof x === "number" ? `US$${x.toFixed(4)}` : "—");
+  return (
+    <p className="muted" aria-label="Spend">Calculated model spend (published prices, <strong>not a bill</strong>): {usd(s.committed_usd)} of a {usd(s.ceiling_usd)} ceiling, {usd(s.remaining_usd)} remaining, {s.open_reservations ?? 0} open reservation(s).
+      {" "}By arm: {Object.entries(s.by_arm_usd ?? {}).map(([k, v]) => `${k === "other" ? "task generation + investigator" : k} ${usd(v)}`).join(" · ")}.</p>
   );
 }
 
@@ -282,6 +317,7 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
         <h3 id="inv-results-h" className="step">4 · Before and after</h3>
         <h3>Baseline versus patched</h3>
         <Comparison d={d} />
+        <Spend d={d} />
         {d.statement ? <p className="muted">{d.statement}</p> : null}
       </section>
     </div>

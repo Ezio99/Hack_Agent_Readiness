@@ -236,3 +236,19 @@ def test_expb_fixture_verdicts_rederive_from_its_own_rows():
     pat = {t["task_id"]: row(t["patched"][pid][0]) for t in d["tasks"]}
     x = d["evaluation"]["exploratory"]
     assert exploratory.analyze(x["plan"], base, plc, pat)["verdict"] == x["verdict"]
+
+
+def test_spend_is_exported_by_arm_from_the_ledger_as_a_calculated_estimate(expb):
+    (expb / "spend").mkdir()
+    rows = []
+    for i, (rid, usd) in enumerate([("taskgen-batch0:req01", 0.01), ("baseline-gen-a-r1:req01", 0.02), ("placebo-prp-x-gen-a-r1:req01", 0.03), ("patched-prp-x-gen-a-r1:req01", 0.04), ("patched-prp-x-gen-a-r1:req02", 0.05)]):
+        rows += [{"ts": "t", "kind": "reserve", "id": rid, "usd": usd + 0.01}, {"ts": "t", "kind": "settle", "id": rid, "usd": usd}]
+    rows.append({"ts": "t", "kind": "reserve", "id": "patched-prp-x-gen-b-r1:req01", "usd": 0.02})        # an open reservation is reported, not hidden
+    (expb / "spend" / "ledger.jsonl").write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+    s = export_run(expb)["spend"]
+    assert s["state"] == "ok" and "not a bill" in s["basis"] and s["committed_usd"] == 0.15 and s["open_reservations"] == 1
+    assert s["by_arm_usd"] == {"baseline": 0.02, "other": 0.01, "patched": 0.09, "placebo": 0.03} and s["by_trial_usd"]["patched-prp-x-gen-a-r1"] == 0.09
+
+
+def test_missing_ledger_is_reported_as_missing(expb):
+    assert export_run(expb)["spend"] == {"state": "missing"}

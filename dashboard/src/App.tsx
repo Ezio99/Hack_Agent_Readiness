@@ -42,7 +42,7 @@ export default function App() {
             <p className="brand">Agent Readiness <span className="tag">diagnostic dashboard</span></p>
             <p className="sub">What a Meta Muse Spark shopping agent did on a controlled storefront, why, and what a site owner could change.</p>
           </div>
-          <p className="badge" role="note">Recorded experiment data · Task 007 · not live inference</p>
+          <p className="badge" role="note">{page === "investigation" ? "Investigation report · evidence mode is labelled on the page" : "Recorded experiment data · Task 007 · not live inference"}</p>
         </div>
         <nav className="wrap" aria-label="Sections">
           <ul className="tabs">
@@ -63,7 +63,7 @@ export default function App() {
         {page === "investigation" && <InvestigationPage />}
       </main>
       <footer className="site"><div className="wrap">
-        <p>Controlled synthetic storefront (20 products) · Meta Muse Spark <code>{provenance.model}</code> reference agent · executed from commit <code>{provenance.executionCommit}</code> · costs are calculated estimates, not bills · no universal readiness score, no claims about real websites.</p>
+        <p>{page === "investigation" ? <>Investigation page: model, site and evidence mode are shown in the loaded report · calculated costs are estimates, not bills · no universal readiness score</> : <>Controlled synthetic storefront (20 products) · Meta Muse Spark <code>{provenance.model}</code> reference agent · executed from commit <code>{provenance.executionCommit}</code> · costs are calculated estimates, not bills · no universal readiness score, no claims about real websites.</>}</p>
       </div></footer>
     </>
   );

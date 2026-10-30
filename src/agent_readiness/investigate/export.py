@@ -111,6 +111,29 @@ def _evaluation(run: InvestigationRun, ev) -> dict:
     return {"state": "evaluated", "reason": None, "rule": _pick(rule, ("id", "primary", "secondary", "alpha", "min_pairs", "pass_delta_floor", "request_reduction_floor", "void_policy", "causal_scope")), "results": results, "exploratory": _exploratory(run, e)}
 
 
+def _spend(run: InvestigationRun) -> dict:
+    """Calculated (published-price) spend from the durable ledger, by arm: never a bill. Ids are `<trial or stage>:<request>`; trial ids start with the arm label."""
+    try:
+        rows = [json.loads(line) for line in (run.dir / "spend" / "ledger.jsonl").read_text().splitlines() if line.strip()]
+    except (OSError, ValueError):
+        return {"state": "missing"}
+    settled = {r["id"]: r["usd"] for r in rows if r.get("kind") == "settle"}
+    open_ = {r["id"] for r in rows if r.get("kind") == "reserve"} - set(settled)
+    by_arm: dict[str, float] = {}
+    by_trial: dict[str, float] = {}
+    for rid, usd in settled.items():
+        trial = rid.split(":")[0]
+        arm = trial.split("-")[0] if trial.split("-")[0] in ("baseline", "patched", "placebo") else "other"
+        by_arm[arm] = by_arm.get(arm, 0) + usd
+        if arm != "other":
+            by_trial[trial] = by_trial.get(trial, 0) + usd
+    total = sum(settled.values())
+    ceiling = (run.state.get("config") or {}).get("total_cap_usd")
+    r6 = lambda x: round(x, 6)
+    return {"state": "ok", "basis": "calculated at published prices from the spend ledger; not a bill", "committed_usd": r6(total), "ceiling_usd": ceiling, "remaining_usd": r6(ceiling - total) if ceiling else None,
+            "open_reservations": len(open_), "by_arm_usd": {k: r6(v) for k, v in sorted(by_arm.items())}, "by_trial_usd": {k: r6(v) for k, v in sorted(by_trial.items())}}
+
+
 def export_run(run_dir: Path | str) -> dict:
     run = InvestigationRun(Path(run_dir))
     state, ev = run.state, run.evidence
@@ -174,7 +197,7 @@ def export_run(run_dir: Path | str) -> dict:
         "proposals": [{"id": p.id, "basis": p.basis, "source_id": p.source_id, "label": p.label, "status": p.status, "validation": p.validation, "expected_effect": p.expected_effect, "risks": p.risks,
                        "auto_applicable": p.auto_applicable, "owner_selected": bool(p.change.get("owner_selected")), "exploratory": bool(p.change.get("exploratory")), "change": {"manual": p.change["manual"]} if "manual" in p.change else {"ops": [o.get("op") for o in p.change.get("ops", [])]}, "approved": bool(p.approvals), "provenance": prov(p)}
                       for p in ev.proposals.values()],
-        "evaluation": _evaluation(run, ev),
+        "evaluation": _evaluation(run, ev), "spend": _spend(run),
         "effects": [{"id": e.id, "proposal_id": e.proposal_id, "verdict": e.verdict, "n_pairs": e.n_pairs, "note": e.note, "measured": e.measured, "mode": e.provenance.mode} for e in ev.effects.values()],
         "investigation": {**_pick(rep_inv, ("skipped", "reason", "finished", "incomplete", "tool_calls", "model_requests", "model", "mode", "cost_usd")), "rejected_hypotheses": len(rep_inv.get("rejected_hypotheses") or [])},
         "statement": (final or interim or {}).get("statement"),
