@@ -50,12 +50,15 @@ def apply_manifest(ctx: Context) -> dict | None:
     items = []
     for pid in ids:
         p = run.evidence.proposals.get(pid)
-        if p is None or not p.auto_applicable or p.basis != "verified_finding":
-            raise ValueError(f"proposal {pid} is not an auto-applicable verified-finding proposal")
+        owner_selected = bool(p and p.basis == "unverified_hypothesis" and p.change.get("owner_selected") and p.provenance.source.startswith("owner:"))
+        if p is None or not p.auto_applicable or (p.basis != "verified_finding" and not owner_selected):
+            raise ValueError(f"proposal {pid} is not an auto-applicable verified-finding or owner-selected exploratory proposal")
         new, rep = apply_patch(snap, {k: v for k, v in p.change.items() if k in ("description", "ops")})
-        items.append({"proposal_id": pid, "label": p.label, "patch_sha256": rep["patch_sha256"], "parent_snapshot_sha256": snap.sha256, "result_snapshot_sha256": rep["new_sha256"], "pages_changed": rep["pages_changed"],
+        items.append({"proposal_id": pid, "label": p.label, "exploratory_owner_selected": owner_selected, "patch_sha256": rep["patch_sha256"], "parent_snapshot_sha256": snap.sha256, "result_snapshot_sha256": rep["new_sha256"], "pages_changed": rep["pages_changed"],
                       "inserted_bytes": rep["inserted_bytes"]})
-    return {"stage": "apply_fix", "applies_to": "the LOCAL MIRROR only (never a real site)", "proposals": items}
+    from ..fork import provenance_summary
+    forked = provenance_summary(run)
+    return {**({"forked_from": forked} if forked else {}), "stage": "apply_fix", "applies_to": "the LOCAL MIRROR only (never a real site)", "proposals": items}
 
 
 def apply_fix_stage(ctx: Context) -> dict:

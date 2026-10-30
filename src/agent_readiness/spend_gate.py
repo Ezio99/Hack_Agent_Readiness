@@ -43,10 +43,16 @@ class RequestGate:
     """Durable per-request spend gate (see module docstring). Plugged into `ResponseCapture` through `recorder.request_gate`."""
 
     def __init__(self, ledger: Ledger, run_id: str, *, run_cap: float = RUN_CAP_USD, per_request_cap: float = PER_REQUEST_CAP_USD, max_requests: int = MAX_REQUESTS, input_overhead_tokens: int = 0,
-                 scope_run_ids: frozenset[str] | None = None, scope_cap: float | None = None):
+                 scope_run_ids: frozenset[str] | None = None, scope_cap: float | None = None, extra_scopes: tuple = ()):
         self.ledger, self.run_id, self.run_cap, self.per_request_cap, self.max_requests = ledger, run_id, run_cap, per_request_cap, max_requests
         self.input_overhead_tokens = input_overhead_tokens
-        self.scope_run_ids, self.scope_cap = (frozenset(scope_run_ids) if scope_run_ids is not None else None), scope_cap     # optional STAGE cap across several gates' run ids (e.g. every baseline trial)
+        # Optional caps ("scopes") across SEVERAL gates' run ids (e.g. every baseline trial; or one arm AND the combined post-trials total). `scope_run_ids`/`scope_cap` is the first scope; `extra_scopes` are
+        # further (run ids, cap, name) triples. Every scope is checked on every reservation, against reserved + settled amounts read from the durable ledger.
+        self.scopes: list[tuple[frozenset[str], float, str]] = []
+        if scope_run_ids is not None and scope_cap is not None:
+            self.scopes.append((frozenset(scope_run_ids), scope_cap, "stage"))
+        self.scopes += [(frozenset(ids), cap, name) for ids, cap, name in extra_scopes]
+        self.scope_run_ids, self.scope_cap = (self.scopes[0][0], self.scopes[0][1]) if self.scopes else (None, None)
         self.violation: str | None = self._recover_violation()
         self.log: list[dict] = []
 
@@ -58,10 +64,11 @@ class RequestGate:
                 return f"an earlier request ({e['id']}) settled at US${e['usd']} above its reservation US${reserved[e['id']]}"
         return None
 
-    def scope_committed(self) -> float:
+    def scope_committed(self, ids=None) -> float:
+        ids = self.scope_run_ids if ids is None else ids
         state: dict[str, float] = {}
         for e in self.ledger.entries():
-            if e["kind"] in ("reserve", "settle") and e["id"].split(":req")[0] in (self.scope_run_ids or ()):
+            if e["kind"] in ("reserve", "settle") and e["id"].split(":req")[0] in (ids or ()):
                 if e["kind"] == "reserve":
                     state.setdefault(e["id"], e["usd"])
                 else:
@@ -94,8 +101,9 @@ class RequestGate:
             raise GateRefused(f"request-count cap {self.max_requests} reached")
         if self.run_committed() + usd > self.run_cap + 1e-9:
             raise GateRefused(f"run cap US${self.run_cap}: committed US${self.run_committed()} + this request's upper bound US${usd}")
-        if self.scope_cap is not None and self.scope_committed() + usd > self.scope_cap + 1e-9:
-            raise GateRefused(f"stage cap US${self.scope_cap}: committed US${self.scope_committed()} + this request's upper bound US${usd}")
+        for ids, cap, name in self.scopes:
+            if self.scope_committed(ids) + usd > cap + 1e-9:
+                raise GateRefused(f"{name} cap US${cap}: committed US${self.scope_committed(ids)} + this request's upper bound US${usd}")
         try:
             self.ledger.reserve(self._id(index), usd)            # raises Halt over the ledger ceiling or on a repeated id; fsync'd before returning
         except Halt as exc:
