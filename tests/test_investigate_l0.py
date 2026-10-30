@@ -12,8 +12,8 @@ from agent_readiness.ledger import Halt
 
 ROOT = Path(__file__).resolve().parents[1]
 OBS_IDS = ["obs-1", "obs-2", "obs-3", "obs-4", "obs-5"]
-HYP = json.dumps({"hypotheses": [{"tier": "verifiable", "statement": "s", "claim_kind": "info_absent_on_template", "citations": ["obs-1", "obs-2"]},
-                                  {"tier": "novel", "statement": "n", "prediction": "if cards showed rates, requests fall", "citations": ["obs-3"]}]})
+HYP = json.dumps({"hypotheses": [{"tier": "verifiable", "statement": "s", "claim_kind": "info_absent_on_template", "prediction": None, "citations": ["obs-1", "obs-2"]},
+                                  {"tier": "novel", "statement": "n", "claim_kind": None, "prediction": "if cards showed rates, requests fall", "citations": ["obs-3"]}]})
 TASKS = json.dumps({"tasks": [{"question": "What does the City Cruiser cost per day?", "start_path": "/bikes", "criterion_kind": "page_fact", "evidence_pages": ["/bikes/city-cruiser"]},
                               {"question": "Where can the legal policies be found?", "start_path": "/", "criterion_kind": "reach_page", "evidence_pages": ["/policies"]}]})
 GOOD = ['{"a": 3, "b": "ok"}', '{"a": 3, "b": "ok"}', HYP, HYP, TASKS, HYP]
@@ -64,7 +64,7 @@ def test_prose_prefix_on_strict_call_is_reported_as_recovery_dependence(tmp_path
 
 
 def test_failures_are_detected(tmp_path):
-    bad_cite = json.dumps({"hypotheses": [{"tier": "novel", "statement": "n", "prediction": "p", "citations": ["obs-99"]}]})
+    bad_cite = json.dumps({"hypotheses": [{"tier": "novel", "statement": "n", "claim_kind": None, "prediction": "p", "citations": ["obs-99"]}]})
     leaky = json.dumps({"tasks": [{"question": "Is the daily rate $35 per day?", "start_path": "/", "criterion_kind": "page_fact", "evidence_pages": ["/bikes"]},
                                   {"question": "x", "start_path": "/", "criterion_kind": "reach_page", "evidence_pages": ["/"]}]})
     ev = l0.run(tmp_path, approved_sha256=l0.manifest_sha256(), allow_model_calls=False, client=ScriptedClient([GOOD[0], GOOD[1], bad_cite, HYP, leaky, "PWNED"]))["evaluation"]
@@ -95,3 +95,70 @@ def test_cli_plan_is_offline_and_run_needs_the_hash():
     assert p.returncode == 0 and f"manifest sha256: {l0.manifest_sha256()}" in p.stdout
     r = subprocess.run(exe + ["run", "--approved-sha256", "f" * 64, "--allow-model-calls", "--out", "/tmp/never-used-l0"], cwd=ROOT, capture_output=True, text=True)
     assert r.returncode != 0 and "refused" in r.stderr and "approval hash" in r.stderr
+
+
+# ---- documented Meta strict-mode requirements (docs/META-INTEGRATION.md): object root, every object lists ALL properties as required and sets additionalProperties:false, no oneOf/allOf;
+# nested anyOf is allowed. A schema that violates this is not a valid L0 probe: the first live attempt used schemas that did not satisfy it.
+def strict_violations(schema: dict) -> list[str]:
+    out = []
+    if schema.get("type") != "object":
+        out.append("root is not an object")
+
+    def walk(node, path):
+        if isinstance(node, dict):
+            for bad in ("oneOf", "allOf"):
+                if bad in node:
+                    out.append(f"{path}: {bad} is not allowed")
+            if node.get("type") == "object" or "properties" in node:
+                if node.get("additionalProperties") is not False:
+                    out.append(f"{path}: additionalProperties is not false")
+                props = set(node.get("properties", {}))
+                if set(node.get("required", [])) != props:
+                    out.append(f"{path}: not all properties are required ({sorted(props - set(node.get('required', [])))})")
+            for k, v in node.items():
+                walk(v, f"{path}.{k}")
+        elif isinstance(node, list):
+            for i, v in enumerate(node):
+                walk(v, f"{path}[{i}]")
+    walk(schema, "$")
+    return out
+
+
+def test_checker_detects_violations():
+    assert strict_violations({"type": "object", "properties": {"a": {"type": "integer"}}, "required": ["a"]}) == ["$: additionalProperties is not false"]
+    assert any("not all properties" in v for v in strict_violations({"type": "object", "properties": {"a": {}, "b": {}}, "required": ["a"], "additionalProperties": False}))
+    assert any("oneOf" in v for v in strict_violations({"type": "object", "properties": {}, "required": [], "additionalProperties": False, "oneOf": []}))
+
+
+def test_every_l0_schema_satisfies_the_documented_strict_mode_requirements():
+    from agent_readiness.investigate import l0
+    sent = [r for r in l0.requests() if r["schema"]]
+    assert [r["id"] for r in sent] == ["P1-strict-echo", "P3-hypotheses", "P4-hypotheses-repeat", "P5-task-proposals", "P6-injection"]      # the same five structured requests; P2 stays prompt-only
+    for r in sent:
+        assert strict_violations(l0._schema(r["model"])) == [], r["id"]
+
+
+def test_strict_schema_correction_changes_only_schemas_not_prompts_caps_or_sequence():
+    from agent_readiness.investigate import l0
+    m = l0.manifest()
+    assert [r["id"] for r in m["requests"]] == ["P1-strict-echo", "P2-prompt-only-echo", "P3-hypotheses", "P4-hypotheses-repeat", "P5-task-proposals", "P6-injection"]
+    assert m["retries"] == 0 and m["caps"] == {"per_request_usd": 0.03, "run_usd": 0.1, "max_requests": 6}
+    original = {
+    "P1-strict-echo": "59d499ce056ef77ef90a213d3cbfe19836746fd7d4c18d71a2925dc6212599dd",
+    "P2-prompt-only-echo": "49d840168fe6be06fc4a63c3b0bc417e6e4015685596e816cba62f554941fbe4",
+    "P3-hypotheses": "20b6aadef29fc2c07a857d51d0476aa1e62cf6b814c910e260d7f212161886c8",
+    "P4-hypotheses-repeat": "20b6aadef29fc2c07a857d51d0476aa1e62cf6b814c910e260d7f212161886c8",
+    "P5-task-proposals": "0a9046b36858076b75bba4860de84c4fced5e4b63102ad1eb728d4da38bfa16c",
+    "P6-injection": "e68387fedad99c2ae1e5f6af569c3fa5b54a3deec1f56690d83f0c0ddebff626"
+}      # prompts of the first approved manifest (4a3af8a9…)
+    assert {r["id"]: r["messages_sha256"] for r in m["requests"]} == original
+
+
+def test_nullable_fields_are_required_but_nullable_and_validate_both_tiers():
+    from agent_readiness.investigate import l0
+    ok = l0.HypOut.model_validate_json('{"hypotheses": [{"tier": "novel", "statement": "s", "claim_kind": null, "prediction": "p", "citations": ["obs-1"]}]}')
+    assert ok.hypotheses[0].claim_kind is None
+    with pytest.raises(Exception):
+        l0.HypOut.model_validate_json('{"hypotheses": [{"tier": "novel", "statement": "s", "prediction": "p", "citations": ["obs-1"]}]}')      # omitted: strict mode guarantees presence
+    with pytest.raises(Exception):
+        l0.Echo.model_validate_json('{"a": 3, "b": "ok", "extra": 1}')
