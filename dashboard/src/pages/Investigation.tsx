@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Callout, Kpi, Pill } from "../components/ui";
-import { EXPLORATORY_VERDICT, MODE_LABEL, compare, parseInvestigation, roles, tally, type EvalResult, type Exploratory, type InvestigationExport, type Mode, type TrialRow } from "../lib/investigation";
+import { SideBySide, StorefrontBrowser } from "../components/Storefront";
+import { EXPLORATORY_VERDICT, MODE_LABEL, compare, parseInvestigation, roles, tally, type EvalResult, type Exploratory, type Hypothesis, type InvestigationExport, type Mode, type TrialRow } from "../lib/investigation";
 
 const pct = (a: number, b: number) => (b ? `${Math.round((100 * a) / b)}%` : "—");
 const num = (x: number | null | undefined, d = 2) => (typeof x === "number" ? x.toFixed(d) : "—");
@@ -84,7 +85,7 @@ export function Findings({ d }: { d: InvestigationExport }) {
               </ul>
             </li>))}
         </ul>)}
-      <h3>Hypotheses that are not findings</h3>
+      <details open><summary><strong>Hypotheses that are not findings</strong> (full records)</summary>
       <ul className="findings">
         {novel.map((h) => (
           <li key={h.id} className="finding conf-hypothesis">
@@ -100,6 +101,7 @@ export function Findings({ d }: { d: InvestigationExport }) {
           </li>))}
         {novel.length + other.length === 0 ? <li className="muted">None recorded.</li> : null}
       </ul>
+      </details>
     </>
   );
 }
@@ -233,7 +235,7 @@ export function Comparison({ d }: { d: InvestigationExport }) {
   return <>{e.exploratory ? <ExploratoryPanel d={d} x={e.exploratory} /> : null}{e.results.map((r) => <ResultCard key={r.proposal_id} d={d} r={r} />)}{e.rule?.causal_scope ? <p className="muted">Scope: {e.rule.causal_scope}</p> : null}</>;
 }
 
-export function Proposals({ d }: { d: InvestigationExport }) {
+export function Proposals({ d, onSeeChange }: { d: InvestigationExport; onSeeChange?: (proposalId: string) => void }) {
   if (!d.proposals.length) return <p className="muted">No proposals.</p>;
   return (
     <ul className="findings">
@@ -242,6 +244,7 @@ export function Proposals({ d }: { d: InvestigationExport }) {
           <span className={`pill ${p.basis === "verified_finding" ? "pill-pass" : "pill-warn"}`}>{p.label}</span>{p.owner_selected ? <> <span className="mode mode-unmeasured">chosen by the site owner · exploratory</span></> : null} <span className="muted">status: {p.status}{p.approved ? " · owner-approved" : ""} · validation: {p.validation}</span>
           <p>{"manual" in p.change ? p.change.manual : `Patch operations: ${p.change.ops.join(", ")}`}</p>
           <p className="muted">Expected: {p.expected_effect}{p.risks.length ? ` · Risks: ${p.risks.join("; ")}` : ""}</p>
+          {onSeeChange && d.storefront?.state === "ok" && d.storefront.variants.some((v) => v.proposal_id === p.id) ? <p><button type="button" className="primary" onClick={() => onSeeChange(p.id)}>See the exact website change →</button></p> : null}
         </li>))}
     </ul>
   );
@@ -257,7 +260,8 @@ export function Spend({ d }: { d: InvestigationExport }) {
   );
 }
 
-const JOURNEY = [["website", "1 · The website"], ["activity", "2 · Agent activity"], ["findings", "3 · Findings & recommendations"], ["results", "4 · Before & after"]] as const;
+const STEPS = [["website", "1 · Website"], ["analysis", "2 · Agent analysis"], ["recommendations", "3 · Recommendations"], ["changes", "4 · Website changes"], ["impact", "5 · Measured impact"]] as const;
+const goTo = (id: string) => document.getElementById(`inv-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
 function Coverage({ d }: { d: InvestigationExport }) {
   const kinds = [...new Set(d.tasks.map((t) => t.kind))];
@@ -265,10 +269,94 @@ function Coverage({ d }: { d: InvestigationExport }) {
   return <p className="muted">Task kinds in this set: {kinds.map((k) => k.replace(/_/g, " ")).join(", ")}.{kinds.includes("reach_page") ? "" : " No navigation (reach-page) task is included, so navigation effort is not measured."} Every task is graded independently of the agent’s own claim of success.</p>;
 }
 
+
+/** Baseline model requests per task against the task's request limit: where the agent's effort went. Descriptive only. */
+export function EffortBars({ d }: { d: InvestigationExport }) {
+  const rows = d.tasks.map((t) => ({ t, r: t.baseline.find((x) => !x.void) })).filter((x) => x.r && typeof x.r.model_requests === "number");
+  if (!rows.length) return null;
+  const top = Math.max(1, ...rows.map((x) => x.t.limits?.max_model_requests ?? x.r!.model_requests!));
+  return (
+    <figure className="paired effort" role="group" aria-label="Baseline model requests per task">
+      <figcaption>Model requests per task in the baseline run (limit {rows[0].t.limits?.max_model_requests ?? "—"})</figcaption>
+      {rows.map(({ t, r }) => (
+        <div key={t.task_id} className="bar-row">
+          <span className="bar-label">{t.question.length > 44 ? `${t.question.slice(0, 44)}…` : t.question}</span>
+          <span className="bar-track" aria-hidden="true"><span className="bar bar-H" style={{ width: `${Math.max(2, (100 * r!.model_requests!) / top)}%` }} /></span>
+          <span className="bar-value">{r!.model_requests} req · {r!.passed ? "pass" : "fail"}</span>
+        </div>))}
+    </figure>
+  );
+}
+
+/** Prominent, noncausal summary of a deterministic pattern. The investigator's own statement is kept verbatim in the record and behind "original wording"; only claim kinds with a known structural meaning are rephrased. */
+export function neutralSummary(h: Hypothesis): string {
+  if (h.claim_kind === "info_absent_on_template") return "Pattern observed: information shown on the detail pages is not shown on the listing page. The check supports the pattern; whether it affects agents is untested.";
+  return h.statement;
+}
+
+/** Who found what: what the investigator actually established, kept apart from what the owner chose to test. Neither is presented as a verified causal finding. */
+export function ProvenanceSplit({ d }: { d: InvestigationExport }) {
+  const pattern = d.hypotheses.filter((h) => h.tier === "verifiable" && h.status === "supported" && !h.promoted);
+  const refuted = d.hypotheses.filter((h) => h.tier === "verifiable" && h.status === "refuted").length;
+  const owner = d.hypotheses.filter((h) => h.provenance.source.startsWith("owner"));
+  const ownerProps = d.proposals.filter((p) => p.owner_selected);
+  return (
+    <div className="provsplit">
+      <section className="card prov-inv" aria-label="Discovered by the investigator">
+        <p className="eyebrow">Discovered by the investigator ({d.investigation.model ?? "model"})</p>
+        <h4>{d.findings.length ? `${d.findings.length} verified finding(s)` : "No verified findings"}</h4>
+        {pattern.map((h) => <p key={h.id}><Pill tone="neutral">structurally supported · not promoted</Pill> {neutralSummary(h)}<br /><span className="muted">Deterministic check: {h.verification?.verifier ?? "—"} → {h.verification?.result ?? "—"}. Not promoted to a finding: a pattern in the pages is not proof that it causes agent friction.</span>
+          {neutralSummary(h) !== h.statement ? <details><summary className="muted">Investigator’s original wording (unchanged)</summary><p className="muted">{h.statement}</p></details> : null}</p>)}
+        {!pattern.length && !d.findings.length ? <p className="muted">The investigator did not establish a supported pattern.</p> : null}
+        {refuted ? <p className="muted">{refuted} other hypothesis(es) were checked and refuted.</p> : null}
+      </section>
+      <section className="card prov-owner" aria-label="Chosen by the site owner">
+        <p className="eyebrow">Chosen by the site owner</p>
+        <h4>{ownerProps.length ? "Exploratory change to test" : "No owner-selected change"}</h4>
+        {owner.map((h) => <p key={h.id}><Pill tone="warn">owner hypothesis · UNVERIFIED</Pill> {h.statement}{h.prediction ? <><br /><span className="muted">Prediction: {h.prediction}</span></> : null}</p>)}
+        {!owner.length ? <p className="muted">All proposals below derive from verified findings or unverified investigator hypotheses.</p> : null}
+      </section>
+    </div>
+  );
+}
+
+/** Step 4: the exact website change for one proposal, with the metrics of the tasks it can affect. */
+export function ChangeSection({ d, proposalId }: { d: InvestigationExport; proposalId: string | null }) {
+  const sf = d.storefront;
+  if (!sf) return <p className="muted">This export contains no storefront pages, so the website change cannot be shown.</p>;
+  if (sf.state !== "ok") return <Callout title="Storefront pages not available" tone="info"><p>{sf.reason}</p></Callout>;
+  const v = sf.variants.find((x) => x.proposal_id === proposalId) ?? sf.variants[0];
+  if (!v) return <p className="muted">No patched version of the site was applied in this run.</p>;
+  const x = d.evaluation.exploratory;
+  const q = new Map(d.tasks.map((t) => [t.task_id, t.question]));
+  const dd = v.diff;
+  return (
+    <>
+      <p className="lead">{dd.elements_added} line(s) of text were added on {dd.pages_changed.length} page ({dd.pages_changed.map((p) => p).join(", ")}); {dd.pages_unchanged} other pages are byte-identical. Added text: {dd.inserted_text_chars} characters ({dd.net_bytes_added} HTML bytes). The change was applied to a local read-only copy, never to a real site.</p>
+      <SideBySide original={sf.original.pages} patched={v.pages} changed={dd.pages_changed} highlightText={dd.inserted_text} />
+      <Callout title="Which version did the agents see?" tone="info"><p>The original run and the unmodified repeat used the <strong>original</strong> pages; only the patched trials used the patched pages. These are the captured pages exactly as served to the agents, with no presentation theme.</p></Callout>
+      {x ? (
+        <section aria-label="Tasks this change can affect">
+          <h4>Tasks this change can affect</h4>
+          <div className="table-wrap"><table className="runs">
+            <caption className="sr-only">Affected tasks: baseline, unmodified repeat and patched</caption>
+            <thead><tr><th scope="col">Task</th><th scope="col">Historical baseline</th><th scope="col">Unmodified repeat (control)</th><th scope="col">Patched</th></tr></thead>
+            <tbody>{roles(x).filter((r) => r.role === "Affected").map(({ task_id }) => (
+              <tr key={task_id}><th scope="row">{q.get(task_id) ?? task_id}</th>
+                {(["baseline", "placebo", "patched"] as const).map((a) => <td key={a}>{x.tasks[a][task_id] ? `${x.tasks[a][task_id]!.requests} requests · ${x.tasks[a][task_id]!.pass ? "pass" : "fail"}` : "—"}</td>)}</tr>))}</tbody>
+          </table></div>
+          <p><button type="button" className="primary" onClick={() => goTo("impact")}>See the full measured impact →</button></p>
+        </section>) : null}
+    </>
+  );
+}
+
 export function InvestigationView({ d }: { d: InvestigationExport }) {
   const t = d.tasks.flatMap((x) => x.baseline), bt = tally(t);
   const inspect = d.stages.find((s) => s.name === "inspect")?.summary ?? {};
   const owner = d.proposals.some((p) => p.owner_selected);
+  const [selected, setSelected] = useState<string | null>(null);
+  const seeChange = (pid: string) => { setSelected(pid); setTimeout(() => goTo("changes"), 0); };
   return (
     <div className="investigation">
       {d.synthetic ? <p className="replay-banner" role="note">SYNTHETIC FIXTURE — hand-written test data, not produced by any model, agent or website.</p> : null}
@@ -280,14 +368,18 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
       {d.run.investigation_status && !["completed"].includes(d.run.investigation_status) ? <Callout title={d.run.investigation_status === "not_run" ? "No investigator ran" : "The investigation did not complete"} tone="bad"><p>Status: <code>{d.run.investigation_status}</code>. Nothing was concluded about the website; this is <strong>not</strong> a finding that no problem exists.</p></Callout> : null}
       {!d.run.complete ? <Callout title="Incomplete investigation" tone="warn"><p>Not every stage finished{d.run.missing_artifacts.length ? ` (missing: ${d.run.missing_artifacts.join(", ")})` : ""}. Sections below show what exists; nothing is inferred for the rest.</p></Callout> : null}
       <header className="hero">
-        <p className="eyebrow">Agent Readiness report</p>
+        <p className="eyebrow">Agent Readiness · one investigation, end to end</p>
         <h2>{d.run.target}</h2>
-        <p className="muted">Run <code>{d.run.id}</code> · mode {d.run.mode} · report source: {d.run.report_source} · outcome: <strong>{d.run.outcome.replace(/_/g, " ")}</strong></p>
-        <nav aria-label="Report journey"><ol className="journey-nav">{JOURNEY.map(([id, label]) => <li key={id}><a href={`#inv-${id}`} onClick={(e) => { e.preventDefault(); document.getElementById(`inv-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>{label}</a></li>)}</ol></nav>
+        <p className="muted">Website → agent analysis → recommendations → website changes → measured impact. Run <code>{d.run.id}</code> · mode {d.run.mode} · outcome: <strong>{d.run.outcome.replace(/_/g, " ")}</strong></p>
       </header>
+      <nav className="steprail" aria-label="Report journey"><ol>{STEPS.map(([id, label]) => <li key={id}><button type="button" onClick={() => goTo(id)}>{label}</button></li>)}</ol></nav>
 
       <section id="inv-website" aria-labelledby="inv-website-h">
-        <h3 id="inv-website-h" className="step">1 · The website and how it was tested</h3>
+        <h3 id="inv-website-h" className="step">1 · The website being evaluated</h3>
+        {d.storefront?.state === "ok" ? <>
+          <p className="muted">A controlled test site built for this project (not a real business). Browse the pages exactly as captured and given to the agent.</p>
+          <StorefrontBrowser pages={d.storefront.original.pages} />
+        </> : <Callout title="Site pages not included" tone="info"><p>{d.storefront && "reason" in d.storefront ? d.storefront.reason : "This export contains no captured pages."}</p></Callout>}
         <div className="kpis">
           <Kpi label="Pages inspected" value={typeof inspect.pages === "number" ? inspect.pages : "—"} note={inspect.fidelity ? `inspection fidelity: ${inspect.fidelity}` : undefined} />
           <Kpi label="Frozen tasks" value={d.tasks.length} note={`${d.tasks.filter((x) => x.partition === "holdout").length} held out from the investigator`} />
@@ -295,27 +387,33 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
           <Kpi label="Void trials" value={d.trials.void} note="excluded, never a website result" tone={d.trials.void ? "b" : "neutral"} />
         </div>
         <Coverage d={d} />
-        <h4>How the investigation ran</h4>
-        <Timeline d={d} />
+        <details><summary>How the investigation ran (stages)</summary><Timeline d={d} /></details>
       </section>
 
-      <section id="inv-activity" aria-labelledby="inv-activity-h">
-        <h3 id="inv-activity-h" className="step">2 · What the agent did on each task</h3>
-        <p className="muted">One browsing agent (frozen configuration) attempted every task. Effort is the number of model requests and pages viewed; success needs evidence-backed correctness.</p>
+      <section id="inv-analysis" aria-labelledby="inv-analysis-h">
+        <h3 id="inv-analysis-h" className="step">2 · What the agent did on each task</h3>
+        <p className="muted">One browsing agent (frozen configuration) attempted every task. Effort is the number of model requests and pages viewed; success needs evidence-backed correctness, graded independently of the agent.</p>
+        <EffortBars d={d} />
         <h3>Task outcomes</h3>
         <TaskTable d={d} />
       </section>
 
-      <section id="inv-findings" aria-labelledby="inv-findings-h">
-        <h3 id="inv-findings-h" className="step">3 · Findings and recommendations</h3>
-        {owner ? <Callout title="Owner-selected experiment" tone="warn"><p>The change tested below was chosen by the site owner. It is labelled <strong>EXPERIMENTAL</strong> and is <strong>not</strong> an investigator-verified finding.</p></Callout> : null}
+      <section id="inv-recommendations" aria-labelledby="inv-recommendations-h">
+        <h3 id="inv-recommendations-h" className="step">3 · Findings and recommendations</h3>
+        {owner ? <Callout title="Owner-selected experiment" tone="warn"><p>The change tested below was chosen by the site owner. It is labelled <strong>EXPERIMENTAL</strong> and is <strong>not</strong> an investigator-verified finding. Neither the investigator’s pattern nor the owner’s change is presented as a verified cause.</p></Callout> : null}
+        <ProvenanceSplit d={d} />
         <Findings d={d} />
         <h3>Proposed changes</h3>
-        <Proposals d={d} />
+        <Proposals d={d} onSeeChange={seeChange} />
       </section>
 
-      <section id="inv-results" aria-labelledby="inv-results-h">
-        <h3 id="inv-results-h" className="step">4 · Before and after</h3>
+      <section id="inv-changes" aria-labelledby="inv-changes-h">
+        <h3 id="inv-changes-h" className="step">4 · The website change</h3>
+        <ChangeSection d={d} proposalId={selected} />
+      </section>
+
+      <section id="inv-impact" aria-labelledby="inv-impact-h">
+        <h3 id="inv-impact-h" className="step">5 · Measured impact</h3>
         <h3>Baseline versus patched</h3>
         <Comparison d={d} />
         <Spend d={d} />
@@ -325,22 +423,31 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
   );
 }
 
+type Source = "public-synthetic" | "expb-synthetic" | "verified-synthetic";
+const SOURCES: Record<Source, { label: string; load: () => Promise<unknown> }> = {
+  "public-synthetic": { label: "EXP-B synthetic (public view)", load: async () => (await import("../fixtures/investigation-synthetic-expb-public.json")).default },
+  "expb-synthetic": { label: "EXP-B synthetic (private view)", load: async () => (await import("../fixtures/investigation-synthetic-expb.json")).default },
+  "verified-synthetic": { label: "Verified-finding synthetic", load: async () => (await import("../fixtures/investigation-synthetic.json")).default },
+};
+
 export function InvestigationPage() {
   const [data, setData] = useState<InvestigationExport | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const load = (text: string) => { const p = parseInvestigation(text); if (p.ok) { setData(p.data); setError(null); } else { setData(null); setError(p.error); } };
+  const [loadId, setLoadId] = useState(0);                                      // a new report must not inherit the previous report's page selection or scroll state
+  const load = (text: string) => { const p = parseInvestigation(text); if (p.ok) { setData(p.data); setLoadId((n) => n + 1); setError(null); } else { setData(null); setError(p.error); } };
+  const pick = async (k: Source) => load(JSON.stringify(await SOURCES[k].load()));
+  useEffect(() => { void pick("public-synthetic"); }, []);
   return (
     <>
-      <h2>Investigation report</h2>
-      <p className="lead">A read-only view of one autonomous investigation: what the agent could not do, what was verified, what is only a hypothesis, and whether a change helped.</p>
+      <h2>Agent Readiness investigation</h2>
+      <p className="lead">How well can an AI agent use this website, what gets in the way, what could change, and did the change help? One investigation, end to end.</p>
       <div className="loader">
+        <label>Demo data <select aria-label="Demo data" defaultValue="public-synthetic" onChange={(e) => void pick(e.target.value as Source)}>{(Object.keys(SOURCES) as Source[]).map((k) => <option key={k} value={k}>{SOURCES[k].label}</option>)}</select></label>
         <label>Open an exported report <input type="file" accept="application/json,.json" onChange={async (e) => { const f = e.target.files?.[0]; if (f) load(await f.text()); }} /></label>
-        <button type="button" onClick={async () => load(JSON.stringify((await import("../fixtures/investigation-synthetic.json")).default))}>Load synthetic example</button>
-        <button type="button" onClick={async () => load(JSON.stringify((await import("../fixtures/investigation-synthetic-expb.json")).default))}>Load EXP-B synthetic example</button>
       </div>
-      <p className="muted">Files are read in your browser only; nothing is uploaded. Create one with <code>readiness investigate export RUN_DIR --out report.json</code>.</p>
+      <p className="muted">Files are read in your browser only; nothing is uploaded. Create one with <code>readiness investigate export RUN_DIR --out report.json --public</code>. The example shown first is a labelled synthetic fixture, not an experimental result.</p>
       {error ? <Callout title="Cannot display this file" tone="bad"><p>{error}</p></Callout> : null}
-      {data ? <InvestigationView d={data} /> : !error ? <p className="muted">No report loaded.</p> : null}
+      {data ? <InvestigationView key={loadId} d={data} /> : !error ? <p className="muted">No report loaded.</p> : null}
     </>
   );
 }

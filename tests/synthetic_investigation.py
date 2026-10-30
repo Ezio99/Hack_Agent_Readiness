@@ -91,6 +91,30 @@ EXPB_PLACEBO = {"syn-t1": (True, 12), "syn-t2": (False, 13), "syn-t3": (False, 1
 EXPB_PATCHED = {"syn-t1": (True, 4), "syn-t2": (True, 4), "syn-t3": (False, 12), "syn-t4": (True, 2), "syn-t5": (True, 3), "syn-t6": (True, 3)}
 
 
+CABINS = [("pine", "Pine Cabin", 95), ("lake", "Lake Cabin", 120), ("birch", "Birch Cabin", 80)]
+
+
+def _page(title: str, body: str) -> bytes:
+    nav = '<nav><a href="/">Home</a><a href="/cabins">Cabins</a></nav>'
+    return (f'<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>{title}</title><style>body{{font:16px/1.5 system-ui;margin:0}}main,header{{max-width:640px;margin:auto;padding:12px}}'
+            f'.card{{border:1px solid #ccc;padding:8px;margin:8px 0;list-style:none}}</style></head><body><header>{nav}</header><main>{body}</main></body></html>').encode()
+
+
+def _storefront_snapshots(root: Path, pid: str) -> None:
+    """SYNTHETIC cabin site (invented), original and patched (nightly fee copied into each listing card), saved where the exporter looks for them."""
+    from agent_readiness.investigate.sitemodel.snapshot import Resource, Snapshot
+    html = "text/html; charset=utf-8"
+    def build(fee: bool):
+        res = {"/": Resource("/", 200, html, _page("Birchwood Cabins", "<h1>Birchwood Cabins</h1><p>Synthetic example site.</p><p><a href=\"/cabins\">Browse cabins</a></p>"))}
+        cards = "".join(f'<li class="card"><a href="/cabins/{s}"><h3>{n}</h3></a><p>Sleeps 4.</p>{f"<p>Nightly fee: ${fee_}</p>" if fee else ""}</li>' for s, n, fee_ in CABINS)
+        res["/cabins"] = Resource("/cabins", 200, html, _page("Cabins", f"<h1>Cabins</h1><ul>{cards}</ul>"))
+        for s, n, fee_ in CABINS:
+            res[f"/cabins/{s}"] = Resource(f"/cabins/{s}", 200, html, _page(n, f"<h1>{n}</h1><table><tr><th>Nightly fee</th><td>${fee_}</td></tr><tr><th>Check-in</th><td>3pm</td></tr></table>"))
+        return Snapshot(res, {})
+    build(False).save(root / "snapshot")
+    build(True).save(root / "patched" / pid)
+
+
 def build_expb(root: Path) -> Path:
     """A SYNTHETIC EXP-B-shaped run: one unpromoted verified pattern, an owner-selected exploratory change, historical baseline + unmodified repeat + patched trials, the frozen verdict and the separate exploratory verdict, both computed by the real code."""
     from agent_readiness.investigate.evaluate import exploratory
@@ -106,6 +130,7 @@ def build_expb(root: Path) -> Path:
                                       citations=[o1.id, o2.id], provenance=OWNER))
     p1 = ev.add_proposal(Proposal(basis="unverified_hypothesis", source_id=h2.id, change={"ops": [{"op": "copy_field_to_listing"}], "owner_selected": True, "exploratory": True},
                                   expected_effect=h2.prediction, risks=["Owner-selected exploratory change: the underlying hypothesis is unverified"], provenance=OWNER))
+    _storefront_snapshots(run.dir, p1.id)
     run.write_artifact("tasks-manifest", {"schema": "tasks-manifest-v1", "tasks": [{"task_id": t, "partition": pt, "kind": k, "source": "model", "question": q, "start_path": "/", "limits": LIMITS} for t, pt, k, q in EXPB_TASKS]})
     run.write_artifact("post-plan", EXPB_PLAN)
     att = {}

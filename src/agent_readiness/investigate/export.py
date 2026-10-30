@@ -5,6 +5,7 @@ journeys, mirror logs, trial directories, tool logs, model transcripts, absolute
 what is missing instead of failing. It reads files only: no model, network, browser or approval gate is touched."""
 from __future__ import annotations
 
+import difflib
 import json
 import os
 import re
@@ -15,6 +16,7 @@ from .models import now
 from .evaluate import exploratory
 from .report import NOTICES
 from .run import InvestigationRun
+from .sitemodel.snapshot import Snapshot
 from .trials.stage import VOID_STATUSES
 
 SCHEMA = "investigation-dashboard-v1"
@@ -134,6 +136,54 @@ def _spend(run: InvestigationRun) -> dict:
             "open_reservations": len(open_), "by_arm_usd": {k: r6(v) for k, v in sorted(by_arm.items())}, "by_trial_usd": {k: r6(v) for k, v in sorted(by_trial.items())}}
 
 
+STOREFRONT_MAX_PAGE_BYTES, STOREFRONT_MAX_TOTAL_BYTES, STOREFRONT_MAX_PAGES = 20_000, 100_000, 20
+_TAG = re.compile(r"(<[^>]+>)")
+UNSAFE_HTML = re.compile(r"<script|<iframe|<object|<embed|<link\b|<img\b|<form\b|\son[a-z]+\s*=|javascript:|https?://|//[a-z0-9.-]+\.[a-z]", re.I)
+
+
+def _pages(snap: Snapshot) -> dict[str, str] | None:
+    """Captured HTML pages of a snapshot, or None when they would break the size limits or contain anything a static, inert view must not carry (scripts, frames, forms, images, external addresses)."""
+    pages = {r.path: r.text() for r in snap.pages()}
+    size = {p: len(h.encode("utf-8")) for p, h in pages.items()}                 # limits are in UTF-8 bytes, per page and in total
+    if not pages or len(pages) > STOREFRONT_MAX_PAGES or sum(size.values()) > STOREFRONT_MAX_TOTAL_BYTES or any(n > STOREFRONT_MAX_PAGE_BYTES for n in size.values()) or any(UNSAFE_HTML.search(h) for h in pages.values()):
+        return None
+    return pages
+
+
+def _inserted_text(before: str, after: str) -> list[str]:
+    """Visible text that exists only in `after`: the tag-token diff, keeping non-tag tokens from inserted or replaced ranges."""
+    a, b = [t for t in _TAG.split(before) if t], [t for t in _TAG.split(after) if t]
+    out = []
+    for op, _i1, _i2, j1, j2 in difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes():
+        if op in ("insert", "replace"):
+            out += [t for t in b[j1:j2] if not t.startswith("<") and t.strip()]
+    return out
+
+
+def _storefront(run: InvestigationRun, pids: list[str]) -> dict:
+    """The captured pages of the evaluated site and of each patched mirror, for a static, inert in-dashboard browser (no server). Presentation of what the agent was given: never restyled or edited."""
+    try:
+        orig = Snapshot.load(run.dir / "snapshot")
+    except (OSError, ValueError, KeyError):
+        return {"state": "missing", "reason": "no snapshot in this run"}
+    o = _pages(orig)
+    if o is None:
+        return {"state": "omitted", "reason": "captured pages exceed the size limits or contain content a static view must not carry"}
+    variants = []
+    for pid in pids:
+        try:
+            pages = _pages(Snapshot.load(run.dir / "patched" / pid))
+        except (OSError, ValueError, KeyError):
+            continue
+        if pages is None:
+            continue
+        changed = sorted(p for p in pages if pages[p] != o.get(p))
+        ins = {p: _inserted_text(o.get(p, ""), pages[p]) for p in changed}
+        variants.append({"proposal_id": pid, "pages": pages, "diff": {"pages_changed": changed, "pages_unchanged": len(pages) - len(changed), "inserted_text": ins,
+                                                                   "elements_added": sum(len(v) for v in ins.values()), "inserted_text_chars": sum(len(t) for v in ins.values() for t in v), "net_bytes_added": sum(len(pages[p].encode()) - len(o.get(p, "").encode()) for p in changed)}})
+    return {"state": "ok", "note": "Captured pages of a controlled test site, as the agent was given them (no presentation theme). Shown read-only; links are inactive in the dashboard.", "original": {"pages": o}, "variants": variants}
+
+
 def export_run(run_dir: Path | str) -> dict:
     run = InvestigationRun(Path(run_dir))
     state, ev = run.state, run.evidence
@@ -197,7 +247,7 @@ def export_run(run_dir: Path | str) -> dict:
         "proposals": [{"id": p.id, "basis": p.basis, "source_id": p.source_id, "label": p.label, "status": p.status, "validation": p.validation, "expected_effect": p.expected_effect, "risks": p.risks,
                        "auto_applicable": p.auto_applicable, "owner_selected": bool(p.change.get("owner_selected")), "exploratory": bool(p.change.get("exploratory")), "change": {"manual": p.change["manual"]} if "manual" in p.change else {"ops": [o.get("op") for o in p.change.get("ops", [])]}, "approved": bool(p.approvals), "provenance": prov(p)}
                       for p in ev.proposals.values()],
-        "evaluation": _evaluation(run, ev), "spend": _spend(run),
+        "evaluation": _evaluation(run, ev), "spend": _spend(run), "storefront": _storefront(run, [p.id for p in ev.proposals.values()]),
         "effects": [{"id": e.id, "proposal_id": e.proposal_id, "verdict": e.verdict, "n_pairs": e.n_pairs, "note": e.note, "measured": e.measured, "mode": e.provenance.mode} for e in ev.effects.values()],
         "investigation": {**_pick(rep_inv, ("skipped", "reason", "finished", "incomplete", "tool_calls", "model_requests", "model", "mode", "cost_usd")), "rejected_hypotheses": len(rep_inv.get("rejected_hypotheses") or [])},
         "statement": (final or interim or {}).get("statement"),
@@ -291,8 +341,9 @@ def check_public(obj, path: str = "$") -> None:
     elif isinstance(obj, list):
         for i, v in enumerate(obj):
             check_public(v, f"{path}[{i}]")
-    elif isinstance(obj, str) and PUBLIC_LEAK.search(obj):
-        raise ExportError(f"internal identifier, hash or path in the public export at {path}: {PUBLIC_LEAK.search(obj).group(0)[:20]}")
+    elif isinstance(obj, str) and (PUBLIC_LEAK.search(obj) or (obj.lstrip().lower().startswith(("<!doctype", "<html")) and UNSAFE_HTML.search(obj))):
+        hit = PUBLIC_LEAK.search(obj) or UNSAFE_HTML.search(obj)
+        raise ExportError(f"internal identifier, hash, path or unsafe markup in the public export at {path}: {hit.group(0)[:20]}")
 
 
 def write_export(run_dir: Path | str, out: Path | str, *, public: bool = False) -> dict:

@@ -482,6 +482,47 @@
     }
   ],
   "statement": "SYNTHETIC FIXTURE: no verified finding; the change was chosen by the owner and is exploratory; trials show an association only.",
+  "storefront": {
+    "note": "Captured pages of a controlled test site, as the agent was given them (no presentation theme). Shown read-only; links are inactive in the dashboard.",
+    "original": {
+      "pages": {
+        "/": "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>Birchwood Cabins</title><style>body{font:16px/1.5 system-ui;margin:0}main,header{max-width:640px;margin:auto;padding:12px}.card{border:1px solid #ccc;padding:8px;margin:8px 0;list-style:none}</style></head><body><header><nav><a href=\"/\">Home</a><a href=\"/cabins\">Cabins</a></nav></header><main><h1>Birchwood Cabins</h1><p>Synthetic example site.</p><p><a href=\"/cabins\">Browse cabins</a></p></main></body></html>",
+        "/cabins": "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>Cabins</title><style>body{font:16px/1.5 system-ui;margin:0}main,header{max-width:640px;margin:auto;padding:12px}.card{border:1px solid #ccc;padding:8px;margin:8px 0;list-style:none}</style></head><body><header><nav><a href=\"/\">Home</a><a href=\"/cabins\">Cabins</a></nav></header><main><h1>Cabins</h1><ul><li class=\"card\"><a href=\"/cabins/pine\"><h3>Pine Cabin</h3></a><p>Sleeps 4.</p></li><li class=\"card\"><a href=\"/cabins/lake\"><h3>Lake Cabin</h3></a><p>Sleeps 4.</p></li><li class=\"card\"><a href=\"/cabins/birch\"><h3>Birch Cabin</h3></a><p>Sleeps 4.</p></li></ul></main></body></html>",
+        "/cabins/birch": "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>Birch Cabin</title><style>body{font:16px/1.5 system-ui;margin:0}main,header{max-width:640px;margin:auto;padding:12px}.card{border:1px solid #ccc;padding:8px;margin:8px 0;list-style:none}</style></head><body><header><nav><a href=\"/\">Home</a><a href=\"/cabins\">Cabins</a></nav></header><main><h1>Birch Cabin</h1><table><tr><th>Nightly fee</th><td>$80</td></tr><tr><th>Check-in</th><td>3pm</td></tr></table></main></body></html>",
+        "/cabins/lake": "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>Lake Cabin</title><style>body{font:16px/1.5 system-ui;margin:0}main,header{max-width:640px;margin:auto;padding:12px}.card{border:1px solid #ccc;padding:8px;margin:8px 0;list-style:none}</style></head><body><header><nav><a href=\"/\">Home</a><a href=\"/cabins\">Cabins</a></nav></header><main><h1>Lake Cabin</h1><table><tr><th>Nightly fee</th><td>$120</td></tr><tr><th>Check-in</th><td>3pm</td></tr></table></main></body></html>",
+        "/cabins/pine": "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>Pine Cabin</title><style>body{font:16px/1.5 system-ui;margin:0}main,header{max-width:640px;margin:auto;padding:12px}.card{border:1px solid #ccc;padding:8px;margin:8px 0;list-style:none}</style></head><body><header><nav><a href=\"/\">Home</a><a href=\"/cabins\">Cabins</a></nav></header><main><h1>Pine Cabin</h1><table><tr><th>Nightly fee</th><td>$95</td></tr><tr><th>Check-in</th><td>3pm</td></tr></table></main></body></html>"
+      }
+    },
+    "state": "ok",
+    "variants": [
+      {
+        "diff": {
+          "elements_added": 3,
+          "inserted_text": {
+            "/cabins": [
+              "Nightly fee: $95",
+              "Nightly fee: $120",
+              "Nightly fee: $80"
+            ]
+          },
+          "inserted_text_chars": 49,
+          "net_bytes_added": 70,
+          "pages_changed": [
+            "/cabins"
+          ],
+          "pages_unchanged": 4
+        },
+        "pages": {
+          "/": "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>Birchwood Cabins</title><style>body{font:16px/1.5 system-ui;margin:0}main,header{max-width:640px;margin:auto;padding:12px}.card{border:1px solid #ccc;padding:8px;margin:8px 0;list-style:none}</style></head><body><header><nav><a href=\"/\">Home</a><a href=\"/cabins\">Cabins</a></nav></header><main><h1>Birchwood Cabins</h1><p>Synthetic example site.</p><p><a href=\"/cabins\">Browse cabins</a></p></main></body></html>",
+          "/cabins": "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>Cabins</title><style>body{font:16px/1.5 system-ui;margin:0}main,header{max-width:640px;margin:auto;padding:12px}.card{border:1px solid #ccc;padding:8px;margin:8px 0;list-style:none}</style></head><body><header><nav><a href=\"/\">Home</a><a href=\"/cabins\">Cabins</a></nav></header><main><h1>Cabins</h1><ul><li class=\"card\"><a href=\"/cabins/pine\"><h3>Pine Cabin</h3></a><p>Sleeps 4.</p><p>Nightly fee: $95</p></li><li class=\"card\"><a href=\"/cabins/lake\"><h3>Lake Cabin</h3></a><p>Sleeps 4.</p><p>Nightly fee: $120</p></li><li class=\"card\"><a href=\"/cabins/birch\"><h3>Birch Cabin</h3></a><p>Sleeps 4.</p><p>Nightly fee: $80</p></li></ul></main></body></html>",
+          "/cabins/birch": "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>Birch Cabin</title><style>body{font:16px/1.5 system-ui;margin:0}main,header{max-width:640px;margin:auto;padding:12px}.card{border:1px solid #ccc;padding:8px;margin:8px 0;list-style:none}</style></head><body><header><nav><a href=\"/\">Home</a><a href=\"/cabins\">Cabins</a></nav></header><main><h1>Birch Cabin</h1><table><tr><th>Nightly fee</th><td>$80</td></tr><tr><th>Check-in</th><td>3pm</td></tr></table></main></body></html>",
+          "/cabins/lake": "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>Lake Cabin</title><style>body{font:16px/1.5 system-ui;margin:0}main,header{max-width:640px;margin:auto;padding:12px}.card{border:1px solid #ccc;padding:8px;margin:8px 0;list-style:none}</style></head><body><header><nav><a href=\"/\">Home</a><a href=\"/cabins\">Cabins</a></nav></header><main><h1>Lake Cabin</h1><table><tr><th>Nightly fee</th><td>$120</td></tr><tr><th>Check-in</th><td>3pm</td></tr></table></main></body></html>",
+          "/cabins/pine": "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>Pine Cabin</title><style>body{font:16px/1.5 system-ui;margin:0}main,header{max-width:640px;margin:auto;padding:12px}.card{border:1px solid #ccc;padding:8px;margin:8px 0;list-style:none}</style></head><body><header><nav><a href=\"/\">Home</a><a href=\"/cabins\">Cabins</a></nav></header><main><h1>Pine Cabin</h1><table><tr><th>Nightly fee</th><td>$95</td></tr><tr><th>Check-in</th><td>3pm</td></tr></table></main></body></html>"
+        },
+        "proposal_id": "prp-9683fc3e5b"
+      }
+    ]
+  },
   "synthetic": true,
   "tasks": [
     {

@@ -5,6 +5,9 @@ import expbFixture from "./fixtures/investigation-synthetic-expb.json";
 import publicFixture from "./fixtures/investigation-synthetic-expb-public.json";
 import { compare, parseInvestigation, tally, type InvestigationExport } from "./lib/investigation";
 import { InvestigationPage, InvestigationView } from "./pages/Investigation";
+import { frame } from "./components/Storefront";
+import App from "./App";
+import { vi } from "vitest";
 
 const base = () => structuredClone(fixture) as unknown as InvestigationExport;
 const html = (d: InvestigationExport) => renderToStaticMarkup(<InvestigationView d={d} />);
@@ -101,7 +104,7 @@ describe("investigation view", () => {
   });
   it("starts empty with a loader and the export instructions (no data bundled eagerly)", () => {
     const h = renderToStaticMarkup(<InvestigationPage />);
-    expect(h).toContain("No report loaded"); expect(h).toContain("readiness investigate export"); expect(h).toContain("Load synthetic example"); expect(h).toContain("nothing is uploaded");
+    expect(h).toContain("No report loaded"); expect(h).toContain("readiness investigate export"); expect(h).toContain("EXP-B synthetic (public view)"); expect(h).toContain("nothing is uploaded"); expect(h).toContain("not an experimental result");
   });
 });
 
@@ -123,8 +126,9 @@ describe("EXP-B journey: three arms, two verdicts", () => {
   it("parses the EXP-B synthetic fixture and lays out the four-part journey", () => {
     expect(parseInvestigation(JSON.stringify(expbFixture)).ok).toBe(true);
     const h = html(expb());
-    for (const label of ["1 · The website and how it was tested", "2 · What the agent did on each task", "3 · Findings and recommendations", "4 · Before and after"]) expect(h).toContain(label);
-    for (const id of ["inv-website", "inv-activity", "inv-findings", "inv-results"]) expect(h).toContain(`href="#${id}"`);
+    for (const label of ["1 · The website being evaluated", "2 · What the agent did on each task", "3 · Findings and recommendations", "4 · The website change", "5 · Measured impact"]) expect(h).toContain(label);
+    for (const id of ["inv-website", "inv-analysis", "inv-recommendations", "inv-changes", "inv-impact"]) expect(h).toContain(`id="${id}"`);
+    for (const label of ["1 · Website", "2 · Agent analysis", "3 · Recommendations", "4 · Website changes", "5 · Measured impact"]) expect(h).toContain(label);
     expect(h).toContain("SYNTHETIC FIXTURE");
   });
   it("shows historical baseline, unmodified repeat and patched side by side for each task role", () => {
@@ -176,7 +180,8 @@ describe("EXP-B journey: three arms, two verdicts", () => {
     expect(h).not.toContain("Unmodified repeat"); expect(h).toContain("Baseline versus patched");
   });
   it("the page offers both labelled synthetic examples", () => {
-    expect(renderToStaticMarkup(<InvestigationPage />)).toContain("Load EXP-B synthetic example");
+    const h = renderToStaticMarkup(<InvestigationPage />);
+    for (const l of ["EXP-B synthetic (public view)", "EXP-B synthetic (private view)", "Verified-finding synthetic"]) expect(h).toContain(l);
   });
 });
 
@@ -228,5 +233,66 @@ describe("public-demo export", () => {
     expect(JSON.stringify(d)).not.toMatch(/"(why|attribution|by_trial_usd)"/);
     expect(d.stages.every((s) => s.manifest_sha256 === null)).toBe(true);
     expect(() => html(d)).not.toThrow();
+  });
+});
+
+describe("investigation-first journey", () => {
+  const pub = () => structuredClone(publicFixture) as unknown as InvestigationExport;
+  it("Investigation is the default page and the legacy views are a secondary Historical experiments section", () => {
+    vi.stubGlobal("window", { location: { hash: "" }, addEventListener() {}, removeEventListener() {}, scrollTo() {} });
+    const h = renderToStaticMarkup(<App />);
+    vi.unstubAllGlobals();
+    expect(h).toContain("Agent Readiness investigation"); expect(h).not.toContain("Recorded experiment data · Task 007");
+    expect(h.indexOf("Investigation</a>")).toBeLessThan(h.indexOf("Historical experiments"));
+    for (const l of ["Task 007 overview", "Scope comparison", "Evidence &amp; method", "Recorded replay", "Protected scanner"]) expect(h.indexOf(l)).toBeGreaterThan(h.indexOf("Historical experiments"));
+  });
+  it("a legacy hash still shows its Task 007 page and banner", () => {
+    vi.stubGlobal("window", { location: { hash: "#/scopes" }, addEventListener() {}, removeEventListener() {}, scrollTo() {} });
+    const h = renderToStaticMarkup(<App />);
+    vi.unstubAllGlobals();
+    expect(h).toContain("Recorded experiment data · Task 007");
+  });
+  it("step 1 shows the original pages in an inert, scriptless frame with an explicit page selector", () => {
+    const h = html(pub());
+    expect(h).toContain('sandbox=""'); expect(h).toContain("pointer-events:none"); expect(h).toContain("Captured pages"); expect(h).toContain("links are inactive here, so use the page selector");
+    expect(h).toContain("controlled test site built for this project");
+    for (const p of ["/cabins", "/cabins/pine"]) expect(h).toContain(`<code>${p}</code>`);
+    expect(h).not.toMatch(/<script|allow-scripts|allow-same-origin/);
+  });
+  it("frame() only makes links inert and wraps exactly the inserted text; everything else is untouched", () => {
+    const page = '<html><head><title>T</title></head><body><ul><li><p>Pine</p><p>Nightly fee: $95</p></li><li><p>Nightly fee: $95 extra</p></li></ul></body></html>';
+    const plain = frame(page);
+    expect(plain.replace("<style>a{pointer-events:none;cursor:default}</style>", "")).toBe(page);
+    const hl = frame(page, ["Nightly fee: $95"]);
+    expect(hl.match(/<mark /g)).toHaveLength(1);                                    // only the exact text node, not a longer one containing it
+    expect(hl.replace(/<mark [^>]*>|<\/mark>/g, "").replace("<style>a{pointer-events:none;cursor:default}</style>", "")).toBe(page);
+  });
+  it("step 3 separates what the investigator established from what the owner chose, and claims no verified cause", () => {
+    const h = html(pub());
+    expect(h).toContain("Discovered by the investigator"); expect(h).toContain("Chosen by the site owner"); expect(h).toContain("No verified findings");
+    expect(h).toContain("structurally supported · not promoted"); expect(h).toContain("owner hypothesis · UNVERIFIED"); expect(h).toContain("not proof that it causes agent friction");
+    expect(h).toContain("Neither the investigator’s pattern nor the owner’s change is presented as a verified cause");
+    expect(h).toContain("See the exact website change →");
+  });
+  it("step 4 ties the proposal to its exact diff and to the affected-task metrics, with the original/patched disclosure", () => {
+    const h = html(pub());
+    expect(h).toContain("3 line(s) of text were added on 1 page (/cabins); 4 other pages are byte-identical");
+    expect(h).toContain("Original (evaluated)"); expect(h).toContain("Patched (retest)"); expect(h).toContain("Highlight the added text (display only)"); expect(h).toContain("&lt;mark") ;
+    expect(h).toContain("Tasks this change can affect"); expect(h).toContain("12 requests · pass"); expect(h).toContain("4 requests · pass"); expect(h).toContain("See the full measured impact →");
+    expect(h).toContain("only the patched trials used the patched pages"); expect(h).toContain("no presentation theme");
+  });
+  it("step 5 keeps both verdicts, the three arms and the control disclosure visible", () => {
+    const d = pub();
+    d.evaluation.exploratory!.tasks.patched["task-3"] = { requests: 11, page_views: 10, pass: true };
+    const h = html(d);
+    for (const t of ["paired-signflip-v1", "exploratory-listing-v1", "Historical baseline", "Unmodified repeat", "Patched", "A control task changed outcome"]) expect(h).toContain(t);
+  });
+  it("renders honestly when the storefront is missing, omitted or the export predates it", () => {
+    for (const sf of [undefined, { state: "missing", reason: "no snapshot in this run" }, { state: "omitted", reason: "captured pages exceed the size limits" }] as any[]) {
+      const d = pub(); if (sf) d.storefront = sf; else delete d.storefront;
+      const h = html(d);
+      expect(h).toContain("Site pages not included"); expect(h).not.toContain("<iframe");
+      expect(h).toContain("Chosen by the site owner");
+    }
   });
 });

@@ -413,6 +413,10 @@
     }
   ],
   "statement": "SYNTHETIC FIXTURE: findings are website properties; trials show an association; a measured effect needs live trials.",
+  "storefront": {
+    "reason": "no snapshot in this run",
+    "state": "missing"
+  },
   "synthetic": true,
   "tasks": [
     {

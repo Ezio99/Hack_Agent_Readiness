@@ -32,8 +32,14 @@ export interface InvestigationExport {
   observations: Observation[]; hypotheses: Hypothesis[]; findings: Finding[]; proposals: Proposal[]; evaluation: Evaluation; effects: Effect[];
   investigation: { skipped: boolean | null; reason: string | null; finished: boolean | null; incomplete: boolean | null; tool_calls: number | null; model_requests: number | null; model: string | null; mode: string | null; cost_usd: number | null; rejected_hypotheses: number };
   statement: string | null;
+  storefront?: Storefront;
   spend?: { state: "ok" | "missing"; basis?: string; committed_usd?: number; ceiling_usd?: number | null; remaining_usd?: number | null; open_reservations?: number; by_arm_usd?: Record<string, number>; by_trial_usd?: Record<string, number> };
 }
+
+export interface StorefrontDiff { pages_changed: string[]; pages_unchanged: number; inserted_text: Record<string, string[]>; elements_added: number; inserted_text_chars: number; net_bytes_added: number }
+export interface StorefrontVariant { proposal_id: string; pages: Record<string, string>; diff: StorefrontDiff }
+/** Captured pages of the evaluated site (and of each patched mirror) for the static, inert in-dashboard browser. */
+export type Storefront = { state: "ok"; note: string; original: { pages: Record<string, string> }; variants: StorefrontVariant[] } | { state: "missing" | "omitted"; reason: string };
 
 export type Parsed = { ok: true; data: InvestigationExport } | { ok: false; error: string };
 const ARRAYS = ["modes", "notices", "stages", "tasks", "observations", "hypotheses", "findings", "proposals", "effects"] as const;
