@@ -23,8 +23,8 @@ def test_manifest_is_exact_bounded_and_synthetic():
     m = l0.manifest()
     assert m["model"] == "muse-spark-1.3" and m["endpoint"] == "https://api.meta.ai/v1/chat/completions" and m["retries"] == 0 and len(m["requests"]) == 6
     assert m["caps"] == {"per_request_usd": 0.03, "run_usd": 0.1, "max_requests": 6}
-    assert m["worst_case_total_usd"] < l0.RUN_CAP_USD and m["run_cap_aud"] <= 0.30 and m["worst_case_total_aud"] < 0.10
-    assert all(r["upper_bound_usd"] <= l0.PER_REQUEST_CAP_USD and r["max_completion_tokens"] <= 1500 for r in m["requests"])
+    assert m["worst_case_total_usd"] < l0.RUN_CAP_USD and m["run_cap_aud"] <= 0.30 and m["worst_case_total_aud"] < m["run_cap_aud"]      # caps now leave room for hidden reasoning (see l0.CAP_*)
+    assert all(r["upper_bound_usd"] <= l0.PER_REQUEST_CAP_USD and r["max_completion_tokens"] <= l0.CAP_STRUCTURED for r in m["requests"])
     assert "synthetic" in m["inputs"]
     text = json.dumps([r["messages"] for r in l0.requests()], default=str).lower()
     from agent_readiness.investigate.zoo import sites
@@ -162,3 +162,34 @@ def test_nullable_fields_are_required_but_nullable_and_validate_both_tiers():
         l0.HypOut.model_validate_json('{"hypotheses": [{"tier": "novel", "statement": "s", "prediction": "p", "citations": ["obs-1"]}]}')      # omitted: strict mode guarantees presence
     with pytest.raises(Exception):
         l0.Echo.model_validate_json('{"a": 3, "b": "ok", "extra": 1}')
+
+
+# ---- L0 attempt 2 findings: reasoning effort and caps are explicit in the manifest; the manifest body equals the body MetaClient sends; failures keep sanitized diagnostics ----------------
+def test_reasoning_effort_and_caps_are_explicit_in_the_manifest_and_match_the_wire_body():
+    import types
+    from agent_readiness.investigate.llm import LLMRequest
+    from agent_readiness.investigate.llm.meta import DEFAULT_REASONING_EFFORT, INPUT_OVERHEAD_TOKENS, MetaClient
+    m = l0.manifest()
+    assert m["reasoning_effort"] == DEFAULT_REASONING_EFFORT == "low" and m["input_overhead_tokens_reserved"] == INPUT_OVERHEAD_TOKENS
+    assert {r["id"]: r["max_completion_tokens"] for r in m["requests"]} == {"P1-strict-echo": 1024, "P2-prompt-only-echo": 1024, "P3-hypotheses": 4096, "P4-hypotheses-repeat": 4096, "P5-task-proposals": 4096, "P6-injection": 4096}
+    cfg = l0.ModelConfig()
+    for r in l0.requests():
+        req = LLMRequest(messages=r["messages"], purpose=r["purpose"], max_tokens=r["max_tokens"], response_schema=l0._schema(r["model"]) if r["schema"] else None)
+        wire = MetaClient.body(types.SimpleNamespace(model=cfg.model, reasoning_effort=DEFAULT_REASONING_EFFORT), req)
+        assert wire == l0._body(cfg, r), r["id"]                                        # what is approved is exactly what is sent
+
+
+def test_validation_failure_keeps_sanitized_diagnostics_and_counts_the_cost(tmp_path):
+    from agent_readiness.investigate.llm.client import LLMResponse
+    SECRET_TEXT = "PRIVATE-MODEL-TEXT-91ab"
+
+    class Cut:
+        mode, model = "live", "muse-spark-1.3"
+        def complete(self, request):
+            return LLMResponse(text="", mode="live", model="m", usage={"prompt_tokens": 105, "completion_tokens": 200}, cost_usd=0.000981, finish_reason="length", reasoning_tokens=198)
+    rep = l0.run(tmp_path, approved_sha256=l0.manifest_sha256(), allow_model_calls=True, client=Cut())
+    (only,) = rep["results"]
+    d = only["diagnostics"]
+    assert d["kind"] == "empty_content" and d["finish_reason"] == "length" and d["content_chars"] == 0 and d["reasoning_tokens"] == 198 and d["completion_tokens"] == 200 and d["prompt_tokens"] == 105
+    assert only["valid"] is False and only["cost_usd"] == 0.000981 and rep["total_calculated_usd"] == 0.000981       # failed requests still count toward spend
+    assert SECRET_TEXT not in json.dumps(rep)

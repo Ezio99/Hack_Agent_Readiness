@@ -216,3 +216,179 @@ def test_l0_report_records_the_classified_cause_without_changing_caps_or_stoppin
     text = json.dumps(rep)
     assert "SECRET" not in text and "Return a=3" not in text and "Bearer" not in text
     assert len([e for e in led.entries() if e["kind"] == "reserve"]) == 1
+
+
+# ---- reasoning effort, sanitized response diagnostics and the under-reservation regression (L0 attempt 2) --------------------------------------------------------------------------------
+from agent_readiness.investigate.llm.client import LLMResponse, response_diagnostics
+from agent_readiness.investigate.llm.meta import INPUT_OVERHEAD_TOKENS
+from agent_readiness.capture import GateRefused
+
+
+def test_reasoning_effort_is_sent_validated_and_optional(tmp_path):
+    seen = []
+    led, gate, client = meta(tmp_path, ok_handler(seen))
+    client.complete(REQ)
+    assert json.loads(seen[0].content)["reasoning_effort"] == "low"
+    for bad in ("none", "max", ""):
+        with pytest.raises(ValueError):
+            MetaClient(ModelConfig(), "k", gate, transport=httpx.MockTransport(ok_handler([])), reasoning_effort=bad)
+    off = MetaClient(ModelConfig(), "k", gate_for(tmp_path / "off")[1], transport=httpx.MockTransport(ok_handler(seen)), reasoning_effort=None)
+    off.complete(REQ)
+    assert "reasoning_effort" not in json.loads(seen[-1].content)
+
+
+def test_finish_reason_and_reasoning_tokens_are_captured_without_changing_usage_or_cost(tmp_path):
+    body = {"choices": [{"message": {"content": None}, "finish_reason": "length"}], "usage": {"prompt_tokens": 105, "completion_tokens": 200, "completion_tokens_details": {"reasoning_tokens": 198}}}
+    led, gate, client = meta(tmp_path, lambda r: httpx.Response(200, json=body))
+    resp = client.complete(REQ)
+    assert resp.text == "" and resp.finish_reason == "length" and resp.reasoning_tokens == 198 and resp.usage == {"prompt_tokens": 105, "completion_tokens": 200}
+    assert resp.cost_usd == round(105 * 1.25e-6 + 200 * 4.25e-6, 6)
+    odd = {"choices": [{"message": {"content": "{}"}}], "usage": {"prompt_tokens": 1, "completion_tokens": 1, "completion_tokens_details": "weird"}}
+    led, gate, client = meta(tmp_path / "odd", lambda r: httpx.Response(200, json=odd))
+    r2 = client.complete(REQ)
+    assert r2.reasoning_tokens is None and r2.finish_reason is None
+
+
+def test_structured_failure_diagnostics_classify_without_leaking_text(tmp_path):
+    cases = [("", "length", "empty_content"), ('{"a": 1', "length", "truncated"), ("sorry, here you go", "stop", "not_json"), ('{"a": "PRIVATE-VALUE-1"}', "stop", "schema_mismatch")]
+    for text, finish, kind in cases:
+        resp = LLMResponse(text=text, mode="live", model="m", usage={"prompt_tokens": 10, "completion_tokens": 20}, cost_usd=0.1, finish_reason=finish, reasoning_tokens=7)
+        d = response_diagnostics(resp)
+        assert d["kind"] == kind and d["finish_reason"] == finish and d["content_chars"] == len(text) and d["reasoning_tokens"] == 7 and "PRIVATE" not in json.dumps(d)
+
+    class C:
+        mode, model = "live", "m"
+        def complete(self, request):
+            return LLMResponse(text='{"a": "PRIVATE-VALUE-1"}', mode="live", model="m", usage={"prompt_tokens": 3, "completion_tokens": 4}, finish_reason="stop")
+    with pytest.raises(StructuredOutputError) as ei:
+        complete_structured(C(), REQ, Out, retries=0)
+    d = ei.value.diagnostics
+    assert d["kind"] == "schema_mismatch" and d["schema_errors"] == [{"loc": "a", "type": "int_parsing"}] and "PRIVATE" not in json.dumps(d) and "PRIVATE" not in str(ei.value)
+
+
+def test_input_overhead_prevents_the_l0_attempt2_under_reservation_without_weakening_the_ceiling(tmp_path):
+    """L0 attempt 2: the P1 request reserved US$0.00096 (estimate 89 input tokens + the 200-token cap) but settled at US$0.000981 (>= 105 prompt tokens): a bound violation that closes the gate."""
+    import types
+    from agent_readiness.investigate import l0
+    from agent_readiness.ledger import cost_of
+    r = l0.requests()[0]
+    body = MetaClient.body(types.SimpleNamespace(model="muse-spark-1.3", reasoning_effort=None), LLMRequest(messages=r["messages"], purpose=r["purpose"], max_tokens=200, response_schema=l0._schema(r["model"])))
+    usage = {"prompt_tokens": 105, "completion_tokens": 200}                               # the smallest usage that reproduces the observed 0.000981
+    assert cost_of(usage) == 0.000981
+    old = RequestGate(Ledger(tmp_path / "old", ceiling=1.0), "x", input_overhead_tokens=0)
+    old.reserve(1, body)
+    assert old.settle(1, {"http_status": 200, "usage": usage}).get("bound_violation") and old.violation              # reproduces the failure
+    new = RequestGate(Ledger(tmp_path / "new", ceiling=1.0), "x", input_overhead_tokens=INPUT_OVERHEAD_TOKENS)
+    reserved = new.reserve(1, body)
+    assert reserved["upper_bound_usd"] > cost_of(usage) and reserved["upper_bound_usd"] > 0.00096
+    out = new.settle(1, {"http_status": 200, "usage": usage})
+    assert out["settled"] and not new.violation and out["actual_usd"] == 0.000981
+    tight = RequestGate(Ledger(tmp_path / "tight", ceiling=0.001), "x", input_overhead_tokens=INPUT_OVERHEAD_TOKENS)     # the hard ceiling still binds, and the larger reservation counts against it
+    with pytest.raises(GateRefused):
+        tight.reserve(1, body)
+    assert tight.ledger.entries() == []
+    with pytest.raises(GateRefused):
+        RequestGate(Ledger(tmp_path / "cap", ceiling=1.0), "x", per_request_cap=0.001, input_overhead_tokens=INPUT_OVERHEAD_TOKENS).reserve(1, body)
+
+
+def test_default_gate_is_unchanged_for_other_live_paths(tmp_path):
+    from agent_readiness.spend_gate import upper_bound_usd
+    body = {"model": "m", "messages": [{"role": "user", "content": "hello"}], "max_completion_tokens": 100}
+    assert upper_bound_usd(body) == upper_bound_usd(body, 0) and upper_bound_usd(body, 128)[0] > upper_bound_usd(body)[0]
+    assert RequestGate(Ledger(tmp_path, ceiling=1.0), "x").input_overhead_tokens == 0
+
+
+def test_diagnostics_tolerate_non_string_content():
+    d = response_diagnostics(LLMResponse(text=[{"type": "text", "text": "PRIVATE"}], mode="live", model="m", finish_reason="stop"))     # type: ignore[arg-type]
+    assert d["kind"] == "not_text" and d["content_chars"] == 0 and "PRIVATE" not in json.dumps(d)
+
+
+# ---- reservation guarantees (reviewer finding): what the bound covers, what it does not, and that the failure mode is detected -------------------------------------------------------------
+def _body(chars: int, schema_props: int = 1, cap: int = 512) -> dict:
+    schema = {"type": "object", "additionalProperties": False, "required": [f"p{i}" for i in range(schema_props)], "properties": {f"p{i}": {"type": "string", "description": "x" * 40} for i in range(schema_props)}}
+    return {"model": "m", "max_completion_tokens": cap, "messages": [{"role": "system", "content": "s" * (chars // 2)}, {"role": "user", "content": "u" * (chars - chars // 2)}],
+            "response_format": {"type": "json_schema", "json_schema": {"name": "o", "strict": True, "schema": schema}}}
+
+
+def test_bound_grows_with_prompt_and_schema_size_and_includes_the_fixed_allowance_exactly_once():
+    from agent_readiness.spend_gate import upper_bound_usd
+    from agent_readiness.ledger import PRICE_INPUT_PER_M
+    sizes = [(100, 1), (2_000, 5), (20_000, 20), (80_000, 60)]
+    bounds = [upper_bound_usd(_body(c, p))[0] for c, p in sizes]
+    assert bounds == sorted(bounds) and len(set(bounds)) == len(bounds)
+    for c, p in sizes:
+        plain, with_overhead = upper_bound_usd(_body(c, p)), upper_bound_usd(_body(c, p), INPUT_OVERHEAD_TOKENS)
+        step = INPUT_OVERHEAD_TOKENS * PRICE_INPUT_PER_M / 1e6
+        assert step - 1e-9 <= with_overhead[0] - plain[0] <= step + 6e-6          # a constant (plus at most the rounding of the old 5-decimal estimate), not scaled with size
+        assert with_overhead[1]["input_overhead_tokens"] == INPUT_OVERHEAD_TOKENS and plain[1]["input_overhead_tokens"] == 0
+
+
+def test_bound_covers_larger_prompts_and_schemas_under_its_stated_assumptions(tmp_path):
+    """Stated assumption: the provider tokenises at >= ~3.6 characters per token (chars/4 with a 10 % margin) and adds at most INPUT_OVERHEAD_TOKENS of fixed framing. Under that model no size violates."""
+    from agent_readiness.spend_gate import upper_bound_usd
+    from agent_readiness.capture import message_texts
+    for i, (c, p) in enumerate([(100, 1), (2_000, 5), (20_000, 20), (80_000, 60)]):
+        body = _body(c, p)
+        sysm, usr, _ = message_texts(body)
+        schema_bytes = len(json.dumps(body["response_format"]["json_schema"]["schema"], sort_keys=True, separators=(",", ":")))
+        actual_prompt = round((len(sysm) + len(usr) + schema_bytes) / 3.7) + INPUT_OVERHEAD_TOKENS            # slightly denser than the estimate's 4.0, plus the full allowance
+        gate = RequestGate(Ledger(tmp_path / str(i), ceiling=10.0), "x", per_request_cap=1.0, run_cap=10.0, input_overhead_tokens=INPUT_OVERHEAD_TOKENS)
+        gate.reserve(1, body)
+        out = gate.settle(1, {"http_status": 200, "usage": {"prompt_tokens": actual_prompt, "completion_tokens": body["max_completion_tokens"]}})      # worst case: the whole cap is used
+        assert out["settled"] and not gate.violation, (c, p)
+
+
+def test_text_denser_than_the_assumption_is_not_covered_but_is_detected_and_closes_the_gate(tmp_path):
+    """Documented non-guarantee: if tokenisation is much denser (here 2 characters per token) a large prompt is under-reserved. The truth is recorded, a violation is flagged and the gate refuses the next send."""
+    from agent_readiness.capture import message_texts
+    body = _body(40_000, 10)
+    sysm, usr, _ = message_texts(body)
+    gate = RequestGate(Ledger(tmp_path, ceiling=10.0), "x", per_request_cap=1.0, run_cap=10.0, input_overhead_tokens=INPUT_OVERHEAD_TOKENS)
+    reserved = gate.reserve(1, body)["upper_bound_usd"]
+    out = gate.settle(1, {"http_status": 200, "usage": {"prompt_tokens": (len(sysm) + len(usr)) // 2, "completion_tokens": 512}})
+    assert out.get("bound_violation") and gate.violation and out["actual_usd"] > reserved
+    assert gate.ledger.committed() == out["actual_usd"]                                                        # the ledger holds the actual cost, not the smaller reservation
+    with pytest.raises(GateRefused):
+        gate.reserve(2, body)
+
+
+def test_details_separate_image_headroom_from_the_fixed_input_overhead():
+    from agent_readiness.spend_gate import upper_bound_usd, IMAGE_UPPER_BOUND_TOKENS
+    from agent_readiness.capture import IMAGE_TOKENS_ESTIMATE, INPUT_SAFETY_MARGIN
+    img = {"model": "m", "max_completion_tokens": 100, "messages": [{"role": "user", "content": [{"type": "text", "text": "hi"}, {"type": "image_url", "image_url": {"url": "data:image/png;base64,AAAA"}}]}]}
+    expected_headroom = round((IMAGE_UPPER_BOUND_TOKENS - IMAGE_TOKENS_ESTIMATE) * INPUT_SAFETY_MARGIN)
+    _u0, d0 = upper_bound_usd(img)
+    _u1, d1 = upper_bound_usd(img, 128)
+    assert d0["image_headroom_tokens"] == d1["image_headroom_tokens"] == expected_headroom and d0["input_overhead_tokens"] == 0 and d1["input_overhead_tokens"] == 128
+    text_only = upper_bound_usd({"model": "m", "max_completion_tokens": 100, "messages": [{"role": "user", "content": "hi"}]}, 128)[1]
+    assert text_only["image_headroom_tokens"] == 0 and text_only["input_overhead_tokens"] == 128
+
+
+# ---- non-string provider content: the whole validation/recovery path fails cleanly (reviewer finding) -----------------------------------------------------------------------------------
+def test_non_string_content_never_reaches_validation_or_recovery(monkeypatch):
+    import agent_readiness.investigate.llm.client as C
+
+    def boom(*a, **k):
+        raise AssertionError("recover() must not be called with non-string content")
+    monkeypatch.setattr(C, "recover", boom)
+    for content in ([{"type": "text", "text": "PRIVATE-PART"}], {"text": "PRIVATE"}, 42):
+        class Cl:
+            mode, model = "live", "m"
+            def complete(self, request, content=content):
+                return LLMResponse(text=content, mode="live", model="m", usage={"prompt_tokens": 5, "completion_tokens": 6}, cost_usd=0.01, finish_reason="stop")   # type: ignore[arg-type]
+        with pytest.raises(StructuredOutputError) as ei:
+            complete_structured(Cl(), REQ, Out, retries=1)
+        d = ei.value.diagnostics
+        assert d["kind"] == "not_text" and d["completion_tokens"] == 6 and "non_string_content" in str(ei.value) and "PRIVATE" not in json.dumps(d) + str(ei.value)
+
+
+def test_non_string_content_end_to_end_through_the_real_client_and_l0(tmp_path):
+    from agent_readiness.investigate import l0
+    body = {"choices": [{"message": {"content": [{"type": "text", "text": "PRIVATE-PART"}]}, "finish_reason": "stop"}], "usage": {"prompt_tokens": 120, "completion_tokens": 30, "completion_tokens_details": {"reasoning_tokens": 12}}}
+    led, gate, client = meta(tmp_path / "c", lambda r: httpx.Response(200, json=body), run_cap=0.10, per_request_cap=0.03, max_requests=6)
+    cfg = ModelConfig()
+    rep = l0.run(tmp_path / "out", approved_sha256=l0.manifest_sha256(l0.manifest(cfg)), allow_model_calls=True, client=client, config=cfg)
+    (only,) = rep["results"]                                                                              # P1 unusable: the probe stops without crashing
+    assert only["valid"] is False and only["diagnostics"]["kind"] == "not_text" and only["diagnostics"]["reasoning_tokens"] == 12 and only["cost_usd"] > 0
+    assert rep["total_calculated_usd"] == only["cost_usd"] and "PRIVATE" not in json.dumps(rep)
+    assert [e["kind"] for e in led.entries()] == ["reserve", "settle"]                                    # a 200 with usage settles the actual cost
