@@ -381,3 +381,117 @@ def test_the_ambiguous_request_still_counts_toward_the_three_request_limit(tmp_p
     gate.reserve(3, _body(100))
     with pytest.raises(GateRefused, match="request-count cap"):
         gate.reserve(4, _body(100))                                                                             # a re-send of batch 0 would be a fourth request: impossible inside the approved manifest
+
+
+# ------------------------------------------------------------------------------------------------------------ recovery integrity (review round 3)
+from agent_readiness.investigate.taskgen.stage import AttemptMarkerMismatch, approved_batch_hashes
+
+
+def _marker(run, i, **over):
+    path = run.dir / "private" / f"taskgen-attempt-{i}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    m = {"batch": i, "request_sha256": request_sha256(propose.batch_requests(run.artifact("site-profile"))[i]), "reserved_before": 0, "at": "t", **over}
+    path.write_text(json.dumps(m))
+    return path
+
+
+def _reserve(run, n):
+    led = run.ledger(2.05)
+    for k in range(1, n + 1):
+        if not led.attempted(f"{run.state['id']}-taskgen:req{k:02d}"):
+            led.reserve(f"{run.state['id']}-taskgen:req{k:02d}", 0.03)
+
+
+@pytest.mark.parametrize("bad", [-1, 3, 99, "0", None, True, 1.0])
+def test_recovery_rejects_invalid_batch_indices(tmp_path, bad):
+    run = make_run(tmp_path)
+    _marker(run, 0)
+    _reserve(run, 1)
+    with pytest.raises(ValueError, match="invalid batch index"):
+        recover_batch(run, bad, note="owner")
+    assert not (run.dir / "private" / "taskgen-batch-0.json").exists()
+
+
+def test_recovery_rejects_a_marker_whose_request_hash_does_not_match_the_approved_request(tmp_path):
+    run = make_run(tmp_path)
+    _marker(run, 0, request_sha256="0" * 64)
+    _reserve(run, 1)
+    with pytest.raises(ValueError, match="refusing to abandon.*does not match"):
+        recover_batch(run, 0, note="owner")
+    _marker(run, 1, batch=0)                                                                                   # right hash for batch 1 but the file claims batch 0
+    _reserve(run, 2)
+    with pytest.raises(ValueError, match="does not match"):
+        recover_batch(run, 1, note="owner")
+    _marker(run, 2, request_sha256=request_sha256(propose.batch_requests(run.artifact("site-profile"))[0]))      # batch 2's marker carrying batch 0's request
+    with pytest.raises(ValueError, match="does not match"):
+        recover_batch(run, 2, note="owner")
+    assert not list((run.dir / "private").glob("taskgen-batch-*.json"))
+
+
+def test_recovery_is_checked_against_the_approved_manifest_not_just_the_current_code(tmp_path):
+    run = make_run(tmp_path, "site-5", "ap")
+    m = flow.taskgen_manifest(Context(run, options={"n_tasks": 8, "total_cap_usd": 2.05}))
+    h = run.manifest_sha256(m)
+    run.write_artifact(f"manifests/taskgen-{h[:16]}", m)
+    run.approve("taskgen", h, "owner approved this manifest")
+    assert approved_batch_hashes(run) == m["batch_request_sha256"]
+    _marker(run, 0)
+    _reserve(run, 1)
+    assert recover_batch(run, 0, note="owner")["status"] == "abandoned"                                        # the marker matches the approved request: allowed
+    other = make_run(tmp_path, "site-5", "ap2")                                                                 # an approved manifest whose request list differs from what the code would send
+    m2 = {**flow.taskgen_manifest(Context(other, options={"n_tasks": 8, "total_cap_usd": 2.05})), "batch_request_sha256": ["a" * 64, "b" * 64, "c" * 64]}
+    h2 = other.manifest_sha256(m2)
+    other.write_artifact(f"manifests/taskgen-{h2[:16]}", m2)
+    other.approve("taskgen", h2, "owner approved a different request list")
+    assert approved_batch_hashes(other) == ["a" * 64, "b" * 64, "c" * 64]
+    _marker(other, 0)                                                                                           # matches the current code but NOT the approved configuration
+    _reserve(other, 1)
+    with pytest.raises(ValueError, match="does not match"):
+        recover_batch(other, 0, note="owner")
+
+
+def test_recovery_requires_a_ledger_reservation_after_the_marker(tmp_path):
+    run = make_run(tmp_path)
+    _marker(run, 0)                                                                                             # marker, but the ledger holds no reservation: nothing was ambiguous
+    with pytest.raises(ValueError, match="not ambiguous"):
+        recover_batch(run, 0, note="owner")
+    _reserve(run, 1)
+    _marker(run, 0, reserved_before=1)                                                                          # one reservation, but it predates the marker
+    with pytest.raises(ValueError, match="not ambiguous"):
+        recover_batch(run, 0, note="owner")
+    _marker(run, 0, reserved_before=5)                                                                          # the ledger is SHORTER than when the marker was written: inconsistent
+    with pytest.raises(ValueError, match="inconsistent ledger"):
+        recover_batch(run, 0, note="owner")
+    assert not (run.dir / "private" / "taskgen-batch-0.json").exists()
+    _marker(run, 0, reserved_before=0)                                                                          # a reservation after the marker: now (and only now) recovery is allowed
+    assert recover_batch(run, 0, note="owner")["status"] == "abandoned"
+
+
+def test_a_normal_restart_rejects_a_mismatched_marker_instead_of_treating_it_as_current(tmp_path):
+    for label, over in (("hash", {"request_sha256": "f" * 64}), ("index", {"batch": 2})):
+        run = make_run(tmp_path, name=f"mm-{label}")
+        marker = _marker(run, 0, **over)
+        client = Seq([never])
+        with pytest.raises(AttemptMarkerMismatch, match="does not match") as ei:
+            taskgen_stage(Context(run, llm=client, options={"n_tasks": 4}))
+        assert client.calls == [] and isinstance(ei.value, Halt) and marker.exists()                           # nothing sent, marker neither deleted nor trusted
+        assert not (run.dir / "private" / "taskgen-batch-0.json").exists()
+    run = make_run(tmp_path, name="mm-ok")                                                                       # control: a matching marker with no reservation is resolved and the batch is attempted
+    _marker(run, 0)
+    ok = Seq([GOOD, OTHER, GOOD])
+    stage(run, ok)
+    assert len(ok.calls) == 3
+
+
+def test_cli_recover_batch_rejects_an_invalid_index_and_a_non_ambiguous_batch(tmp_path, monkeypatch):
+    from agent_readiness.cli import main as cli_main
+    run = make_run(tmp_path)
+    _marker(run, 0)
+    argv = lambda *a: monkeypatch.setattr("sys.argv", ["readiness", "investigate", "recover-batch", str(run.dir), "--abandon", "--note", "owner", *a])
+    argv("--batch", "7")
+    with pytest.raises(SystemExit, match="invalid batch index"):
+        cli_main()
+    argv("--batch", "0")                                                                                         # marker present but no reservation after it
+    with pytest.raises(SystemExit, match="not ambiguous"):
+        cli_main()
+    assert not (run.dir / "private" / "taskgen-batch-0.json").exists()

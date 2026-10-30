@@ -35,6 +35,10 @@ class AmbiguousBatchAttempt(Halt):
     it cost, is unknown to this run. The owner decides explicitly (`recover_batch`)."""
 
 
+class AttemptMarkerMismatch(Halt):
+    """An attempt marker does not belong to the request this run would send for that batch (wrong index or request hash). It is never treated as the current request; the owner must look."""
+
+
 def _reserved_requests(run) -> int:
     """Taskgen requests the durable spend ledger has reserved so far (reserve-before-send: a reservation exists iff the request may have been sent). Read-only; creates nothing."""
     path = run.dir / "spend" / "ledger.jsonl"
@@ -48,18 +52,51 @@ def _attempt_marker(run, i: int):
     return run.dir / "private" / f"taskgen-attempt-{i}.json"
 
 
+def approved_batch_hashes(run) -> list[str]:
+    """The request hashes of the CURRENT approved taskgen configuration: the latest approved taskgen manifest (verified against its approved hash), or - for runs that have no taskgen approval
+    (mock / scripted) - the requests the current code and site profile produce."""
+    for a in reversed(run.approvals()):
+        if a["stage"] == "taskgen":
+            path = run.dir / "artifacts" / "manifests" / f"taskgen-{a['manifest_sha256'][:16]}.json"
+            if path.exists():
+                m = json.loads(path.read_text())
+                if run.manifest_sha256(m) == a["manifest_sha256"]:
+                    return list(m["batch_request_sha256"])
+    return [request_sha256(r) for r in propose_mod.batch_requests(run.artifact("site-profile"))]
+
+
+def _check_marker(marker_path, i: int, expected_hash: str) -> dict:
+    m = json.loads(marker_path.read_text())
+    if m.get("batch") != i or m.get("request_sha256") != expected_hash:
+        raise AttemptMarkerMismatch(f"taskgen batch {i}: the attempt marker (batch {m.get('batch')}, request {str(m.get('request_sha256'))[:12]}) does not match the request this run would send "
+                                    f"({expected_hash[:12]}). It is not treated as the current request and nothing is sent; inspect {marker_path.name} and the ledger.")
+    return m
+
+
 def recover_batch(run, i: int, *, note: str) -> dict:
-    """Explicit owner recovery of an ambiguous batch: record it as `abandoned` so the stage can continue WITHOUT re-sending it. The request's reservation stays counted in the ledger (it may have
-    been billed), and the 3-request limit still includes it, so a re-send is not possible within the approved manifest."""
+    """Explicit owner recovery of an ambiguous batch: record it as `abandoned` so the stage can continue WITHOUT re-sending it. Allowed only when (1) `i` is a batch of the current approved
+    configuration, (2) the attempt marker is that batch's (index and request hash match the approved manifest) and (3) the durable ledger shows a reservation made after the marker - i.e. the
+    attempt really is ambiguous. The reservation stays counted (it may have been billed) and the 3-request limit still includes it, so a re-send is not possible within the approved manifest."""
     if not note.strip():
         raise ValueError("recovery needs a note saying who decided what")
+    expected = approved_batch_hashes(run)
+    if not isinstance(i, int) or isinstance(i, bool) or not 0 <= i < len(expected):
+        raise ValueError(f"invalid batch index {i!r}: the approved taskgen configuration has batches 0..{len(expected) - 1}")
     if (run.dir / "private" / f"taskgen-batch-{i}.json").exists():
         raise ValueError(f"batch {i} already has a persisted result; nothing to recover")
     marker = _attempt_marker(run, i)
     if not marker.exists():
         raise ValueError(f"batch {i} has no attempt marker; nothing to recover")
-    rec = {"status": "abandoned", "drafts": [], "meta": {"error": "ambiguous attempt abandoned by the owner (request may have been sent and billed; result unknown)", "note": note.strip()[:300],
-                                                       "attempt": json.loads(marker.read_text())}}
+    try:
+        m = _check_marker(marker, i, expected[i])
+    except AttemptMarkerMismatch as exc:
+        raise ValueError(f"refusing to abandon: {exc}") from exc
+    reserved = _reserved_requests(run)
+    if reserved < m["reserved_before"]:
+        raise ValueError(f"inconsistent ledger: {reserved} reservation(s) now, but {m['reserved_before']} when the attempt marker was written; refusing to recover")
+    if reserved == m["reserved_before"]:
+        raise ValueError(f"batch {i} is not ambiguous: the ledger shows no reservation after the attempt marker, so the request never left this process; re-run the stage and it will be attempted normally")
+    rec = {"status": "abandoned", "drafts": [], "meta": {"error": "ambiguous attempt abandoned by the owner (request may have been sent and billed; result unknown)", "note": note.strip()[:300], "attempt": m}}
     run.write_private(f"taskgen-batch-{i}", rec)
     return rec
 
@@ -75,7 +112,7 @@ def _batch_result(run, i: int, req, llm, profile) -> tuple[dict, bool]:
         return rec, rec["status"] == "provider_error"
     marker = _attempt_marker(run, i)
     if marker.exists():
-        before = json.loads(marker.read_text())["reserved_before"]
+        before = _check_marker(marker, i, request_sha256(req))["reserved_before"]          # a marker for another batch / request is rejected, never taken for this one
         if _reserved_requests(run) > before:
             raise AmbiguousBatchAttempt(f"taskgen batch {i}: a request was reserved/sent but no result was persisted (interrupted run?). It is NOT re-sent automatically. Inspect spend/ledger.jsonl and "
                                         f"calls/taskgen.jsonl, then decide: `readiness investigate recover-batch {run.dir} --batch {i} --abandon --note '<who decided what>'`")

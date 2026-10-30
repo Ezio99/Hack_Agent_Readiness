@@ -65,7 +65,7 @@ def taskgen_manifest(ctx: Context) -> dict:
             "input_overhead_tokens_reserved": INPUT_OVERHEAD_TOKENS, "per_request_reservation_usd": bounds, "worst_case_stage_usd": round(sum(bounds), 6),
             "on_batch_validation_failure": "recorded; other batches kept; rule-based fallback if fewer than 4 acceptable tasks", "on_provider_error": "no further requests; accepted work kept",
             "on_spend_gate_refusal_or_violation": "stage stops (Halt); completed batches are persisted and never re-requested",
-            "on_interrupted_request": "a durable attempt marker precedes every request; if a request was reserved/sent but its result was not persisted the stage STOPS and never re-sends it automatically (owner runs `recover-batch --abandon`)", "allocation": alloc.allocation(ctx.options.get("total_cap_usd", 3.0)),
+            "on_interrupted_request": "a durable attempt marker precedes every request; if a request was reserved/sent but its result was not persisted the stage STOPS and never re-sends it automatically (owner runs `recover-batch --abandon`, allowed only if the batch index and request hash match this approved configuration and the ledger shows a reservation after the attempt marker); a marker that does not match the request is rejected, never treated as current", "allocation": alloc.allocation(ctx.options.get("total_cap_usd", 3.0)),
             "cost_basis": "calculated upper bounds at published prices; not a bill"}
 
 
