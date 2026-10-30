@@ -25,7 +25,7 @@ export interface Exploratory {
 export interface Evaluation { state: "evaluated" | "not_evaluated" | "missing"; reason: string | null; rule: Record<string, string | number | null> | null; results: EvalResult[]; exploratory?: Exploratory | null }
 export interface Effect { id: string; proposal_id: string; verdict: string; n_pairs: number; note: string; measured: boolean; mode: Mode }
 export interface InvestigationExport {
-  schema: "investigation-dashboard-v1"; exported_at: string; synthetic?: boolean;
+  schema: "investigation-dashboard-v1"; exported_at: string | null; synthetic?: boolean; audience?: "public-demo";
   run: { id: string; target: string; mode: Mode; created_at: string | null; outcome: "findings" | "experimental_only" | "no_supported_issue" | "not_investigated" | "incomplete_due_to_infrastructure_error" | "incomplete_unusable_model_output" | "incomplete_no_finish"; investigation_status: "completed" | "not_run" | "incomplete_due_to_infrastructure_error" | "incomplete_unusable_model_output" | "incomplete_no_finish" | null; report_source: "report-final" | "report" | "evidence"; complete: boolean; missing_artifacts: string[] };
   modes: Mode[]; notices: string[]; stages: StageInfo[]; tasks: TaskInfo[];
   trials: { baseline: number; patched: number; placebo?: number; quarantined?: number; void: number; note: string };

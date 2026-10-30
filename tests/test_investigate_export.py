@@ -252,3 +252,95 @@ def test_spend_is_exported_by_arm_from_the_ledger_as_a_calculated_estimate(expb)
 
 def test_missing_ledger_is_reported_as_missing(expb):
     assert export_run(expb)["spend"] == {"state": "missing"}
+
+
+# ---- public-demo-safe view ----
+import re as _re  # noqa: E402
+
+from agent_readiness.investigate.export import check_public, public_demo  # noqa: E402
+
+
+@pytest.fixture
+def pub(expb):
+    (expb / "spend").mkdir()
+    (expb / "spend" / "ledger.jsonl").write_text("\n".join(json.dumps(r) for r in [{"ts": "t", "kind": "reserve", "id": "patched-prp-x-syn-t1-r1:req01", "usd": 0.02}, {"ts": "t", "kind": "settle", "id": "patched-prp-x-syn-t1-r1:req01", "usd": 0.01}]) + "\n")
+    private = export_run(expb)
+    return private, public_demo(private)
+
+
+def test_public_export_keeps_outcomes_arms_controls_both_verdicts_and_owner_provenance(pub):
+    private, d = pub
+    assert d["audience"] == "public-demo" and d["run"]["id"] == "public-demo" and d["exported_at"] is None
+    assert [t["question"] for t in d["tasks"]] == [t["question"] for t in private["tasks"]] and [t["partition"] for t in d["tasks"]] == [t["partition"] for t in private["tasks"]]
+    base = lambda x: [(r["passed"], r["model_requests"], r["page_views"]) for t in x["tasks"] for r in t["baseline"]]
+    assert base(d) == base(private)
+    flat = lambda x, arm: sorted((r["passed"], r["model_requests"], r["page_views"]) for t in x["tasks"] for rows in t[arm].values() for r in rows)
+    assert flat(d, "patched") == flat(private, "patched") and flat(d, "placebo") == flat(private, "placebo") and len(flat(d, "placebo")) == 3
+    ev, pe = d["evaluation"], private["evaluation"]
+    assert ev["results"][0]["verdict"] == pe["results"][0]["verdict"] == "inconclusive" and ev["rule"]["id"] == "paired-signflip-v1"
+    assert ev["exploratory"]["verdict"] == pe["exploratory"]["verdict"] and ev["exploratory"]["rules_id"] == "exploratory-listing-v1" and ev["exploratory"]["rules_sha256"] == pe["exploratory"]["rules_sha256"]
+    (p,) = d["proposals"]
+    assert p["owner_selected"] is True and p["label"].startswith("EXPERIMENTAL — OWNER-SELECTED") and p["basis"] == "unverified_hypothesis" and p["provenance"]["source"] == "owner" and d["findings"] == []
+    assert d["spend"]["by_arm_usd"] == private["spend"]["by_arm_usd"] and "by_trial_usd" not in d["spend"] and d["trials"]["placebo"] == 3
+
+
+def test_public_export_has_no_internal_ids_hashes_narratives_or_paths(pub):
+    private, d = pub
+    text = json.dumps(d)
+    assert not _re.search(r"\b(?:syn-t\d|prp-[0-9a-f]{10}|obs-[0-9a-f]{10}|hyp-[0-9a-f]{10}|eff-[0-9a-f]{10})", text), "internal ids must be aliased"
+    assert set(_re.findall(r"[0-9a-f]{64}", text)) == {private["evaluation"]["exploratory"]["rules_sha256"]}          # only the pre-registered rules hash survives
+    assert '"why"' not in text and '"attribution"' not in text and "synthetic fixture attribution" not in text and "/home/" not in text and "project-owner" not in text
+    assert all(s["manifest_sha256"] is None and s["updated_at"] is None for s in d["stages"])
+    assert d["tasks"][0]["task_id"].startswith("task-") and all("source" not in t for t in d["tasks"])
+    for r in (r for t in d["tasks"] for r in t["baseline"]):
+        assert "attribution" not in r and "why" not in r
+
+
+def test_public_export_is_consistent_after_aliasing(pub):
+    _, d = pub
+    ids = {t["task_id"] for t in d["tasks"]}
+    x = d["evaluation"]["exploratory"]
+    assert set(x["plan"]["affected"]) <= ids and set(x["tasks"]["patched"]) <= ids and set(x["affected"]) <= ids
+    (pid,) = {k for t in d["tasks"] for k in t["patched"]}
+    assert pid == "change-1" and d["proposals"][0]["id"] == pid and d["effects"][0]["proposal_id"] == pid and d["evaluation"]["results"][0]["proposal_id"] == pid
+    assert d["hypotheses"][1]["id"].startswith("hypothesis-") and all(o["id"].startswith("observation-") for o in d["observations"])
+
+
+@pytest.mark.parametrize("bad", [{"tasks": [{"baseline": [{"attribution": "agent"}], "patched": {}}]}, {"x": "gen-0384beb35e"}, {"x": "a" * 64}, {"x": "see /home/vaibhav/x"}, {"x": "investigations/site-5-live-c/private"},
+                                 {"x": "trial-data/baseline"}, {"why": "narrative"}, {"spend": {"by_trial_usd": {"a": 1}}}, {"stages": [{"manifest_sha256": "x"}]}])
+def test_public_guard_refuses_leaks(bad):
+    with pytest.raises(ExportError):
+        check_public(bad)
+
+
+def test_public_guard_allows_the_rules_hash_and_plain_text():
+    check_public({"rules_sha256": "f" * 64, "note": "plain text 13 requests"})
+
+
+def test_private_export_is_unchanged_by_the_public_view(expb):
+    before = export_run(expb)
+    snapshot = json.dumps(before, sort_keys=True)
+    public_demo(before)
+    assert json.dumps(before, sort_keys=True) == snapshot                                    # the public view works on a copy
+    assert "syn-t1" in snapshot and "audience" not in before
+
+
+def test_cli_public_flag_writes_the_public_view(expb, tmp_path, monkeypatch, capsys):
+    out = tmp_path / "pub.json"
+    monkeypatch.setattr("sys.argv", ["readiness", "investigate", "export", str(expb), "--out", str(out), "--public"])
+    cli_main()
+    d = json.loads(out.read_text())
+    assert d["audience"] == "public-demo" and "syn-t1" not in out.read_text()
+    out2 = tmp_path / "priv.json"
+    monkeypatch.setattr("sys.argv", ["readiness", "investigate", "export", str(expb), "--out", str(out2)])
+    cli_main()
+    assert "audience" not in json.loads(out2.read_text()) and "syn-t1" in out2.read_text()
+
+
+def test_public_fixture_matches_the_exporter(tmp_path):
+    from tests.synthetic_investigation import FIXTURE_EXPB_PUBLIC, build_expb
+    committed = json.loads(FIXTURE_EXPB_PUBLIC.read_text())
+    fresh = public_demo(export_run(build_expb(tmp_path)))
+    for d in (committed, fresh):
+        d.pop("synthetic", None), d.pop("exported_at"), d["run"].pop("created_at")
+    assert committed == fresh and json.loads(FIXTURE_EXPB_PUBLIC.read_text())["synthetic"] is True

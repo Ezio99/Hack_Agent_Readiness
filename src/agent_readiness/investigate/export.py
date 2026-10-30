@@ -221,7 +221,83 @@ def check_clean(obj, path: str = "$") -> None:
         raise ExportError(f"credential-like string or local path at {path}")
 
 
-def write_export(run_dir: Path | str, out: Path | str) -> dict:
+PUBLIC_STAGE_KEYS = ("pages", "observations", "fidelity", "trials", "void")
+PUBLIC_LEAK = re.compile(r"\b(?:gen|prp|obs|hyp|fnd|eff|trial)-[0-9a-f]{6,}|[0-9a-f]{64}|trial-data|/home/|private|site-5-live|\.jsonl")
+RULES_HASH_KEYS = {"rules_sha256"}
+
+
+def _alias_map(d: dict) -> dict[str, str]:
+    """Stable, readable aliases for every internal identifier (tasks, proposals, hypotheses, observations, findings, effects)."""
+    m: dict[str, str] = {}
+    for prefix, items in (("task", d["tasks"]), ("change", d["proposals"]), ("hypothesis", d["hypotheses"]), ("observation", d["observations"]), ("finding", d["findings"]), ("effect", d["effects"])):
+        for i, x in enumerate(items, 1):
+            m[x["task_id"] if prefix == "task" else x["id"]] = f"{prefix}-{i}"
+    return m
+
+
+def public_demo(data: dict) -> dict:
+    """A public-demo-safe VIEW of an already sanitized export (`export_run`): internal ids become aliases; per-trial attribution narratives, stage manifest/import hashes, per-trial spend and run directory names are dropped.
+    Kept: task questions and partitions, outcomes, request / page counts, the three arms, control disclosures, BOTH verdicts, the owner-selected provenance and labels, spend by arm. The private export is not changed."""
+    d = json.loads(json.dumps(data))
+    amap = _alias_map(d)
+    pat = re.compile("|".join(re.escape(k) for k in sorted(amap, key=len, reverse=True))) if amap else None
+    sub = (lambda t: pat.sub(lambda m: amap[m.group(0)], t)) if pat else (lambda t: t)
+
+    def walk(o):
+        if isinstance(o, dict):
+            return {sub(k): walk(v) for k, v in o.items()}
+        if isinstance(o, list):
+            return [walk(v) for v in o]
+        return sub(o) if isinstance(o, str) else o
+    for t in d["tasks"]:
+        for rows in (t["baseline"], *t.get("patched", {}).values(), *t.get("placebo", {}).values()):
+            for r in rows:
+                r.pop("attribution", None), r.pop("why", None)
+        t.pop("source", None)
+    for st in d["stages"]:
+        st["manifest_sha256"] = None
+        st["updated_at"] = None
+        st["summary"] = {k: v for k, v in st["summary"].items() if k in PUBLIC_STAGE_KEYS}
+    spend = d.get("spend") or {}
+    spend.pop("by_trial_usd", None)
+    d["run"].update({"id": "public-demo", "created_at": None, "missing_artifacts": []})
+    for h in d["hypotheses"]:
+        if h.get("verification"):
+            h["verification"]["evidence"] = []
+    for p in d["proposals"]:
+        p["provenance"]["source"] = "owner" if p["provenance"]["source"].startswith("owner:") else p["provenance"]["source"]
+    for x in d["hypotheses"] + d["observations"]:
+        x["provenance"]["source"] = "owner" if x["provenance"]["source"].startswith("owner:") else x["provenance"]["source"]
+    out = walk(d)
+    out["audience"] = "public-demo"
+    out["exported_at"] = None
+    check_public(out)
+    return out
+
+
+def check_public(obj, path: str = "$") -> None:
+    """Fail closed on anything that looks like an internal id, a hash (other than the pre-registered rules hash), a run path or a per-trial attribution narrative."""
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if k in ("why", "by_trial_usd", "manifest_sha256", "snapshot_sha256", "imported_from", "trial_dir") and v not in (None, [], {}):
+                raise ExportError(f"public export contains {k!r} at {path}")
+            check_public(k, f"{path}.<key>")
+            if k not in RULES_HASH_KEYS:
+                check_public(v, f"{path}.{k}")
+        for t in obj.get("tasks", []) if isinstance(obj.get("tasks"), list) else []:
+            for rows in (t.get("baseline", []), *t.get("patched", {}).values(), *t.get("placebo", {}).values()) if isinstance(t, dict) and isinstance(t.get("baseline"), list) and isinstance(t.get("patched", {}), dict) else []:
+                if any("attribution" in r or "why" in r for r in rows):
+                    raise ExportError("public export contains a per-trial attribution narrative")
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj):
+            check_public(v, f"{path}[{i}]")
+    elif isinstance(obj, str) and PUBLIC_LEAK.search(obj):
+        raise ExportError(f"internal identifier, hash or path in the public export at {path}: {PUBLIC_LEAK.search(obj).group(0)[:20]}")
+
+
+def write_export(run_dir: Path | str, out: Path | str, *, public: bool = False) -> dict:
     data = export_run(run_dir)
+    if public:
+        data = public_demo(data)
     Path(out).write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
     return data

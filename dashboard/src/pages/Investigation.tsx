@@ -272,6 +272,7 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
   return (
     <div className="investigation">
       {d.synthetic ? <p className="replay-banner" role="note">SYNTHETIC FIXTURE — hand-written test data, not produced by any model, agent or website.</p> : null}
+      {d.audience === "public-demo" ? <p className="muted" role="note">Public demo view: internal identifiers are replaced by aliases and per-trial narratives, stage hashes and file paths are removed. Outcomes, request counts, controls and both verdicts are unchanged.</p> : null}
       <div className="modes" role="note" aria-label="Evidence modes">
         {d.modes.map((m) => <ModeBadge key={m} mode={m} />)}
         <span className="muted">{d.notices.join(" ")}</span>

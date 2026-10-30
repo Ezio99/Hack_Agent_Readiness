@@ -79,6 +79,7 @@ def regenerate(tmp: Path) -> dict:
 
 
 FIXTURE_EXPB = FIXTURE.with_name("investigation-synthetic-expb.json")
+FIXTURE_EXPB_PUBLIC = FIXTURE.with_name("investigation-synthetic-expb-public.json")
 OWNER = Provenance(mode="scripted", source="owner:project-owner", created_at="2026-01-01T00:00:00+00:00")
 # EXP-B shaped scenario: no verified finding, an unpromoted verified pattern, an owner-selected exploratory change, an unmodified repeat ("placebo") and a patched arm. All numbers are invented.
 EXPB_TASKS = [("syn-t1", "investigation", "extremum", "Which cabin has the lowest nightly fee?"), ("syn-t2", "holdout", "item_set", "Which cabins have a nightly fee under $90? List their names."),
@@ -150,4 +151,7 @@ if __name__ == "__main__":
     with tempfile.TemporaryDirectory() as d:
         _write_fixture(regenerate(Path(d)), FIXTURE)
     with tempfile.TemporaryDirectory() as d:
-        _write_fixture(export_run(build_expb(Path(d))), FIXTURE_EXPB)
+        private = export_run(build_expb(Path(d)))
+        _write_fixture(private, FIXTURE_EXPB)
+        from agent_readiness.investigate.export import public_demo
+        _write_fixture(public_demo(json.loads(json.dumps(private))), FIXTURE_EXPB_PUBLIC)

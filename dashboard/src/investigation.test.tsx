@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import fixture from "./fixtures/investigation-synthetic.json";
 import expbFixture from "./fixtures/investigation-synthetic-expb.json";
+import publicFixture from "./fixtures/investigation-synthetic-expb-public.json";
 import { compare, parseInvestigation, tally, type InvestigationExport } from "./lib/investigation";
 import { InvestigationPage, InvestigationView } from "./pages/Investigation";
 
@@ -206,5 +207,26 @@ describe("EXP-B headline, control flip, holdout flag and spend", () => {
     expect(h).toContain("not a bill"); expect(h).toContain("US$1.5344"); expect(h).toContain("placebo US$0.4600"); expect(h).toContain("task generation + investigator");
     d.spend = { state: "missing" };
     expect(html(d)).not.toContain("not a bill");
+  });
+});
+
+describe("public-demo export", () => {
+  const pub = () => structuredClone(publicFixture) as unknown as InvestigationExport;
+  it("parses and renders with both verdicts, three arms, controls and owner-selected provenance", () => {
+    expect(parseInvestigation(JSON.stringify(publicFixture)).ok).toBe(true);
+    const h = html(pub());
+    expect(h).toContain("Public demo view"); expect(h).toContain("paired-signflip-v1"); expect(h).toContain("exploratory-listing-v1"); expect(h).toContain("Consistent with the hypothesis"); expect(h).toContain("Unmodified repeat (control)");
+    expect(h).toContain("12 → 4"); expect(h).toContain("EXPERIMENTAL — OWNER-SELECTED"); expect(h).toContain("Owner-selected experiment"); expect(h).toContain("No verified findings"); expect(h).toContain("SYNTHETIC FIXTURE");
+  });
+  it("shows no internal identifiers, hashes or attribution narratives", () => {
+    const h = html(pub());
+    expect(h).not.toMatch(/gen-[0-9a-f]{6,}|prp-[0-9a-f]{6,}|syn-t\d|trial-data|\/home\/|synthetic fixture attribution/);
+    expect(h).toContain("task-1"); expect(h).toContain("change-1");
+  });
+  it("does not need the private-only fields (no attribution, stage hashes or per-trial spend)", () => {
+    const d = pub();
+    expect(JSON.stringify(d)).not.toMatch(/"(why|attribution|by_trial_usd)"/);
+    expect(d.stages.every((s) => s.manifest_sha256 === null)).toBe(true);
+    expect(() => html(d)).not.toThrow();
   });
 });
