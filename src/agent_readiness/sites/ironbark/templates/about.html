@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+{{ m.crumbs([('/', 'Home'), (None, 'About us')]) }}
+<div class="pagehead"><div class="wrap"><h1>About {{ B.name }}</h1><p>A family-run equipment hire business serving Sydney's inner west.</p></div></div>
+<div class="wrap" style="padding-top:1.5rem"><div class="split">
+<section class="panel"><h2>Our story</h2><p>Ironbark began with a single trailer and a handful of tools lent to neighbours. Today the yard in Marrickville holds {{ PRODUCTS | length }} machines, from cordless drills to scissor lifts, each serviced between hires.</p><p>This is a fictional business created to test software. Nothing on this site can be booked or bought.</p></section>
+<section class="panel"><h2>What we promise</h2><ul class="tick"><li>Clear daily, weekend and weekly rates</li><li>Machines cleaned, tested and safe to use</li><li>Straight answers on what suits your job</li><li>Delivery across Sydney metro</li></ul></section>
+</div></div>
+{% endblock %}

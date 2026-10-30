@@ -1,0 +1,2264 @@
+{
+  "business": {
+    "name": "Ironbark Hire Co.",
+    "tagline": "Tool and equipment hire for tradies and weekend warriors",
+    "address": "Unit 4, 18 Foundry Lane, Marrickville NSW 2204",
+    "phone": "(02) 5550 1234",
+    "phone_href": "+61255501234",
+    "email": "hello@ironbarkhire.example",
+    "hours": [
+      [
+        "Monday to Friday",
+        "7:00 am – 5:00 pm"
+      ],
+      [
+        "Saturday",
+        "8:00 am – 12:00 pm"
+      ],
+      [
+        "Sunday and public holidays",
+        "Closed"
+      ]
+    ]
+  },
+  "as_of": "2026-11-02",
+  "window_last_day": "2026-12-27",
+  "terms": {
+    "waiver_rate": 0.1,
+    "delivery_fees": {
+      "courier": 45,
+      "machine": 120
+    },
+    "bundle_discount": 0.1,
+    "weekend": "Weekend hire: collect between 1:00 pm and 5:00 pm on Friday, return by 9:00 am on Monday (one weekend rate).",
+    "gst": "All prices are in Australian dollars and include GST."
+  },
+  "categories": [
+    {
+      "slug": "drilling-and-breaking",
+      "name": "Drilling & breaking",
+      "blurb": "Drills, rotary hammers, breakers and core drills for timber, brick and concrete."
+    },
+    {
+      "slug": "cutting",
+      "name": "Cutting",
+      "blurb": "Wet and dry saws for tiles, paving, concrete and timber."
+    },
+    {
+      "slug": "landscaping",
+      "name": "Landscaping",
+      "blurb": "Hedge, lawn, stump and green-waste machines for the garden and larger blocks."
+    },
+    {
+      "slug": "access",
+      "name": "Access & height",
+      "blurb": "Ladders, scaffold towers and lifts for working safely at height."
+    },
+    {
+      "slug": "ground-and-concrete",
+      "name": "Ground & concrete",
+      "blurb": "Compaction and mixing equipment for paving, slabs and bedding."
+    }
+  ],
+  "jobs": {
+    "break-up-concrete": [
+      "Break up concrete",
+      "Slabs, footings, old paths and tile beds."
+    ],
+    "drill-into-brick-or-concrete": [
+      "Drill into brick or concrete",
+      "Anchors, fixings and pipe or vent holes."
+    ],
+    "cut-tiles-or-paving": [
+      "Cut tiles, pavers or concrete",
+      "Straight and mitred cuts in tile, stone, brick and concrete."
+    ],
+    "clear-the-garden": [
+      "Clear a garden or remove a stump",
+      "Hedges, branches, storm damage and stumps."
+    ],
+    "renovate-a-lawn": [
+      "Renovate a lawn",
+      "Thatch and moss removal ahead of reseeding."
+    ],
+    "work-at-height": [
+      "Work at height",
+      "Gutters, painting and ceiling work."
+    ],
+    "pave-and-compact": [
+      "Lay pavers or a slab base",
+      "Compacting bedding, trench backfill and mixing concrete."
+    ],
+    "mix-concrete": [
+      "Mix concrete",
+      "Small to medium batches on site."
+    ],
+    "core-large-holes": [
+      "Core large holes",
+      "Pipe, vent and flue holes up to 152 mm."
+    ],
+    "assemble-and-fix": [
+      "Assemble and fix",
+      "Fixing, screwing and general building tasks."
+    ]
+  },
+  "products": [
+    {
+      "id": "IB-DRL-001",
+      "slug": "cordless-drill-driver-kit-18v",
+      "category": "drilling-and-breaking",
+      "name": "Cordless drill driver kit 18 V",
+      "maker": "Kestrel",
+      "model": "KD-18",
+      "summary": "Two-battery 18 V drill driver with hammer action for timber, steel and light masonry.",
+      "description": "A compact two-speed drill driver with a hammer-action mode for the odd brick or block hole. The kit includes two 2.0 Ah batteries and a one-hour charger, so a day of screwing and drilling does not stop for charging.",
+      "power": "18 V cordless",
+      "weight_kg": 1.8,
+      "daily": 25,
+      "weekend": 40,
+      "weekly": 90,
+      "deposit": 100,
+      "min_days": 1,
+      "delivery": "optional",
+      "delivery_class": "courier",
+      "units": 3,
+      "specs": [
+        [
+          "Chuck",
+          "13 mm keyless"
+        ],
+        [
+          "Max hole, timber",
+          "38 mm"
+        ],
+        [
+          "Max hole, steel",
+          "13 mm"
+        ],
+        [
+          "Max hole, masonry (hammer mode)",
+          "10 mm"
+        ],
+        [
+          "Batteries",
+          "2 × 18 V 2.0 Ah"
+        ],
+        [
+          "Weight",
+          "1.8 kg"
+        ]
+      ],
+      "included": [
+        "2 × 18 V batteries",
+        "Charger",
+        "Carry case",
+        "Driver bit set (15 pieces)"
+      ],
+      "conditions": [
+        "Operator must be 18 or over.",
+        "Charger is for indoor use only."
+      ],
+      "jobs": [
+        "drill-into-brick-or-concrete",
+        "assemble-and-fix"
+      ],
+      "also_called": [
+        "power drill",
+        "screw gun",
+        "battery drill",
+        "impact driver kit"
+      ],
+      "compat": [
+        "kestrel-18v"
+      ],
+      "bookings": [
+        {
+          "unit": 0,
+          "from": "2026-11-06",
+          "to": "2026-11-06"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-13",
+          "to": "2026-11-13"
+        },
+        {
+          "unit": 2,
+          "from": "2026-11-14",
+          "to": "2026-11-14"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-23",
+          "to": "2026-11-26"
+        },
+        {
+          "unit": 2,
+          "from": "2026-11-30",
+          "to": "2026-12-01"
+        },
+        {
+          "unit": 2,
+          "from": "2026-12-05",
+          "to": "2026-12-07"
+        },
+        {
+          "unit": 2,
+          "from": "2026-12-12",
+          "to": "2026-12-12"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-15",
+          "to": "2026-12-19"
+        },
+        {
+          "unit": 1,
+          "from": "2026-12-22",
+          "to": "2026-12-23"
+        },
+        {
+          "unit": 1,
+          "from": "2026-12-26",
+          "to": "2026-12-27"
+        }
+      ]
+    },
+    {
+      "id": "IB-DRL-002",
+      "slug": "sds-plus-rotary-hammer-26mm",
+      "category": "drilling-and-breaking",
+      "name": "SDS-Plus rotary hammer 26 mm",
+      "maker": "Kestrel",
+      "model": "RH-26",
+      "summary": "Mains rotary hammer for clean holes in brick, block and concrete up to 26 mm.",
+      "description": "A 3-mode rotary hammer (drill, hammer-drill, chisel) with a vibration-damped handle. Fitted with a depth stop and an SDS-Plus chuck, it is the standard choice for fixing anchors into concrete and drilling through brick.",
+      "power": "240 V mains",
+      "weight_kg": 3.1,
+      "daily": 55,
+      "weekend": 90,
+      "weekly": 200,
+      "deposit": 150,
+      "min_days": 1,
+      "delivery": "optional",
+      "delivery_class": "courier",
+      "units": 2,
+      "specs": [
+        [
+          "Chuck",
+          "SDS-Plus"
+        ],
+        [
+          "Max hole, concrete",
+          "26 mm"
+        ],
+        [
+          "Max hole, steel",
+          "13 mm"
+        ],
+        [
+          "Impact energy",
+          "2.8 J"
+        ],
+        [
+          "Modes",
+          "Drill / hammer-drill / chisel"
+        ],
+        [
+          "Weight",
+          "3.1 kg"
+        ]
+      ],
+      "included": [
+        "Side handle",
+        "Depth stop",
+        "Carry case"
+      ],
+      "conditions": [
+        "Operator must be 18 or over.",
+        "Hearing protection required."
+      ],
+      "jobs": [
+        "drill-into-brick-or-concrete"
+      ],
+      "also_called": [
+        "hammer drill",
+        "concrete drill",
+        "masonry drill",
+        "Hilti-style drill"
+      ],
+      "compat": [
+        "sds-plus",
+        "240v"
+      ],
+      "bookings": [
+        {
+          "unit": 0,
+          "from": "2026-11-02",
+          "to": "2026-11-05"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-03",
+          "to": "2026-11-07"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-04",
+          "to": "2026-11-07"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-06",
+          "to": "2026-11-10"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-13",
+          "to": "2026-11-16"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-14",
+          "to": "2026-11-16"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-22",
+          "to": "2026-11-25"
+        },
+        {
+          "unit": 1,
+          "from": "2026-12-15",
+          "to": "2026-12-18"
+        },
+        {
+          "unit": 1,
+          "from": "2026-12-23",
+          "to": "2026-12-25"
+        }
+      ]
+    },
+    {
+      "id": "IB-DRL-003",
+      "slug": "electric-demolition-hammer-15kg",
+      "category": "drilling-and-breaking",
+      "name": "Electric demolition hammer 15 kg",
+      "maker": "Torvald",
+      "model": "DH-15",
+      "summary": "Mains-powered demolition hammer for breaking slabs, footings and tiles.",
+      "description": "A 15 kg-class electric demolition hammer with a 30 mm hex chuck. It suits breaking up paths, slabs up to about 100 mm and old tile beds. Chisels are not included and are sold separately.",
+      "power": "240 V mains",
+      "weight_kg": 15.0,
+      "daily": 95,
+      "weekend": 150,
+      "weekly": 340,
+      "deposit": 250,
+      "min_days": 1,
+      "delivery": "optional",
+      "delivery_class": "courier",
+      "units": 2,
+      "specs": [
+        [
+          "Chuck",
+          "30 mm hex"
+        ],
+        [
+          "Impact energy",
+          "30 J"
+        ],
+        [
+          "Blows per minute",
+          "1,400"
+        ],
+        [
+          "Suited to slabs up to",
+          "100 mm"
+        ],
+        [
+          "Cord length",
+          "5 m"
+        ],
+        [
+          "Weight",
+          "15.0 kg"
+        ]
+      ],
+      "included": [
+        "Side handle",
+        "Carry case"
+      ],
+      "conditions": [
+        "Operator must be 18 or over.",
+        "Chisels sold separately.",
+        "Hearing and eye protection required."
+      ],
+      "jobs": [
+        "break-up-concrete"
+      ],
+      "also_called": [
+        "jackhammer",
+        "jack hammer",
+        "concrete breaker",
+        "electric breaker",
+        "kango"
+      ],
+      "compat": [
+        "hex-30",
+        "240v"
+      ],
+      "bookings": [
+        {
+          "unit": 0,
+          "from": "2026-11-06",
+          "to": "2026-11-09"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-06",
+          "to": "2026-11-08"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-07",
+          "to": "2026-11-08"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-10",
+          "to": "2026-11-13"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-12",
+          "to": "2026-11-16"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-15",
+          "to": "2026-11-17"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-20",
+          "to": "2026-11-23"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-20",
+          "to": "2026-11-22"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-21",
+          "to": "2026-11-21"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-23",
+          "to": "2026-11-24"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-01",
+          "to": "2026-12-05"
+        },
+        {
+          "unit": 1,
+          "from": "2026-12-05",
+          "to": "2026-12-05"
+        },
+        {
+          "unit": 1,
+          "from": "2026-12-08",
+          "to": "2026-12-09"
+        },
+        {
+          "unit": 1,
+          "from": "2026-12-13",
+          "to": "2026-12-15"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-21",
+          "to": "2026-12-24"
+        }
+      ]
+    },
+    {
+      "id": "IB-DRL-004",
+      "slug": "diamond-core-drill-152mm",
+      "category": "drilling-and-breaking",
+      "name": "Diamond core drill 152 mm (wet)",
+      "maker": "Torvald",
+      "model": "CD-152",
+      "summary": "Wet diamond core drill with stand for large holes through concrete and brick.",
+      "description": "A rig-mounted core drill that cuts clean holes up to 152 mm through reinforced concrete for pipes and vents. Supplied with a stand, a water pressure tank and one 152 mm core bit.",
+      "power": "240 V mains",
+      "weight_kg": 22.0,
+      "daily": 120,
+      "weekend": 190,
+      "weekly": 430,
+      "deposit": 400,
+      "min_days": 1,
+      "delivery": "optional",
+      "delivery_class": "machine",
+      "units": 1,
+      "specs": [
+        [
+          "Max hole diameter",
+          "152 mm"
+        ],
+        [
+          "Max depth with bit",
+          "300 mm"
+        ],
+        [
+          "Water supply",
+          "Pressure tank (supplied)"
+        ],
+        [
+          "Speeds",
+          "3"
+        ],
+        [
+          "Stand",
+          "Included"
+        ],
+        [
+          "Weight (drill and stand)",
+          "22.0 kg"
+        ]
+      ],
+      "included": [
+        "Drill stand",
+        "Water pressure tank",
+        "1 × 152 mm core bit"
+      ],
+      "conditions": [
+        "Operator must be 18 or over.",
+        "Wet use: connect through a safety switch (RCD)."
+      ],
+      "jobs": [
+        "drill-into-brick-or-concrete",
+        "core-large-holes"
+      ],
+      "also_called": [
+        "core hole machine",
+        "concrete hole saw",
+        "diamond drill"
+      ],
+      "compat": [
+        "240v"
+      ],
+      "bookings": [
+        {
+          "unit": 0,
+          "from": "2026-11-03",
+          "to": "2026-11-05"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-05",
+          "to": "2026-11-05"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-09",
+          "to": "2026-11-11"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-10",
+          "to": "2026-11-12"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-22",
+          "to": "2026-11-22"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-07",
+          "to": "2026-12-10"
+        }
+      ]
+    },
+    {
+      "id": "IB-CUT-001",
+      "slug": "wet-tile-saw-250mm",
+      "category": "cutting",
+      "name": "Wet tile saw 250 mm",
+      "maker": "Marlow",
+      "model": "TS-250",
+      "summary": "Bench tile saw with water tray for ceramic, porcelain and natural stone.",
+      "description": "A 250 mm bench tile saw with a sliding table and mitre guide. The water-cooled blade gives chip-free cuts in ceramic, porcelain and natural stone tiles and light pavers up to 80 mm thick.",
+      "power": "240 V mains",
+      "weight_kg": 17.0,
+      "daily": 65,
+      "weekend": 105,
+      "weekly": 240,
+      "deposit": 200,
+      "min_days": 1,
+      "delivery": "optional",
+      "delivery_class": "courier",
+      "units": 2,
+      "specs": [
+        [
+          "Blade diameter",
+          "250 mm"
+        ],
+        [
+          "Max cutting depth",
+          "80 mm"
+        ],
+        [
+          "Max cutting length",
+          "620 mm"
+        ],
+        [
+          "Mitre",
+          "0–45°"
+        ],
+        [
+          "Water",
+          "Recirculating tray"
+        ],
+        [
+          "Weight",
+          "17.0 kg"
+        ]
+      ],
+      "included": [
+        "Continuous-rim tile blade fitted",
+        "Mitre guide"
+      ],
+      "conditions": [
+        "Operator must be 18 or over.",
+        "Connect through a safety switch (RCD)."
+      ],
+      "jobs": [
+        "cut-tiles-or-paving"
+      ],
+      "also_called": [
+        "tile cutter",
+        "tile cutting machine",
+        "porcelain cutter",
+        "wet saw"
+      ],
+      "compat": [
+        "blade-250",
+        "240v"
+      ],
+      "bookings": [
+        {
+          "unit": 1,
+          "from": "2026-11-04",
+          "to": "2026-11-05"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-06",
+          "to": "2026-11-09"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-06",
+          "to": "2026-11-08"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-16",
+          "to": "2026-11-19"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-19",
+          "to": "2026-11-20"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-02",
+          "to": "2026-12-03"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-05",
+          "to": "2026-12-07"
+        },
+        {
+          "unit": 1,
+          "from": "2026-12-07",
+          "to": "2026-12-10"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-17",
+          "to": "2026-12-21"
+        }
+      ]
+    },
+    {
+      "id": "IB-CUT-002",
+      "slug": "petrol-cut-off-saw-350mm",
+      "category": "cutting",
+      "name": "Petrol cut-off saw 350 mm",
+      "maker": "Torvald",
+      "model": "CS-350",
+      "summary": "Hand-held petrol cut-off saw with a 350 mm diamond blade, cuts up to 125 mm deep.",
+      "description": "A powerful 2-stroke cut-off saw for concrete, pavers, bricks and steel pipe. It cuts to a depth of 125 mm and is supplied with a general-purpose diamond blade and a water attachment to keep dust down.",
+      "power": "Petrol (2-stroke)",
+      "weight_kg": 10.0,
+      "daily": 110,
+      "weekend": 175,
+      "weekly": 395,
+      "deposit": 300,
+      "min_days": 1,
+      "delivery": "optional",
+      "delivery_class": "courier",
+      "units": 1,
+      "specs": [
+        [
+          "Blade diameter",
+          "350 mm"
+        ],
+        [
+          "Max cutting depth",
+          "125 mm"
+        ],
+        [
+          "Engine",
+          "73 cc 2-stroke"
+        ],
+        [
+          "Fuel",
+          "2-stroke mix (not supplied)"
+        ],
+        [
+          "Water attachment",
+          "Included"
+        ],
+        [
+          "Weight",
+          "10.0 kg"
+        ]
+      ],
+      "included": [
+        "1 × general-purpose diamond blade fitted",
+        "Water attachment"
+      ],
+      "conditions": [
+        "Operator must be 18 or over.",
+        "Fuel not supplied.",
+        "Dust mask, eye and ear protection required."
+      ],
+      "jobs": [
+        "cut-tiles-or-paving",
+        "break-up-concrete"
+      ],
+      "also_called": [
+        "concrete saw",
+        "road saw",
+        "quick-cut saw",
+        "consaw",
+        "angle grinder (large)"
+      ],
+      "compat": [
+        "blade-350",
+        "two-stroke"
+      ],
+      "bookings": [
+        {
+          "unit": 0,
+          "from": "2026-11-02",
+          "to": "2026-11-04"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-05",
+          "to": "2026-11-08"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-06",
+          "to": "2026-11-09"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-13",
+          "to": "2026-11-15"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-17",
+          "to": "2026-11-19"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-02",
+          "to": "2026-12-04"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-06",
+          "to": "2026-12-08"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-16",
+          "to": "2026-12-20"
+        }
+      ]
+    },
+    {
+      "id": "IB-CUT-003",
+      "slug": "petrol-chainsaw-45cm",
+      "category": "cutting",
+      "name": "Petrol chainsaw 45 cm",
+      "maker": "Marlow",
+      "model": "CH-45",
+      "summary": "45 cm bar petrol chainsaw for felling small trees, limbing and firewood.",
+      "description": "A professional-weight petrol chainsaw with a 45 cm bar and chain brake. Suited to storm clean-up, limbing and cutting firewood. Chaps and helmet are included with every hire.",
+      "power": "Petrol (2-stroke)",
+      "weight_kg": 5.6,
+      "daily": 70,
+      "weekend": 110,
+      "weekly": 250,
+      "deposit": 250,
+      "min_days": 1,
+      "delivery": "optional",
+      "delivery_class": "courier",
+      "units": 2,
+      "specs": [
+        [
+          "Bar length",
+          "45 cm"
+        ],
+        [
+          "Engine",
+          "50 cc 2-stroke"
+        ],
+        [
+          "Fuel",
+          "2-stroke mix (not supplied)"
+        ],
+        [
+          "Chain brake",
+          "Inertia"
+        ],
+        [
+          "Weight (no fuel)",
+          "5.6 kg"
+        ]
+      ],
+      "included": [
+        "Chainsaw chaps",
+        "Helmet with visor and ear muffs",
+        "Spare chain"
+      ],
+      "conditions": [
+        "Operator must be 18 or over.",
+        "Fuel not supplied.",
+        "Chaps and helmet must be worn."
+      ],
+      "jobs": [
+        "clear-the-garden"
+      ],
+      "also_called": [
+        "tree saw",
+        "firewood saw",
+        "petrol saw"
+      ],
+      "compat": [
+        "two-stroke"
+      ],
+      "bookings": [
+        {
+          "unit": 1,
+          "from": "2026-11-03",
+          "to": "2026-11-06"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-04",
+          "to": "2026-11-07"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-09",
+          "to": "2026-11-13"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-15",
+          "to": "2026-11-15"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-19",
+          "to": "2026-11-20"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-21",
+          "to": "2026-11-22"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-27",
+          "to": "2026-11-27"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-02",
+          "to": "2026-12-02"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-04",
+          "to": "2026-12-06"
+        },
+        {
+          "unit": 1,
+          "from": "2026-12-08",
+          "to": "2026-12-11"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-21",
+          "to": "2026-12-22"
+        }
+      ]
+    },
+    {
+      "id": "IB-LND-001",
+      "slug": "cordless-hedge-trimmer-60cm",
+      "category": "landscaping",
+      "name": "Cordless hedge trimmer 60 cm",
+      "maker": "Kestrel",
+      "model": "HT-60",
+      "summary": "Light 60 cm cordless hedge trimmer on the same battery platform as our 18 V drill.",
+      "description": "A quiet, light trimmer for domestic hedges. It uses the same 18 V batteries as the Kestrel drill kit, and the supplied batteries will cut roughly 250 m of hedge.",
+      "power": "18 V cordless",
+      "weight_kg": 3.4,
+      "daily": 35,
+      "weekend": 55,
+      "weekly": 125,
+      "deposit": 100,
+      "min_days": 1,
+      "delivery": "optional",
+      "delivery_class": "courier",
+      "units": 3,
+      "specs": [
+        [
+          "Blade length",
+          "60 cm"
+        ],
+        [
+          "Cutting capacity",
+          "20 mm"
+        ],
+        [
+          "Batteries",
+          "2 × 18 V 2.0 Ah"
+        ],
+        [
+          "Weight",
+          "3.4 kg"
+        ]
+      ],
+      "included": [
+        "2 × 18 V batteries",
+        "Charger",
+        "Blade cover"
+      ],
+      "conditions": [
+        "Operator must be 18 or over."
+      ],
+      "jobs": [
+        "clear-the-garden"
+      ],
+      "also_called": [
+        "hedge cutter",
+        "hedge shears",
+        "hedger"
+      ],
+      "compat": [
+        "kestrel-18v"
+      ],
+      "bookings": [
+        {
+          "unit": 1,
+          "from": "2026-11-02",
+          "to": "2026-11-04"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-05",
+          "to": "2026-11-09"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-07",
+          "to": "2026-11-10"
+        },
+        {
+          "unit": 2,
+          "from": "2026-11-10",
+          "to": "2026-11-14"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-13",
+          "to": "2026-11-16"
+        },
+        {
+          "unit": 2,
+          "from": "2026-11-17",
+          "to": "2026-11-18"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-19",
+          "to": "2026-11-19"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-21",
+          "to": "2026-11-24"
+        },
+        {
+          "unit": 1,
+          "from": "2026-12-01",
+          "to": "2026-12-03"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-09",
+          "to": "2026-12-13"
+        },
+        {
+          "unit": 2,
+          "from": "2026-12-11",
+          "to": "2026-12-15"
+        },
+        {
+          "unit": 1,
+          "from": "2026-12-12",
+          "to": "2026-12-15"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-16",
+          "to": "2026-12-16"
+        },
+        {
+          "unit": 1,
+          "from": "2026-12-20",
+          "to": "2026-12-23"
+        }
+      ]
+    },
+    {
+      "id": "IB-LND-002",
+      "slug": "petrol-lawn-scarifier-40cm",
+      "category": "landscaping",
+      "name": "Petrol lawn scarifier 40 cm",
+      "maker": "Marlow",
+      "model": "SC-40",
+      "summary": "Petrol scarifier with 40 cm working width to remove thatch and renovate lawns.",
+      "description": "A self-propelled scarifier with adjustable depth that lifts thatch and moss, leaving the lawn ready for overseeding. Blades are changed to dethatching or light aeration tines on request.",
+      "power": "Petrol (4-stroke)",
+      "weight_kg": 34.0,
+      "daily": 85,
+      "weekend": 135,
+      "weekly": 300,
+      "deposit": 250,
+      "min_days": 1,
+      "delivery": "optional",
+      "delivery_class": "machine",
+      "units": 1,
+      "specs": [
+        [
+          "Working width",
+          "40 cm"
+        ],
+        [
+          "Engine",
+          "163 cc 4-stroke"
+        ],
+        [
+          "Depth settings",
+          "5"
+        ],
+        [
+          "Collection bag",
+          "Included"
+        ],
+        [
+          "Weight",
+          "34.0 kg"
+        ]
+      ],
+      "included": [
+        "Dethatching blades fitted",
+        "Collection bag"
+      ],
+      "conditions": [
+        "Operator must be 18 or over.",
+        "Delivered with fuel in tank; return with the tank full."
+      ],
+      "jobs": [
+        "renovate-a-lawn"
+      ],
+      "also_called": [
+        "dethatcher",
+        "lawn rake",
+        "lawn aerator",
+        "verticutter"
+      ],
+      "compat": [],
+      "bookings": [
+        {
+          "unit": 0,
+          "from": "2026-11-02",
+          "to": "2026-11-02"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-06",
+          "to": "2026-11-08"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-19",
+          "to": "2026-11-19"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-10",
+          "to": "2026-12-12"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-15",
+          "to": "2026-12-17"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-27",
+          "to": "2026-12-27"
+        }
+      ]
+    },
+    {
+      "id": "IB-LND-003",
+      "slug": "stump-grinder-13hp",
+      "category": "landscaping",
+      "name": "Stump grinder 13 hp",
+      "maker": "Torvald",
+      "model": "SG-13",
+      "summary": "Self-propelled 13 hp stump grinder, grinds stumps up to 300 mm below ground.",
+      "description": "A self-propelled petrol stump grinder with a hydraulic-feel swing control. It grinds stumps up to 500 mm across to about 300 mm below ground level and passes through a standard side gate.",
+      "power": "Petrol (4-stroke)",
+      "weight_kg": 215.0,
+      "daily": 190,
+      "weekend": 300,
+      "weekly": 680,
+      "deposit": 500,
+      "min_days": 1,
+      "delivery": "required",
+      "delivery_class": "machine",
+      "units": 1,
+      "specs": [
+        [
+          "Engine",
+          "13 hp 4-stroke"
+        ],
+        [
+          "Max stump diameter",
+          "500 mm"
+        ],
+        [
+          "Grinding depth below ground",
+          "300 mm"
+        ],
+        [
+          "Width",
+          "78 cm (fits a standard gate)"
+        ],
+        [
+          "Weight",
+          "215 kg"
+        ]
+      ],
+      "included": [
+        "Operator guide",
+        "Safety chaps and visor"
+      ],
+      "conditions": [
+        "Operator must be 18 or over.",
+        "Delivery and collection required.",
+        "Delivered with fuel in tank; return with the tank full."
+      ],
+      "jobs": [
+        "clear-the-garden"
+      ],
+      "also_called": [
+        "stump removal machine",
+        "stump cutter",
+        "tree stump grinder"
+      ],
+      "compat": [],
+      "bookings": [
+        {
+          "unit": 0,
+          "from": "2026-11-09",
+          "to": "2026-11-11"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-22",
+          "to": "2026-11-23"
+        }
+      ]
+    },
+    {
+      "id": "IB-LND-004",
+      "slug": "wood-chipper-100mm",
+      "category": "landscaping",
+      "name": "Wood chipper 100 mm",
+      "maker": "Torvald",
+      "model": "WC-100",
+      "summary": "Trailer-mounted petrol chipper for branches up to 100 mm across.",
+      "description": "A towable petrol chipper that turns branches up to 100 mm thick into mulch. It is delivered on its own trailer and set up where you need it.",
+      "power": "Petrol (4-stroke)",
+      "weight_kg": 320.0,
+      "daily": 180,
+      "weekend": 285,
+      "weekly": 640,
+      "deposit": 500,
+      "min_days": 1,
+      "delivery": "required",
+      "delivery_class": "machine",
+      "units": 1,
+      "specs": [
+        [
+          "Max branch diameter",
+          "100 mm"
+        ],
+        [
+          "Engine",
+          "15 hp 4-stroke"
+        ],
+        [
+          "Feed",
+          "Gravity hopper"
+        ],
+        [
+          "Mounting",
+          "Trailer (supplied)"
+        ],
+        [
+          "Weight",
+          "320 kg"
+        ]
+      ],
+      "included": [
+        "Trailer",
+        "Safety visor and ear muffs"
+      ],
+      "conditions": [
+        "Operator must be 18 or over.",
+        "Delivery and collection required.",
+        "Delivered with fuel in tank; return with the tank full."
+      ],
+      "jobs": [
+        "clear-the-garden"
+      ],
+      "also_called": [
+        "mulcher",
+        "shredder",
+        "branch chipper"
+      ],
+      "compat": [],
+      "bookings": [
+        {
+          "unit": 0,
+          "from": "2026-11-04",
+          "to": "2026-11-05"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-06",
+          "to": "2026-11-07"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-13",
+          "to": "2026-11-14"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-21",
+          "to": "2026-11-23"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-29",
+          "to": "2026-12-03"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-05",
+          "to": "2026-12-08"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-11",
+          "to": "2026-12-11"
+        }
+      ]
+    },
+    {
+      "id": "IB-ACC-001",
+      "slug": "fibreglass-extension-ladder-7m",
+      "category": "access",
+      "name": "Fibreglass extension ladder 7.3 m",
+      "maker": "Marlow",
+      "model": "LD-73",
+      "summary": "Two-section 7.3 m fibreglass extension ladder, reaches a second-storey gutter.",
+      "description": "A Type 1 industrial two-section ladder with non-slip feet. Extended length is 7.3 m, which reaches a typical second-storey gutter line safely at the correct angle. Fibreglass rails are non-conductive.",
+      "power": "Manual",
+      "weight_kg": 17.5,
+      "daily": 32,
+      "weekend": 50,
+      "weekly": 115,
+      "deposit": 150,
+      "min_days": 1,
+      "delivery": "optional",
+      "delivery_class": "courier",
+      "units": 3,
+      "specs": [
+        [
+          "Extended length",
+          "7.3 m"
+        ],
+        [
+          "Closed length",
+          "4.1 m"
+        ],
+        [
+          "Safe working reach",
+          "6.3 m"
+        ],
+        [
+          "Duty rating",
+          "Industrial, 120 kg"
+        ],
+        [
+          "Rails",
+          "Fibreglass (non-conductive)"
+        ],
+        [
+          "Weight",
+          "17.5 kg"
+        ]
+      ],
+      "included": [
+        "Ladder stabiliser",
+        "Safe-use leaflet"
+      ],
+      "conditions": [
+        "Operator must be 18 or over.",
+        "Must be tied off at the top when used above 3 m."
+      ],
+      "jobs": [
+        "work-at-height"
+      ],
+      "also_called": [
+        "extension ladder",
+        "tall ladder",
+        "two-storey ladder",
+        "gutter ladder"
+      ],
+      "compat": [],
+      "bookings": [
+        {
+          "unit": 0,
+          "from": "2026-11-07",
+          "to": "2026-11-07"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-07",
+          "to": "2026-11-08"
+        },
+        {
+          "unit": 2,
+          "from": "2026-11-07",
+          "to": "2026-11-07"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-08",
+          "to": "2026-11-08"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-10",
+          "to": "2026-11-11"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-10",
+          "to": "2026-11-14"
+        },
+        {
+          "unit": 2,
+          "from": "2026-11-11",
+          "to": "2026-11-14"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-13",
+          "to": "2026-11-14"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-17",
+          "to": "2026-11-21"
+        },
+        {
+          "unit": 2,
+          "from": "2026-11-17",
+          "to": "2026-11-18"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-20",
+          "to": "2026-11-23"
+        },
+        {
+          "unit": 2,
+          "from": "2026-11-20",
+          "to": "2026-11-20"
+        },
+        {
+          "unit": 2,
+          "from": "2026-11-25",
+          "to": "2026-11-25"
+        },
+        {
+          "unit": 2,
+          "from": "2026-11-27",
+          "to": "2026-12-01"
+        },
+        {
+          "unit": 1,
+          "from": "2026-12-04",
+          "to": "2026-12-08"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-05",
+          "to": "2026-12-09"
+        },
+        {
+          "unit": 2,
+          "from": "2026-12-10",
+          "to": "2026-12-13"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-12",
+          "to": "2026-12-16"
+        },
+        {
+          "unit": 1,
+          "from": "2026-12-13",
+          "to": "2026-12-17"
+        },
+        {
+          "unit": 2,
+          "from": "2026-12-17",
+          "to": "2026-12-17"
+        }
+      ]
+    },
+    {
+      "id": "IB-ACC-002",
+      "slug": "aluminium-scaffold-tower-4m",
+      "category": "access",
+      "name": "Aluminium mobile scaffold tower 4 m",
+      "maker": "Torvald",
+      "model": "MT-40",
+      "summary": "Mobile aluminium scaffold tower with 4 m working height, delivered and set up.",
+      "description": "A castor-mounted aluminium tower with guard rails and toe boards that gives a 4 m working platform height. The tower is delivered in sections with an assembly guide and can be wheeled around a room or driveway.",
+      "power": "Manual",
+      "weight_kg": 120.0,
+      "daily": 75,
+      "weekend": 120,
+      "weekly": 270,
+      "deposit": 300,
+      "min_days": 2,
+      "delivery": "required",
+      "delivery_class": "machine",
+      "units": 2,
+      "specs": [
+        [
+          "Platform working height",
+          "4.0 m"
+        ],
+        [
+          "Platform size",
+          "1.8 m × 0.7 m"
+        ],
+        [
+          "Safe working load",
+          "200 kg"
+        ],
+        [
+          "Castors",
+          "Locking, 4"
+        ],
+        [
+          "Weight",
+          "120 kg"
+        ]
+      ],
+      "included": [
+        "Guard rails and toe boards",
+        "Assembly guide",
+        "4 outriggers"
+      ],
+      "conditions": [
+        "Operator must be 18 or over.",
+        "Two-day minimum hire.",
+        "Delivery and collection required.",
+        "Must be assembled on firm, level ground."
+      ],
+      "jobs": [
+        "work-at-height"
+      ],
+      "also_called": [
+        "scaffolding",
+        "scaffold",
+        "working platform",
+        "painter's scaffold"
+      ],
+      "compat": [],
+      "bookings": [
+        {
+          "unit": 0,
+          "from": "2026-11-03",
+          "to": "2026-11-05"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-07",
+          "to": "2026-11-07"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-11",
+          "to": "2026-11-11"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-18",
+          "to": "2026-11-22"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-21",
+          "to": "2026-11-23"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-25",
+          "to": "2026-11-26"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-25",
+          "to": "2026-11-28"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-29",
+          "to": "2026-11-30"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-05",
+          "to": "2026-12-08"
+        },
+        {
+          "unit": 1,
+          "from": "2026-12-06",
+          "to": "2026-12-10"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-18",
+          "to": "2026-12-19"
+        }
+      ]
+    },
+    {
+      "id": "IB-ACC-003",
+      "slug": "electric-scissor-lift-6m",
+      "category": "access",
+      "name": "Electric scissor lift 6 m",
+      "maker": "Torvald",
+      "model": "SL-60",
+      "summary": "Battery-electric scissor lift with 6 m platform height, narrow enough for a standard doorway.",
+      "description": "A self-propelled electric scissor lift for indoor and outdoor work at height. The platform reaches 6 m and the base passes through a standard 810 mm doorway. Delivered by truck with an operator induction.",
+      "power": "Battery electric",
+      "weight_kg": 1150.0,
+      "daily": 210,
+      "weekend": 330,
+      "weekly": 740,
+      "deposit": 600,
+      "min_days": 2,
+      "delivery": "required",
+      "delivery_class": "machine",
+      "units": 1,
+      "specs": [
+        [
+          "Platform height",
+          "6.0 m"
+        ],
+        [
+          "Safe working load",
+          "230 kg"
+        ],
+        [
+          "Base width",
+          "76 cm"
+        ],
+        [
+          "Drive",
+          "Self-propelled"
+        ],
+        [
+          "Power",
+          "Battery electric, 24 V"
+        ],
+        [
+          "Weight",
+          "1,150 kg"
+        ]
+      ],
+      "included": [
+        "Charger",
+        "Operator induction on delivery"
+      ],
+      "conditions": [
+        "Operator must be 18 or over and complete the induction.",
+        "Two-day minimum hire.",
+        "Delivery and collection required."
+      ],
+      "jobs": [
+        "work-at-height"
+      ],
+      "also_called": [
+        "platform lift",
+        "access platform",
+        "work platform",
+        "elevated work platform"
+      ],
+      "compat": [],
+      "bookings": [
+        {
+          "unit": 0,
+          "from": "2026-11-02",
+          "to": "2026-11-06"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-05",
+          "to": "2026-11-06"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-09",
+          "to": "2026-11-12"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-12",
+          "to": "2026-11-17"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-19",
+          "to": "2026-11-21"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-27",
+          "to": "2026-11-28"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-30",
+          "to": "2026-12-04"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-16",
+          "to": "2026-12-20"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-26",
+          "to": "2026-12-26"
+        }
+      ]
+    },
+    {
+      "id": "IB-GRD-001",
+      "slug": "reversible-plate-compactor-90kg",
+      "category": "ground-and-concrete",
+      "name": "Reversible plate compactor 90 kg",
+      "maker": "Torvald",
+      "model": "PC-90",
+      "summary": "Reversible 90 kg petrol plate compactor for paving bases and trenches.",
+      "description": "A reversible vibrating plate with a 500 mm base plate, suitable for compacting road base, sand bedding and trench backfill. Optional paving mat is included for finishing pavers.",
+      "power": "Petrol (4-stroke)",
+      "weight_kg": 90.0,
+      "daily": 80,
+      "weekend": 125,
+      "weekly": 280,
+      "deposit": 300,
+      "min_days": 1,
+      "delivery": "optional",
+      "delivery_class": "machine",
+      "units": 2,
+      "specs": [
+        [
+          "Plate width",
+          "50 cm"
+        ],
+        [
+          "Compaction force",
+          "20 kN"
+        ],
+        [
+          "Engine",
+          "5.5 hp 4-stroke"
+        ],
+        [
+          "Direction",
+          "Reversible"
+        ],
+        [
+          "Weight",
+          "90 kg"
+        ]
+      ],
+      "included": [
+        "Paving mat",
+        "Operator guide"
+      ],
+      "conditions": [
+        "Operator must be 18 or over.",
+        "Delivered with fuel in tank; return with the tank full."
+      ],
+      "jobs": [
+        "pave-and-compact"
+      ],
+      "also_called": [
+        "whacker packer",
+        "wacker",
+        "ground tamper",
+        "vibrating plate"
+      ],
+      "compat": [],
+      "bookings": [
+        {
+          "unit": 0,
+          "from": "2026-11-03",
+          "to": "2026-11-07"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-06",
+          "to": "2026-11-09"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-06",
+          "to": "2026-11-09"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-14",
+          "to": "2026-11-18"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-17",
+          "to": "2026-11-20"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-20",
+          "to": "2026-11-24"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-25",
+          "to": "2026-11-26"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-11",
+          "to": "2026-12-12"
+        },
+        {
+          "unit": 1,
+          "from": "2026-12-12",
+          "to": "2026-12-13"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-14",
+          "to": "2026-12-17"
+        },
+        {
+          "unit": 1,
+          "from": "2026-12-17",
+          "to": "2026-12-17"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-21",
+          "to": "2026-12-21"
+        },
+        {
+          "unit": 1,
+          "from": "2026-12-25",
+          "to": "2026-12-25"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-26",
+          "to": "2026-12-27"
+        }
+      ]
+    },
+    {
+      "id": "IB-GRD-002",
+      "slug": "electric-concrete-mixer-140l",
+      "category": "ground-and-concrete",
+      "name": "Electric concrete mixer 140 L",
+      "maker": "Marlow",
+      "model": "CM-140",
+      "summary": "140 L electric drum mixer, mixes about three barrow-loads per batch.",
+      "description": "A drum mixer with a tilting frame and a 140 L drum (about 100 L of mixed concrete per batch). Runs from a standard 240 V outlet, so no fuel is needed on site.",
+      "power": "240 V mains",
+      "weight_kg": 62.0,
+      "daily": 45,
+      "weekend": 70,
+      "weekly": 160,
+      "deposit": 200,
+      "min_days": 1,
+      "delivery": "optional",
+      "delivery_class": "machine",
+      "units": 2,
+      "specs": [
+        [
+          "Drum capacity",
+          "140 L"
+        ],
+        [
+          "Mixed output per batch",
+          "about 100 L"
+        ],
+        [
+          "Motor",
+          "650 W, 240 V"
+        ],
+        [
+          "Frame",
+          "Tilting, on wheels"
+        ],
+        [
+          "Weight",
+          "62 kg"
+        ]
+      ],
+      "included": [
+        "Wheeled stand"
+      ],
+      "conditions": [
+        "Operator must be 18 or over.",
+        "Return cleaned of concrete, or a cleaning fee applies."
+      ],
+      "jobs": [
+        "pave-and-compact",
+        "mix-concrete"
+      ],
+      "also_called": [
+        "cement mixer",
+        "concrete drum mixer"
+      ],
+      "compat": [
+        "240v"
+      ],
+      "bookings": [
+        {
+          "unit": 1,
+          "from": "2026-11-02",
+          "to": "2026-11-06"
+        },
+        {
+          "unit": 1,
+          "from": "2026-11-11",
+          "to": "2026-11-12"
+        },
+        {
+          "unit": 0,
+          "from": "2026-11-20",
+          "to": "2026-11-21"
+        },
+        {
+          "unit": 1,
+          "from": "2026-12-03",
+          "to": "2026-12-06"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-04",
+          "to": "2026-12-04"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-10",
+          "to": "2026-12-13"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-15",
+          "to": "2026-12-17"
+        },
+        {
+          "unit": 1,
+          "from": "2026-12-17",
+          "to": "2026-12-18"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-20",
+          "to": "2026-12-22"
+        },
+        {
+          "unit": 1,
+          "from": "2026-12-21",
+          "to": "2026-12-22"
+        },
+        {
+          "unit": 0,
+          "from": "2026-12-25",
+          "to": "2026-12-27"
+        }
+      ]
+    }
+  ],
+  "accessories": [
+    {
+      "id": "IB-ACX-001",
+      "slug": "sds-plus-masonry-bit-set",
+      "name": "SDS-Plus masonry bit set (5 piece)",
+      "kind": "purchase",
+      "price": 38,
+      "summary": "Five SDS-Plus bits, 5 to 16 mm, for brick, block and concrete.",
+      "fits_text": "SDS-Plus shank. Suits SDS-Plus rotary hammers.",
+      "fits": [
+        "sds-plus"
+      ],
+      "detail": [
+        [
+          "Sizes",
+          "5, 6, 8, 10, 16 mm"
+        ],
+        [
+          "Shank",
+          "SDS-Plus"
+        ],
+        [
+          "Length",
+          "160 mm"
+        ]
+      ]
+    },
+    {
+      "id": "IB-ACX-002",
+      "slug": "hex-30-chisel-set",
+      "name": "30 mm hex chisel set (3 piece)",
+      "kind": "purchase",
+      "price": 62,
+      "summary": "Point, flat and spade chisels for 30 mm hex demolition hammers.",
+      "fits_text": "30 mm hex shank. Suits 30 mm hex demolition hammers.",
+      "fits": [
+        "hex-30"
+      ],
+      "detail": [
+        [
+          "Pieces",
+          "Point, flat 50 mm, spade 100 mm"
+        ],
+        [
+          "Shank",
+          "30 mm hex"
+        ],
+        [
+          "Length",
+          "400 mm"
+        ]
+      ]
+    },
+    {
+      "id": "IB-ACX-003",
+      "slug": "diamond-blade-350mm",
+      "name": "Diamond blade 350 mm (concrete and masonry)",
+      "kind": "purchase",
+      "price": 149,
+      "summary": "Segmented diamond blade for concrete, pavers and brick.",
+      "fits_text": "350 mm blade with 25.4 mm bore. Suits 350 mm cut-off saws.",
+      "fits": [
+        "blade-350"
+      ],
+      "detail": [
+        [
+          "Diameter",
+          "350 mm"
+        ],
+        [
+          "Bore",
+          "25.4 mm"
+        ],
+        [
+          "Material",
+          "Concrete, brick, pavers"
+        ]
+      ]
+    },
+    {
+      "id": "IB-ACX-004",
+      "slug": "continuous-rim-tile-blade-250mm",
+      "name": "Continuous-rim tile blade 250 mm",
+      "kind": "purchase",
+      "price": 45,
+      "summary": "Chip-free diamond blade for ceramic, porcelain and stone tile.",
+      "fits_text": "250 mm blade with 25.4 mm bore. Suits 250 mm wet tile saws.",
+      "fits": [
+        "blade-250"
+      ],
+      "detail": [
+        [
+          "Diameter",
+          "250 mm"
+        ],
+        [
+          "Bore",
+          "25.4 mm"
+        ],
+        [
+          "Material",
+          "Ceramic, porcelain, stone"
+        ]
+      ]
+    },
+    {
+      "id": "IB-ACX-005",
+      "slug": "kestrel-18v-battery-5ah",
+      "name": "Spare 18 V 5.0 Ah battery (Kestrel)",
+      "kind": "hire",
+      "price": 8,
+      "summary": "Higher-capacity spare battery for the Kestrel 18 V tool platform.",
+      "fits_text": "Kestrel 18 V platform. Fits Kestrel 18 V tools.",
+      "fits": [
+        "kestrel-18v"
+      ],
+      "detail": [
+        [
+          "Voltage",
+          "18 V"
+        ],
+        [
+          "Capacity",
+          "5.0 Ah"
+        ],
+        [
+          "Charge time",
+          "1 hour"
+        ]
+      ]
+    },
+    {
+      "id": "IB-ACX-006",
+      "slug": "extension-lead-20m",
+      "name": "Heavy-duty extension lead 20 m",
+      "kind": "hire",
+      "price": 6,
+      "summary": "20 m, 10 A outdoor lead with an RCD at the plug.",
+      "fits_text": "240 V, 10 A. Suits any 240 V mains tool.",
+      "fits": [
+        "240v"
+      ],
+      "detail": [
+        [
+          "Length",
+          "20 m"
+        ],
+        [
+          "Rating",
+          "10 A, 240 V"
+        ],
+        [
+          "Protection",
+          "Built-in RCD"
+        ]
+      ]
+    },
+    {
+      "id": "IB-ACX-007",
+      "slug": "safety-pack",
+      "name": "Safety pack (glasses, ear muffs, gloves, P2 mask)",
+      "kind": "purchase",
+      "price": 29,
+      "summary": "Eye, ear, hand and dust protection for one operator.",
+      "fits_text": "Universal. Suits any tool.",
+      "fits": [],
+      "detail": [
+        [
+          "Contents",
+          "Safety glasses, ear muffs, gloves, 2 × P2 masks"
+        ],
+        [
+          "Size",
+          "One size"
+        ]
+      ]
+    },
+    {
+      "id": "IB-ACX-008",
+      "slug": "two-stroke-fuel-mix-5l",
+      "name": "2-stroke fuel mix 5 L (pre-mixed)",
+      "kind": "purchase",
+      "price": 18,
+      "summary": "Pre-mixed 2-stroke petrol for chainsaws and cut-off saws.",
+      "fits_text": "50:1 pre-mix. Suits 2-stroke engines.",
+      "fits": [
+        "two-stroke"
+      ],
+      "detail": [
+        [
+          "Volume",
+          "5 L"
+        ],
+        [
+          "Mix",
+          "50:1"
+        ],
+        [
+          "Fuel",
+          "Unleaded 91 pre-mix"
+        ]
+      ]
+    }
+  ],
+  "bundles": [
+    {
+      "id": "IB-KIT-001",
+      "slug": "concrete-demolition-kit",
+      "name": "Concrete demolition kit",
+      "summary": "Demolition hammer, chisel set, safety pack and a 20 m lead.",
+      "hire": [
+        "IB-DRL-003"
+      ],
+      "hire_acc": [
+        "IB-ACX-006"
+      ],
+      "buy": [
+        "IB-ACX-002",
+        "IB-ACX-007"
+      ],
+      "rates": {
+        "hire": {
+          "daily": 86,
+          "weekend": 135,
+          "weekly": 306
+        },
+        "list": {
+          "daily": 95,
+          "weekend": 150,
+          "weekly": 340
+        },
+        "consumables": 91
+      }
+    },
+    {
+      "id": "IB-KIT-002",
+      "slug": "tile-and-paving-cutting-kit",
+      "name": "Tile and paving cutting kit",
+      "summary": "Wet tile saw with a fresh tile blade, safety pack and a 20 m lead.",
+      "hire": [
+        "IB-CUT-001"
+      ],
+      "hire_acc": [
+        "IB-ACX-006"
+      ],
+      "buy": [
+        "IB-ACX-004",
+        "IB-ACX-007"
+      ],
+      "rates": {
+        "hire": {
+          "daily": 59,
+          "weekend": 95,
+          "weekly": 216
+        },
+        "list": {
+          "daily": 65,
+          "weekend": 105,
+          "weekly": 240
+        },
+        "consumables": 74
+      }
+    },
+    {
+      "id": "IB-KIT-003",
+      "slug": "masonry-drilling-kit",
+      "name": "Masonry drilling kit",
+      "summary": "SDS-Plus rotary hammer, masonry bit set, safety pack and a 20 m lead.",
+      "hire": [
+        "IB-DRL-002"
+      ],
+      "hire_acc": [
+        "IB-ACX-006"
+      ],
+      "buy": [
+        "IB-ACX-001",
+        "IB-ACX-007"
+      ],
+      "rates": {
+        "hire": {
+          "daily": 50,
+          "weekend": 81,
+          "weekly": 180
+        },
+        "list": {
+          "daily": 55,
+          "weekend": 90,
+          "weekly": 200
+        },
+        "consumables": 67
+      }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+{{ m.crumbs([('/', 'Home'), (None, 'Browse by job')]) }}
+<div class="pagehead"><div class="wrap"><h1>Browse by job</h1><p>Pick the job you are doing and see the equipment that suits it.</p></div></div>
+<div class="wrap" style="padding-top:1.5rem"><div class="grid g3" style="margin-bottom:2rem">
+{% for slug, (jt, ji) in JOBS.items() %}<a class="card tile" href="/jobs/{{ slug }}"><div class="body"><h2>{{ jt }}</h2><p>{{ ji }}</p></div></a>
+{% endfor %}
+</div></div>
+{% endblock %}

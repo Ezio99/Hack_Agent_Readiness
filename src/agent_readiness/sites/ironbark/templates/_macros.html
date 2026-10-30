@@ -1,0 +1,29 @@
+{% macro img(src, alt, w=800, h=600, lazy=True) -%}
+<img src="{{ src }}" alt="{{ alt }}" width="{{ w }}" height="{{ h }}"{% if lazy %} loading="lazy"{% endif %}>
+{%- endmacro %}
+
+{% macro status(pv) -%}
+{% if pv.available_today %}<span class="pill ok">Available today</span>{% else %}<span class="pill bad">Fully booked today</span>{% endif %}
+{%- endmacro %}
+
+{% macro card(pv, v, h="h3") -%}
+{% set p = pv.p %}
+<article class="card" aria-labelledby="c-{{ p.id }}">
+<div class="img">{{ img(pv.img, p.name ~ ' (illustration)', 800, 600) }}</div>
+<div class="body">
+<div class="meta"><span class="pill cat">{{ pv.cat.name }}</span> {{ status(pv) }}</div>
+<{{ h }} id="c-{{ p.id }}"><a href="{{ pv.url }}">{{ p.name }}</a></{{ h }}>
+<p>{{ p.summary }}</p>
+<p>{{ p.power }} · {{ '%g' % p.weight_kg }} kg</p>
+{% if v.discover %}<p class="aka" data-variant="discover">Also called: {{ p.also_called | join(', ') }}</p>
+{% endif %}
+{% if v.avail %}<p class="nextfree" data-variant="avail">{% if pv.next_free %}Next free: {{ fmt_date(pv.next_free) }}{% elif pv.next_booked %}Next booked day: {{ fmt_date(pv.next_booked) }}{% else %}No booked days before {{ fmt_date(LAST_DAY) }}{% endif %}</p>
+{% endif %}
+<p class="price">from <b>{{ money(p.daily) }}</b> <small>/ day inc. GST</small></p>
+</div>
+</article>
+{%- endmacro %}
+
+{% macro crumbs(items) -%}
+<nav class="crumbs wrap" aria-label="Breadcrumb"><ol>{% for href, label in items %}<li>{% if href %}<a href="{{ href }}">{{ label }}</a>{% else %}<span aria-current="page">{{ label }}</span>{% endif %}</li>{% endfor %}</ol></nav>
+{%- endmacro %}

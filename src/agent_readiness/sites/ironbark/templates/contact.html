@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+{{ m.crumbs([('/', 'Home'), (None, 'Contact and booking')]) }}
+<div class="pagehead"><div class="wrap"><h1>Contact and booking</h1><p>We take bookings by phone and e-mail.</p></div></div>
+<div class="wrap" style="padding-top:1.5rem"><div class="split">
+<section class="panel"><h2>How to book</h2><ol><li>Choose your equipment and check its booking calendar.</li><li>Call <a href="tel:{{ B.phone_href }}">{{ B.phone }}</a> or e-mail <a href="mailto:{{ B.email }}">{{ B.email }}</a> with the item, dates and whether you want delivery.</li><li>We confirm availability and hold your card deposit when the hire begins.</li></ol><p class="notice">There is no online checkout. This site is a fictional demonstration, so the phone number and e-mail address are not real.</p></section>
+<section class="panel"><h2>Visit the yard</h2><p>{{ B.address }}</p><div class="table-wrap" role="region" aria-label="Opening hours (scrollable)" tabindex="0"><table><caption>Opening hours</caption><tbody>{% for d, h in B.hours %}<tr><th scope="row">{{ d }}</th><td>{{ h }}</td></tr>{% endfor %}</tbody></table></div></section>
+</div></div>
+{% endblock %}

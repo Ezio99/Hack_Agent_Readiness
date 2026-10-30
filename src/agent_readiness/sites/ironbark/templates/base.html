@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% if title %}{{ title }} | {% endif %}{{ B.name }}</title>
+<meta name="description" content="{{ description or B.tagline }}">
+<link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site">
+<div class="utility"><div class="wrap"><span>Open Mon–Fri 7–5, Sat 8–12 · {{ B.address }}</span><span><a href="tel:{{ B.phone_href }}">{{ B.phone }}</a> · <a href="mailto:{{ B.email }}">{{ B.email }}</a></span></div></div>
+<div class="wrap bar">
+<a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="46" height="46"><span><b>IRONBARK</b><span>Hire Co.</span></span></a>
+<nav class="main" aria-label="Main">
+<ul>
+{% for href, label in NAV %}<li><a href="{{ href }}"{% if current == href %} aria-current="page"{% endif %}>{{ label }}</a></li>
+{% endfor %}
+{% if v.discover %}<li data-variant="discover"><a href="/jobs"{% if current == '/jobs' %} aria-current="page"{% endif %}>Browse by job</a></li>
+{% endif %}
+</ul>
+</nav>
+<details class="menu"><summary>Menu</summary>
+<ul>
+{% for href, label in NAV %}<li><a href="{{ href }}">{{ label }}</a></li>
+{% endfor %}
+{% if v.discover %}<li data-variant="discover"><a href="/jobs">Browse by job</a></li>
+{% endif %}
+</ul>
+</details>
+</div>
+</header>
+<main id="main">
+{% block content %}{% endblock %}
+</main>
+<footer class="site">
+<div class="wrap">
+<div><h2>{{ B.name }}</h2><p>{{ B.tagline }}.</p><p>{{ B.address }}</p></div>
+<div><h2>Hire</h2><ul>{% for c in CATEGORIES %}<li><a href="/hire/category/{{ c.slug }}">{{ c.name }}</a></li>{% endfor %}</ul></div>
+<div><h2>Help</h2><ul><li><a href="/hire-terms">Hire terms and pricing</a></li><li><a href="/kits">Kits</a></li><li><a href="/accessories">Accessories</a></li><li><a href="/contact">Contact and booking</a></li></ul></div>
+<div><h2>Opening hours</h2><ul>{% for d, h in B.hours %}<li>{{ d }}: {{ h }}</li>{% endfor %}</ul></div>
+</div>
+<div class="wrap legal"><p>{{ B.name }} is a fictional business created for software testing. Equipment, makers (Kestrel, Marlow, Torvald), prices, phone number and e-mail address are invented. Images are original illustrations, not photographs. {{ GST }}</p></div>
+</footer>
+</body>
+</html>

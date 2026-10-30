@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+{{ m.crumbs(CRUMBS) }}
+<div class="pagehead"><div class="wrap"><h1>{{ heading }}</h1><p>{{ intro }}</p></div></div>
+<div class="wrap">
+<div class="toolbar">
+<div class="chips" role="group" aria-label="Categories"><a class="chip" href="/hire"{% if not category %} aria-current="true"{% endif %}>All equipment</a>{% for c in CATEGORIES %}<a class="chip" href="/hire/category/{{ c.slug }}"{% if category and category.slug == c.slug %} aria-current="true"{% endif %}>{{ c.name }}</a>{% endfor %}</div>
+{% if not category %}<div class="chips" role="group" aria-label="Sort order"><span class="muted">Sort:</span>{% for key, label in SORTS %}<a class="chip" href="/hire{% if key != 'default' %}/sort/{{ key }}{% endif %}"{% if sort == key %} aria-current="true"{% endif %}>{{ label }}</a>{% endfor %}</div>{% endif %}
+</div>
+<p class="notice">Availability shown is for today, {{ fmt_date(AS_OF) }} {{ AS_OF.year }}. Each product page links to its booking calendar. {{ GST }}</p>
+<div class="grid g3" style="margin-bottom:2rem">
+{% for pv in items %}{{ m.card(pv, v, "h2") }}
+{% endfor %}
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+{{ m.crumbs([('/', 'Home'), (None, 'Kits')]) }}
+<div class="pagehead"><div class="wrap"><h1>Hire kits</h1><p>Equipment, consumables and safety gear grouped for common jobs. Hired equipment in a kit is {{ (BUNDLE_DISCOUNT * 100) | round | int }}% off its combined rates, hire accessories such as the lead are included free, and consumables are sold at list price.</p></div></div>
+<div class="wrap" style="padding-top:1.5rem">
+{% for k in KITS %}<article class="panel" id="{{ k.b.slug }}" aria-labelledby="k-{{ k.b.id }}">
+<div class="split">
+<div>{{ m.img('/assets/img/' ~ k.b.slug ~ '.svg', k.b.name ~ ' (illustration)', 800, 600) }}</div>
+<div>
+<h2 id="k-{{ k.b.id }}">{{ k.b.name }}</h2>
+<p class="muted">Kit code {{ k.b.id }}</p>
+<p>{{ k.b.summary }}</p>
+<h3>Hired items</h3>
+<ul>{% for i in k.hire %}<li><a href="{{ i.url }}">{{ i.name }}</a></li>{% endfor %}</ul>
+<h3>Included at no extra charge</h3>
+<ul>{% for i in k.included %}<li><a href="{{ i.url }}">{{ i.name }}</a></li>{% endfor %}</ul>
+<h3>Consumables you keep</h3>
+<ul>{% for i in k.buy %}<li><a href="{{ i.url }}">{{ i.name }}</a> ({{ money(i.price) }})</li>{% endfor %}</ul>
+<div class="rates" role="group" aria-label="Kit hire rates"><div class="rate"><b>{{ money(k.rates.hire.daily) }}</b><span>Per day</span></div><div class="rate"><b>{{ money(k.rates.hire.weekend) }}</b><span>Weekend</span></div><div class="rate"><b>{{ money(k.rates.hire.weekly) }}</b><span>Per week</span></div></div>
+<p class="muted">Plus {{ money(k.rates.consumables) }} for the consumables in the kit. Rates include GST.</p>
+</div>
+</div>
+</article>
+{% endfor %}
+</div>
+{% endblock %}

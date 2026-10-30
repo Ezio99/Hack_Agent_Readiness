@@ -15,8 +15,9 @@ def _groups():
     from .investigate import cli as investigate
     from .remediation import cli_impl as remediation
     from .scanner import cli as scanner
+    from .sites import cli as sites
     from .suite import cli as suite
-    return (scanner, suite, remediation, experiments, investigate)
+    return (scanner, suite, remediation, experiments, investigate, sites)
 
 
 def main():

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+{{ m.crumbs([('/', 'Home'), ('/accessories', 'Accessories'), (None, a.name)]) }}
+<div class="wrap pdp">
+<div class="gallery"><figure>{{ m.img('/assets/img/' ~ a.slug ~ '.svg', a.name ~ ' (illustration)', 800, 600, False) }}</figure></div>
+<div>
+<p class="eyebrow">{{ 'Hire accessory' if a.kind == 'hire' else 'Sold accessory' }}</p>
+<h1>{{ a.name }}</h1>
+<p>{{ a.summary }}</p>
+<p class="muted">Product code {{ a.id }}</p>
+<div class="rates" role="group" aria-label="Price"><div class="rate"><b>{{ money(a.price) }}</b><span>{{ 'Per day to hire' if a.kind == 'hire' else 'To buy' }}</span></div></div>
+<p class="muted">Price includes GST.</p>
+<div class="table-wrap" role="region" aria-label="Details (scrollable)" tabindex="0"><table><caption>Details</caption><tbody>{% for label, value in a.detail %}<tr><th scope="row">{{ label }}</th><td>{{ value }}</td></tr>{% endfor %}<tr><th scope="row">Fits</th><td>{{ a.fits_text }}</td></tr></tbody></table></div>
+{% if v.compat %}<section class="panel" data-variant="compat" aria-labelledby="fits">
+<h2 id="fits">Fits these hire items</h2>
+{% if products %}<ul>{% for p in products %}<li><a href="/hire/{{ p.slug }}">{{ p.name }}</a> ({{ p.id }})</li>{% endfor %}</ul>{% else %}<p>Universal: suits any tool.</p>{% endif %}
+{% if kits %}<h3>Included in kits</h3><ul>{% for k in kits %}<li><a href="/kits#{{ k.slug }}">{{ k.name }}</a></li>{% endfor %}</ul>{% endif %}
+</section>
+{% endif %}
+<p><a class="btn" href="/contact">How to order</a></p>
+</div>
+</div>
+{% endblock %}

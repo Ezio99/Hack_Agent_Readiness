@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+{{ m.crumbs([('/', 'Home'), ('/jobs', 'Browse by job'), (None, title)]) }}
+<div class="pagehead"><div class="wrap"><h1>{{ title }}</h1><p>{{ intro }}</p></div></div>
+<div class="wrap" style="padding-top:1.5rem"><div class="grid g3" style="margin-bottom:2rem">
+{% for pv in items %}{{ m.card(pv, v, "h2") }}
+{% endfor %}
+</div></div>
+{% endblock %}

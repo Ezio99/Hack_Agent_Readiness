@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+<section class="hero"><div class="wrap">
+<div>
+<p class="eyebrow">Marrickville · Sydney metro delivery</p>
+<h1>Hire the right equipment for the day, the weekend or the week.</h1>
+<p class="lead">Well-maintained tools and machines for builders, landscapers and home renovators, with clear daily, weekend and weekly rates.</p>
+<div class="actions"><a class="btn" href="/hire">Browse equipment</a><a class="btn ghost" href="/hire-terms">How hire and pricing work</a></div>
+</div>
+{{ m.img('/assets/img/hero.svg', 'Illustration of Ironbark equipment: a demolition hammer, tile saw, ladder, chainsaw and plate compactor', 1000, 600, False) }}
+</div></section>
+
+<section class="block"><div class="wrap">
+<div class="head-row"><div><p class="eyebrow">Equipment</p><h2>Hire by category</h2></div><p>{{ PRODUCTS | length }} machines across {{ CATEGORIES | length }} categories</p></div>
+<div class="grid g5 tiles">
+{% for c in CATEGORIES %}<a class="card tile" href="/hire/category/{{ c.slug }}"><div class="img">{{ m.img('/assets/img/cat-' ~ c.slug ~ '.svg', c.name ~ ' (illustration)', 800, 600) }}</div><div class="body"><h3>{{ c.name }}</h3><p>{{ c.blurb }}</p></div></a>
+{% endfor %}
+</div>
+</div></section>
+
+{% if v.discover %}<section class="block alt" data-variant="discover"><div class="wrap">
+<div class="head-row"><div><p class="eyebrow">Not sure what you need?</p><h2>What are you working on?</h2></div><p>Start with the job and see the equipment that suits it.</p></div>
+<div class="grid g4">
+{% for slug, (jt, ji) in JOBS.items() %}<a class="card tile" href="/jobs/{{ slug }}"><div class="body"><h3>{{ jt }}</h3><p>{{ ji }}</p></div></a>
+{% endfor %}
+</div>
+</div></section>
+{% endif %}
+
+<section class="block alt"><div class="wrap">
+<div class="head-row"><div><p class="eyebrow">Popular hires</p><h2>Featured equipment</h2></div><p><a href="/hire">See all {{ PRODUCTS | length }} items</a></p></div>
+<div class="grid g3">
+{% for pv in FEATURED %}{{ m.card(pv, v) }}
+{% endfor %}
+</div>
+</div></section>
+
+<section class="block"><div class="wrap">
+<div class="head-row"><div><p class="eyebrow">Kits</p><h2>Everything for the job in one hire</h2></div><p><a href="/kits">View all kits</a></p></div>
+<div class="grid g3">
+{% for k in KITS %}<article class="card" aria-labelledby="k-{{ k.b.id }}"><div class="img">{{ m.img('/assets/img/' ~ k.b.slug ~ '.svg', k.b.name ~ ' (illustration)', 800, 600) }}</div><div class="body"><h3 id="k-{{ k.b.id }}"><a href="/kits">{{ k.b.name }}</a></h3><p>{{ k.b.summary }}</p><p class="price">from <b>{{ money(k.rates.hire.daily) }}</b> <small>/ day + {{ money(k.rates.consumables) }} consumables</small></p></div></article>
+{% endfor %}
+</div>
+</div></section>
+
+<section class="block alt"><div class="wrap">
+<div class="features">
+<div class="feature"><h3>Serviced and tested</h3><p>Every machine is inspected and tested between hires.</p></div>
+<div class="feature"><h3>Metro delivery</h3><p>Delivery and collection across Sydney, from {{ money(DELIVERY.courier) }}.</p></div>
+<div class="feature"><h3>Weekend rates</h3><p>Collect Friday afternoon, return Monday morning for one weekend rate.</p></div>
+<div class="feature"><h3>Safety gear</h3><p>Eye, ear and dust protection available with every hire.</p></div>
+</div>
+</div></section>
+
+<section class="block"><div class="wrap">
+<h2>How hire works</h2>
+<ol class="steps">
+<li><h3>Choose your equipment</h3><p>Compare rates, specifications and conditions on each product page.</p></li>
+<li><h3>Check the dates</h3><p>Each item has a booking calendar. Call or email to reserve your dates.</p></li>
+<li><h3>Collect or get it delivered</h3><p>Pick up from Marrickville, or have it delivered and collected for a flat fee.</p></li>
+</ol>
+</div></section>
+{% endblock %}
