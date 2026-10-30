@@ -11,18 +11,37 @@ class RecordingClient:
     """Wraps a client and appends every exchange to a private JSONL transcript (for later replay). The transcript holds prompts and model text: keep it out of Git
     unless it has been reviewed and approved; the recorded request hash lets `RecordedClient` replay it offline."""
 
-    def __init__(self, inner: LLMClient, path: Path):
+    def __init__(self, inner: LLMClient, path: Path, calls_path: Path | None = None):
         self.inner, self.path = inner, Path(path)
+        self.calls_path = Path(calls_path) if calls_path else None          # SANITIZED per-call log (no prompts, no model text): safe to keep with the run's public artifacts
         self.mode, self.model = inner.mode, inner.model
 
-    def complete(self, request: LLMRequest) -> LLMResponse:
-        resp = self.inner.complete(request)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self.path.open("a") as f:
-            f.write(json.dumps({"request_sha256": request_sha256(request), "purpose": request.purpose, "mode": resp.mode, "model": resp.model, "usage": resp.usage,
-                                "cost_usd": resp.cost_usd, "text": resp.text, "messages": request.messages}) + "\n")
+    @staticmethod
+    def _append(path: Path, row: dict) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a") as f:
+            f.write(json.dumps(row) + "\n")
             f.flush()
             os.fsync(f.fileno())
+
+    def _log_call(self, request: LLMRequest, row: dict) -> None:
+        if self.calls_path:
+            self._append(self.calls_path, {"purpose": request.purpose, "request_sha256": request_sha256(request)[:16], "max_completion_tokens": request.max_tokens, **row})
+
+    def complete(self, request: LLMRequest) -> LLMResponse:
+        try:
+            resp = self.inner.complete(request)
+        except Exception as exc:
+            if hasattr(exc, "category"):                                    # a classified provider error: status and sanitized summary only
+                self._log_call(request, {"outcome": "provider_error", "error_category": exc.category, "http_status": getattr(exc, "status", None), "error_summary": getattr(exc, "summary", None)})
+            raise
+        u = resp.usage or {}
+        done = u.get("completion_tokens")
+        self._append(self.path, {"request_sha256": request_sha256(request), "purpose": request.purpose, "mode": resp.mode, "model": resp.model, "usage": resp.usage, "cost_usd": resp.cost_usd,
+                                 "finish_reason": resp.finish_reason, "reasoning_tokens": resp.reasoning_tokens, "text": resp.text, "messages": request.messages})
+        self._log_call(request, {"outcome": "response", "finish_reason": resp.finish_reason, "prompt_tokens": u.get("prompt_tokens"), "completion_tokens": done, "reasoning_tokens": resp.reasoning_tokens,
+                                 "cap_used_pct": round(100 * done / request.max_tokens, 1) if isinstance(done, int) and request.max_tokens else None,
+                                 "content_chars": len(resp.text) if isinstance(resp.text, str) else None, "cost_usd": resp.cost_usd, "mode": resp.mode})
         return resp
 
 
@@ -45,4 +64,4 @@ class RecordedClient:
         i = self._used.get(h, 0)
         self._used[h] = i + 1
         e = self.entries[h][min(i, len(self.entries[h]) - 1)]
-        return LLMResponse(text=e["text"], mode=self.mode, model=e["model"], usage=e.get("usage") or {}, cost_usd=0.0, request_sha256=h)
+        return LLMResponse(text=e["text"], mode=self.mode, model=e["model"], usage=e.get("usage") or {}, cost_usd=0.0, request_sha256=h, finish_reason=e.get("finish_reason"), reasoning_tokens=e.get("reasoning_tokens"))

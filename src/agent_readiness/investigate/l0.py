@@ -191,6 +191,9 @@ def run(run_dir: Path, *, approved_sha256: str, allow_model_calls: bool, client=
             parsed, resp, attempts = complete_structured(client, req, r["model"], retries=0)
             rec.update(http_ok=True, usage_reported=bool((resp.usage or {}).get("prompt_tokens") is not None or resp.mode != "live"), strict_json=_strict(resp.text), cost_usd=resp.cost_usd, usage=resp.usage)
             rec["recovered"] = not rec["strict_json"]
+            done = (resp.usage or {}).get("completion_tokens")
+            rec.update(finish_reason=resp.finish_reason, reasoning_tokens=resp.reasoning_tokens, content_chars=len(resp.text), max_completion_tokens=r["max_tokens"],           # sanitized: no text
+                       cap_used_pct=round(100 * done / r["max_tokens"], 1) if isinstance(done, int) else None)
             rec.update(_check(r, parsed, resp, True))
             raw.append({"id": r["id"], "text": resp.text})
         except StructuredOutputError as exc:

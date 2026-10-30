@@ -13,7 +13,7 @@ from ..suite.core import canonical_hash
 from . import zoo
 from .inspect.stage import run_inspect
 from .llm import LLMRequest, RecordingClient
-from .llm.meta import MetaClient
+from .llm.meta import DEFAULT_REASONING_EFFORT, INPUT_OVERHEAD_TOKENS, MetaClient, reservation_bound_usd
 from .pipeline import Context, Pipeline, Stage
 from .run import InvestigationRun
 from .evaluate import stage as evaluator
@@ -38,7 +38,7 @@ class LazyMeta:
     def complete(self, request: LLMRequest):
         if self._client is None:
             inner = MetaClient.live(self._cfg, self._run.ledger(self._ceiling), f"{self._run.state['id']}-{self._name}", allow_model_calls=self._allow, run_cap_usd=self._cap, per_request_cap_usd=0.05, max_requests=self._max_requests)
-            self._client = RecordingClient(inner, self._run.dir / "private" / f"{self._transcript}.jsonl")
+            self._client = RecordingClient(inner, self._run.dir / "private" / f"{self._transcript}.jsonl", calls_path=self._run.dir / "calls" / f"{self._name}.jsonl")
         return self._client.complete(request)
 
 
@@ -48,7 +48,8 @@ def taskgen_manifest(ctx: Context) -> dict:
     n = ctx.options.get("n_tasks", 8)
     return {"stage": "taskgen", "provider": cfg.provider, "model": cfg.model, "endpoint": cfg.base_url.rstrip("/") + "/chat/completions", "max_requests": 4, "retries_per_request": 1,
             "first_prompt_sha256": canonical_hash(propose.build_prompt(profile, n + 2, None)), "snapshot_sha256": ctx.run.artifact("site-profile")["snapshot_sha256"], "run_cap_usd": TASKGEN_RUN_CAP_USD,
-            "per_request_cap_usd": 0.05, "cost_basis": "calculated upper bounds at published prices; not a bill"}
+            "per_request_cap_usd": 0.05, "reasoning_effort": DEFAULT_REASONING_EFFORT, "max_completion_tokens": propose.MAX_TOKENS, "input_overhead_tokens_reserved": INPUT_OVERHEAD_TOKENS,
+            "per_request_reservation_usd": reservation_bound_usd(propose.build_request(profile, n + 2)), "cost_basis": "calculated upper bounds at published prices; not a bill"}
 
 
 def build(root: Path, run_id: str, site: str, *, mode: str, options: dict | None = None) -> tuple[InvestigationRun, Pipeline, Context]:

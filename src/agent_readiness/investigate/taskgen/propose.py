@@ -54,6 +54,8 @@ class TaskProposals(BaseModel):
     tasks: list[TaskDraftModel]
 
 
+MAX_TOKENS = 2500          # completion cap per taskgen request; INCLUDES hidden reasoning (see l0 measurements); listed in the taskgen manifest
+
 MAX_ITEMS_SHOWN = 30      # bound the prompt on large listings (the summary says how many items exist)
 
 
@@ -97,9 +99,13 @@ def build_prompt(profile: dict, n: int, focus: str | None = None, feedback: list
     return text
 
 
+def build_request(profile: dict, n: int, focus: str | None = None, feedback: list[str] | None = None) -> LLMRequest:
+    return LLMRequest(messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": build_prompt(profile, n, focus, feedback)}], purpose="taskgen", max_tokens=MAX_TOKENS,
+                      response_schema=TaskProposals.model_json_schema())
+
+
 def propose(llm: LLMClient, profile: dict, *, n: int = 10, focus: str | None = None, feedback: list[str] | None = None) -> tuple[list[Draft], dict]:
-    req = LLMRequest(messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": build_prompt(profile, n, focus, feedback)}], purpose="taskgen", max_tokens=2500,
-                     response_schema=TaskProposals.model_json_schema())
+    req = build_request(profile, n, focus, feedback)
     parsed, resp, attempts = complete_structured(llm, req, TaskProposals, retries=1)
     drafts = []
     for t in parsed.tasks:
