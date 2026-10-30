@@ -1,0 +1,4 @@
+{"placebo_tasks": ["gen-e38eac8644", "gen-c7c642f78c", "gen-0384beb35e"],
+ "affected": ["gen-e38eac8644", "gen-c7c642f78c"],
+ "same_shape_controls": ["gen-0384beb35e"],
+ "detail_controls": ["gen-0ac84d18d3", "gen-b05c45672f", "gen-f2731972ed"]}
