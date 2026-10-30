@@ -7,7 +7,7 @@ import { InvestigationPage } from "./pages/Investigation";
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
 let host: HTMLDivElement, root: Root;
-beforeEach(() => { host = document.createElement("div"); document.body.append(host); root = createRoot(host); });
+beforeEach(() => { sessionStorage.clear(); host = document.createElement("div"); document.body.append(host); root = createRoot(host); });
 afterEach(() => { act(() => root.unmount()); host.remove(); });
 
 const settle = async () => { for (let i = 0; i < 6; i++) await act(async () => { await new Promise((r) => setTimeout(r, 10)); }); };
@@ -114,5 +114,108 @@ describe("storefront views in the journey", () => {
     await settle();
     expect(host.querySelector('.steprail button[aria-current="step"]')!.textContent).toContain("1 · Website");
     expect(host.querySelectorAll(".steprail button")).toHaveLength(5);
+  });
+});
+
+// ---- demo reliability: keeping an explicitly loaded report across reloads (this tab's session only) ----
+import { KEY } from "./lib/reportStore";
+
+const realText = () => { const d: any = structuredClone(publicFixture); delete d.synthetic; d.run.mode = "live"; d.modes = ["live"]; d.run.target = "site-5"; return JSON.stringify(d); };
+const chooseFile = async (text: string, name = "export.json") => {
+  const input = host.querySelector<HTMLInputElement>('.sourcebar input[type="file"]')!;
+  const file = new File([text], name, { type: "application/json" });
+  Object.defineProperty(input, "files", { value: [file], configurable: true });
+  await act(async () => { input.dispatchEvent(new Event("change", { bubbles: true })); });
+  await settle();
+};
+const mount = async () => { await act(async () => { root.render(<InvestigationPage />); }); await settle(); };
+const remount = async () => { act(() => root.unmount()); root = createRoot(host); await mount(); };
+const prov = () => host.querySelector('[aria-label="Report provenance"]')?.textContent;
+const btn = (label: string) => [...host.querySelectorAll(".sourcebar button")].find((b) => b.textContent!.includes(label));
+
+describe("report persistence for demo reliability", () => {
+  it("starts on labelled synthetic data and offers a Load real export control that opens the file picker", async () => {
+    await mount();
+    expect(prov()).toBe("SYNTHETIC DEMO DATA");
+    const input = host.querySelector<HTMLInputElement>('.sourcebar input[type="file"]')!;
+    let opened = 0; input.click = () => { opened++; };
+    click(btn("Load real export")!);
+    expect(opened).toBe(1);
+    expect(host.querySelector(".sourcebar")!.textContent).toContain("nothing is fetched, uploaded or published");
+    expect(sessionStorage.getItem(KEY)).toBeNull();                              // fixtures are never stored
+  });
+  it("keeps an explicitly loaded real report across a reload and says so", async () => {
+    await mount();
+    await chooseFile(realText(), "public-export.json");
+    expect(prov()).toBe("LIVE EXPERIMENT · real model trials");
+    expect(host.textContent).not.toContain("SYNTHETIC FIXTURE");
+    expect(host.querySelector(".srcstate")!.textContent).toContain("Kept in this tab's session storage only");
+    await remount();                                                            // a page reload: nothing in memory survives, only sessionStorage
+    expect(prov()).toBe("LIVE EXPERIMENT · real model trials");
+    expect(host.querySelector(".hero2 h1")!.textContent).toContain("Make your website ready for AI agents");
+    expect(host.querySelector(".srcstate")!.textContent).toContain("public-export.json");
+  });
+  it("clears the loaded report on request, so a reload shows synthetic data again", async () => {
+    await mount(); await chooseFile(realText());
+    expect(sessionStorage.getItem(KEY)).not.toBeNull();
+    click(btn("Remove loaded report")!); await settle();
+    expect(sessionStorage.getItem(KEY)).toBeNull();
+    expect(prov()).toBe("SYNTHETIC DEMO DATA");
+    expect(host.querySelector(".srcnotice")!.textContent).toContain("removed");
+    await remount();
+    expect(prov()).toBe("SYNTHETIC DEMO DATA");
+  });
+  it("fails gracefully when session storage is unavailable: still shows the report and says a reload needs the file again", async () => {
+    const real = Object.getOwnPropertyDescriptor(window, "sessionStorage")!;
+    Object.defineProperty(window, "sessionStorage", { configurable: true, get() { throw new DOMException("denied", "SecurityError"); } });
+    try {
+      await mount(); await chooseFile(realText());
+      expect(prov()).toBe("LIVE EXPERIMENT · real model trials");
+      expect(host.querySelector(".srcnotice")!.textContent).toContain("Reloading this page will require selecting the file again");
+      expect(btn("Remove loaded report")).toBeUndefined();
+      await remount();
+      expect(prov()).toBe("SYNTHETIC DEMO DATA");
+    } finally { Object.defineProperty(window, "sessionStorage", real); }
+  });
+  it("fails gracefully when the write is refused (quota) and when the report is too large", async () => {
+    const proto = Object.getPrototypeOf(sessionStorage);
+    const orig = proto.setItem;
+    proto.setItem = () => { throw new DOMException("full", "QuotaExceededError"); };
+    try {
+      await mount(); await chooseFile(realText());
+      expect(prov()).toBe("LIVE EXPERIMENT · real model trials");
+      expect(host.querySelector(".srcnotice")!.textContent).toMatch(/full or refused the write\. Reloading this page will require selecting the file again/);
+    } finally { proto.setItem = orig; }
+    const big = JSON.parse(realText()); big.padding = "x".repeat(2_100_000);
+    await chooseFile(JSON.stringify(big));
+    expect(host.querySelector(".srcnotice")!.textContent).toContain("too large");
+    expect(sessionStorage.getItem(KEY)).toBeNull();
+  });
+  it("switches between synthetic and real reports with matching labels, and can return to the kept report", async () => {
+    await mount();
+    await chooseFile(realText());
+    expect(prov()).toBe("LIVE EXPERIMENT · real model trials");
+    const select = host.querySelector("select")!;
+    await act(async () => { select.value = "expb-synthetic"; select.dispatchEvent(new Event("change", { bubbles: true })); });
+    await settle();
+    expect(prov()).toBe("SYNTHETIC DEMO DATA");
+    expect(host.textContent).toContain("SYNTHETIC FIXTURE");
+    expect(sessionStorage.getItem(KEY)).not.toBeNull();                         // viewing a fixture does not discard the kept report
+    click(btn("Switch back to loaded report")!); await settle();
+    expect(prov()).toBe("LIVE EXPERIMENT · real model trials");
+    expect(host.textContent).not.toContain("SYNTHETIC FIXTURE");
+  });
+  it("never stores or shows a file that fails validation, and discards a corrupt kept report", async () => {
+    await mount();
+    await chooseFile(JSON.stringify({ ...JSON.parse(realText()), criteria: { x: 1 } }));      // forbidden private field
+    expect(sessionStorage.getItem(KEY)).toBeNull();
+    expect(host.textContent).toContain("Cannot display this file");
+    await chooseFile("{not json");
+    expect(sessionStorage.getItem(KEY)).toBeNull();
+    sessionStorage.setItem(KEY, JSON.stringify({ name: "x.json", text: "{broken" }));
+    await remount();
+    expect(prov()).toBe("SYNTHETIC DEMO DATA");
+    expect(sessionStorage.getItem(KEY)).toBeNull();
+    expect(host.querySelector(".srcnotice")!.textContent).toContain("could not be read and was discarded");
   });
 });
