@@ -170,32 +170,32 @@ def test_rule_candidates_yield_valid_diverse_tasks_on_structurally_different_sit
 
 
 # --- model proposals through the gate --------------------------------------------------------------------------------------------------------------------------------------
-def test_model_proposals_are_gated_and_rejections_feed_one_replacement_round(tmp_path):
-    first = proposals_json(GOOD_TASKS[:2] + BAD_TASKS[:3])
-    second = proposals_json(GOOD_TASKS[2:])
-    llm = ScriptedClient([first, second])
+def test_three_batches_are_gated_deduplicated_never_retried_and_use_distinct_prompts(tmp_path):
+    llm = ScriptedClient([proposals_json(GOOD_TASKS[:2] + BAD_TASKS[:3]), proposals_json(GOOD_TASKS[1:4]), proposals_json(GOOD_TASKS[2:])])       # batch 2 repeats one task of batch 1; batch 3 repeats one of batch 2
     run = make_run(tmp_path)
     res = run_tasks(run, llm, n_tasks=4)
-    assert res.status == "done" and len(llm.calls) == 2
+    assert res.status == "done" and len(llm.calls) == 3 and [c.max_tokens for c in llm.calls] == [propose.MAX_TOKENS] * 3
     rep = run.artifact("taskgen-report")
-    assert [a["source"] for a in rep["accepted"]].count("model") == 4 and len(rep["rejected"]) == 3
-    prompt2 = llm.calls[1].messages[1]["content"]
-    assert "rejected for these reasons" in prompt2 and "contains the expected answer" in prompt2 and "$45" not in prompt2.split("rejected for these reasons")[1]
+    assert [a["source"] for a in rep["accepted"]].count("model") == 4 and len(rep["rejected"]) >= 3
+    assert any("duplicate" in r["reason"].lower() or "already" in r["reason"].lower() for r in rep["rejected"])         # cross-batch de-duplication is the gate's, unchanged
+    prompts = [c.messages[1]["content"] for c in llm.calls]
+    assert len(set(prompts)) == 3 and all("rejected for these reasons" not in p for p in prompts)                      # no feedback-generated extra call
+    assert [c["status"] for c in rep["model_calls"]] == ["ok", "ok", "ok"] and "Propose 4 tasks" in prompts[0]
     assert len(llm.calls[0].response_schema["$defs"]["CriterionDraft"]["properties"]) == 7 and llm.calls[0].response_schema["$defs"]["CriterionDraft"]["additionalProperties"] is False
 
 
 def test_unusable_model_output_is_recorded_and_rules_top_up(tmp_path):
     run = make_run(tmp_path)
-    res = run_tasks(run, ScriptedClient(["not json", "still not json"]))
+    res = run_tasks(run, ScriptedClient(["not json", "still not json", "nope"]))
     assert res.status == "done"
     rep = run.artifact("taskgen-report")
-    assert rep["model_calls"][0]["error"] and rep["rule_topup"] >= 4
+    assert [c["status"] for c in rep["model_calls"]] == ["invalid"] * 3 and rep["model_calls"][0]["error"] and rep["rule_topup"] >= 4
     assert run.state["stages"]["taskgen"]["summary"]["by_source"]["rule"] >= 4
 
 
 def test_too_few_acceptable_tasks_fails_loudly_but_keeps_the_reasons(tmp_path):
     run = make_run(tmp_path)
-    res = run_tasks(run, ScriptedClient([proposals_json(BAD_TASKS)] * 2), rule_topup=False)
+    res = run_tasks(run, ScriptedClient([proposals_json(BAD_TASKS)] * 3), rule_topup=False)
     assert res.status == "failed" and "acceptable tasks" in res.error
     assert len(run.artifact("taskgen-report")["rejected"]) >= 5
 
@@ -204,7 +204,7 @@ def test_owner_goals_go_through_the_same_gate(tmp_path):
     goals = {"focus": "visitors comparing workshop prices", "tasks": [
         {"question": "What does the Pottery Basics workshop cost?", "criterion": {"kind": "page_fact", "page": "/workshops/pottery-basics", "label": "price"}},
         {"question": "How much is the Screen Printing workshop? It costs $52.", "criterion": {"kind": "page_fact", "page": "/workshops/screen-print", "label": "price"}}]}
-    llm = ScriptedClient([proposals_json(GOOD_TASKS[1:])])
+    llm = ScriptedClient([proposals_json(GOOD_TASKS[1:])] * 3)
     run = make_run(tmp_path)
     run_tasks(run, llm, goals=goals, n_tasks=4, feedback_round=False)
     rep = run.artifact("taskgen-report")
@@ -215,7 +215,7 @@ def test_owner_goals_go_through_the_same_gate(tmp_path):
 def test_provider_agnostic_record_and_replay(tmp_path):
     path = tmp_path / "t.jsonl"
     r1 = make_run(tmp_path, name="a")
-    run_tasks(r1, RecordingClient(ScriptedClient([proposals_json(GOOD_TASKS)]), path), n_tasks=4)
+    run_tasks(r1, RecordingClient(ScriptedClient([proposals_json(GOOD_TASKS)] * 3), path), n_tasks=4)
     r2 = make_run(tmp_path, name="b")
     run_tasks(r2, RecordedClient(path), n_tasks=4)
     assert r1.artifact("tasks-manifest")["tasks"] == r2.artifact("tasks-manifest")["tasks"] and r2.artifact("tasks-manifest")["generator"]["mode"] == "recorded"
@@ -229,7 +229,7 @@ def frozen(tmp_path, sid="site-1", llm=None):
 
 
 def test_manifest_is_public_only_immutable_and_hash_linked_to_private_criteria(tmp_path):
-    run = frozen(tmp_path, llm=ScriptedClient([proposals_json(GOOD_TASKS)]))
+    run = frozen(tmp_path, llm=ScriptedClient([proposals_json(GOOD_TASKS)] * 3))
     manifest, private = freezer.load(run)
     text = json.dumps(manifest)
     by_id = {t["task_id"]: t for t in manifest["tasks"]}
@@ -273,7 +273,7 @@ def test_partition_is_deterministic_spread_and_never_leaks_holdout_to_the_invest
 
 
 def test_instances_are_graded_independently_of_the_agent_and_need_evidence(tmp_path):
-    run = frozen(tmp_path, llm=ScriptedClient([proposals_json(GOOD_TASKS)]))
+    run = frozen(tmp_path, llm=ScriptedClient([proposals_json(GOOD_TASKS)] * 3))
     insts = {i.spec.objective: i for i in freezer.instances(run)}
     var = freezer.variant_for(run.artifact("tasks-manifest")["snapshot_sha256"])
     pf = insts["What does the Pottery Basics workshop cost?"]
@@ -308,7 +308,7 @@ def test_full_taskgen_and_freeze_on_every_site_with_no_model(tmp_path, sid):
 
 
 def test_prompts_are_blind_and_taskgen_code_is_domain_neutral(tmp_path):
-    llm = ScriptedClient([proposals_json(GOOD_TASKS)])
+    llm = ScriptedClient([proposals_json(GOOD_TASKS)] * 3)
     run_tasks(make_run(tmp_path), llm)
     for call in llm.calls:
         sealed.assert_blind(json.dumps(call.messages))

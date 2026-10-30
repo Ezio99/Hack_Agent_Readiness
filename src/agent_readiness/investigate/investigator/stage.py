@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from ...suite.core import canonical_hash
+from .. import allocation as alloc
 from ..llm import LLMRequest, RecordingClient  # noqa: F401
 from ..llm.meta import DEFAULT_REASONING_EFFORT, INPUT_OVERHEAD_TOKENS, reservation_bound_usd
 from ..models import now
@@ -12,7 +13,7 @@ from .loop import STEP_MAX_TOKENS, SYSTEM, Step, first_user_message, investigate
 from .tools import Workspace
 
 DEFAULT_MAX_CALLS = 12
-RUN_CAP_USD = 0.40
+RUN_CAP_USD = alloc.INVESTIGATE_CAP_USD
 
 
 def manifest(ctx: Context) -> dict:
@@ -21,9 +22,9 @@ def manifest(ctx: Context) -> dict:
     ws = Workspace(ctx.run)
     n = ctx.options.get("max_calls", DEFAULT_MAX_CALLS)
     return {"stage": "investigate", "provider": cfg.provider, "model": cfg.model, "endpoint": cfg.base_url.rstrip("/") + "/chat/completions", "max_tool_calls": n, "max_requests": 2 * (n + 1),
-            "retries_per_request": 1, "run_cap_usd": ctx.options.get("investigate_cap_usd", RUN_CAP_USD), "per_request_cap_usd": 0.05, "reasoning_effort": DEFAULT_REASONING_EFFORT, "max_completion_tokens": STEP_MAX_TOKENS, "input_overhead_tokens_reserved": INPUT_OVERHEAD_TOKENS,
+            "retries_per_request": 1, "run_cap_usd": ctx.options.get("investigate_cap_usd", RUN_CAP_USD), "per_request_cap_usd": alloc.PER_REQUEST_CAP_USD, "reasoning_effort": DEFAULT_REASONING_EFFORT, "max_completion_tokens": STEP_MAX_TOKENS, "input_overhead_tokens_reserved": INPUT_OVERHEAD_TOKENS,
             "first_request_reservation_usd": reservation_bound_usd(LLMRequest(messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": first_user_message(ws, ctx.options.get("focus"))}], purpose="investigate", max_tokens=STEP_MAX_TOKENS, response_schema=Step.model_json_schema())),
-            "reservation_note": "input grows with the conversation; every request is re-reserved and refused if it would exceed the per-request or run cap", "prompt_sha256": canonical_hash([SYSTEM, first_user_message(ws, ctx.options.get("focus"))]),
+            "allocation": alloc.allocation(ctx.options.get("total_cap_usd", 3.0)), "reservation_note": "input grows with the conversation; every request is re-reserved and refused if it would exceed the per-request or run cap", "prompt_sha256": canonical_hash([SYSTEM, first_user_message(ws, ctx.options.get("focus"))]),
             "attribution_sha256": canonical_hash(ctx.run.artifact("attribution")), "tasks_manifest_sha256": canonical_hash(ctx.run.artifact("tasks-manifest")), "cost_basis": "calculated upper bounds at published prices; not a bill"}
 
 

@@ -83,13 +83,12 @@ def test_l0_rows_for_successful_requests_carry_sanitized_finish_and_reasoning_fi
     assert "Return a=3" not in json.dumps(rep) and l0.manifest_sha256() == "0ce19b499a243252ffbf4f0172f8e084cbd0119f3d7fad2ae3b90ca5b0490b86"      # observability does not change the approved L0 manifest
 
 
-def test_taskgen_manifest_lists_effort_cap_and_the_enforced_reservation(tmp_path):
+def test_taskgen_manifest_lists_effort_cap_and_the_enforced_reservations(tmp_path):
     run = make_run(tmp_path, "site-5", "tg")
-    m = flow.taskgen_manifest(Context(run, options={"n_tasks": 8}))
-    assert m["reasoning_effort"] == DEFAULT_REASONING_EFFORT and m["max_completion_tokens"] == propose.MAX_TOKENS and m["input_overhead_tokens_reserved"] == INPUT_OVERHEAD_TOKENS
-    assert 0 < m["per_request_reservation_usd"] <= m["per_request_cap_usd"] and m["max_requests"] * m["per_request_reservation_usd"] <= m["run_cap_usd"]       # worst case fits the stage cap
-    changed = flow.taskgen_manifest(Context(run, options={"n_tasks": 3}))
-    assert changed["first_prompt_sha256"] != m["first_prompt_sha256"]
+    m = flow.taskgen_manifest(Context(run, options={"n_tasks": 8, "total_cap_usd": 2.05}))
+    assert m["reasoning_effort"] == DEFAULT_REASONING_EFFORT and m["max_completion_tokens"] == propose.MAX_TOKENS == 6144 and m["input_overhead_tokens_reserved"] == INPUT_OVERHEAD_TOKENS
+    assert len(m["per_request_reservation_usd"]) == m["batches"] == 3 and all(0 < b <= m["per_request_cap_usd"] for b in m["per_request_reservation_usd"])
+    assert m["worst_case_stage_usd"] == round(sum(m["per_request_reservation_usd"]), 6) <= m["run_cap_usd"] == 0.15
 
 
 def test_investigate_manifest_lists_effort_cap_and_reservation(tmp_path):

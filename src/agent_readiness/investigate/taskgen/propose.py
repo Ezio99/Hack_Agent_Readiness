@@ -54,7 +54,12 @@ class TaskProposals(BaseModel):
     tasks: list[TaskDraftModel]
 
 
-MAX_TOKENS = 2500          # completion cap per taskgen request; INCLUDES hidden reasoning (see l0 measurements); listed in the taskgen manifest
+MAX_TOKENS = 6144          # completion cap per taskgen request; INCLUDES hidden reasoning (L0 attempt 3: 3 simple tasks used 3,015 tokens, ~93 % reasoning); listed in the taskgen manifest
+BATCHES = 3                # L1a: three independent requests of BATCH_SIZE proposals each; no retries and no feedback round (a failed batch is recorded, never re-requested)
+BATCH_SIZE = 4
+BATCH_ANGLES = ("retrieving one labelled fact from a page that is reached by following links (page_fact tasks)",
+                "navigation: finding a specific page the user must reach by following links, and facts on pages that are two or more clicks deep (reach_page and page_fact tasks)",
+                "comparisons and filters across the items of a listing (item_set and extremum tasks)")
 
 MAX_ITEMS_SHOWN = 30      # bound the prompt on large listings (the summary says how many items exist)
 
@@ -89,8 +94,10 @@ def site_summary(profile: dict, max_pages: int = 40) -> dict:
             "listings": listings, "facts_on_other_pages": other[:12]}
 
 
-def build_prompt(profile: dict, n: int, focus: str | None = None, feedback: list[str] | None = None) -> str:
+def build_prompt(profile: dict, n: int, focus: str | None = None, feedback: list[str] | None = None, angle: str | None = None) -> str:
     text = f"Website summary (JSON):\n{json.dumps(site_summary(profile), ensure_ascii=False)}\n\n{RULES}\n\nPropose {n} tasks."
+    if angle:
+        text += f"\nEmphasis of this batch: {angle}. Other kinds are still allowed; do not repeat tasks that another batch would obviously propose."
     if focus:
         text += f"\nThe site owner's priorities (treat as guidance for what matters, not as answers): {focus}"
     if feedback:
@@ -99,14 +106,20 @@ def build_prompt(profile: dict, n: int, focus: str | None = None, feedback: list
     return text
 
 
-def build_request(profile: dict, n: int, focus: str | None = None, feedback: list[str] | None = None) -> LLMRequest:
-    return LLMRequest(messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": build_prompt(profile, n, focus, feedback)}], purpose="taskgen", max_tokens=MAX_TOKENS,
+def build_request(profile: dict, n: int, focus: str | None = None, feedback: list[str] | None = None, angle: str | None = None) -> LLMRequest:
+    return LLMRequest(messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": build_prompt(profile, n, focus, feedback, angle)}], purpose="taskgen", max_tokens=MAX_TOKENS,
                       response_schema=TaskProposals.model_json_schema())
 
 
-def propose(llm: LLMClient, profile: dict, *, n: int = 10, focus: str | None = None, feedback: list[str] | None = None) -> tuple[list[Draft], dict]:
-    req = build_request(profile, n, focus, feedback)
-    parsed, resp, attempts = complete_structured(llm, req, TaskProposals, retries=1)
+def batch_requests(profile: dict, focus: str | None = None) -> list[LLMRequest]:
+    """The exact requests the L1a taskgen stage sends (deterministic: no batch depends on another's output), in order. The approval manifest hashes these same requests."""
+    return [build_request(profile, BATCH_SIZE, focus, None, angle) for angle in BATCH_ANGLES[:BATCHES]]
+
+
+def propose(llm: LLMClient, profile: dict, *, n: int = 10, focus: str | None = None, feedback: list[str] | None = None, angle: str | None = None, retries: int = 1,
+            request: LLMRequest | None = None) -> tuple[list[Draft], dict]:
+    req = request or build_request(profile, n, focus, feedback, angle)
+    parsed, resp, attempts = complete_structured(llm, req, TaskProposals, retries=retries)
     drafts = []
     for t in parsed.tasks:
         try:

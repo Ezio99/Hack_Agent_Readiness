@@ -10,6 +10,7 @@ from pathlib import Path
 from ..agent import ModelConfig
 from ..ledger import Halt
 from ..suite.core import canonical_hash
+from . import allocation as alloc
 from . import zoo
 from .inspect.stage import run_inspect
 from .llm import LLMRequest, RecordingClient
@@ -20,11 +21,12 @@ from .evaluate import stage as evaluator
 from .investigator import stage as investigator
 from .recommend import stage as recommend
 from .taskgen import propose
+from .taskgen.goals import load_goals
 from .taskgen.stage import freeze_stage, taskgen_stage
 from .trials import stage as trials
 
 STAGES = ("inspect", "taskgen", "freeze", "baseline_trials", "trace", "investigate", "recommend", "report", "apply_fix", "post_trials", "evaluate", "final_report")
-TASKGEN_RUN_CAP_USD = 0.15
+TASKGEN_RUN_CAP_USD = alloc.TASKGEN_CAP_USD
 
 
 class LazyMeta:
@@ -35,21 +37,35 @@ class LazyMeta:
         self.model, self._run, self._cfg, self._allow, self._cap, self._ceiling, self._client = cfg.model, run, cfg, allow, cap_usd, ledger_ceiling_usd, None
         self._name, self._max_requests, self._transcript = name, max_requests, transcript
 
+    @property
+    def violation(self) -> str | None:
+        """The spend gate's bound-violation flag (None until the first request, or when clean). The stage stops on it."""
+        gate = getattr(getattr(getattr(self._client, "inner", None), "gate", None), "violation", None)
+        return gate
+
     def complete(self, request: LLMRequest):
         if self._client is None:
-            inner = MetaClient.live(self._cfg, self._run.ledger(self._ceiling), f"{self._run.state['id']}-{self._name}", allow_model_calls=self._allow, run_cap_usd=self._cap, per_request_cap_usd=0.05, max_requests=self._max_requests)
+            inner = MetaClient.live(self._cfg, self._run.ledger(self._ceiling), f"{self._run.state['id']}-{self._name}", allow_model_calls=self._allow, run_cap_usd=self._cap, per_request_cap_usd=alloc.PER_REQUEST_CAP_USD, max_requests=self._max_requests)
             self._client = RecordingClient(inner, self._run.dir / "private" / f"{self._transcript}.jsonl", calls_path=self._run.dir / "calls" / f"{self._name}.jsonl")
         return self._client.complete(request)
 
 
 def taskgen_manifest(ctx: Context) -> dict:
+    """What the owner approves for taskgen. Everything here is also what the stage executes: the request list is the one `propose.batch_requests` builds and the stage sends, the caps are the
+    ones `build` hands to the spend gate."""
+    from .llm import request_sha256
     cfg = ctx.options.get("model_config") or ModelConfig()
     profile = ctx.run.artifact("site-profile")
-    n = ctx.options.get("n_tasks", 8)
-    return {"stage": "taskgen", "provider": cfg.provider, "model": cfg.model, "endpoint": cfg.base_url.rstrip("/") + "/chat/completions", "max_requests": 4, "retries_per_request": 1,
-            "first_prompt_sha256": canonical_hash(propose.build_prompt(profile, n + 2, None)), "snapshot_sha256": ctx.run.artifact("site-profile")["snapshot_sha256"], "run_cap_usd": TASKGEN_RUN_CAP_USD,
-            "per_request_cap_usd": 0.05, "reasoning_effort": DEFAULT_REASONING_EFFORT, "max_completion_tokens": propose.MAX_TOKENS, "input_overhead_tokens_reserved": INPUT_OVERHEAD_TOKENS,
-            "per_request_reservation_usd": reservation_bound_usd(propose.build_request(profile, n + 2)), "cost_basis": "calculated upper bounds at published prices; not a bill"}
+    reqs = propose.batch_requests(profile, load_goals(ctx.options.get("goals"))[0])
+    bounds = [reservation_bound_usd(r) for r in reqs]
+    return {"stage": "taskgen", "provider": cfg.provider, "model": cfg.model, "endpoint": cfg.base_url.rstrip("/") + "/chat/completions", "batches": len(reqs), "proposals_per_batch": propose.BATCH_SIZE,
+            "max_requests": len(reqs), "retries_per_request": 0, "feedback_round": False, "target_tasks": ctx.options.get("n_tasks", 8),
+            "batch_prompt_sha256": [canonical_hash(r.messages) for r in reqs], "batch_request_sha256": [request_sha256(r) for r in reqs], "snapshot_sha256": profile["snapshot_sha256"],
+            "run_cap_usd": TASKGEN_RUN_CAP_USD, "per_request_cap_usd": alloc.PER_REQUEST_CAP_USD, "reasoning_effort": DEFAULT_REASONING_EFFORT, "max_completion_tokens": propose.MAX_TOKENS,
+            "input_overhead_tokens_reserved": INPUT_OVERHEAD_TOKENS, "per_request_reservation_usd": bounds, "worst_case_stage_usd": round(sum(bounds), 6),
+            "on_batch_validation_failure": "recorded; other batches kept; rule-based fallback if fewer than 4 acceptable tasks", "on_provider_error": "no further requests; accepted work kept",
+            "on_spend_gate_refusal_or_violation": "stage stops (Halt); completed batches are persisted and never re-requested", "allocation": alloc.allocation(ctx.options.get("total_cap_usd", 3.0)),
+            "cost_basis": "calculated upper bounds at published prices; not a bill"}
 
 
 def build(root: Path, run_id: str, site: str, *, mode: str, options: dict | None = None) -> tuple[InvestigationRun, Pipeline, Context]:
@@ -61,7 +77,7 @@ def build(root: Path, run_id: str, site: str, *, mode: str, options: dict | None
     cfg = opts.get("model_config") or ModelConfig()
     live = mode == "live"
     ceiling = opts.get("total_cap_usd", 3.0)                       # ONE hard ceiling on the shared spend ledger for the whole investigation
-    llm = LazyMeta(run, cfg, opts.get("allow_model_calls", False), TASKGEN_RUN_CAP_USD, ceiling) if live else None
+    llm = LazyMeta(run, cfg, opts.get("allow_model_calls", False), TASKGEN_RUN_CAP_USD, ceiling, max_requests=propose.BATCHES) if live else None
     if live and "investigator_llm" not in opts:
         opts["investigator_llm"] = LazyMeta(run, cfg, opts.get("allow_model_calls", False), opts.get("investigate_cap_usd", investigator.RUN_CAP_USD), ceiling, name="investigate",
                                             max_requests=2 * (opts.get("max_calls", investigator.DEFAULT_MAX_CALLS) + 1), transcript="investigator-llm-transcript")

@@ -1,4 +1,6 @@
-# Report 016j — L1a configuration and observability proposal (after L0 attempt 3 PASS)
+# Report 016j — L1a configuration and observability (after L0 attempt 3 PASS)
+
+> **Status: owner decisions applied (see "Round 2" at the end).** Sections 2-5 are the original proposal and are kept for the record; where they differ (taskgen route, baseline stage cap, hashes) the Round 2 section governs.
 
 Offline only. L0 artifacts, the programme ledger and every earlier manifest are untouched; no model call was made. L0 manifest hash is unchanged (`0ce19b49…0b86`).
 
@@ -46,3 +48,36 @@ Common to all: every draft already passes the same independent gate (acceptance,
 1. Taskgen route: A (8,192), A' (6,144) or **B** (recommended); and for B the stage cap US$0.20 vs no batch retry.
 2. Confirm investigator cap 4,096.
 3. Whether to add a baseline-stage cap (e.g. US$1.50) so the investigator cannot be starved (code change to the trials manifest; not done).
+
+## Round 2 — owner decisions implemented (PR #47 stays a draft)
+Decisions: (1) taskgen = Option B: 3 batches x 4 proposals, 6,144 completion tokens per request, **no retries, no feedback round**, stage cap stays US$0.15; (2) investigator cap 4,096 with US$0.40 stage cap; (3) **enforceable baseline stage cap US$1.40**, overall ceiling US$2.05, US$0.10 unallocated; (4) keep acceptance / de-duplication / leakage gate and rule fallback; one bad batch must not discard good ones; spend-gate violations and other critical failures stop safely; (5) every batch prompt, request limit, cap and stage limit in the approval manifests, and execution must match; (6) offline regression tests.
+
+### What changed (code)
+- `taskgen/propose.py`: `MAX_TOKENS=6144`, `BATCHES=3`, `BATCH_SIZE=4`, three fixed batch "emphasis" lines (fact retrieval / navigation and deep pages / comparisons and filters) so **no batch depends on another's output** and all three prompts are known and hashed before approval; `batch_requests()` builds the exact requests; `propose()` gains `angle`, `retries` and `request` parameters (stage uses `retries=0`).
+- `taskgen/stage.py`: `taskgen_stage` sends the three batch requests once each. Every finished batch (ok / invalid / provider error) is persisted to `private/taskgen-batch-<i>.json` *before* anything else. Per-batch **validation failure** (`StructuredOutputError`) is recorded and the other batches are unaffected. A **provider error** keeps accepted work and stops issuing requests. A **spend-gate Halt / refusal, a gate bound violation, or any unexpected exception** propagates (critical): no half-written report, completed batches are on disk, and a restart (an owner decision) never re-requests them (the gate's request counter and ledger also persist, so the 3-request limit holds across restarts). The per-draft gate (acceptance, fingerprint de-duplication across batches, leakage checks) and the rule top-up are untouched.
+- `allocation.py` (new): the stage caps (0.15 / 1.40 / 0.40), per-request cap 0.05 and an `allocation(ceiling)` summary; used by the manifests and the code that enforces them.
+- `spend_gate.py`: optional `scope_run_ids` + `scope_cap` give a **stage cap spanning many gates** (reserved + settled, read from the durable ledger, so it survives restarts and ignores other stages); a recorded bound violation now keeps a *new* gate instance closed after a restart. Defaults leave every other live path unchanged.
+- `trials/stage.py`: baseline trials build each trial gate with the stage scope and cap taken from the manifest (`stage_cap_usd`, option `baseline_stage_cap_usd`, default 1.40). A trial that would breach it is refused, ends void, and the stage halts (existing rule); the patched-arm manifest is unchanged (the cap key is dropped there).
+- `flow.py` / `investigator/stage.py`: manifests list batches, per-batch prompt and request hashes, retries 0, no feedback round, completion caps, reasoning effort, per-request reservations, worst case, failure-handling policy and the allocation; the gates are built from the same constants (a test compares).
+- Test changes needed by the decisions: taskgen tests that assumed one request plus a feedback round now script three batches; the bug-hunt test that asserted "no per-stage caps" now asserts the cap exists and fits inside the one ceiling; the live-flow test expects the three-batch manifest.
+
+### Revised hashes (computed in-process from free inspect output; no gate or run started; `--total-cap-usd 2.05`, `n_tasks=8`)
+- L0 `0ce19b499a243252ffbf4f0172f8e084cbd0119f3d7fad2ae3b90ca5b0490b86` (unchanged).
+- Taskgen `site-5`: **`3ce7be841975404c37c6f01ab3045c0dd243b8475dde0e6bca00c53eabf0b7df`** (earlier draft hashes `a38374df…` and `d9c894cd…` are superseded). `site-4` for reference: `418d85055bd6b28f420cf3ebff6b2c34e11ae1bba7756c58b527af21e7da97d0`.
+- Baseline-trials and investigate hashes depend on the frozen tasks and the baseline attribution and are printed at their own gates; both manifests now contain the new fields, so no earlier value is valid. The hash covers `--total-cap-usd`, so L1a must be started with 2.05.
+
+### Spending (calculated upper bounds, site-5)
+| stage | requests | per-request reservation | stage worst case | stage cap |
+|---|---|---|---|---|
+| taskgen | 3 (no retry) | US$0.02847 / 0.02849 / 0.02846 (< 0.05) | **US$0.0854** | 0.15 |
+| baseline trials (8 tasks, K = 1) | <= 16 per trial | <= 0.05 | bounded by the enforced **stage cap 1.40** (per-trial cap 0.50) | 1.40 |
+| investigate (<= 12 tool calls) | <= 26 | first ~0.0195, ~0.034 at full history (< 0.05) | bounded by stage cap 0.40 | 0.40 |
+Allocated 0.15 + 1.40 + 0.40 = **US$1.95**; ledger ceiling **US$2.05**; unallocated **US$0.10** (A$0.15); US$2.05 = A$3.08 against A$43.79 remaining. Expected spend remains about US$1.0. The programme ledger is not modified.
+
+### Remaining risks
+- **6,144 may still be too small for a batch** (P5: ~93 % reasoning; a real batch has a larger prompt). A truncated batch is recorded `invalid` with finish reason / reasoning tokens (new diagnostics), the other batches survive, and the rule fallback guarantees >= 4 tasks; but if all three fail, L1a would proceed on rule tasks only (visible in the report as `by_source.model = 0`).
+- Three fixed "emphasis" lines reduce but do not remove duplicate proposals; duplicates are rejected by the gate, so up to 12 proposals may yield fewer than 8 distinct accepted tasks.
+- Stage caps include reservations (upper bounds, including the browser path's screenshot headroom), so the baseline cap can bind earlier than actual spend would; a trial refused by the cap is void and halts the stage.
+- A gate bound violation can still overshoot by one request before the gate closes; the closure now survives restarts.
+- Investigator: the final `finish` step can still be truncated at 4,096; the run then ends `incomplete` and keeps the evidence gathered.
+- Taskgen/investigate gates are still created per process: a restart after a halt needs a new owner approval of the (unchanged) manifest, and the investigator is not resumable mid-conversation (unchanged).

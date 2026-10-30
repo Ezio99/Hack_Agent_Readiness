@@ -97,7 +97,7 @@ def test_live_flow_stops_for_approval_at_taskgen_before_any_key_or_network(tmp_p
     r = pipe.run(ctx)
     assert r.status == "awaiting_approval" and r.stage == "taskgen" and ctx.llm._client is None
     m = run.artifact(f"manifests/taskgen-{r.manifest_sha256[:16]}")
-    assert m["model"] == "muse-spark-1.3" and m["max_requests"] == 4 and m["run_cap_usd"] == 0.15 and len(m["first_prompt_sha256"]) == 64
+    assert m["model"] == "muse-spark-1.3" and m["max_requests"] == 3 and m["batches"] == 3 and m["retries_per_request"] == 0 and m["feedback_round"] is False and m["run_cap_usd"] == 0.15 and len(m["batch_prompt_sha256"]) == 3
     assert not (run.dir / "spend").exists()
     run.approve("taskgen", r.manifest_sha256, "unit test approval")
     r2 = flow.build(tmp_path, "live-a", "site-4", mode="live", options={"n_tasks": 6})[1].run(flow.build(tmp_path, "live-a", "site-4", mode="live", options={"n_tasks": 6})[2])
