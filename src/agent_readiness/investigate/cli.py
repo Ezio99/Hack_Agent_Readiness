@@ -55,6 +55,10 @@ def register(sub) -> None:
     rb.add_argument("--batch", type=int, required=True)
     rb.add_argument("--abandon", action="store_true", required=True, help="record the batch as abandoned (the request stays counted in the ledger; no re-send)")
     rb.add_argument("--note", required=True, help="who decided what")
+    fk = isub.add_parser("fork", help="Free, offline: create a NEW run that imports the frozen tasks, baseline evidence and spending history of an existing run (no paid stage is re-run; every paid stage of the fork needs a fresh approval)")
+    fk.add_argument("source_dir", type=Path)
+    fk.add_argument("--id", required=True, help="id of the new run")
+    fk.add_argument("--root", type=Path, default=Path("investigations"))
     ap = isub.add_parser("approve", help="Record the owner's approval of an exact stage manifest hash")
     ap.add_argument("run_dir", type=Path)
     ap.add_argument("--stage", required=True)
@@ -93,6 +97,10 @@ def main(args) -> None:
         except Halt as exc:
             raise SystemExit(f"refused: {exc}")
         print(f"{run.state['id']}: {res.status}" + (f" at {res.stage}" if res.stage else ""))
+        if res.status == "done" and run.has_artifact("report-final"):
+            rep = run.artifact("report-final")
+            if rep.get("investigation_status") != "completed":
+                print(f"  NOTE: investigation status is {rep.get('investigation_status')} (outcome: {rep.get('outcome')}). {rep.get('outcome_note', '')}")
         if res.status == "awaiting_approval":
             print(f"stage {res.stage} needs your approval of manifest sha256 {res.manifest_sha256}\n  manifest: {run.dir}/artifacts/manifests/{res.stage}-{res.manifest_sha256[:16]}.json\n"
                   f"  approve: readiness investigate approve {run.dir} --stage {res.stage} --sha256 {res.manifest_sha256} --note '<who approved what>'  then re-run this command" + (" --allow-model-calls" if args.mode == "live" else ""))
@@ -142,6 +150,16 @@ def main(args) -> None:
             raise SystemExit(f"export refused: {exc}")
         print(f"exported {data['run']['id']} -> {args.out}  complete={data['run']['complete']}  source={data['run']['report_source']}  modes={','.join(data['modes'])}")
         return
+    if args.investigate_command == "fork":
+        from .fork import fork, load_fork
+        try:
+            d = fork(args.source_dir, args.root, args.id)
+        except (ValueError, FileExistsError) as exc:
+            raise SystemExit(f"fork refused: {exc}")
+        prov = load_fork(InvestigationRun(d))
+        print(f"forked {prov['source_run']} -> {d}\n  imported {len(prov['imported_sha256'])} files; imported_files_sha256 {prov['imported_files_sha256'][:16]}...; spending history carried over: "
+              f"committed US${prov['source_ledger']['committed_usd']}\n  NOT imported: approvals, evidence store, investigator output. Next (free): re-run the same `run` command with --id {args.id} to reach the investigate approval gate.")
+        return
     if args.investigate_command == "recover-batch":
         from .taskgen.stage import recover_batch
         try:
@@ -155,6 +173,7 @@ def main(args) -> None:
         print(json.dumps(run.approve(args.stage, args.sha256, args.note), indent=2))
         return
     s = run.state
-    print(f"{s['id']}  target={s['target']}  mode={s['mode']}  outcome={run.evidence.outcome()}")
+    final = run.artifact("report-final") if run.has_artifact("report-final") else None
+    print(f"{s['id']}  target={s['target']}  mode={s['mode']}  outcome={(final or {}).get('outcome') or run.evidence.outcome()}" + (f"  investigation_status={final['investigation_status']}" if final and final.get("investigation_status") else ""))
     for name, st in s["stages"].items():
         print(f"  {name:16} {st['status']}" + (f"  needs approval of sha256 {st['manifest_sha256']}" if st["status"] == "awaiting_approval" else ""))

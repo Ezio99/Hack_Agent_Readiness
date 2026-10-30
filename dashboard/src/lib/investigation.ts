@@ -15,7 +15,7 @@ export interface Evaluation { state: "evaluated" | "not_evaluated" | "missing"; 
 export interface Effect { id: string; proposal_id: string; verdict: string; n_pairs: number; note: string; measured: boolean; mode: Mode }
 export interface InvestigationExport {
   schema: "investigation-dashboard-v1"; exported_at: string; synthetic?: boolean;
-  run: { id: string; target: string; mode: Mode; created_at: string | null; outcome: "findings" | "experimental_only" | "no_supported_issue"; report_source: "report-final" | "report" | "evidence"; complete: boolean; missing_artifacts: string[] };
+  run: { id: string; target: string; mode: Mode; created_at: string | null; outcome: "findings" | "experimental_only" | "no_supported_issue" | "not_investigated" | "incomplete_due_to_infrastructure_error" | "incomplete_unusable_model_output" | "incomplete_no_finish"; investigation_status: "completed" | "not_run" | "incomplete_due_to_infrastructure_error" | "incomplete_unusable_model_output" | "incomplete_no_finish" | null; report_source: "report-final" | "report" | "evidence"; complete: boolean; missing_artifacts: string[] };
   modes: Mode[]; notices: string[]; stages: StageInfo[]; tasks: TaskInfo[];
   trials: { baseline: number; patched: number; void: number; note: string };
   observations: Observation[]; hypotheses: Hypothesis[]; findings: Finding[]; proposals: Proposal[]; evaluation: Evaluation; effects: Effect[];

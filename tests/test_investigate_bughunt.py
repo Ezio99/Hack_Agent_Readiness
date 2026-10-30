@@ -220,7 +220,7 @@ def test_a_duplicate_hypothesis_or_a_provider_failure_does_not_discard_a_paid_in
             return ScriptedClient(T.scripted_model([T.step("list_trials")])).complete(req)
     ws2 = T.ws_for(tmp_path, name="flaky")
     res2 = investigate(ws2, Flaky(), max_calls=6)
-    assert not res2["finished"] and "aborted after 2 model request(s)" in res2["incomplete"] and res2["tool_calls"] == 2 and res2["transcript"]
+    assert not res2["finished"] and "aborted after 3 model request(s)" in res2["incomplete"] and res2["tool_calls"] == 2 and res2["transcript"]      # the failed 3rd request is counted as sent (it may have been billed); it produced no tool call
     out = investigate_stage(Context(ws2.run, options={"investigator_llm": type("L", (), {"mode": "live", "model": "m", "complete": lambda self, r: Flaky().complete(r)})()}))
     assert ws2.run.has_artifact("investigation") and (ws2.run.dir / "private" / "investigator-transcript.json").exists() and out["incomplete"]
 
