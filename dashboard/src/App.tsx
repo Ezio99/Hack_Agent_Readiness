@@ -8,17 +8,19 @@ import { InvestigationPage } from "./pages/Investigation";
 import { provenance } from "./data/task007";
 
 export type Page = "overview" | "scopes" | "evidence" | "replay" | "scanner" | "investigation";
-const PAGES: { id: Page; label: string }[] = [
-  { id: "overview", label: "Overview" },
+const MAIN: { id: Page; label: string } = { id: "investigation", label: "Investigation" };
+/** Earlier experiments, kept as a secondary section. */
+const HISTORICAL: { id: Page; label: string }[] = [
+  { id: "overview", label: "Task 007 overview" },
   { id: "scopes", label: "Scope comparison" },
   { id: "evidence", label: "Evidence & method" },
   { id: "replay", label: "Recorded replay" },
   { id: "scanner", label: "Protected scanner" },
-  { id: "investigation", label: "Investigation" },
 ];
+const PAGES = [MAIN, ...HISTORICAL];
 const fromHash = (): Page => {
   const h = window.location.hash.replace(/^#\/?/, "");
-  return (PAGES.find((p) => p.id === h)?.id ?? "overview") as Page;
+  return (PAGES.find((p) => p.id === h)?.id ?? MAIN.id) as Page;
 };
 
 export default function App() {
@@ -40,15 +42,17 @@ export default function App() {
         <div className="wrap head">
           <div>
             <p className="brand">Agent Readiness <span className="tag">diagnostic dashboard</span></p>
-            <p className="sub">What a Meta Muse Spark shopping agent did on a controlled storefront, why, and what a site owner could change.</p>
+            <p className="sub">{page === "investigation" ? "Can AI agents use this website? Investigate, recommend, change the site, and measure the impact." : "What a Meta Muse Spark shopping agent did on a controlled storefront, why, and what a site owner could change."}</p>
           </div>
           <p className="badge" role="note">{page === "investigation" ? "Investigation report · evidence mode is labelled on the page" : "Recorded experiment data · Task 007 · not live inference"}</p>
         </div>
         <nav className="wrap" aria-label="Sections">
           <ul className="tabs">
-            {PAGES.map((p) => (
+            <li><a href={`#/${MAIN.id}`} aria-current={page === MAIN.id ? "page" : undefined} onClick={(e) => { e.preventDefault(); go(MAIN.id); }}>{MAIN.label}</a></li>
+            <li className="tabs-label nav-secondary" aria-hidden="true"><span className="muted">Historical experiments:</span></li>
+            {HISTORICAL.map((p) => (
               <li key={p.id}>
-                <a href={`#/${p.id}`} aria-current={page === p.id ? "page" : undefined} onClick={(e) => { e.preventDefault(); go(p.id); }}>{p.label}</a>
+                <a href={`#/${p.id}`} aria-current={page === p.id ? "page" : undefined} onClick={(e) => { e.preventDefault(); go(p.id); }} className="nav-secondary-link">{p.label}</a>
               </li>
             ))}
           </ul>

@@ -344,3 +344,38 @@ def test_public_fixture_matches_the_exporter(tmp_path):
     for d in (committed, fresh):
         d.pop("synthetic", None), d.pop("exported_at"), d["run"].pop("created_at")
     assert committed == fresh and json.loads(FIXTURE_EXPB_PUBLIC.read_text())["synthetic"] is True
+
+
+# ---- static storefront block (PR 1 of the demo journey) ----
+def test_storefront_exports_original_and_patched_pages_with_an_exact_diff(expb):
+    s = export_run(expb)["storefront"]
+    assert s["state"] == "ok" and set(s["original"]["pages"]) == {"/", "/cabins", "/cabins/pine", "/cabins/lake", "/cabins/birch"}
+    (v,) = s["variants"]
+    assert v["diff"]["pages_changed"] == ["/cabins"] and v["diff"]["pages_unchanged"] == 4 and v["diff"]["elements_added"] == 3 and v["diff"]["inserted_text"]["/cabins"][0] == "Nightly fee: $95"
+    assert all(v["pages"][p] == s["original"]["pages"][p] for p in s["original"]["pages"] if p != "/cabins")          # every other page is byte-identical
+    assert "Nightly fee: $95" in v["pages"]["/cabins"] and "Nightly fee: $95" not in s["original"]["pages"]["/cabins"]
+
+
+def test_storefront_is_missing_or_omitted_rather_than_unsafe(expb, tmp_path):
+    import shutil
+    from agent_readiness.investigate.sitemodel.snapshot import Resource, Snapshot
+    assert export_run(expb)["storefront"]["state"] == "ok"
+    snap = Snapshot.load(expb / "snapshot")
+    for bad in ("<p><script>alert(1)</script></p>", '<img src="x.png">', '<a href="https://example.com/x">x</a>', '<p onclick="x()">x</p>', "x" * 21_000):
+        res = dict(snap.resources)
+        res["/"] = Resource("/", 200, "text/html; charset=utf-8", f"<!DOCTYPE html><html><body>{bad}</body></html>".encode())
+        shutil.rmtree(expb / "snapshot")
+        Snapshot(res, {}).save(expb / "snapshot")
+        assert export_run(expb)["storefront"]["state"] == "omitted", bad
+    shutil.rmtree(expb / "snapshot")
+    assert export_run(expb)["storefront"]["state"] == "missing"
+
+
+def test_public_view_keeps_the_storefront_and_refuses_unsafe_html(pub):
+    private, d = pub
+    assert d["storefront"]["state"] == "ok" and d["storefront"]["variants"][0]["proposal_id"] == "change-1" and d["storefront"]["variants"][0]["diff"]["elements_added"] == 3
+    assert "snapshot_sha256" not in json.dumps(d["storefront"])
+    for bad in ("<!DOCTYPE html><html><body><script>x</script></body></html>", "<!DOCTYPE html><html><body>see https://evil.example/x</body></html>"):
+        with pytest.raises(ExportError):
+            check_public({"storefront": {"original": {"pages": {"/": bad}}}})
+    check_public({"storefront": {"original": {"pages": {"/": "<!DOCTYPE html><html><body><a href=\"/cabins\">Cabins</a></body></html>"}}}})
