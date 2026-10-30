@@ -74,6 +74,9 @@ def complete_structured(client: LLMClient, request: LLMRequest, output_model, *,
     last_err, diag = "no attempt", {}
     for attempt in range(retries + 1):
         resp = client.complete(request)
+        if not isinstance(resp.text, str):                    # non-string content (e.g. a list of parts): neither validation nor recovery can run on it; fail cleanly with diagnostics
+            last_err, diag = "non_string_content", response_diagnostics(resp)
+            continue
         try:
             return output_model.model_validate_json(resp.text), resp, attempt + 1
         except Exception as exc:
