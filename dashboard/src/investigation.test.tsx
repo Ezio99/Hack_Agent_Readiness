@@ -102,3 +102,16 @@ describe("investigation view", () => {
     expect(h).toContain("No report loaded"); expect(h).toContain("readiness investigate export"); expect(h).toContain("Load synthetic example"); expect(h).toContain("nothing is uploaded");
   });
 });
+
+describe("terminal investigation status", () => {
+  it("never presents an aborted investigation as a negative finding", () => {
+    const d = base();
+    d.run.outcome = "incomplete_due_to_infrastructure_error"; d.run.investigation_status = "incomplete_due_to_infrastructure_error"; d.findings = [];
+    const h = html(d);
+    expect(h).toContain("The investigation did not complete"); expect(h).toContain("incomplete_due_to_infrastructure_error"); expect(h).toContain("not</strong> a finding that no problem exists");
+    expect(h).toContain("incomplete due to infrastructure error");
+  });
+  it("shows no incomplete warning for a completed investigation", () => {
+    expect(html(base())).not.toContain("did not complete");
+  });
+});

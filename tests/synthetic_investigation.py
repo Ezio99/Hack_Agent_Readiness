@@ -68,7 +68,7 @@ def build(root: Path, *, complete: bool = True) -> Path:
         run.write_artifact("evaluation", {"evaluated": True, "rule": {"id": "paired-signflip-v1", "primary": "evidence_backed_pass_rate", "secondary": "model_requests", "alpha": 0.1, "min_pairs": 4, "pass_delta_floor": 0.25,
                                                                          "request_reduction_floor": 0.25, "void_policy": "a pair with any void trial in either arm is excluded and listed", "causal_scope": "these frozen tasks, this profile and this patched mirror only"},
                            "results": {p1.id: res}})
-        run.write_artifact("report-final", {"statement": "SYNTHETIC FIXTURE: findings are website properties; trials show an association; a measured effect needs live trials."})
+        run.write_artifact("report-final", {"outcome": "findings", "investigation_status": "completed", "statement": "SYNTHETIC FIXTURE: findings are website properties; trials show an association; a measured effect needs live trials."})
     return run.dir
 
 

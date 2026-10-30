@@ -139,7 +139,7 @@ def export_run(run_dir: Path | str) -> dict:
     rep_inv = (final or interim or {}).get("investigation") or inv
     out = {
         "schema": SCHEMA, "exported_at": now(),
-        "run": {"id": state["id"], "target": state["target"], "mode": state["mode"], "created_at": state.get("created_at"), "outcome": ev.outcome(), "report_source": report_source,
+        "run": {"id": state["id"], "target": state["target"], "mode": state["mode"], "created_at": state.get("created_at"), "outcome": (final or interim or {}).get("outcome") or ev.outcome(), "investigation_status": (final or interim or {}).get("investigation_status"), "report_source": report_source,
                 "complete": report_source == "report-final" and all(s.get("status") == "done" for s in state["stages"].values()), "missing_artifacts": sorted(set(missing))},
         "modes": modes, "notices": [NOTICES[m] for m in modes],
         "stages": [{"name": n, **_stage_summary(s)} for n, s in sorted(state["stages"].items(), key=lambda kv: FLOW_STAGES.index(kv[0]) if kv[0] in FLOW_STAGES else len(FLOW_STAGES))],      # run.json is written with sorted keys; restore pipeline order

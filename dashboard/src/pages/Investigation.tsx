@@ -170,6 +170,7 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
         {d.modes.map((m) => <ModeBadge key={m} mode={m} />)}
         <span className="muted">{d.notices.join(" ")}</span>
       </div>
+      {d.run.investigation_status && !["completed"].includes(d.run.investigation_status) ? <Callout title={d.run.investigation_status === "not_run" ? "No investigator ran" : "The investigation did not complete"} tone="bad"><p>Status: <code>{d.run.investigation_status}</code>. Nothing was concluded about the website; this is <strong>not</strong> a finding that no problem exists.</p></Callout> : null}
       {!d.run.complete ? <Callout title="Incomplete investigation" tone="warn"><p>Not every stage finished{d.run.missing_artifacts.length ? ` (missing: ${d.run.missing_artifacts.join(", ")})` : ""}. Sections below show what exists; nothing is inferred for the rest.</p></Callout> : null}
       <h2>{d.run.target}</h2>
       <p className="muted">Run <code>{d.run.id}</code> · mode {d.run.mode} · report source: {d.run.report_source} · outcome: <strong>{d.run.outcome.replace(/_/g, " ")}</strong></p>

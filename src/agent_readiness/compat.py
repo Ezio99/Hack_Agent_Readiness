@@ -98,5 +98,7 @@ def recover(content, output_format) -> dict:
     result.update(status="recovered", reason="prose_prefix_single_json_object", validated=True)
     actions = getattr(parsed, "action", None)
     if actions is not None:
+        if hasattr(actions, "model_dump"):          # a SINGLE action object (e.g. the investigator's tool call), not Browser Use's list: iterating a model would yield (name, value) tuples
+            actions = [actions]
         result["actions"] = [sorted(a.model_dump(exclude_none=True)) for a in actions]
     return result

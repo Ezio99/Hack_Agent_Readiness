@@ -262,6 +262,7 @@
     "complete": true,
     "created_at": "2026-01-01T00:00:00+00:00",
     "id": "synthetic-demo",
+    "investigation_status": "completed",
     "missing_artifacts": [],
     "mode": "scripted",
     "outcome": "findings",

@@ -67,21 +67,70 @@ def _tier_and_params(d: HypothesisOut):
     return None, params, "needs either a known claim_kind or a falsifiable prediction"
 
 
+class _Metered:
+    """Counts every request at the moment its response (or a provider error) comes back, BEFORE any parsing or validation, so a later structured-output failure or crash can never hide a paid
+    request. `Halt` (a spend-gate refusal) is raised before anything is sent and is not counted as sent. Wraps any `LLMClient`; passes `mode` / `model` through."""
+
+    def __init__(self, inner):
+        self.inner, self.mode, self.model = inner, inner.mode, inner.model
+        self.responses, self.provider_errors, self.refused, self.cost, self.pin, self.pout, self.reasoning, self.finish = 0, [], 0, 0.0, 0, 0, 0, {}
+
+    def complete(self, request):
+        from ...ledger import Halt
+        try:
+            resp = self.inner.complete(request)
+        except Halt:
+            self.refused += 1
+            raise
+        except Exception as exc:
+            self.provider_errors.append({"category": getattr(exc, "category", type(exc).__name__), "http_status": getattr(exc, "status", None)})
+            raise
+        u = resp.usage or {}
+        self.responses += 1
+        self.cost += resp.cost_usd or 0.0
+        self.pin += u.get("prompt_tokens") or 0
+        self.pout += u.get("completion_tokens") or 0
+        self.reasoning += resp.reasoning_tokens or 0
+        self.finish[str(resp.finish_reason)] = self.finish.get(str(resp.finish_reason), 0) + 1
+        return resp
+
+    @property
+    def sent(self) -> int:
+        return self.responses + len(self.provider_errors)
+
+
+def terminal_status(res: dict) -> str:
+    """Why the investigation ended. Only `completed` is a genuine investigation; an `incomplete_*` status must never be read as 'no problem found'."""
+    if res.get("finished"):
+        return "completed"
+    why = res.get("incomplete") or ""
+    if why.startswith("aborted"):
+        return "incomplete_due_to_infrastructure_error"          # provider outage, spend-gate refusal, parsing/recovery crash, blindness halt ...
+    if why.startswith("unusable model output"):
+        return "incomplete_unusable_model_output"
+    return "incomplete_no_finish"                                   # the tool budget ran out (or no finish action)
+
+
 def investigate(ws: Workspace, llm: LLMClient, *, max_calls: int = 12, focus: str | None = None) -> dict:
     """Run the loop. NOTHING raised after the first paid call may discard the work already paid for: provider/gate/blindness failures end the investigation as `incomplete` with the reason,
-    and per-hypothesis problems (duplicates, store rule violations) become recorded rejections."""
+    and per-hypothesis problems (duplicates, store rule violations) become recorded rejections. Request, token and cost accounting comes from a meter on the client, not from parsed steps."""
     store = ws.run.evidence
+    meter = _Metered(llm)
     msgs = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": first_user_message(ws, focus)}]
-    state = {"log": [], "requests": 0, "rejected": [], "rows": [], "novel": [], "finished": False, "incomplete": None, "cost": 0.0, "pin": 0, "pout": 0}
+    state = {"log": [], "rejected": [], "rows": [], "novel": [], "finished": False, "incomplete": None, "error": None}
     try:
-        _run(ws, llm, store, msgs, state, max_calls)
-    except Exception as exc:                                                       # provider outage, spend-gate refusal, blindness halt, ...
-        state["incomplete"] = f"aborted after {state['requests']} model request(s): {type(exc).__name__}: {str(exc)[:160]}"
+        _run(ws, meter, store, msgs, state, max_calls)
+    except Exception as exc:                                                       # provider outage, spend-gate refusal, blindness halt, parsing crash ...
+        state["error"] = type(exc).__name__
+        state["incomplete"] = f"aborted after {meter.sent} model request(s): {type(exc).__name__}: {str(exc)[:160]}"
     if not state["finished"] and state["incomplete"] is None:
         state["incomplete"] = "no finish action"
-    return {"finished": state["finished"], "incomplete": state["incomplete"], "tool_calls": len(state["log"]), "model_requests": state["requests"], "tool_log": state["log"],
-            "rejected_hypotheses": state["rejected"], "verification": state["rows"], "novel_changes": state["novel"], "pending_trial_requests": ws.pending_requests,
-            "cost_usd": round(state["cost"], 6), "prompt_tokens": state["pin"], "completion_tokens": state["pout"], "transcript": msgs}
+    res = {"finished": state["finished"], "incomplete": state["incomplete"], "tool_calls": len(state["log"]), "model_requests": meter.sent, "tool_log": state["log"],
+           "rejected_hypotheses": state["rejected"], "verification": state["rows"], "novel_changes": state["novel"], "pending_trial_requests": ws.pending_requests,
+           "cost_usd": round(meter.cost, 6), "prompt_tokens": meter.pin, "completion_tokens": meter.pout, "reasoning_tokens": meter.reasoning, "finish_reasons": meter.finish,
+           "provider_errors": meter.provider_errors, "refused_before_send": meter.refused, "error": state["error"], "transcript": msgs}
+    res["status"] = terminal_status(res)
+    return res
 
 
 def _run(ws, llm, store, msgs, st, max_calls) -> None:
@@ -93,10 +142,6 @@ def _run(ws, llm, store, msgs, st, max_calls) -> None:
         except StructuredOutputError as exc:
             st["incomplete"] = f"unusable model output: {str(exc)[:120]}"
             return
-        st["requests"] += attempts
-        st["cost"] += resp.cost_usd
-        st["pin"] += (resp.usage or {}).get("prompt_tokens") or 0
-        st["pout"] += (resp.usage or {}).get("completion_tokens") or 0
         a = step.action
         if a.tool != "finish" and i >= max_calls:                                       # the tool budget is spent: no further tool is executed
             st["incomplete"] = "tool budget exhausted without a finish action"
