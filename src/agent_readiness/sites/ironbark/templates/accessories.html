@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+{{ m.crumbs([('/', 'Home'), (None, 'Accessories')]) }}
+<div class="pagehead"><div class="wrap"><h1>Accessories and consumables</h1><p>Blades, bits, chisels, leads and safety gear. Items marked "buy" are sold; items marked "hire" are charged per day.</p></div></div>
+<div class="wrap" style="padding-top:1.5rem">
+<div class="grid g4" style="margin-bottom:2rem">
+{% for a in ACCESSORIES %}<article class="card" aria-labelledby="a-{{ a.id }}"><div class="img">{{ m.img('/assets/img/' ~ a.slug ~ '.svg', a.name ~ ' (illustration)', 800, 600) }}</div><div class="body"><div class="meta"><span class="pill cat">{{ 'Hire' if a.kind == 'hire' else 'Buy' }}</span></div><h2 id="a-{{ a.id }}"><a href="/accessories/{{ a.slug }}">{{ a.name }}</a></h2><p>{{ a.summary }}</p><p class="price"><b>{{ money(a.price) }}</b> <small>{{ '/ day to hire' if a.kind == 'hire' else 'to buy' }}, inc. GST</small></p></div></article>
+{% endfor %}
+</div>
+</div>
+{% endblock %}

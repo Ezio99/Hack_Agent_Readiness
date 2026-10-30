@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+{{ m.crumbs([('/', 'Home'), (None, 'Hire terms and pricing')]) }}
+<div class="pagehead"><div class="wrap"><h1>Hire terms and pricing</h1><p>How our rates, charges, delivery and deposits work. {{ GST }}</p></div></div>
+<div class="wrap" style="padding-top:1.5rem">
+<section class="panel" id="rates"><h2>Hire periods and rates</h2>
+<ul>
+<li>A hire day is 24 hours from collection or delivery. One day costs the daily rate shown on the product page.</li>
+<li>Two to six days cost the number of days multiplied by the daily rate, but never more than the weekly rate. Seven days cost the weekly rate.</li>
+<li>Hires longer than seven days: please call for a quote.</li>
+<li>Minimum hire is one day unless the product page states a longer minimum.</li>
+<li>{{ WEEKEND }}</li>
+</ul></section>
+<section class="panel" id="waiver"><h2>Damage waiver</h2>
+<p>Damage waiver is optional and costs {{ (WAIVER * 100) | round | int }}% of the hire charge. It covers accidental damage to the equipment but not loss, theft or misuse.</p></section>
+<section class="panel" id="delivery"><h2>Delivery and collection</h2>
+<p>We deliver and collect within the Sydney metropolitan area between 7 and 10 am. The fee covers both delivery and collection and is charged once per job.</p>
+<div class="table-wrap" role="region" aria-label="Delivery fees (scrollable)" tabindex="0"><table><caption>Delivery and collection fees</caption><thead><tr><th scope="col">Delivery type</th><th scope="col">Fee</th><th scope="col">Used for</th></tr></thead>
+<tbody><tr><th scope="row">Courier</th><td>{{ money(DELIVERY.courier) }}</td><td>Hand-portable items (under about 25 kg)</td></tr><tr><th scope="row">Machine delivery</th><td>{{ money(DELIVERY.machine) }}</td><td>Heavier machines and anything on a trailer</td></tr></tbody></table></div>
+<p style="margin-top:1rem">Each product page says whether delivery is optional or required for that item. Collection from Marrickville is free.</p></section>
+<section class="panel" id="deposit"><h2>Refundable deposit</h2>
+<p>A deposit is held on your card when the hire begins and released within three business days of a clean return. The amount for each item is on its product page. The deposit is not a charge and is not part of the hire cost.</p></section>
+<section class="panel" id="operators"><h2>Operators and safety</h2>
+<p>Operators must be 18 or over. Some items need protective equipment or an induction, which is stated on the product page. Safety gear is available in our <a href="/accessories">accessories</a>.</p></section>
+<section class="panel" id="return"><h2>Fuel, cleaning and returns</h2>
+<p>Petrol machines are delivered with fuel in the tank and should be returned with the tank full. Fuel for 2-stroke tools is not supplied. Concrete mixers and similar items must be returned cleaned or a cleaning fee applies.</p></section>
+<section class="panel" id="cancel"><h2>Cancellations</h2>
+<p>Cancel at least 48 hours before the hire starts for a full release of your booking. Later cancellations may be charged one day's hire.</p></section>
+</div>
+{% endblock %}

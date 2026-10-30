@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+{{ m.crumbs([('/', 'Home'), ('/hire', 'Hire equipment'), ('/hire/' ~ p.slug, p.name), (None, 'Availability')]) }}
+<div class="pagehead"><div class="wrap"><h1>Availability: {{ p.name }}</h1><p>Booking calendar for the next eight weeks, as of {{ fmt_date(AS_OF) }} {{ AS_OF.year }}. Fleet size: {{ p.units }} unit{{ 's' if p.units != 1 }}.</p></div></div>
+<div class="wrap" style="padding-top:1.5rem">
+<p class="notice">Each day shows how many units are free. A hire can be reserved when at least one unit is free on every day of the period. Sundays are closed for collection and return, but equipment out on hire stays booked.</p>
+<div class="table-wrap" role="region" aria-label="Availability calendar (scrollable)" tabindex="0">
+<table class="cal">
+<caption class="sr">Units free each day for {{ p.name }}</caption>
+<thead><tr><th scope="col">Week of</th>{% for d in ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] %}<th scope="col">{{ d }}</th>{% endfor %}</tr></thead>
+<tbody>
+{% for w in weeks %}<tr><th scope="row">{{ w.label }}</th>{% for c in w.cells %}<td class="{{ c.cls }}"><span class="d">{{ c.date }}</span><span class="s">{{ c.text }}</span></td>{% endfor %}</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+<p style="margin-top:1rem"><a class="btn dark" href="/hire/{{ p.slug }}">Back to {{ p.name }}</a> <a class="btn" href="/contact">How to book</a></p>
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+{{ m.crumbs([('/', 'Home'), ('/hire', 'Hire equipment'), ('/hire/category/' ~ cat.slug, cat.name), (None, p.name)]) }}
+<div class="wrap pdp">
+<div class="gallery">
+<figure>{{ m.img('/assets/img/' ~ p.slug ~ '-1.svg', p.name ~ ' (illustration)', 800, 600, False) }}</figure>
+<figure>{{ m.img('/assets/img/' ~ p.slug ~ '-2.svg', 'Key facts card for the ' ~ p.name ~ ': ' ~ p.power ~ ', ' ~ ('%g' % p.weight_kg) ~ ' kg, hire from ' ~ money(p.daily) ~ ' a day', 800, 600) }}</figure>
+</div>
+<div>
+<p class="eyebrow">{{ cat.name }}</p>
+<h1>{{ p.name }}</h1>
+<p>{{ p.summary }}</p>
+<p class="muted">Product code {{ p.id }} · {{ p.maker }} {{ p.model }}</p>
+<div class="rates" role="group" aria-label="Hire rates">
+<div class="rate"><b>{{ money(p.daily) }}</b><span>Per day</span></div>
+<div class="rate"><b>{{ money(p.weekend) }}</b><span>Weekend</span></div>
+<div class="rate"><b>{{ money(p.weekly) }}</b><span>Per week</span></div>
+</div>
+<p class="muted">Rates include GST. Weekend hire is collected Friday afternoon and returned Monday morning.</p>
+<dl class="facts">
+<dt>Power</dt><dd>{{ p.power }}</dd>
+<dt>Weight</dt><dd>{{ '%g' % p.weight_kg }} kg</dd>
+<dt>Refundable deposit</dt><dd>{{ money(p.deposit) }}</dd>
+<dt>Minimum hire</dt><dd>{{ p.min_days }} day{{ 's' if p.min_days != 1 }}</dd>
+<dt>Delivery and collection</dt><dd>{{ 'Required for this item' if p.delivery == 'required' else 'Optional' }}</dd>
+</dl>
+<div class="panel avail{{ '' if pv.available_today else ' out' }}">
+<h2>Availability</h2>
+<p><strong>Today, {{ fmt_date(AS_OF) }}: {{ 'available' if pv.available_today else 'fully booked' }}.</strong> <a href="/hire/{{ p.slug }}/availability">View the booking calendar</a> for the next eight weeks.</p>
+</div>
+{% if v.avail %}<section class="panel" data-variant="avail" aria-labelledby="glance">
+<h2 id="glance">Dates at a glance</h2>
+<ul>
+<li>Fully booked: {% if glance.periods %}{% for a, b in glance.periods %}{{ fmt_date(a) }}{% if a != b %} to {{ fmt_date(b) }}{% endif %}{% if not loop.last %}; {% endif %}{% endfor %}{% else %}no fully booked days before {{ fmt_date(LAST_DAY) }}{% endif %}</li>
+<li>Next free weekend (Fri to Mon): {% if glance.weekend %}{{ fmt_date(glance.weekend[0]) }} to {{ fmt_date(glance.weekend[1]) }}{% else %}none before {{ fmt_date(LAST_DAY) }}{% endif %}</li>
+</ul>
+</section>
+{% endif %}
+{% if v.cost %}<section class="panel" data-variant="cost" aria-labelledby="yourcost">
+<h2 id="yourcost">Your hire cost</h2>
+<p>Totals include GST. The deposit of {{ money(p.deposit) }} is held on your card and released on return; it is not part of these totals.</p>
+<div class="table-wrap" role="region" aria-label="Hire cost table (scrollable)" tabindex="0"><table>
+<caption class="sr">Hire cost by period</caption>
+<thead><tr><th scope="col">Period</th><th scope="col" class="num">Hire charge</th><th scope="col" class="num">Total{% if p.delivery == 'required' %} with delivery{% else %}, collected{% endif %}</th><th scope="col" class="num">Total with {{ (WAIVER * 100) | round | int }}% damage waiver</th>{% if p.delivery != 'required' %}<th scope="col" class="num">Total with waiver and delivery</th>{% endif %}</tr></thead>
+<tbody>{% for r in cost_rows %}<tr><th scope="row">{{ r.label }}</th><td class="num">{{ money(r.hire) }}</td><td class="num">{{ money(r.plain) }}</td><td class="num">{{ money(r.waiver) }}</td>{% if p.delivery != 'required' %}<td class="num">{{ money(r.waiver_delivery) }}</td>{% endif %}</tr>{% endfor %}</tbody>
+</table></div>
+<p class="muted">Delivery and collection for this item: {{ money(DELIVERY[p.delivery_class]) }} per job ({{ 'required' if p.delivery == 'required' else 'optional' }}). Minimum hire {{ p.min_days }} day{{ 's' if p.min_days != 1 }}. Damage waiver is optional.</p>
+</section>
+{% endif %}
+<p><a class="btn" href="/contact">How to book this item</a></p>
+<p class="muted">Prices exclude the optional damage waiver, delivery and the refundable deposit; see the <a href="/hire-terms">hire terms</a>.</p>
+</div>
+</div>
+
+<div class="wrap">
+<section class="panel"><h2>About this equipment</h2><p>{{ p.description }}</p></section>
+{% if v.discover %}<section class="panel" data-variant="discover" aria-labelledby="aka">
+<h2 id="aka">Also called</h2>
+<p>{{ p.also_called | join(', ') }}</p>
+<h3>Good for</h3>
+<ul>{% for j in p.jobs %}<li><a href="/jobs/{{ j }}">{{ JOBS[j][0] }}</a></li>{% endfor %}</ul>
+</section>
+{% endif %}
+<div class="split">
+<section class="panel"><div class="table-wrap" role="region" aria-label="Specifications (scrollable)" tabindex="0"><table><caption>Specifications</caption><tbody>{% for label, value in p.specs %}<tr><th scope="row">{{ label }}</th><td>{{ value }}</td></tr>{% endfor %}</tbody></table></div></section>
+<section class="panel"><h2>Included with the hire</h2><ul class="tick">{% for i in p.included %}<li>{{ i }}</li>{% endfor %}</ul><h3>Conditions</h3><ul>{% for c in p.conditions %}<li>{{ c }}</li>{% endfor %}</ul></section>
+</div>
+{% if v.compat %}<section class="panel" data-variant="compat" aria-labelledby="works">
+<h2 id="works">Works with</h2>
+{% if accessories %}<ul>{% for a in accessories %}<li><a href="/accessories/{{ a.slug }}">{{ a.name }}</a> ({{ 'hire' if a.kind == 'hire' else 'buy' }} {{ money(a.price) }}{{ ' / day' if a.kind == 'hire' }}){% if not a.fits %}, fits any tool{% endif %}</li>{% endfor %}</ul>{% else %}<p>No specific accessories are needed.</p>{% endif %}
+{% if kits %}<h3>Included in kits</h3><ul>{% for k in kits %}<li><a href="/kits#{{ k.slug }}">{{ k.name }}</a></li>{% endfor %}</ul>{% endif %}
+</section>
+{% endif %}
+<section class="panel"><h2>More in {{ cat.name }}</h2><ul>{% for o in others %}<li><a href="/hire/{{ o.slug }}">{{ o.name }}</a> from {{ money(o.daily) }} / day</li>{% endfor %}</ul></section>
+</div>
+{% endblock %}
