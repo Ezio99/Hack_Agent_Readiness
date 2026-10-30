@@ -54,7 +54,7 @@ def post_manifest(ctx: Context) -> dict | None:
     if not ids:
         return None
     shared = trials.shared_arm_config(ctx)
-    base = trials.manifest(ctx, shared)
+    base = {k: v for k, v in trials.manifest(ctx, shared).items() if k not in ("stage_cap_usd", "stage_cap_note", "allocation")}      # the baseline stage cap does not apply to patched arms; their manifest is unchanged
     arms = []
     for pid in ids:
         snap = Snapshot.load(run.dir / "patched" / pid)

@@ -24,6 +24,13 @@ DEFAULT_REASONING_EFFORT = "low"                               # as the validate
 INPUT_OVERHEAD_TOKENS = 128                                    # fixed input-token allowance added to every reservation (see spend_gate.upper_bound_usd; L0 attempt 2 under-reserved by >= 16 tokens)
 
 
+def reservation_bound_usd(request: LLMRequest, reasoning_effort: str | None = DEFAULT_REASONING_EFFORT) -> float:
+    """What the spend gate will reserve for `request` through `MetaClient.live` (same body, same fixed input allowance). Used by stage manifests so the approved numbers are the enforced ones."""
+    from types import SimpleNamespace
+    from ...spend_gate import upper_bound_usd
+    return upper_bound_usd(MetaClient.body(SimpleNamespace(model=ModelConfig().model, reasoning_effort=reasoning_effort), request), INPUT_OVERHEAD_TOKENS)[0]
+
+
 class ProviderError(RuntimeError):
     """A failed model request, classified so the cause is not lost. `category`: `transport` (no HTTP response: timeout / connection / other httpx error), `http` (a non-200 status) or
     `parse` (a 200 whose body was not the expected shape). `status` is the HTTP status when there was one. `summary` is short and sanitized: a transport/parse error is its class name only; an HTTP

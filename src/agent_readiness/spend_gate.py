@@ -42,11 +42,31 @@ def upper_bound_usd(body: dict, input_overhead_tokens: int = 0) -> tuple[float, 
 class RequestGate:
     """Durable per-request spend gate (see module docstring). Plugged into `ResponseCapture` through `recorder.request_gate`."""
 
-    def __init__(self, ledger: Ledger, run_id: str, *, run_cap: float = RUN_CAP_USD, per_request_cap: float = PER_REQUEST_CAP_USD, max_requests: int = MAX_REQUESTS, input_overhead_tokens: int = 0):
+    def __init__(self, ledger: Ledger, run_id: str, *, run_cap: float = RUN_CAP_USD, per_request_cap: float = PER_REQUEST_CAP_USD, max_requests: int = MAX_REQUESTS, input_overhead_tokens: int = 0,
+                 scope_run_ids: frozenset[str] | None = None, scope_cap: float | None = None):
         self.ledger, self.run_id, self.run_cap, self.per_request_cap, self.max_requests = ledger, run_id, run_cap, per_request_cap, max_requests
         self.input_overhead_tokens = input_overhead_tokens
-        self.violation: str | None = None
+        self.scope_run_ids, self.scope_cap = (frozenset(scope_run_ids) if scope_run_ids is not None else None), scope_cap     # optional STAGE cap across several gates' run ids (e.g. every baseline trial)
+        self.violation: str | None = self._recover_violation()
         self.log: list[dict] = []
+
+    def _recover_violation(self) -> str | None:
+        """A bound violation recorded in the durable ledger by an earlier gate instance (before a restart) keeps this gate closed: the flag is not allowed to reset with the process."""
+        reserved = {e["id"]: e["usd"] for e in self.ledger.entries() if e["kind"] == "reserve" and e["id"].startswith(self.run_id + ":req")}
+        for e in self.ledger.entries():
+            if e["kind"] == "settle" and e["id"] in reserved and e["usd"] > reserved[e["id"]] + 1e-9:
+                return f"an earlier request ({e['id']}) settled at US${e['usd']} above its reservation US${reserved[e['id']]}"
+        return None
+
+    def scope_committed(self) -> float:
+        state: dict[str, float] = {}
+        for e in self.ledger.entries():
+            if e["kind"] in ("reserve", "settle") and e["id"].split(":req")[0] in (self.scope_run_ids or ()):
+                if e["kind"] == "reserve":
+                    state.setdefault(e["id"], e["usd"])
+                else:
+                    state[e["id"]] = e["usd"]
+        return round(sum(state.values()), 6)
 
     def _id(self, index: int) -> str:
         return f"{self.run_id}:req{index:02d}"
@@ -74,6 +94,8 @@ class RequestGate:
             raise GateRefused(f"request-count cap {self.max_requests} reached")
         if self.run_committed() + usd > self.run_cap + 1e-9:
             raise GateRefused(f"run cap US${self.run_cap}: committed US${self.run_committed()} + this request's upper bound US${usd}")
+        if self.scope_cap is not None and self.scope_committed() + usd > self.scope_cap + 1e-9:
+            raise GateRefused(f"stage cap US${self.scope_cap}: committed US${self.scope_committed()} + this request's upper bound US${usd}")
         try:
             self.ledger.reserve(self._id(index), usd)            # raises Halt over the ledger ceiling or on a repeated id; fsync'd before returning
         except Halt as exc:

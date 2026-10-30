@@ -12,6 +12,7 @@ from ...ledger import Halt, preflight
 from ...spend_gate import RequestGate
 from ..inspect.stage import load_snapshot
 from ..pipeline import Context
+from .. import allocation as alloc
 from ..taskgen import freeze as freezer
 from .runner import run_trial
 
@@ -46,10 +47,12 @@ def manifest(ctx: Context, shared: dict | None = None) -> dict:
     return {"stage": "baseline_trials", "snapshot_sha256": tm["snapshot_sha256"], "tasks_manifest_sha256": freezer.canonical_hash(tm), "task_ids": [t["task_id"] for t in tm["tasks"]],
             "repeats": sc["repeats"], "agent_profile": tm["agent_profile"], "model": sc["model"], "endpoint": sc["endpoint"], "run_cap_usd": o.get("run_cap_usd", 0.50),
             "ledger_ceiling_usd": o.get("total_cap_usd", 3.0), "per_request_cap_usd": o.get("per_request_cap_usd", 0.05), "max_requests_per_trial": o.get("max_requests_per_trial", 16),
-            "retries": 0, "cost_basis": "calculated at published prices; not a bill", "ledger_note": "one shared spend ledger for the whole investigation (taskgen, both trial arms, investigation); this is its hard ceiling"}
+            "retries": 0, "stage_cap_usd": o.get("baseline_stage_cap_usd", alloc.BASELINE_CAP_USD), "allocation": alloc.allocation(o.get("total_cap_usd", 3.0)),
+            "stage_cap_note": "enforced by the spend gate across ALL baseline trials of this stage (reserved + settled, durable across restarts); a trial that would breach it is void and halts the stage",
+            "cost_basis": "calculated at published prices; not a bill", "ledger_note": "one shared spend ledger for the whole investigation (taskgen, both trial arms, investigation); this is its hard ceiling"}
 
 
-def run_arm(ctx: Context, *, label: str, snap, tasks: list[dict], insts: dict, prefix: str, manifest_: dict, repeats: int, mock_behavior: str = "correct") -> dict:
+def run_arm(ctx: Context, *, label: str, snap, tasks: list[dict], insts: dict, prefix: str, manifest_: dict, repeats: int, mock_behavior: str = "correct", stage_cap: float | None = None) -> dict:
     """Run every given frozen task K times on `snap`; one attempt each, sequential, resumable from artifacts, live requests behind the reserve-before-send gate."""
     run, o = ctx.run, ctx.options
     live = run.mode == "live"
@@ -57,6 +60,7 @@ def run_arm(ctx: Context, *, label: str, snap, tasks: list[dict], insts: dict, p
     key = preflight(cfg, o.get("allow_model_calls", False)) if live else None
     ledger = run.ledger(manifest_["ledger_ceiling_usd"]) if live else None
     done, void = [], []
+    scope = frozenset(f"{prefix}-{t['task_id']}-r{r + 1}" for r in range(repeats) for t in tasks)      # every trial gate of THIS stage; the stage cap spans all of them
     for rep in range(repeats):
         for t in tasks:
             tid = f"{t['task_id']}-r{rep + 1}"
@@ -64,7 +68,8 @@ def run_arm(ctx: Context, *, label: str, snap, tasks: list[dict], insts: dict, p
             if run.has_artifact(name):
                 done.append(tid)
                 continue
-            gate = RequestGate(ledger, f"{prefix}-{tid}", run_cap=manifest_["run_cap_usd"], per_request_cap=manifest_["per_request_cap_usd"], max_requests=manifest_["max_requests_per_trial"]) if live else None
+            gate = RequestGate(ledger, f"{prefix}-{tid}", run_cap=manifest_["run_cap_usd"], per_request_cap=manifest_["per_request_cap_usd"], max_requests=manifest_["max_requests_per_trial"],
+                               scope_run_ids=scope if stage_cap is not None else None, scope_cap=stage_cap) if live else None
             out = Path(run.dir) / "trial-data" / f"{prefix}-{tid}"
             rec = asyncio.run(run_trial(insts[t["task_id"]], snap, provider="live" if live else "mock", mock_behavior=o.get("mock_behavior", "correct"), output=out, model_config=cfg, api_key=key,
                                         request_gate=gate, label=label))
@@ -83,4 +88,5 @@ def baseline_trials_stage(ctx: Context) -> dict:
     insts = {i.spec.task_id: i for i in freezer.instances(run)}
     sc = arm_config(ctx)
     run.write_artifact("arm-config", sc)                      # write-once: resuming the baseline with different options raises instead of mixing configurations
-    return run_arm(ctx, label="baseline", snap=snap, tasks=manifest_["tasks"], insts=insts, prefix="baseline", manifest_=manifest(ctx), repeats=sc["repeats"], mock_behavior=sc["mock_behavior"])
+    return run_arm(ctx, label="baseline", snap=snap, tasks=manifest_["tasks"], insts=insts, prefix="baseline", manifest_=manifest(ctx), repeats=sc["repeats"], mock_behavior=sc["mock_behavior"],
+                   stage_cap=manifest(ctx)["stage_cap_usd"])

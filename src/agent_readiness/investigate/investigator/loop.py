@@ -40,6 +40,9 @@ class HypothesisOut(BaseModel):
     proposed_change: Optional[str]
 
 
+STEP_MAX_TOKENS = 4096     # completion cap per investigator step; INCLUDES hidden reasoning. L0 attempt 3: hypothesis output used 1,281-1,434 tokens (~70 % reasoning); 1,800 left no headroom
+
+
 class Step(BaseModel):
     model_config = ConfigDict(extra="forbid")
     thought: str
@@ -86,7 +89,7 @@ def _run(ws, llm, store, msgs, st, max_calls) -> None:
         if i == max_calls - 1:
             msgs.append({"role": "user", "content": "Tool budget almost used: call `finish` now with your hypotheses (or none)."})
         try:
-            step, resp, attempts = complete_structured(llm, LLMRequest(messages=msgs, purpose="investigate", max_tokens=1800, response_schema=Step.model_json_schema()), Step, retries=1)
+            step, resp, attempts = complete_structured(llm, LLMRequest(messages=msgs, purpose="investigate", max_tokens=STEP_MAX_TOKENS, response_schema=Step.model_json_schema()), Step, retries=1)
         except StructuredOutputError as exc:
             st["incomplete"] = f"unusable model output: {str(exc)[:120]}"
             return

@@ -170,10 +170,11 @@ def test_every_arm_shares_the_baselines_frozen_configuration(tmp_path):
         run.write_artifact("arm-config", {**frozen, "repeats": 2})                                                  # resuming the baseline with other options cannot overwrite it
 
 
-def test_there_is_one_total_spend_ceiling_not_per_stage_caps_that_disagree(tmp_path, monkeypatch):
+def test_there_is_one_total_spend_ceiling_and_the_stage_caps_are_consistent_with_it(tmp_path, monkeypatch):
     run = F.with_finding(tmp_path, name="cap")
     m = trials_stage.manifest(Context(run, options={"total_cap_usd": 2.05}))
-    assert m["ledger_ceiling_usd"] == 2.05 and "stage_cap_usd" not in m and m["retries"] == 0
+    assert m["ledger_ceiling_usd"] == 2.05 and m["stage_cap_usd"] == 1.40 and m["retries"] == 0           # owner decision: an enforced baseline stage cap that fits inside the one ceiling
+    assert m["allocation"]["allocated_usd"] == 1.95 and m["allocation"]["unallocated_usd"] == 0.10 and m["allocation"]["allocation_fits_ceiling"]
     run_l, pipe, ctx = flow.build(tmp_path, "capflow", "site-5", mode="live", options={"total_cap_usd": 1.75})
     assert ctx.llm._ceiling == 1.75 and ctx.options["investigator_llm"]._ceiling == 1.75
     from agent_readiness.ledger import Ledger
