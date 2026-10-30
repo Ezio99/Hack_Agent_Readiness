@@ -66,7 +66,12 @@ def run_plan(ctx: Context, steps: list[dict], *, manifest_: dict, verify=None) -
         t, prefix, rep = st["task"], st["prefix"], st["repeat"]
         tid = f"{t['task_id']}-r{rep}"
         name = f"trials/{prefix}-{tid}"
+        quarantine = f"trials-quarantine/{prefix}-{tid}"
+        if run.has_artifact(quarantine):                                                        # an integrity-failed trial is neither accepted nor silently re-run on a restart
+            raise Halt(f"trial {prefix}-{tid} failed its integrity check earlier and is quarantined (artifacts/{quarantine}.json); it is not accepted and not re-run: review it explicitly")
         if run.has_artifact(name):
+            if verify is not None and run.artifact(name)["outcome"]["run_status"] not in VOID_STATUSES:
+                verify(run.artifact(name), st)                                                  # re-verify on resume: an accepted trial must still be identical to its baseline
             done.append(tid)
             continue
         scopes = list(st.get("scopes") or [])
@@ -77,14 +82,19 @@ def run_plan(ctx: Context, steps: list[dict], *, manifest_: dict, verify=None) -
         rec = asyncio.run(run_trial(st["inst"], st["snap"], provider="live" if live else "mock", mock_behavior=o.get("mock_behavior", "correct"), output=out, model_config=cfg, api_key=key,
                                     request_gate=gate, label=st["label"]))
         trial_dir = str(Path(rec.pop("artifact_path")).relative_to(run.dir))
-        run.write_artifact(name, {**rec, "task_id": t["task_id"], "partition": t["partition"], "repeat": rep, "trial_id": tid, "trial_dir": trial_dir, "arm": st["label"]})
-        executed.append(f"{prefix}-{tid}")
+        record = {**rec, "task_id": t["task_id"], "partition": t["partition"], "repeat": rep, "trial_id": tid, "trial_dir": trial_dir, "arm": st["label"]}
         is_void = rec["outcome"]["run_status"] in VOID_STATUSES
+        if verify is not None and not is_void:
+            try:
+                verify(record, st)                                                              # BEFORE the trial can be accepted as evidence
+            except Halt as exc:
+                run.write_artifact(quarantine, {**record, "integrity_failure": str(exc)})        # diagnostic evidence preserved (full record; the trial data directory is kept too); never in trials/
+                raise
+        run.write_artifact(name, record)
+        executed.append(f"{prefix}-{tid}")
         (void if is_void else done).append(tid)
         if live and is_void:
             raise Halt(f"trial {prefix}-{tid} ended with {rec['outcome']['run_status']}; stopping the stage (void trial, not a website result)")
-        if verify is not None:
-            verify(rec, st)
     return {"trials": len(done), "void": len(void), "executed": executed}
 
 

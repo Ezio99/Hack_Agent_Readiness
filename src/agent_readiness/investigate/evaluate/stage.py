@@ -1,6 +1,7 @@
 """Stages `post_trials` (spends), `evaluate` (free) and `final_report` (free): retest the SAME frozen tasks on each patched mirror and compare with the pre-registered rule."""
 from __future__ import annotations
 
+import json
 from collections import defaultdict
 
 from ...agent import ModelConfig
@@ -111,9 +112,25 @@ def _check_control(run, st: dict, rec: dict) -> None:
         raise Halt(f"control integrity: the {st['label']} trial of {st['task']['task_id']} differs from its baseline trial in {diff}; stopping (never compare against a changed control)")
 
 
+def approved_post_manifest(run, fresh: dict) -> dict:
+    """The manifest the owner actually approved, loaded from its write-once artifact, for LIVE (spending) runs. The pipeline already refuses to start the stage unless the freshly recomputed manifest's hash
+    is approved (`InvestigationRun.require_approval`, called by `Pipeline.run` before `stage.fn`); this repeats that check inside the stage (so a direct call cannot bypass it) and makes execution read
+    the APPROVED artifact - never only a recomputation - so every approved field (execution order and its hash, rules hash, proposal identity, snapshots, caps) is what runs. Non-live runs spend nothing."""
+    if run.mode != "live":
+        return fresh
+    h = canonical_hash(fresh)
+    if not run.is_approved("post_trials", h):
+        raise Halt("the post_trials manifest the stage would run is not the one the owner approved (no approval for its exact sha256); nothing was sent")
+    path = run.dir / "artifacts" / "manifests" / f"post_trials-{h[:16]}.json"
+    approved = json.loads(path.read_text()) if path.exists() else None
+    if approved is None or canonical_hash(approved) != h:
+        raise Halt("the approved post_trials manifest artifact is missing or was altered; nothing was sent")
+    return approved
+
+
 def post_trials_stage(ctx: Context) -> dict:
     run = ctx.run
-    m = post_manifest(ctx)
+    m = approved_post_manifest(run, post_manifest(ctx))
     manifest_ = freezer.load(run)[0]
     plan = _plan(ctx)
     if plan is not None:

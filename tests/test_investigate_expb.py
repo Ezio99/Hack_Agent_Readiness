@@ -233,8 +233,20 @@ def faked(run, monkeypatch, calls, status="completed", mutate=None, reserve_usd=
     monkeypatch.setattr(ts, "preflight", lambda cfg, allow: "k")
 
 
+def approve_post(run, ctx):
+    """What the owner does at the gate: the manifest is written (as `Pipeline` does through `require_approval`) and its exact hash approved."""
+    from agent_readiness.investigate.run import NeedsApproval
+    try:
+        run.require_approval("post_trials", ev.post_manifest(ctx))
+    except NeedsApproval as exc:
+        run.approve("post_trials", exc.manifest_sha256, "owner approves this exact post_trials manifest")
+        return exc.manifest_sha256
+    raise AssertionError("already approved")
+
+
 def approved_post(tmp_path, monkeypatch, name="p", **kw):
     run, p, plan, ctx = exp_ctx(tmp_path, name, live=True, allow_model_calls=True)
+    approve_post(run, ctx)
     calls = []
     faked(run, monkeypatch, calls, **kw)
     return run, p, plan, ctx, calls
@@ -458,3 +470,135 @@ def test_carried_fork_runs_apply_fix_then_post_trials_then_evaluation_behind_two
     doc = run.artifact("evaluation")
     assert doc["evaluated"] and doc["results"][pid]["rule"] == "paired-signflip-v1" and doc["exploratory"]["rules_sha256"] == exploratory.RULES_SHA256
     assert run.artifact("report-final")["exploratory_statement"].startswith("EXPLORATORY") and run.artifact("report-final")["investigation_status"] == "completed"
+
+
+# ------------------------------------------------------------------------------------------------------------ 7. review round: integrity failures survive a restart; the approved manifest is what runs
+def _break_baseline(run, task_id):
+    f = run.dir / "artifacts" / "trials" / f"baseline-{task_id}-r1.json"
+    base = json.loads(f.read_text())
+    f.write_text(json.dumps({**base, "trial": {**base["trial"], "model": "muse-spark-1.3", "profile_hash": "abc"}}))
+
+
+def test_an_integrity_failed_trial_is_quarantined_and_a_restart_neither_accepts_nor_reruns_it(tmp_path, monkeypatch):
+    run, p, plan, ctx, calls = approved_post(tmp_path, monkeypatch)
+    first = plan["placebo_tasks"][0]
+    _break_baseline(run, first)
+    faked(run, monkeypatch, calls, mutate=lambda r, label, inst: r["trial"].update({"model": "some-other-model", "profile_hash": "abc"}))      # the repeat is NOT identical to its baseline
+    with pytest.raises(Halt, match="control integrity"):
+        ev.post_trials_stage(ctx)
+    name = f"placebo-{p.id}-{first}-r1"
+    assert len(calls) == 1 and not run.has_artifact(f"trials/{name}")                                                        # never accepted as trial evidence ...
+    q = run.artifact(f"trials-quarantine/{name}")
+    assert "control integrity" in q["integrity_failure"] and q["outcome"]["run_status"] == "completed" and q["trial"]["model"] == "some-other-model" and q["task_id"] == first   # ... but fully preserved for diagnosis
+    assert (run.dir / q["trial_dir"]).exists()                                                                               # the trial data directory is kept as well
+    assert not list((run.dir / "artifacts" / "trials").glob("placebo-*")) and not any(k.startswith("placebo") for k in ev._collect(run, f"placebo-{p.id}", freezer.load(run)[1], run.artifact("site-profile")))
+    faked(run, monkeypatch, calls)                                                                                          # RESTART with a well-behaved executor: still refused, nothing is sent
+    with pytest.raises(Halt, match="quarantined"):
+        ev.post_trials_stage(Context(run, options=dict(ctx.options)))
+    assert len(calls) == 1 and not run.has_artifact(f"trials/{name}")                                                        # neither silently accepted nor silently re-run (and re-spent)
+
+
+def test_accepted_trials_are_re_verified_on_resume(tmp_path, monkeypatch):
+    run, p, plan, ctx, calls = approved_post(tmp_path, monkeypatch)
+    ev.post_trials_stage(ctx)
+    n = len(calls)
+    _break_baseline(run, plan["placebo_tasks"][0])                                                                          # the baseline of an already-accepted trial changes (drift or tampering)
+    run.artifact(f"trials/placebo-{p.id}-{plan['placebo_tasks'][0]}-r1")
+    with pytest.raises(Halt, match="control integrity"):
+        ev.post_trials_stage(Context(run, options=dict(ctx.options)))
+    assert len(calls) == n                                                                                                  # the resume verified the existing artifact instead of skipping it, and sent nothing
+
+
+def _stage():
+    return Stage("post_trials", ev.post_trials_stage, spends=True, manifest=ev.post_manifest)
+
+
+def test_every_approved_field_is_in_the_hashed_manifest(tmp_path):
+    run, p, plan, ctx = exp_ctx(tmp_path, "fields")
+    m = ev.post_manifest(ctx)
+    h = run.manifest_sha256(m)
+    import copy
+
+    def mutated(path):
+        c = copy.deepcopy(m)
+        node = c
+        for k in path[:-1]:
+            node = node[k]
+        node[path[-1]] = "CHANGED" if not isinstance(node[path[-1]], (int, float)) else node[path[-1]] + 1
+        return run.manifest_sha256(c)
+    paths = [("execution_order_sha256",), ("execution_order", 0), ("exploratory", "rules_sha256"), ("exploratory", "rules"), ("exploratory", "proposal_id"), ("exploratory", "plan"), ("arms", 0, "proposal_id"),
+             ("arms", 0, "patched_snapshot_sha256"), ("placebo", "snapshot_sha256"), ("placebo", "identical_to_baseline", "arm_config_sha256"), ("caps_usd", "patched_arm"), ("caps_usd", "placebo_arm"),
+             ("caps_usd", "post_trials_combined"), ("caps_usd", "per_trial"), ("caps_usd", "per_request"), ("caps_usd", "ledger_ceiling"), ("evaluation_rule_sha256",), ("model",), ("run_cap_usd",)]
+    for path in paths:
+        assert mutated(path) != h, path                                                                                     # each approved element changes the exact hash that was approved
+
+
+def test_the_pipeline_never_starts_a_paid_trial_unless_the_exact_manifest_hash_is_approved(tmp_path, monkeypatch):
+    run, p, plan, ctx = exp_ctx(tmp_path, "gate", live=True, allow_model_calls=True)
+    calls = []
+    faked(run, monkeypatch, calls)
+    r = Pipeline([_stage()]).run(ctx)                                                                                       # code path: Pipeline.run -> InvestigationRun.require_approval(stage, stage.manifest(ctx)) BEFORE stage.fn
+    assert r.status == "awaiting_approval" and calls == [] and not list((run.dir / "artifacts" / "trials").glob("patched-*"))
+    run.approve("post_trials", "e" * 64, "approval of some other hash")
+    assert Pipeline([_stage()]).run(ctx).status == "awaiting_approval" and calls == []
+    run.approve("post_trials", r.manifest_sha256, "owner approves this exact manifest")
+    approved_hash = r.manifest_sha256
+    steps = ev.post_manifest(ctx)["execution_order"]
+    orig_plan = exploratory.execution_plan
+
+    def swapped(plan_, ids_, pid_):
+        out = orig_plan(plan_, ids_, pid_)
+        out[0], out[1] = out[1], out[0]
+        return out
+    mutations = {
+        "rules": lambda mp: mp.setitem(exploratory.RULES, "effect_floor", 0.30),
+        "rules hash": lambda mp: mp.setattr(exploratory, "RULES_SHA256", "0" * 64),
+        "patched-arm cap": lambda mp: mp.setattr(alloc, "PATCHED_ARM_CAP_USD", 0.81),
+        "placebo-arm cap": lambda mp: mp.setattr(alloc, "PLACEBO_ARM_CAP_USD", 0.56),
+        "combined cap": lambda mp: mp.setattr(alloc, "POST_TRIALS_CAP_USD", 1.40),
+        "execution order": lambda mp: mp.setattr(exploratory, "execution_plan", swapped),
+        "proposal identity": lambda mp: mp.setattr(Proposal, "label", property(lambda self: "EXPERIMENTAL - a different proposal")),
+    }
+    for what, apply_mutation in mutations.items():
+        with monkeypatch.context() as mp:
+            apply_mutation(mp)
+            r2 = Pipeline([_stage()]).run(Context(run, options=dict(ctx.options)))
+        assert r2.status == "awaiting_approval" and r2.manifest_sha256 != approved_hash and calls == [], what                  # a changed approved element is a NEW, unapproved manifest: stopped before any trial
+    with monkeypatch.context() as mp:                                                                                           # a different ledger ceiling (cap block) is also a different manifest
+        r3 = Pipeline([_stage()]).run(Context(run, options={**ctx.options, "total_cap_usd": 2.0}))
+    assert r3.status == "awaiting_approval" and r3.manifest_sha256 != approved_hash and calls == []
+    r4 = Pipeline([_stage()]).run(Context(run, options=dict(ctx.options)))                                                      # unchanged: the approved manifest runs, in the approved order
+    assert r4.status == "done" and [f"{c['label']}:{c['task']}:r1" for c in calls] == steps
+
+
+def test_a_direct_stage_call_cannot_bypass_the_approval_and_executes_the_approved_artifact(tmp_path, monkeypatch):
+    run, p, plan, ctx = exp_ctx(tmp_path, "direct", live=True, allow_model_calls=True)
+    calls = []
+    faked(run, monkeypatch, calls)
+    with pytest.raises(Halt, match="not the one the owner approved"):
+        ev.post_trials_stage(ctx)                                                                                           # no approval at all: refused inside the stage itself, before any trial
+    run.approve("post_trials", "d" * 64, "approval of a different hash")
+    with pytest.raises(Halt, match="not the one the owner approved"):
+        ev.post_trials_stage(ctx)
+    h = approve_post(run, ctx)
+    path = run.dir / "artifacts" / "manifests" / f"post_trials-{h[:16]}.json"
+    original = path.read_text()
+    path.write_text(original.replace('"caps_usd"', '"caps_usd_edited"', 1))                                                    # the approved manifest artifact is altered after approval
+    with pytest.raises(Halt, match="missing or was altered"):
+        ev.post_trials_stage(ctx)
+    path.write_text(original)
+    with monkeypatch.context() as mp:
+        mp.setattr(exploratory, "RULES_SHA256", "1" * 64)                                                                   # the manifest the code would now produce is not the approved one
+        with pytest.raises(Halt, match="not the one the owner approved"):
+            ev.post_trials_stage(ctx)
+    assert calls == []
+    fresh = ev.post_manifest(ctx)
+    assert ev.approved_post_manifest(run, fresh) == json.loads(path.read_text()) and run.manifest_sha256(fresh) == h
+    ev.post_trials_stage(ctx)
+    assert [f"{c['label']}:{c['task']}:r1" for c in calls] == json.loads(path.read_text())["execution_order"]                 # execution = the approved artifact's order
+
+
+def test_the_non_spending_modes_need_no_approval_but_still_use_the_same_stage(tmp_path):
+    run, p, plan, ctx = exp_ctx(tmp_path, "mockmode")
+    m = ev.post_manifest(ctx)
+    assert ev.approved_post_manifest(run, m) is m                                                                           # scripted/mock runs spend nothing: no approval is demanded
