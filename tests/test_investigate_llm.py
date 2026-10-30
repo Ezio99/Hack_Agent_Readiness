@@ -216,3 +216,88 @@ def test_l0_report_records_the_classified_cause_without_changing_caps_or_stoppin
     text = json.dumps(rep)
     assert "SECRET" not in text and "Return a=3" not in text and "Bearer" not in text
     assert len([e for e in led.entries() if e["kind"] == "reserve"]) == 1
+
+
+# ---- reasoning effort, sanitized response diagnostics and the under-reservation regression (L0 attempt 2) --------------------------------------------------------------------------------
+from agent_readiness.investigate.llm.client import LLMResponse, response_diagnostics
+from agent_readiness.investigate.llm.meta import INPUT_OVERHEAD_TOKENS
+from agent_readiness.capture import GateRefused
+
+
+def test_reasoning_effort_is_sent_validated_and_optional(tmp_path):
+    seen = []
+    led, gate, client = meta(tmp_path, ok_handler(seen))
+    client.complete(REQ)
+    assert json.loads(seen[0].content)["reasoning_effort"] == "low"
+    for bad in ("none", "max", ""):
+        with pytest.raises(ValueError):
+            MetaClient(ModelConfig(), "k", gate, transport=httpx.MockTransport(ok_handler([])), reasoning_effort=bad) if bad else (_ for _ in ()).throw(ValueError("empty"))
+    off = MetaClient(ModelConfig(), "k", gate_for(tmp_path / "off")[1], transport=httpx.MockTransport(ok_handler(seen)), reasoning_effort=None)
+    off.complete(REQ)
+    assert "reasoning_effort" not in json.loads(seen[-1].content)
+
+
+def test_finish_reason_and_reasoning_tokens_are_captured_without_changing_usage_or_cost(tmp_path):
+    body = {"choices": [{"message": {"content": None}, "finish_reason": "length"}], "usage": {"prompt_tokens": 105, "completion_tokens": 200, "completion_tokens_details": {"reasoning_tokens": 198}}}
+    led, gate, client = meta(tmp_path, lambda r: httpx.Response(200, json=body))
+    resp = client.complete(REQ)
+    assert resp.text == "" and resp.finish_reason == "length" and resp.reasoning_tokens == 198 and resp.usage == {"prompt_tokens": 105, "completion_tokens": 200}
+    assert resp.cost_usd == round(105 * 1.25e-6 + 200 * 4.25e-6, 6)
+    odd = {"choices": [{"message": {"content": "{}"}}], "usage": {"prompt_tokens": 1, "completion_tokens": 1, "completion_tokens_details": "weird"}}
+    led, gate, client = meta(tmp_path / "odd", lambda r: httpx.Response(200, json=odd))
+    r2 = client.complete(REQ)
+    assert r2.reasoning_tokens is None and r2.finish_reason is None
+
+
+def test_structured_failure_diagnostics_classify_without_leaking_text(tmp_path):
+    cases = [("", "length", "empty_content"), ('{"a": 1', "length", "truncated"), ("sorry, here you go", "stop", "not_json"), ('{"a": "PRIVATE-VALUE-1"}', "stop", "schema_mismatch")]
+    for text, finish, kind in cases:
+        resp = LLMResponse(text=text, mode="live", model="m", usage={"prompt_tokens": 10, "completion_tokens": 20}, cost_usd=0.1, finish_reason=finish, reasoning_tokens=7)
+        d = response_diagnostics(resp)
+        assert d["kind"] == kind and d["finish_reason"] == finish and d["content_chars"] == len(text) and d["reasoning_tokens"] == 7 and "PRIVATE" not in json.dumps(d)
+
+    class C:
+        mode, model = "live", "m"
+        def complete(self, request):
+            return LLMResponse(text='{"a": "PRIVATE-VALUE-1"}', mode="live", model="m", usage={"prompt_tokens": 3, "completion_tokens": 4}, finish_reason="stop")
+    with pytest.raises(StructuredOutputError) as ei:
+        complete_structured(C(), REQ, Out, retries=0)
+    d = ei.value.diagnostics
+    assert d["kind"] == "schema_mismatch" and d["schema_errors"] == [{"loc": "a", "type": "int_parsing"}] and "PRIVATE" not in json.dumps(d) and "PRIVATE" not in str(ei.value)
+
+
+def test_input_overhead_prevents_the_l0_attempt2_under_reservation_without_weakening_the_ceiling(tmp_path):
+    """L0 attempt 2: the P1 request reserved US$0.00096 (estimate 89 input tokens + the 200-token cap) but settled at US$0.000981 (>= 105 prompt tokens): a bound violation that closes the gate."""
+    import types
+    from agent_readiness.investigate import l0
+    from agent_readiness.ledger import cost_of
+    r = l0.requests()[0]
+    body = MetaClient.body(types.SimpleNamespace(model="muse-spark-1.3", reasoning_effort=None), LLMRequest(messages=r["messages"], purpose=r["purpose"], max_tokens=200, response_schema=l0._schema(r["model"])))
+    usage = {"prompt_tokens": 105, "completion_tokens": 200}                               # the smallest usage that reproduces the observed 0.000981
+    assert cost_of(usage) == 0.000981
+    old = RequestGate(Ledger(tmp_path / "old", ceiling=1.0), "x", input_overhead_tokens=0)
+    old.reserve(1, body)
+    assert old.settle(1, {"http_status": 200, "usage": usage}).get("bound_violation") and old.violation              # reproduces the failure
+    new = RequestGate(Ledger(tmp_path / "new", ceiling=1.0), "x", input_overhead_tokens=INPUT_OVERHEAD_TOKENS)
+    reserved = new.reserve(1, body)
+    assert reserved["upper_bound_usd"] > cost_of(usage) and reserved["upper_bound_usd"] > 0.00096
+    out = new.settle(1, {"http_status": 200, "usage": usage})
+    assert out["settled"] and not new.violation and out["actual_usd"] == 0.000981
+    tight = RequestGate(Ledger(tmp_path / "tight", ceiling=0.001), "x", input_overhead_tokens=INPUT_OVERHEAD_TOKENS)     # the hard ceiling still binds, and the larger reservation counts against it
+    with pytest.raises(GateRefused):
+        tight.reserve(1, body)
+    assert tight.ledger.entries() == []
+    with pytest.raises(GateRefused):
+        RequestGate(Ledger(tmp_path / "cap", ceiling=1.0), "x", per_request_cap=0.001, input_overhead_tokens=INPUT_OVERHEAD_TOKENS).reserve(1, body)
+
+
+def test_default_gate_is_unchanged_for_other_live_paths(tmp_path):
+    from agent_readiness.spend_gate import upper_bound_usd
+    body = {"model": "m", "messages": [{"role": "user", "content": "hello"}], "max_completion_tokens": 100}
+    assert upper_bound_usd(body) == upper_bound_usd(body, 0) and upper_bound_usd(body, 128)[0] > upper_bound_usd(body)[0]
+    assert RequestGate(Ledger(tmp_path, ceiling=1.0), "x").input_overhead_tokens == 0
+
+
+def test_diagnostics_tolerate_non_string_content():
+    d = response_diagnostics(LLMResponse(text=[{"type": "text", "text": "PRIVATE"}], mode="live", model="m", finish_reason="stop"))     # type: ignore[arg-type]
+    assert d["kind"] == "not_text" and d["content_chars"] == 0 and "PRIVATE" not in json.dumps(d)

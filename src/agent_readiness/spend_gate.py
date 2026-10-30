@@ -16,11 +16,13 @@ MAX_REQUESTS = 16
 IMAGE_UPPER_BOUND_TOKENS = 4_000   # per screenshot; the calibrated estimate is 1,430 (measured 8,128/9,443 prompt tokens) -> ~2.8x headroom
 
 
-def upper_bound_usd(body: dict) -> tuple[float, dict]:
-    """Conservative upper bound of one request: the guard's estimate (full completion cap, schema, +10 %) plus extra screenshot headroom."""
+def upper_bound_usd(body: dict, input_overhead_tokens: int = 0) -> tuple[float, dict]:
+    """Conservative upper bound of one request: the guard's estimate (full completion cap, schema, +10 %) plus extra screenshot headroom.
+    `input_overhead_tokens` adds a FIXED number of input tokens (chat-template / role / structured-output framing the character-based estimate cannot see); the 10 % margin alone is
+    ineffective for tiny prompts. Default 0 keeps every existing caller byte-identical."""
     est = estimate_cost_usd(body)
     _s, _u, images = message_texts(body)
-    extra_tokens = round(images * max(0, IMAGE_UPPER_BOUND_TOKENS - IMAGE_TOKENS_ESTIMATE) * INPUT_SAFETY_MARGIN)
+    extra_tokens = round(images * max(0, IMAGE_UPPER_BOUND_TOKENS - IMAGE_TOKENS_ESTIMATE) * INPUT_SAFETY_MARGIN) + input_overhead_tokens
     usd = round(est["usd"] + extra_tokens * PRICE_INPUT_PER_M / 1e6, 6)
     return usd, {**est, "images": images, "image_headroom_tokens": extra_tokens, "upper_bound_usd": usd}
 
@@ -28,8 +30,9 @@ def upper_bound_usd(body: dict) -> tuple[float, dict]:
 class RequestGate:
     """Durable per-request spend gate (see module docstring). Plugged into `ResponseCapture` through `recorder.request_gate`."""
 
-    def __init__(self, ledger: Ledger, run_id: str, *, run_cap: float = RUN_CAP_USD, per_request_cap: float = PER_REQUEST_CAP_USD, max_requests: int = MAX_REQUESTS):
+    def __init__(self, ledger: Ledger, run_id: str, *, run_cap: float = RUN_CAP_USD, per_request_cap: float = PER_REQUEST_CAP_USD, max_requests: int = MAX_REQUESTS, input_overhead_tokens: int = 0):
         self.ledger, self.run_id, self.run_cap, self.per_request_cap, self.max_requests = ledger, run_id, run_cap, per_request_cap, max_requests
+        self.input_overhead_tokens = input_overhead_tokens
         self.violation: str | None = None
         self.log: list[dict] = []
 
@@ -52,7 +55,7 @@ class RequestGate:
     def reserve(self, index: int, body: dict, estimate: dict | None = None) -> dict:
         if self.violation:
             raise GateRefused(f"gate closed after a bound violation: {self.violation}")
-        usd, detail = upper_bound_usd(body)
+        usd, detail = upper_bound_usd(body, self.input_overhead_tokens)
         if usd > self.per_request_cap:
             raise GateRefused(f"upper bound US${usd} for this request exceeds the per-request cap US${self.per_request_cap}")
         if self.request_count() >= self.max_requests:
