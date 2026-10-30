@@ -22,7 +22,7 @@ from ..ledger import Halt, Ledger
 from ..spend_gate import upper_bound_usd
 from ..suite.core import canonical_hash
 from .llm import LLMRequest, StructuredOutputError, complete_structured
-from .llm.meta import MetaClient
+from .llm.meta import MetaClient, ProviderError
 from .models import CLAIM_KINDS
 from .zoo.sealed import assert_blind
 
@@ -186,6 +186,8 @@ def run(run_dir: Path, *, approved_sha256: str, allow_model_calls: bool, client=
             rec.update(http_ok=True, usage_reported=True, valid=False)
         except Exception as exc:                                  # transport / provider / gate failure: record and stop (no retries)
             rec["error"] = type(exc).__name__
+            if isinstance(exc, ProviderError):                    # classified, sanitized cause (no body, headers or model text)
+                rec.update(error_category=exc.category, http_status=exc.status, error_summary=exc.summary)
             results.append({**rec, "latency_s": round(time.monotonic() - t0, 2)})
             break
         rec["latency_s"] = round(time.monotonic() - t0, 2)

@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from agent_readiness.agent import ModelConfig
 from agent_readiness.investigate.llm import (LLMRequest, RecordedClient, RecordingClient, ScriptedClient, StructuredOutputError, complete_structured, request_sha256)
-from agent_readiness.investigate.llm.meta import MetaClient
+from agent_readiness.investigate.llm.meta import MetaClient, ProviderError
 from agent_readiness.ledger import Halt, Ledger
 from agent_readiness.spend_gate import RequestGate
 
@@ -149,3 +149,70 @@ def test_only_the_two_sanctioned_modules_may_use_the_network():
         if f.relative_to(base).as_posix() not in allowed and any(w in text for w in ("import httpx", "import requests", "import socket", "urllib.request", "import aiohttp")):
             offenders.append(f.relative_to(base).as_posix())
     assert offenders == []
+
+
+# ---- classified provider errors (L0 diagnostics): the cause of a failed request is kept, sanitized, and never leaks the key, headers, request body or model text -------------------
+KEY = "sk-test-SECRET-KEY"
+PROVIDER_JSON = {"error": {"type": "invalid_request_error", "code": "bad_schema", "message": f"schema rejected near additionalProperties; echoed {KEY} Bearer abcdefghijkl"}}
+
+
+@pytest.mark.parametrize("status", [400, 401, 403, 429, 500])
+def test_http_errors_keep_status_and_a_sanitized_provider_summary(tmp_path, status):
+    led, gate, client = meta(tmp_path, lambda r: httpx.Response(status, json=PROVIDER_JSON))
+    with pytest.raises(ProviderError) as ei:
+        client.complete(REQ)
+    e = ei.value
+    assert isinstance(e, RuntimeError) and e.category == "http" and e.status == status
+    assert "invalid_request_error" in e.summary and "bad_schema" in e.summary and "additionalProperties" in e.summary
+    shown = str(e) + repr(e) + e.summary
+    assert "SECRET" not in shown and "abcdefghijkl" not in shown and "hello" not in shown and "Authorization" not in shown      # no key, bearer, prompt or header
+    assert f"HTTP {status}" in str(e) and e.__cause__ is None
+    reserved = [x for x in led.entries() if x["kind"] == "reserve"][0]["usd"]
+    assert [x["kind"] for x in led.entries()] == ["reserve"] and led.committed() == reserved      # unchanged accounting: the full upper bound stays counted, nothing settled
+
+
+def test_non_json_and_oversized_http_bodies_never_surface_raw_text(tmp_path):
+    for body in ("<html>gateway " + KEY + " dump</html>", "x" * 5000):
+        led, gate, client = meta(tmp_path / str(len(body)), lambda r, b=body: httpx.Response(502, text=b))
+        with pytest.raises(ProviderError) as ei:
+            client.complete(REQ)
+        assert ei.value.status == 502 and "SECRET" not in str(ei.value) and "gateway" not in ei.value.summary and len(ei.value.summary) <= 160
+
+
+def test_transport_errors_are_distinguished_from_http_errors(tmp_path):
+    for exc, expect in ((httpx.ReadTimeout("slow"), "timeout"), (httpx.ConnectTimeout("slow"), "timeout"), (httpx.ConnectError("no route"), "ConnectError"), (httpx.RemoteProtocolError("bad"), "RemoteProtocolError")):
+        def boom(request, exc=exc):
+            raise exc
+        led, gate, client = meta(tmp_path / type(exc).__name__, boom)
+        with pytest.raises(ProviderError) as ei:
+            client.complete(REQ)
+        assert ei.value.category == "transport" and ei.value.status is None and expect in ei.value.summary
+        assert led.committed() > 0 and [x["kind"] for x in led.entries()] == ["reserve"]
+
+
+def test_parse_errors_after_a_200_are_a_third_category_and_the_key_stays_counted(tmp_path):
+    for resp in (httpx.Response(200, json={"choices": []}), httpx.Response(200, text="not json"), httpx.Response(200, json=[1, 2])):
+        led, gate, client = meta(tmp_path / str(id(resp)), lambda r, x=resp: x)
+        with pytest.raises(ProviderError) as ei:
+            client.complete(REQ)
+        assert ei.value.category == "parse" and ei.value.status == 200 and "unexpected response shape" in ei.value.summary
+        assert led.committed() > 0                                                                  # no usage: the full reservation is still counted
+
+
+def test_model_output_validation_stays_a_separate_layer(tmp_path):
+    led, gate, client = meta(tmp_path, lambda r: httpx.Response(200, json={"choices": [{"message": {"content": "not the schema"}}], "usage": {"prompt_tokens": 10, "completion_tokens": 5}}))
+    with pytest.raises(StructuredOutputError):
+        complete_structured(client, REQ, Out, retries=0)
+
+
+def test_l0_report_records_the_classified_cause_without_changing_caps_or_stopping_rules(tmp_path):
+    from agent_readiness.investigate import l0
+    led, gate, client = meta(tmp_path / "c", lambda r: httpx.Response(400, json=PROVIDER_JSON), run_cap=0.10, per_request_cap=0.03, max_requests=6)
+    cfg = ModelConfig()
+    rep = l0.run(tmp_path / "out", approved_sha256=l0.manifest_sha256(l0.manifest(cfg)), allow_model_calls=True, client=client, config=cfg)
+    (only,) = rep["results"]                                                                        # P1 failed: the probe stops, no further requests (unchanged rule)
+    assert only["error_category"] == "http" and only["http_status"] == 400 and "bad_schema" in only["error_summary"] and only["error"] == "ProviderError"
+    assert rep["evaluation"]["verdict"] == "FAIL" and rep["total_calculated_usd"] == 0.0
+    text = json.dumps(rep)
+    assert "SECRET" not in text and "Return a=3" not in text and "Bearer" not in text
+    assert len([e for e in led.entries() if e["kind"] == "reserve"]) == 1
