@@ -2,6 +2,9 @@
 
 **Authoritative current state (2026-10-29, Task 015 stack and 015f merged; Task 016 next).** Verify against the repository, not this text. Full historical checkpoints are preserved verbatim in [docs/archive/STATUS-through-2026-10-29.md](docs/archive/STATUS-through-2026-10-29.md); architecture, execution paths, frozen artifacts and technical debt are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## EXP-B (2026-10-30, latest; supersedes older "next/on hold" wording below where they conflict)
+The owner-selected daily-fee listing experiment on `site-5` (run `investigations/site-5-live-c`) is **complete**: nine live trials, no protocol deviation, calculated spend US$0.864152 (run total US$1.534404 of the US$2.05 ceiling, not a bill). Frozen `paired-signflip-v1`: **inconclusive**; separate exploratory `exploratory-listing-v1`: **consistent_with_h1** (affected tasks 13→4 and 13→3 requests); one same-shape control changed pass status (within request tolerance). Owner-selected, not an investigator-verified finding; n = 1 per cell. Report: [016m](collaboration/reports/016m-exp-b-results.md). Dashboard: draft PR #52 (not merged, nothing deployed). The programme ledger file has not been updated for L0, L1a or EXP-B. No further paid call is authorized.
+
 ## Integration baseline (merged)
 `main` contains everything through **Task 015f**: PRs #22 (Task 015 product), #24 (pilot/experiment driver), #25 (pilot results), #26 (corrected main-stage proposal + verification) and #29 (consolidation) were merged bottom-up with merge commits (history preserved). Only #23 (future-work roadmap, docs) remains open. Verified after merging: fresh install, CLI, full suite and CI green on `main`; frozen sources/manifests/pilot artifacts/budget ledger unchanged. Handoff for the next session: [collaboration/TASK016_HANDOFF.md](collaboration/TASK016_HANDOFF.md).
 

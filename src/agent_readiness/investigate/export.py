@@ -12,6 +12,7 @@ from pathlib import Path
 
 from .flow import STAGES as FLOW_STAGES
 from .models import now
+from .evaluate import exploratory
 from .report import NOTICES
 from .run import InvestigationRun
 from .trials.stage import VOID_STATUSES
@@ -53,10 +54,11 @@ def _trial_row(t: dict, partition: str | None = None) -> dict:
             "mode": (t.get("trial") or {}).get("mode")}
 
 
-def _trials(run: InvestigationRun) -> tuple[dict, dict]:
-    """(baseline by task id, patched by proposal id then task id). Rebuilt from the per-trial records, so failures and void trials are all present."""
+def _trials(run: InvestigationRun) -> tuple[dict, dict, dict]:
+    """(baseline by task id, patched by proposal id then task id, unmodified repeats ("placebo") by proposal id then task id). Rebuilt from the per-trial records, so failures and void trials are all present."""
     base: dict[str, list] = {}
     patched: dict[str, dict[str, list]] = {}
+    placebo: dict[str, dict[str, list]] = {}
     for path in sorted((run.dir / "artifacts" / "trials").glob("*.json")):
         t = _artifact(run, f"trials/{path.stem}")
         if not t or "task_id" not in t:
@@ -64,10 +66,10 @@ def _trials(run: InvestigationRun) -> tuple[dict, dict]:
         row = _trial_row(t)
         if path.stem.startswith("baseline-"):
             base.setdefault(t["task_id"], []).append(row)
-        elif path.stem.startswith("patched-"):
-            pid = "-".join(path.stem.split("-")[1:3])          # artifact name is patched-<proposal id>-<task id>-r<n>; a proposal id is prp-<10 hex>
-            patched.setdefault(pid, {}).setdefault(t["task_id"], []).append(row)
-    return base, patched
+        elif path.stem.startswith(("patched-", "placebo-")):
+            pid = "-".join(path.stem.split("-")[1:3])          # artifact name is patched-|placebo-<proposal id>-<task id>-r<n>; a proposal id is prp-<10 hex>
+            (patched if path.stem.startswith("patched-") else placebo).setdefault(pid, {}).setdefault(t["task_id"], []).append(row)
+    return base, patched, placebo
 
 
 def _resolve_support(refs: list[str], trial_ids: set[str], task_ids: set[str]) -> list[dict]:
@@ -78,12 +80,27 @@ def _resolve_support(refs: list[str], trial_ids: set[str], task_ids: set[str]) -
     return out
 
 
+EXPLORATORY_KEYS = ("rules_id", "rules_sha256", "label", "verdict", "reasons", "tasks", "missing_or_void", "noise_estimate_requests", "controls_within_tolerance", "affected")
+
+
+def _exploratory(run: InvestigationRun, e: dict) -> dict | None:
+    """The separate EXP-B analysis (never the frozen verdict). Whitelisted: numeric per-arm rows, the verdict with its reasons, the task roles and the rules summary only when the stored hash matches the code."""
+    x = e.get("exploratory")
+    if not x:
+        return None
+    plan = _artifact(run, "post-plan") or {}
+    rules_ok = x.get("rules_sha256") == exploratory.RULES_SHA256
+    rules = {k: exploratory.RULES[k] for k in ("id", "label", "primary_comparison", "secondary_comparison", "effect_floor", "support", "noise_estimate", "same_shape_control_tolerance_requests",
+                                                "detail_control_tolerance_requests", "controls", "drift", "conflict", "verdicts", "claims")} if rules_ok else None
+    return {**_pick(x, EXPLORATORY_KEYS), "plan": _pick(plan, ("placebo_tasks", "affected", "same_shape_controls", "detail_controls")), "rules": rules, "rules_match_code": rules_ok}
+
+
 def _evaluation(run: InvestigationRun, ev) -> dict:
     e = _artifact(run, "evaluation")
     if e is None:
-        return {"state": "missing", "reason": "no evaluation artifact (the evaluate stage has not run)", "rule": None, "results": []}
+        return {"state": "missing", "reason": "no evaluation artifact (the evaluate stage has not run)", "rule": None, "results": [], "exploratory": None}
     if not e.get("evaluated"):
-        return {"state": "not_evaluated", "reason": e.get("reason") or "not evaluated", "rule": None, "results": []}
+        return {"state": "not_evaluated", "reason": e.get("reason") or "not evaluated", "rule": None, "results": [], "exploratory": None}
     measured = {x.proposal_id: x for x in ev.effects.values()}
     results = []
     for pid, r in (e.get("results") or {}).items():
@@ -91,7 +108,30 @@ def _evaluation(run: InvestigationRun, ev) -> dict:
         results.append({"proposal_id": pid, **_pick(r, ("verdict", "reason", "pairs", "pass_delta", "request_change", "p_pass", "p_requests", "holdout_consistent", "by_partition", "rule_preregistered_at_freeze")),
                         "excluded": [_pick(x, ("task_id", "reason")) for x in r.get("excluded") or []], "measured": bool(eff and eff.measured), "effect_mode": eff.provenance.mode if eff else None})
     rule = e.get("rule") or {}
-    return {"state": "evaluated", "reason": None, "rule": _pick(rule, ("id", "primary", "secondary", "alpha", "min_pairs", "pass_delta_floor", "request_reduction_floor", "void_policy", "causal_scope")), "results": results}
+    return {"state": "evaluated", "reason": None, "rule": _pick(rule, ("id", "primary", "secondary", "alpha", "min_pairs", "pass_delta_floor", "request_reduction_floor", "void_policy", "causal_scope")), "results": results, "exploratory": _exploratory(run, e)}
+
+
+def _spend(run: InvestigationRun) -> dict:
+    """Calculated (published-price) spend from the durable ledger, by arm: never a bill. Ids are `<trial or stage>:<request>`; trial ids start with the arm label."""
+    try:
+        rows = [json.loads(line) for line in (run.dir / "spend" / "ledger.jsonl").read_text().splitlines() if line.strip()]
+    except (OSError, ValueError):
+        return {"state": "missing"}
+    settled = {r["id"]: r["usd"] for r in rows if r.get("kind") == "settle"}
+    open_ = {r["id"] for r in rows if r.get("kind") == "reserve"} - set(settled)
+    by_arm: dict[str, float] = {}
+    by_trial: dict[str, float] = {}
+    for rid, usd in settled.items():
+        trial = rid.split(":")[0]
+        arm = trial.split("-")[0] if trial.split("-")[0] in ("baseline", "patched", "placebo") else "other"
+        by_arm[arm] = by_arm.get(arm, 0) + usd
+        if arm != "other":
+            by_trial[trial] = by_trial.get(trial, 0) + usd
+    total = sum(settled.values())
+    ceiling = (run.state.get("config") or {}).get("total_cap_usd")
+    r6 = lambda x: round(x, 6)
+    return {"state": "ok", "basis": "calculated at published prices from the spend ledger; not a bill", "committed_usd": r6(total), "ceiling_usd": ceiling, "remaining_usd": r6(ceiling - total) if ceiling else None,
+            "open_reservations": len(open_), "by_arm_usd": {k: r6(v) for k, v in sorted(by_arm.items())}, "by_trial_usd": {k: r6(v) for k, v in sorted(by_trial.items())}}
 
 
 def export_run(run_dir: Path | str) -> dict:
@@ -109,8 +149,8 @@ def export_run(run_dir: Path | str) -> dict:
     report_source = "report-final" if final else "report" if interim else "evidence"
     if not final:
         missing.append("report-final")
-    base, patched = _trials(run)
-    trial_ids = {r["trial_id"] for rows in base.values() for r in rows} | {r["trial_id"] for by in patched.values() for rows in by.values() for r in rows}
+    base, patched, placebo = _trials(run)
+    trial_ids = {r["trial_id"] for rows in base.values() for r in rows} | {r["trial_id"] for arm in (patched, placebo) for by in arm.values() for rows in by.values() for r in rows}
     task_ids = {t["task_id"] for t in (manifest or {}).get("tasks", [])}
     attribution = _artifact(run, "attribution") or {}
     att_by_task: dict[str, list] = {}
@@ -122,7 +162,8 @@ def export_run(run_dir: Path | str) -> dict:
                 if a["trial_id"] == r["trial_id"]:
                     r["attribution"] = a["primary"]
                     r["why"] = a["why"]
-    tasks = [{**_pick(t, ("task_id", "question", "kind", "source", "partition", "start_path")), "limits": t.get("limits"), "baseline": base.get(t["task_id"], []), "patched": {pid: by.get(t["task_id"], []) for pid, by in patched.items()}}
+    tasks = [{**_pick(t, ("task_id", "question", "kind", "source", "partition", "start_path")), "limits": t.get("limits"), "baseline": base.get(t["task_id"], []), "patched": {pid: by.get(t["task_id"], []) for pid, by in patched.items()},
+             "placebo": {pid: by[t["task_id"]] for pid, by in placebo.items() if t["task_id"] in by}}
              for t in (manifest or {}).get("tasks", [])]
     modes = sorted({x.provenance.mode for coll in (ev.observations, ev.hypotheses, ev.findings, ev.proposals, ev.effects) for x in coll.values()} | {run.mode} | {r["mode"] for rows in base.values() for r in rows if r["mode"]},
                    key=MODES.index)
@@ -144,8 +185,9 @@ def export_run(run_dir: Path | str) -> dict:
         "modes": modes, "notices": [NOTICES[m] for m in modes],
         "stages": [{"name": n, **_stage_summary(s)} for n, s in sorted(state["stages"].items(), key=lambda kv: FLOW_STAGES.index(kv[0]) if kv[0] in FLOW_STAGES else len(FLOW_STAGES))],      # run.json is written with sorted keys; restore pipeline order
         "tasks": tasks,
-        "trials": {"baseline": sum(len(r) for r in base.values()), "patched": sum(len(r) for by in patched.values() for r in by.values()),
-                   "void": sum(r["void"] for rows in base.values() for r in rows) + sum(r["void"] for by in patched.values() for rows in by.values() for r in rows),
+        "trials": {"baseline": sum(len(r) for r in base.values()), "patched": sum(len(r) for by in patched.values() for r in by.values()), "placebo": sum(len(r) for by in placebo.values() for r in by.values()),
+                   "void": sum(r["void"] for rows in base.values() for r in rows) + sum(r["void"] for arm in (patched, placebo) for by in arm.values() for rows in by.values() for r in rows),
+                   "quarantined": len(list((run.dir / "artifacts" / "trials-quarantine").glob("*.json"))),
                    "note": "Void trials (provider, budget, infrastructure, fidelity guard) are never website results and are excluded from comparisons."},
         "observations": [{"id": o.id, "kind": o.kind, "summary": o.summary, "refs": o.refs, "provenance": prov(o)} for o in ev.observations.values()],
         "hypotheses": [{"id": h.id, "tier": h.tier, "statement": h.statement, "claim_kind": h.claim_kind, "prediction": h.prediction, "status": h.status, "observation_ids": h.citations,
@@ -153,9 +195,9 @@ def export_run(run_dir: Path | str) -> dict:
                        for h in ev.hypotheses.values()],
         "findings": findings,
         "proposals": [{"id": p.id, "basis": p.basis, "source_id": p.source_id, "label": p.label, "status": p.status, "validation": p.validation, "expected_effect": p.expected_effect, "risks": p.risks,
-                       "auto_applicable": p.auto_applicable, "change": {"manual": p.change["manual"]} if "manual" in p.change else {"ops": [o.get("op") for o in p.change.get("ops", [])]}, "approved": bool(p.approvals), "provenance": prov(p)}
+                       "auto_applicable": p.auto_applicable, "owner_selected": bool(p.change.get("owner_selected")), "exploratory": bool(p.change.get("exploratory")), "change": {"manual": p.change["manual"]} if "manual" in p.change else {"ops": [o.get("op") for o in p.change.get("ops", [])]}, "approved": bool(p.approvals), "provenance": prov(p)}
                       for p in ev.proposals.values()],
-        "evaluation": _evaluation(run, ev),
+        "evaluation": _evaluation(run, ev), "spend": _spend(run),
         "effects": [{"id": e.id, "proposal_id": e.proposal_id, "verdict": e.verdict, "n_pairs": e.n_pairs, "note": e.note, "measured": e.measured, "mode": e.provenance.mode} for e in ev.effects.values()],
         "investigation": {**_pick(rep_inv, ("skipped", "reason", "finished", "incomplete", "tool_calls", "model_requests", "model", "mode", "cost_usd")), "rejected_hypotheses": len(rep_inv.get("rejected_hypotheses") or [])},
         "statement": (final or interim or {}).get("statement"),
@@ -179,7 +221,83 @@ def check_clean(obj, path: str = "$") -> None:
         raise ExportError(f"credential-like string or local path at {path}")
 
 
-def write_export(run_dir: Path | str, out: Path | str) -> dict:
+PUBLIC_STAGE_KEYS = ("pages", "observations", "fidelity", "trials", "void")
+PUBLIC_LEAK = re.compile(r"\b(?:gen|prp|obs|hyp|fnd|eff|trial)-[0-9a-f]{6,}|[0-9a-f]{64}|trial-data|/home/|private|site-5-live|\.jsonl")
+RULES_HASH_KEYS = {"rules_sha256"}
+
+
+def _alias_map(d: dict) -> dict[str, str]:
+    """Stable, readable aliases for every internal identifier (tasks, proposals, hypotheses, observations, findings, effects)."""
+    m: dict[str, str] = {}
+    for prefix, items in (("task", d["tasks"]), ("change", d["proposals"]), ("hypothesis", d["hypotheses"]), ("observation", d["observations"]), ("finding", d["findings"]), ("effect", d["effects"])):
+        for i, x in enumerate(items, 1):
+            m[x["task_id"] if prefix == "task" else x["id"]] = f"{prefix}-{i}"
+    return m
+
+
+def public_demo(data: dict) -> dict:
+    """A public-demo-safe VIEW of an already sanitized export (`export_run`): internal ids become aliases; per-trial attribution narratives, stage manifest/import hashes, per-trial spend and run directory names are dropped.
+    Kept: task questions and partitions, outcomes, request / page counts, the three arms, control disclosures, BOTH verdicts, the owner-selected provenance and labels, spend by arm. The private export is not changed."""
+    d = json.loads(json.dumps(data))
+    amap = _alias_map(d)
+    pat = re.compile("|".join(re.escape(k) for k in sorted(amap, key=len, reverse=True))) if amap else None
+    sub = (lambda t: pat.sub(lambda m: amap[m.group(0)], t)) if pat else (lambda t: t)
+
+    def walk(o):
+        if isinstance(o, dict):
+            return {sub(k): walk(v) for k, v in o.items()}
+        if isinstance(o, list):
+            return [walk(v) for v in o]
+        return sub(o) if isinstance(o, str) else o
+    for t in d["tasks"]:
+        for rows in (t["baseline"], *t.get("patched", {}).values(), *t.get("placebo", {}).values()):
+            for r in rows:
+                r.pop("attribution", None), r.pop("why", None)
+        t.pop("source", None)
+    for st in d["stages"]:
+        st["manifest_sha256"] = None
+        st["updated_at"] = None
+        st["summary"] = {k: v for k, v in st["summary"].items() if k in PUBLIC_STAGE_KEYS}
+    spend = d.get("spend") or {}
+    spend.pop("by_trial_usd", None)
+    d["run"].update({"id": "public-demo", "created_at": None, "missing_artifacts": []})
+    for h in d["hypotheses"]:
+        if h.get("verification"):
+            h["verification"]["evidence"] = []
+    for p in d["proposals"]:
+        p["provenance"]["source"] = "owner" if p["provenance"]["source"].startswith("owner:") else p["provenance"]["source"]
+    for x in d["hypotheses"] + d["observations"]:
+        x["provenance"]["source"] = "owner" if x["provenance"]["source"].startswith("owner:") else x["provenance"]["source"]
+    out = walk(d)
+    out["audience"] = "public-demo"
+    out["exported_at"] = None
+    check_public(out)
+    return out
+
+
+def check_public(obj, path: str = "$") -> None:
+    """Fail closed on anything that looks like an internal id, a hash (other than the pre-registered rules hash), a run path or a per-trial attribution narrative."""
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if k in ("why", "by_trial_usd", "manifest_sha256", "snapshot_sha256", "imported_from", "trial_dir") and v not in (None, [], {}):
+                raise ExportError(f"public export contains {k!r} at {path}")
+            check_public(k, f"{path}.<key>")
+            if k not in RULES_HASH_KEYS:
+                check_public(v, f"{path}.{k}")
+        for t in obj.get("tasks", []) if isinstance(obj.get("tasks"), list) else []:
+            for rows in (t.get("baseline", []), *t.get("patched", {}).values(), *t.get("placebo", {}).values()) if isinstance(t, dict) and isinstance(t.get("baseline"), list) and isinstance(t.get("patched", {}), dict) else []:
+                if any("attribution" in r or "why" in r for r in rows):
+                    raise ExportError("public export contains a per-trial attribution narrative")
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj):
+            check_public(v, f"{path}[{i}]")
+    elif isinstance(obj, str) and PUBLIC_LEAK.search(obj):
+        raise ExportError(f"internal identifier, hash or path in the public export at {path}: {PUBLIC_LEAK.search(obj).group(0)[:20]}")
+
+
+def write_export(run_dir: Path | str, out: Path | str, *, public: bool = False) -> dict:
     data = export_run(run_dir)
+    if public:
+        data = public_demo(data)
     Path(out).write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
     return data

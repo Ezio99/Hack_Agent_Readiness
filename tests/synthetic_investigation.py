@@ -78,15 +78,80 @@ def regenerate(tmp: Path) -> dict:
     return export_run(build(tmp))
 
 
-if __name__ == "__main__":
-    import tempfile
-    with tempfile.TemporaryDirectory() as d:
-        data = regenerate(Path(d))
+FIXTURE_EXPB = FIXTURE.with_name("investigation-synthetic-expb.json")
+FIXTURE_EXPB_PUBLIC = FIXTURE.with_name("investigation-synthetic-expb-public.json")
+OWNER = Provenance(mode="scripted", source="owner:project-owner", created_at="2026-01-01T00:00:00+00:00")
+# EXP-B shaped scenario: no verified finding, an unpromoted verified pattern, an owner-selected exploratory change, an unmodified repeat ("placebo") and a patched arm. All numbers are invented.
+EXPB_TASKS = [("syn-t1", "investigation", "extremum", "Which cabin has the lowest nightly fee?"), ("syn-t2", "holdout", "item_set", "Which cabins have a nightly fee under $90? List their names."),
+              ("syn-t3", "holdout", "extremum", "Which cabin has the largest deposit?"), ("syn-t4", "investigation", "page_fact", "What is the check-in time for Pine Cabin?"),
+              ("syn-t5", "investigation", "page_fact", "What is the cancellation window for Lake Cabin?"), ("syn-t6", "investigation", "page_fact", "How many guests does Birch Cabin sleep?")]
+EXPB_PLAN = {"placebo_tasks": ["syn-t1", "syn-t2", "syn-t3"], "affected": ["syn-t1", "syn-t2"], "same_shape_controls": ["syn-t3"], "detail_controls": ["syn-t4", "syn-t5", "syn-t6"]}
+EXPB_BASE = {"syn-t1": (True, 13), "syn-t2": (False, 13), "syn-t3": (False, 13), "syn-t4": (True, 2), "syn-t5": (True, 3), "syn-t6": (True, 3)}
+EXPB_PLACEBO = {"syn-t1": (True, 12), "syn-t2": (False, 13), "syn-t3": (False, 12)}
+EXPB_PATCHED = {"syn-t1": (True, 4), "syn-t2": (True, 4), "syn-t3": (False, 12), "syn-t4": (True, 2), "syn-t5": (True, 3), "syn-t6": (True, 3)}
+
+
+def build_expb(root: Path) -> Path:
+    """A SYNTHETIC EXP-B-shaped run: one unpromoted verified pattern, an owner-selected exploratory change, historical baseline + unmodified repeat + patched trials, the frozen verdict and the separate exploratory verdict, both computed by the real code."""
+    from agent_readiness.investigate.evaluate import exploratory
+    run = InvestigationRun.create(root, "synthetic-expb", target="synthetic-cabin-site (fixture)", mode="scripted", stages=STAGES)
+    ev = run.evidence
+    for st in STAGES:
+        run.set_status(st, "done", summary={"synthetic": True})
+    o1 = ev.add_observation(Observation(kind="listing_cards", summary="Listing cards show name and photo; none of the five detail fields appears (0 of 8 cards).", refs=["page:/cabins"], provenance=SCRIPTED))
+    o2 = ev.add_observation(Observation(kind="detail_pages", summary="Condition, availability, nightly fee, deposit and next-open date appear on all 8 detail pages.", refs=["page:/cabins/1"], provenance=SCRIPTED))
+    h1 = ev.add_hypothesis(Hypothesis(tier="verifiable", statement="Detail fields are present on every detail page but absent from every listing card.", claim_kind="info_absent_on_template", citations=[o1.id, o2.id], provenance=SCRIPTED))
+    ev.record_verification(h1.id, Verification(verifier="fixture:info_absent_on_template", result="supported", evidence=[o1.id, o2.id], provenance=SCRIPTED))
+    h2 = ev.add_hypothesis(Hypothesis(tier="novel", statement="Showing the nightly fee in each listing card reduces page views on fee-dependent tasks.", prediction="Requests on the two fee tasks fall by at least 25 % against an unmodified repeat.",
+                                      citations=[o1.id, o2.id], provenance=OWNER))
+    p1 = ev.add_proposal(Proposal(basis="unverified_hypothesis", source_id=h2.id, change={"ops": [{"op": "copy_field_to_listing"}], "owner_selected": True, "exploratory": True},
+                                  expected_effect=h2.prediction, risks=["Owner-selected exploratory change: the underlying hypothesis is unverified"], provenance=OWNER))
+    run.write_artifact("tasks-manifest", {"schema": "tasks-manifest-v1", "tasks": [{"task_id": t, "partition": pt, "kind": k, "source": "model", "question": q, "start_path": "/", "limits": LIMITS} for t, pt, k, q in EXPB_TASKS]})
+    run.write_artifact("post-plan", EXPB_PLAN)
+    att = {}
+    rows = lambda src: {t: [{"void": False, "passed": v[0], "evidence_backed": v[0], "model_requests": v[1], "primary": "x", "page_views": v[1] - 1}] for t, v in src.items()}
+    for t, *_ in EXPB_TASKS:
+        passed, req = EXPB_BASE[t]
+        _trial(run, f"baseline-{t}-r1", f"{t}-r1", t, 1, "baseline", "completed", passed, req)
+        att[f"{t}-r1"] = {"task_id": t, "primary": "success" if passed else "agent", "void": False, "why": "synthetic fixture attribution"}
+    for t, (passed, req) in EXPB_PLACEBO.items():
+        _trial(run, f"placebo-{p1.id}-{t}-r1", f"placebo-{t}-r1", t, 1, "placebo", "completed", passed, req)
+    for t, (passed, req) in EXPB_PATCHED.items():
+        _trial(run, f"patched-{p1.id}-{t}-r1", f"patched-{t}-r1", t, 1, "patched", "completed", passed, req)
+    run.write_artifact("attribution", att)
+    run.write_artifact("investigation", {"skipped": False, "finished": True, "incomplete": False, "tool_calls": 7, "model_requests": 8, "model": "scripted-fixture", "mode": "scripted", "cost_usd": 0.0, "rejected_hypotheses": []})
+    ev.approve(p1.id, manifest_sha256="1" * 64, note="synthetic approval")
+    ev.mark_applied(p1.id)
+    parts = {t: pt for t, pt, *_ in EXPB_TASKS}
+    cmp_ = design.compare(rows(EXPB_BASE), rows(EXPB_PATCHED), parts, design.RULE)                                # the FROZEN rule, applied unchanged
+    res = {**{k: cmp_[k] for k in ("verdict", "pairs", "pass_delta", "request_change", "p_pass", "p_requests", "holdout_consistent", "by_partition", "excluded")},
+           "reason": f"ILLUSTRATIVE (synthetic data): {cmp_['reason']}", "rule_preregistered_at_freeze": True}
+    ev.add_effect(Effect(proposal_id=p1.id, verdict=res["verdict"], metrics={"pass_delta": res["pass_delta"]}, n_pairs=res["pairs"], note=res["reason"], provenance=SCRIPTED))
+    expl = exploratory.analyze(EXPB_PLAN, rows(EXPB_BASE), rows(EXPB_PLACEBO), rows(EXPB_PATCHED))                  # the EXPLORATORY rules, separately
+    run.write_artifact("evaluation", {"evaluated": True, "rule": {"id": "paired-signflip-v1", "primary": "evidence_backed_pass_rate", "secondary": "model_requests", "alpha": 0.1, "min_pairs": 4, "pass_delta_floor": 0.25,
+                                                                     "request_reduction_floor": 0.25, "void_policy": "a pair with any void trial in either arm is excluded and listed", "causal_scope": "these frozen tasks, this profile and this patched mirror only"},
+                                      "results": {p1.id: res}, "exploratory": expl})
+    run.write_artifact("report-final", {"outcome": "experimental_only", "investigation_status": "completed", "statement": "SYNTHETIC FIXTURE: no verified finding; the change was chosen by the owner and is exploratory; trials show an association only."})
+    return run.dir
+
+
+def _write_fixture(data: dict, path: Path) -> None:
     data["synthetic"] = True
     data["exported_at"] = "2026-01-01T00:00:00+00:00"
     data["run"]["created_at"] = "2026-01-01T00:00:00+00:00"
-    for s in data["stages"]:
-        s["updated_at"] = None
-    FIXTURE.parent.mkdir(parents=True, exist_ok=True)
-    FIXTURE.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
-    print(f"wrote {FIXTURE}")
+    for st in data["stages"]:
+        st["updated_at"] = None
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
+    print(f"wrote {path}")
+
+
+if __name__ == "__main__":
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        _write_fixture(regenerate(Path(d)), FIXTURE)
+    with tempfile.TemporaryDirectory() as d:
+        private = export_run(build_expb(Path(d)))
+        _write_fixture(private, FIXTURE_EXPB)
+        from agent_readiness.investigate.export import public_demo
+        _write_fixture(public_demo(json.loads(json.dumps(private))), FIXTURE_EXPB_PUBLIC)

@@ -101,3 +101,16 @@ button:disabled { opacity: .55; cursor: not-allowed; } button.linklike { backgro
 .tl-name { font-weight: 600; text-transform: capitalize; font-size: .9rem; } .tl-note { font-size: .78rem; }
 .loader { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin: 1rem 0 .4rem; } .loader button { padding: .45rem .9rem; border: 1px solid var(--required); border-radius: 6px; background: var(--info-bg); color: var(--required); font-weight: 600; cursor: pointer; }
 .conf-hypothesis { border-left-color: #c28a00; }
+
+/* Investigation journey (EXP-B demo) */
+.hero { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem 1.2rem; margin: 1rem 0; } .hero h2 { margin: .1rem 0 .3rem; }
+.eyebrow { margin: 0; text-transform: uppercase; letter-spacing: .06em; font-size: .75rem; font-weight: 700; color: var(--muted); }
+.journey-nav { list-style: none; display: flex; flex-wrap: wrap; gap: .4rem; padding: 0; margin: .6rem 0 0; }
+.journey-nav a { display: block; padding: .35rem .8rem; border: 1px solid var(--line); border-radius: 999px; text-decoration: none; color: var(--required); font-weight: 600; background: var(--info-bg); }
+h3.step { font-size: 1.3rem; border-bottom: 3px solid var(--required); padding-bottom: .25rem; margin: 2rem 0 .8rem; scroll-margin-top: 5rem; }
+.bar-H { background: #8793a3; } .bar-C { background: var(--b); } .swatch.bar-H, .swatch.bar-C, .swatch.bar-A { display: inline-block; }.threearm .bar-row { grid-template-columns: 9rem 1fr 7rem; }
+.threearm { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin: 1rem 0; } .threearm .card { margin: 0; } .threearm h4 { margin: 0 0 .5rem; }
+.verdicts .card { margin: 0; } .verdict-frozen { border-top-color: #8793a3; } .verdict-exploratory { border-top-color: var(--b); }
+.verdict-good { border-top-color: var(--good); } .verdict-bad { border-top-color: var(--bad); } .verdict-warn { border-top-color: #c28a00; }
+.pill-warn { color: var(--warn); background: var(--warn-bg); border-color: #e8cf8b; } .pill-neutral { color: var(--muted); background: #eceff3; border-color: var(--line); }
+.headline { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; padding: 0; margin: 1rem 0; } .headline .card { margin: 0; border-top-color: var(--a); } .headline .big { font-size: 2rem; font-weight: 800; color: var(--a); }

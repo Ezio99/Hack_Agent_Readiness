@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Callout, Kpi, Pill } from "../components/ui";
-import { MODE_LABEL, compare, parseInvestigation, tally, type EvalResult, type InvestigationExport, type Mode, type TrialRow } from "../lib/investigation";
+import { EXPLORATORY_VERDICT, MODE_LABEL, compare, parseInvestigation, roles, tally, type EvalResult, type Exploratory, type InvestigationExport, type Mode, type TrialRow } from "../lib/investigation";
 
 const pct = (a: number, b: number) => (b ? `${Math.round((100 * a) / b)}%` : "—");
 const num = (x: number | null | undefined, d = 2) => (typeof x === "number" ? x.toFixed(d) : "—");
@@ -33,25 +33,27 @@ function Cell({ rows }: { rows: TrialRow[] }) {
     <>
       {rows.map((r) =>
         r.void ? <span key={r.trial_id} title={`${r.run_status}: void, not a website result`}><Pill tone="warn">void</Pill> </span>
-          : <span key={r.trial_id} title={`${r.run_status}; ${r.model_requests ?? "?"} requests`}><Pill tone={r.passed ? "pass" : "fail"}>{r.passed ? "pass" : "fail"}</Pill> <span className="muted">{r.model_requests ?? "?"} req</span> </span>)}
+          : <span key={r.trial_id} title={`${r.run_status}; ${r.model_requests ?? "?"} requests, ${r.page_views ?? "?"} page views`}><Pill tone={r.passed ? "pass" : "fail"}>{r.passed ? "pass" : "fail"}</Pill> <span className="muted">{r.model_requests ?? "?"} req · {r.page_views ?? "?"} pages</span> </span>)}
     </>
   );
 }
 
 export function TaskTable({ d }: { d: InvestigationExport }) {
   const pids = [...new Set(d.tasks.flatMap((t) => Object.keys(t.patched)))];
+  const hasControl = d.tasks.some((t) => Object.keys(t.placebo ?? {}).length > 0);
   if (!d.tasks.length) return <p className="muted">No frozen tasks in this export (the task stages had not completed).</p>;
   return (
     <div className="table-wrap">
       <table className="runs">
         <caption className="sr-only">Task outcomes per arm</caption>
-        <thead><tr><th scope="col">Task</th><th scope="col">Set</th><th scope="col">Baseline</th>{pids.map((p) => <th scope="col" key={p}>Patched <code>{short(p)}</code></th>)}</tr></thead>
+        <thead><tr><th scope="col">Task</th><th scope="col">Set</th><th scope="col">{hasControl ? "Historical baseline" : "Baseline"}</th>{hasControl ? <th scope="col">Unmodified repeat (control)</th> : null}{pids.map((p) => <th scope="col" key={p}>Patched <code>{short(p)}</code></th>)}</tr></thead>
         <tbody>
           {d.tasks.map((t) => (
             <tr key={t.task_id} className={t.baseline.some((r) => !r.void && !r.passed) ? "row-fail" : undefined}>
               <th scope="row"><span>{t.question}</span><br /><code>{t.task_id}</code> <span className="muted">{t.kind}</span></th>
               <td>{t.partition}</td>
               <td><Cell rows={t.baseline} />{t.baseline.some((r) => r.attribution && !["success", "infrastructure"].includes(r.attribution)) ? <div className="muted">{t.baseline.map((r) => r.attribution).filter(Boolean).join(", ")}</div> : null}</td>
+              {hasControl ? <td><Cell rows={Object.values(t.placebo ?? {}).flat()} /></td> : null}
               {pids.map((p) => <td key={p}><Cell rows={t.patched[p] ?? []} /></td>)}
             </tr>))}
         </tbody>
@@ -86,7 +88,7 @@ export function Findings({ d }: { d: InvestigationExport }) {
       <ul className="findings">
         {novel.map((h) => (
           <li key={h.id} className="finding conf-hypothesis">
-            <span className="pill pill-warn">Novel hypothesis — UNVERIFIED</span> <ModeBadge mode={h.provenance.mode} />
+            <span className="pill pill-warn">{h.provenance.source.startsWith("owner:") ? "Owner-authored hypothesis" : "Novel hypothesis"} — UNVERIFIED</span> <ModeBadge mode={h.provenance.mode} />
             <h4>{h.statement}</h4>
             <p className="muted">Prediction to test: {h.prediction}</p>
           </li>))}
@@ -129,7 +131,7 @@ function ResultCard({ d, r }: { d: InvestigationExport; r: EvalResult }) {
       <dl className="facts">
         <dt>Pre-registered rule</dt><dd>{r.rule_preregistered_at_freeze ? "fixed before any trial ran" : "not recorded as pre-registered"}</dd>
         <dt>Pairs · pass Δ · request Δ</dt><dd>{r.pairs ?? "—"} · {num(r.pass_delta)} · {num(r.request_change)} (p = {num(r.p_pass)} / {num(r.p_requests)})</dd>
-        <dt>Holdout consistent</dt><dd>{r.holdout_consistent == null ? "—" : r.holdout_consistent ? "yes" : "no — the improvement is withdrawn"}</dd>
+        <dt>Holdout consistent</dt><dd>{r.holdout_consistent == null ? "—" : r.holdout_consistent ? "yes" : "no"}{r.by_partition ? <span className="muted"> — pass change: {Object.entries(r.by_partition).map(([k, v]) => `${k} ${v.pass_delta == null ? "—" : (v.pass_delta > 0 ? "+" : "") + v.pass_delta.toFixed(2)} (${v.pairs} pairs)`).join(" · ")}. “No” means the two partitions’ pass changes have different signs; it does not by itself mean the holdout got worse, and it only withdraws an <em>improvement</em> verdict when the holdout pass rate fell.</span> : null}</dd>
         <dt>Reason</dt><dd>{r.reason ?? "—"}</dd>
         {r.excluded.length ? <><dt>Excluded</dt><dd>{r.excluded.map((e) => `${e.task_id}: ${e.reason}`).join("; ")}</dd></> : null}
       </dl>
@@ -140,11 +142,95 @@ function ResultCard({ d, r }: { d: InvestigationExport; r: EvalResult }) {
   );
 }
 
+const ARM_BAR = { baseline: { label: "Historical baseline", cls: "H" }, placebo: { label: "Unmodified repeat", cls: "C" }, patched: { label: "Patched", cls: "A" } } as const;
+
+/** Model requests per task in the three arms, with the role each task plays in the pre-registered design. Descriptive; the verdicts are computed by the rules, not by this chart. */
+export function ThreeArmChart({ d, x }: { d: InvestigationExport; x: Exploratory }) {
+  const q = new Map(d.tasks.map((t) => [t.task_id, t.question]));
+  const all = roles(x).flatMap(({ task_id }) => (["baseline", "placebo", "patched"] as const).map((a) => x.tasks[a][task_id]?.requests ?? 0));
+  const top = Math.max(1, ...all);
+  return (
+    <div className="threearm" role="group" aria-label="Model requests per task in each arm">
+      <ul className="legend" aria-label="Legend">{Object.values(ARM_BAR).map((a) => <li key={a.cls}><span className={`swatch bar-${a.cls}`} aria-hidden="true" />{a.label}</li>)}</ul>
+      {roles(x).map(({ task_id, role }) => (
+        <section key={task_id} className="card" aria-label={`${role}: ${task_id}`}>
+          <h4><Pill tone={role === "Affected" ? "pass" : "neutral"}>{role}</Pill> <span>{q.get(task_id) ?? task_id}</span></h4>
+          {(["baseline", "placebo", "patched"] as const).map((a) => {
+            const r = x.tasks[a][task_id];
+            if (!r) return a === "placebo" ? null : <div key={a} className="bar-row"><span className="bar-label">{ARM_BAR[a].label}</span><span /><span className="bar-value muted">no trial</span></div>;
+            return <div key={a} className="bar-row"><span className="bar-label">{ARM_BAR[a].label}</span><span className="bar-track" aria-hidden="true"><span className={`bar bar-${ARM_BAR[a].cls}`} style={{ width: `${Math.max(2, (100 * r.requests) / top)}%` }} /></span>
+              <span className="bar-value">{r.requests} req · {r.pass ? "pass" : "fail"}</span></div>;
+          })}
+        </section>))}
+    </div>
+  );
+}
+
+/** Headline request changes (unmodified repeat → patched) for the affected tasks, and any control whose pass status differs between arms. Derived only from the exported rows. */
+export function Headline({ d, x }: { d: InvestigationExport; x: Exploratory }) {
+  const q = new Map(d.tasks.map((t) => [t.task_id, t.question]));
+  const aff = roles(x).filter((r) => r.role === "Affected");
+  const flips = roles(x).filter((r) => r.role !== "Affected").flatMap(({ task_id, role }) => {
+    const b = x.tasks.baseline[task_id], c = x.tasks.placebo[task_id], p = x.tasks.patched[task_id];
+    if (!p) return [];
+    const was = c ?? b;
+    return was && was.pass !== p.pass ? [{ task_id, role, was, p, vs: c ? "unmodified repeat" : "historical baseline" }] : [];
+  });
+  return (
+    <>
+      <ul className="headline" aria-label="Affected-task request changes">
+        {aff.map(({ task_id }) => <li key={task_id} className="card"><span className="big">{x.tasks.placebo[task_id]?.requests ?? "—"} → {x.tasks.patched[task_id]?.requests ?? "—"}</span> model requests<br /><span className="muted">{q.get(task_id) ?? task_id} (unmodified repeat → patched)</span></li>)}
+      </ul>
+      {flips.map((f) => (
+        <Callout key={f.task_id} title="A control task changed outcome" tone="warn">
+          <p><strong>{q.get(f.task_id) ?? f.task_id}</strong> ({f.role.toLowerCase()}, <code>{f.task_id}</code>) went from <strong>{f.was.pass ? "pass" : "fail"}</strong> ({f.was.requests} requests, {f.vs}) to <strong>{f.p.pass ? "pass" : "fail"}</strong> ({f.p.requests} requests, patched).
+            Its request count moved within the pre-registered tolerance, and the exploratory rules test controls on request counts only, so this does not change the verdict. With one trial per arm it cannot be separated from run-to-run variation, and it is not evidence either way about the change.</p>
+        </Callout>))}
+    </>
+  );
+}
+
+export function ExploratoryPanel({ d, x }: { d: InvestigationExport; x: Exploratory }) {
+  const v = EXPLORATORY_VERDICT[x.verdict] ?? { label: x.verdict, tone: "info" as const };
+  const frozen = d.evaluation.results[0];
+  return (
+    <>
+      <div className="grid2 verdicts">
+        <section className="card verdict-frozen" aria-label="Frozen pre-registered verdict">
+          <p className="eyebrow">Frozen rule · fixed before any trial</p>
+          <h4><code>{d.evaluation.rule?.id ?? "paired-signflip-v1"}</code> <Pill tone={frozen?.verdict === "improvement" ? "pass" : frozen?.verdict === "regression" ? "fail" : "neutral"}>{frozen?.verdict ?? "—"}</Pill></h4>
+          <p className="muted">Historical baseline vs patched, {frozen?.pairs ?? "—"} task pairs. Reported unchanged. With only two tasks that can be affected, this rule can at best say “inconclusive”.</p>
+          {frozen ? <p className="muted">Pass Δ {num(frozen.pass_delta)} · request Δ {num(frozen.request_change)} (p = {num(frozen.p_requests)})</p> : null}
+        </section>
+        <section className={`card verdict-exploratory verdict-${v.tone}`} aria-label="Exploratory verdict">
+          <p className="eyebrow">Exploratory rules · owner-selected change · not a replacement</p>
+          <h4><code>{x.rules_id}</code> <Pill tone={v.tone === "good" ? "pass" : v.tone === "bad" ? "fail" : "warn"}>{v.label}</Pill></h4>
+          <p className="muted">Contemporaneous unmodified repeat vs patched is the primary comparison; the historical baseline is secondary.</p>
+          {x.reasons.map((r) => <p key={r} className="muted">{r}</p>)}
+        </section>
+      </div>
+      <Headline d={d} x={x} />
+      <ThreeArmChart d={d} x={x} />
+      <dl className="facts">
+        <dt>Noise estimate</dt><dd>{x.noise_estimate_requests ?? "—"} request(s): the largest gap between an unmodified repeat and its historical trial</dd>
+        <dt>Controls within tolerance</dt><dd>{x.controls_within_tolerance == null ? "—" : x.controls_within_tolerance ? "yes" : "no — the result is uninterpretable"}</dd>
+        <dt>Effect floor</dt><dd>{x.rules ? `patched requests ≤ ${(1 - x.rules.effect_floor) * 100}% of the unmodified repeat, on every affected task` : "rules text unavailable (stored hash does not match this build)"}</dd>
+        <dt>Rules hash</dt><dd><code>{short(x.rules_sha256)}</code> {x.rules_match_code ? "· matches the pre-registered rules" : "· does NOT match the code"}</dd>
+        {x.missing_or_void.length ? <><dt>Missing or void</dt><dd>{x.missing_or_void.join(", ")}</dd></> : null}
+      </dl>
+      <Callout title="What this does and does not show" tone="info">
+        <p>One trial per task per arm, one site, one model. {x.rules?.claims ?? "Allowed wording: consistent with / not consistent with a reduction in browsing effort for this exploratory change on this site and these tasks."}</p>
+        <p>The change was chosen by the site owner after an unpromoted pattern was observed. It is <strong>not</strong> an investigator-verified finding, and the holdout tasks were not blind to the owner.</p>
+      </Callout>
+    </>
+  );
+}
+
 export function Comparison({ d }: { d: InvestigationExport }) {
   const e = d.evaluation;
   if (e.state === "missing") return <Callout title="No evaluation data" tone="warn"><p>{e.reason} Baseline results are shown above; no before/after comparison is available.</p></Callout>;
   if (e.state === "not_evaluated") return <Callout title="Not evaluated" tone="info"><p>{e.reason ?? "No evaluation was run"}. Nothing was retested, so nothing is compared.</p></Callout>;
-  return <>{e.results.map((r) => <ResultCard key={r.proposal_id} d={d} r={r} />)}{e.rule?.causal_scope ? <p className="muted">Scope: {e.rule.causal_scope}</p> : null}</>;
+  return <>{e.exploratory ? <ExploratoryPanel d={d} x={e.exploratory} /> : null}{e.results.map((r) => <ResultCard key={r.proposal_id} d={d} r={r} />)}{e.rule?.causal_scope ? <p className="muted">Scope: {e.rule.causal_scope}</p> : null}</>;
 }
 
 export function Proposals({ d }: { d: InvestigationExport }) {
@@ -153,7 +239,7 @@ export function Proposals({ d }: { d: InvestigationExport }) {
     <ul className="findings">
       {d.proposals.map((p) => (
         <li key={p.id} className={`finding ${p.basis === "verified_finding" ? "conf-observed" : "conf-hypothesis"}`}>
-          <span className={`pill ${p.basis === "verified_finding" ? "pill-pass" : "pill-warn"}`}>{p.label}</span> <span className="muted">status: {p.status}{p.approved ? " · owner-approved" : ""} · validation: {p.validation}</span>
+          <span className={`pill ${p.basis === "verified_finding" ? "pill-pass" : "pill-warn"}`}>{p.label}</span>{p.owner_selected ? <> <span className="mode mode-unmeasured">chosen by the site owner · exploratory</span></> : null} <span className="muted">status: {p.status}{p.approved ? " · owner-approved" : ""} · validation: {p.validation}</span>
           <p>{"manual" in p.change ? p.change.manual : `Patch operations: ${p.change.ops.join(", ")}`}</p>
           <p className="muted">Expected: {p.expected_effect}{p.risks.length ? ` · Risks: ${p.risks.join("; ")}` : ""}</p>
         </li>))}
@@ -161,35 +247,80 @@ export function Proposals({ d }: { d: InvestigationExport }) {
   );
 }
 
+export function Spend({ d }: { d: InvestigationExport }) {
+  const s = d.spend;
+  if (!s || s.state !== "ok") return null;
+  const usd = (x: number | null | undefined) => (typeof x === "number" ? `US$${x.toFixed(4)}` : "—");
+  return (
+    <p className="muted" aria-label="Spend">Calculated model spend (published prices, <strong>not a bill</strong>): {usd(s.committed_usd)} of a {usd(s.ceiling_usd)} ceiling, {usd(s.remaining_usd)} remaining, {s.open_reservations ?? 0} open reservation(s).
+      {" "}By arm: {Object.entries(s.by_arm_usd ?? {}).map(([k, v]) => `${k === "other" ? "task generation + investigator" : k} ${usd(v)}`).join(" · ")}.</p>
+  );
+}
+
+const JOURNEY = [["website", "1 · The website"], ["activity", "2 · Agent activity"], ["findings", "3 · Findings & recommendations"], ["results", "4 · Before & after"]] as const;
+
+function Coverage({ d }: { d: InvestigationExport }) {
+  const kinds = [...new Set(d.tasks.map((t) => t.kind))];
+  if (!kinds.length) return null;
+  return <p className="muted">Task kinds in this set: {kinds.map((k) => k.replace(/_/g, " ")).join(", ")}.{kinds.includes("reach_page") ? "" : " No navigation (reach-page) task is included, so navigation effort is not measured."} Every task is graded independently of the agent’s own claim of success.</p>;
+}
+
 export function InvestigationView({ d }: { d: InvestigationExport }) {
   const t = d.tasks.flatMap((x) => x.baseline), bt = tally(t);
+  const inspect = d.stages.find((s) => s.name === "inspect")?.summary ?? {};
+  const owner = d.proposals.some((p) => p.owner_selected);
   return (
     <div className="investigation">
       {d.synthetic ? <p className="replay-banner" role="note">SYNTHETIC FIXTURE — hand-written test data, not produced by any model, agent or website.</p> : null}
+      {d.audience === "public-demo" ? <p className="muted" role="note">Public demo view: internal identifiers are replaced by aliases and per-trial narratives, stage hashes and file paths are removed. Outcomes, request counts, controls and both verdicts are unchanged.</p> : null}
       <div className="modes" role="note" aria-label="Evidence modes">
         {d.modes.map((m) => <ModeBadge key={m} mode={m} />)}
         <span className="muted">{d.notices.join(" ")}</span>
       </div>
       {d.run.investigation_status && !["completed"].includes(d.run.investigation_status) ? <Callout title={d.run.investigation_status === "not_run" ? "No investigator ran" : "The investigation did not complete"} tone="bad"><p>Status: <code>{d.run.investigation_status}</code>. Nothing was concluded about the website; this is <strong>not</strong> a finding that no problem exists.</p></Callout> : null}
       {!d.run.complete ? <Callout title="Incomplete investigation" tone="warn"><p>Not every stage finished{d.run.missing_artifacts.length ? ` (missing: ${d.run.missing_artifacts.join(", ")})` : ""}. Sections below show what exists; nothing is inferred for the rest.</p></Callout> : null}
-      <h2>{d.run.target}</h2>
-      <p className="muted">Run <code>{d.run.id}</code> · mode {d.run.mode} · report source: {d.run.report_source} · outcome: <strong>{d.run.outcome.replace(/_/g, " ")}</strong></p>
-      <div className="kpis">
-        <Kpi label="Frozen tasks" value={d.tasks.length} note={`${d.tasks.filter((x) => x.partition === "holdout").length} held out from the investigator`} />
-        <Kpi label="Baseline pass rate" value={pct(bt.passed, bt.usable)} note={`${bt.passed}/${bt.usable} usable trials`} tone={bt.usable && bt.passed < bt.usable ? "bad" : "neutral"} />
-        <Kpi label="Void trials" value={d.trials.void} note="excluded, never a website result" tone={d.trials.void ? "b" : "neutral"} />
-        <Kpi label="Verified findings" value={d.findings.length} tone={d.findings.length ? "good" : "neutral"} />
-      </div>
-      <h3>Stage timeline</h3>
-      <Timeline d={d} />
-      <h3>Task outcomes</h3>
-      <TaskTable d={d} />
-      <Findings d={d} />
-      <h3>Proposed changes</h3>
-      <Proposals d={d} />
-      <h3>Baseline versus patched</h3>
-      <Comparison d={d} />
-      {d.statement ? <p className="muted">{d.statement}</p> : null}
+      <header className="hero">
+        <p className="eyebrow">Agent Readiness report</p>
+        <h2>{d.run.target}</h2>
+        <p className="muted">Run <code>{d.run.id}</code> · mode {d.run.mode} · report source: {d.run.report_source} · outcome: <strong>{d.run.outcome.replace(/_/g, " ")}</strong></p>
+        <nav aria-label="Report journey"><ol className="journey-nav">{JOURNEY.map(([id, label]) => <li key={id}><a href={`#inv-${id}`} onClick={(e) => { e.preventDefault(); document.getElementById(`inv-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>{label}</a></li>)}</ol></nav>
+      </header>
+
+      <section id="inv-website" aria-labelledby="inv-website-h">
+        <h3 id="inv-website-h" className="step">1 · The website and how it was tested</h3>
+        <div className="kpis">
+          <Kpi label="Pages inspected" value={typeof inspect.pages === "number" ? inspect.pages : "—"} note={inspect.fidelity ? `inspection fidelity: ${inspect.fidelity}` : undefined} />
+          <Kpi label="Frozen tasks" value={d.tasks.length} note={`${d.tasks.filter((x) => x.partition === "holdout").length} held out from the investigator`} />
+          <Kpi label="Baseline pass rate" value={pct(bt.passed, bt.usable)} note={`${bt.passed}/${bt.usable} usable trials`} tone={bt.usable && bt.passed < bt.usable ? "bad" : "neutral"} />
+          <Kpi label="Void trials" value={d.trials.void} note="excluded, never a website result" tone={d.trials.void ? "b" : "neutral"} />
+        </div>
+        <Coverage d={d} />
+        <h4>How the investigation ran</h4>
+        <Timeline d={d} />
+      </section>
+
+      <section id="inv-activity" aria-labelledby="inv-activity-h">
+        <h3 id="inv-activity-h" className="step">2 · What the agent did on each task</h3>
+        <p className="muted">One browsing agent (frozen configuration) attempted every task. Effort is the number of model requests and pages viewed; success needs evidence-backed correctness.</p>
+        <h3>Task outcomes</h3>
+        <TaskTable d={d} />
+      </section>
+
+      <section id="inv-findings" aria-labelledby="inv-findings-h">
+        <h3 id="inv-findings-h" className="step">3 · Findings and recommendations</h3>
+        {owner ? <Callout title="Owner-selected experiment" tone="warn"><p>The change tested below was chosen by the site owner. It is labelled <strong>EXPERIMENTAL</strong> and is <strong>not</strong> an investigator-verified finding.</p></Callout> : null}
+        <Findings d={d} />
+        <h3>Proposed changes</h3>
+        <Proposals d={d} />
+      </section>
+
+      <section id="inv-results" aria-labelledby="inv-results-h">
+        <h3 id="inv-results-h" className="step">4 · Before and after</h3>
+        <h3>Baseline versus patched</h3>
+        <Comparison d={d} />
+        <Spend d={d} />
+        {d.statement ? <p className="muted">{d.statement}</p> : null}
+      </section>
     </div>
   );
 }
@@ -205,6 +336,7 @@ export function InvestigationPage() {
       <div className="loader">
         <label>Open an exported report <input type="file" accept="application/json,.json" onChange={async (e) => { const f = e.target.files?.[0]; if (f) load(await f.text()); }} /></label>
         <button type="button" onClick={async () => load(JSON.stringify((await import("../fixtures/investigation-synthetic.json")).default))}>Load synthetic example</button>
+        <button type="button" onClick={async () => load(JSON.stringify((await import("../fixtures/investigation-synthetic-expb.json")).default))}>Load EXP-B synthetic example</button>
       </div>
       <p className="muted">Files are read in your browser only; nothing is uploaded. Create one with <code>readiness investigate export RUN_DIR --out report.json</code>.</p>
       {error ? <Callout title="Cannot display this file" tone="bad"><p>{error}</p></Callout> : null}

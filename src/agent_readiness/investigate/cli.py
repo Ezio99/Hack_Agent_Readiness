@@ -51,6 +51,7 @@ def register(sub) -> None:
     ex = isub.add_parser("export", help="Write a sanitized, read-only JSON of a run for the dashboard (no private criteria, answers, traces or credentials; tolerates incomplete runs)")
     ex.add_argument("run_dir", type=Path)
     ex.add_argument("--out", type=Path, required=True)
+    ex.add_argument("--public", action="store_true", help="public-demo-safe view: internal ids aliased, no attribution narratives, no stage hashes or paths (the default private export is unchanged)")
     rb = isub.add_parser("recover-batch", help="Explicitly abandon a taskgen batch whose request was reserved/sent but whose result was never persisted (an interrupted run). It is never re-sent automatically.")
     rb.add_argument("run_dir", type=Path)
     rb.add_argument("--batch", type=int, required=True)
@@ -156,7 +157,7 @@ def main(args) -> None:
     if args.investigate_command == "export":
         from .export import ExportError, write_export
         try:
-            data = write_export(args.run_dir, args.out)
+            data = write_export(args.run_dir, args.out, public=args.public)
         except (ExportError, FileNotFoundError) as exc:
             raise SystemExit(f"export refused: {exc}")
         print(f"exported {data['run']['id']} -> {args.out}  complete={data['run']['complete']}  source={data['run']['report_source']}  modes={','.join(data['modes'])}")
