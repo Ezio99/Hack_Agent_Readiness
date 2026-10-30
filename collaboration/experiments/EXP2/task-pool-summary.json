@@ -1,0 +1,161 @@
+{
+  "generated": 388,
+  "accepted": 326,
+  "rejected": 62,
+  "rejections_by_reason": {
+    "same template, truth and evidence as an accepted task": 54,
+    "set size 0 outside 1..6": 7,
+    "ambiguous on the pages": 1
+  },
+  "by_family": {
+    "lookup": 54,
+    "discovery": 25,
+    "availability": 83,
+    "kit_vs_items": 16,
+    "total_cost": 72,
+    "delivery_deposit": 27,
+    "compatibility": 19,
+    "planning": 30
+  },
+  "by_template": {
+    "lookup/deposit": 16,
+    "lookup/weight": 16,
+    "lookup/delivery_required": 16,
+    "lookup/min_hire": 2,
+    "lookup/spec": 4,
+    "discovery/need": 12,
+    "discovery/synonym": 13,
+    "availability/day": 19,
+    "availability/next_free": 28,
+    "availability/category_weekend": 16,
+    "availability/named_list": 10,
+    "availability/units_free": 10,
+    "kit_vs_items/choice_own_gear": 4,
+    "kit_vs_items/saving": 6,
+    "kit_vs_items/kit_total": 6,
+    "total_cost/single": 44,
+    "total_cost/weekly_cap": 12,
+    "total_cost/two_items": 16,
+    "delivery_deposit/delivery_fee": 16,
+    "delivery_deposit/max_deposit": 4,
+    "delivery_deposit/category_delivery": 2,
+    "delivery_deposit/two_deposits": 5,
+    "compatibility/product_to_accessory": 4,
+    "compatibility/accessory_to_products": 6,
+    "compatibility/fits_yesno": 8,
+    "compatibility/fuel_price": 1,
+    "planning/cheapest_feasible": 6,
+    "planning/plan_total": 6,
+    "planning/two_jobs_total": 12,
+    "planning/budget_set": 6
+  },
+  "by_difficulty": {
+    "easy": 118,
+    "medium": 163,
+    "hard": 45
+  },
+  "by_kind": {
+    "money": 140,
+    "number": 20,
+    "yesno": 43,
+    "integer": 12,
+    "product": 35,
+    "date": 28,
+    "products": 40,
+    "choice": 4,
+    "accessory": 4
+  },
+  "sensitive_to": {
+    "discoverability": 37,
+    "availability": 101,
+    "cost": 130,
+    "compatibility": 29
+  },
+  "negative_controls": 63,
+  "rejected_examples": [
+    {
+      "task_id": "ib-7a073f3356",
+      "family": "availability",
+      "sub": "day",
+      "reason": "same template, truth and evidence as an accepted task",
+      "question": "Can the Cordless drill driver kit 18 V be hired on Tuesday 10 November 2026?"
+    },
+    {
+      "task_id": "ib-7c2a1f022b",
+      "family": "availability",
+      "sub": "day",
+      "reason": "same template, truth and evidence as an accepted task",
+      "question": "Can the SDS-Plus rotary hammer 26 mm be hired on Friday 20 November 2026?"
+    },
+    {
+      "task_id": "ib-a24aa5af85",
+      "family": "availability",
+      "sub": "day",
+      "reason": "same template, truth and evidence as an accepted task",
+      "question": "Can the Electric demolition hammer 15 kg be hired on Thursday 3 December 2026?"
+    },
+    {
+      "task_id": "ib-6f742e474a",
+      "family": "availability",
+      "sub": "day",
+      "reason": "same template, truth and evidence as an accepted task",
+      "question": "Can the Diamond core drill 152 mm (wet) be hired on Tuesday 17 November 2026?"
+    },
+    {
+      "task_id": "ib-4a6a92f8d7",
+      "family": "availability",
+      "sub": "day",
+      "reason": "same template, truth and evidence as an accepted task",
+      "question": "Can the Wet tile saw 250 mm be hired on Saturday 14 November 2026?"
+    },
+    {
+      "task_id": "ib-6b1ca1348e",
+      "family": "availability",
+      "sub": "day",
+      "reason": "same template, truth and evidence as an accepted task",
+      "question": "Can the Petrol cut-off saw 350 mm be hired on Tuesday 17 November 2026?"
+    },
+    {
+      "task_id": "ib-9791df471c",
+      "family": "availability",
+      "sub": "day",
+      "reason": "same template, truth and evidence as an accepted task",
+      "question": "Can the Cordless hedge trimmer 60 cm be hired on Thursday 3 December 2026?"
+    },
+    {
+      "task_id": "ib-5b123f314b",
+      "family": "availability",
+      "sub": "day",
+      "reason": "same template, truth and evidence as an accepted task",
+      "question": "Can the Petrol lawn scarifier 40 cm be hired on Tuesday 10 November 2026?"
+    },
+    {
+      "task_id": "ib-92045eecf0",
+      "family": "availability",
+      "sub": "day",
+      "reason": "same template, truth and evidence as an accepted task",
+      "question": "Can the Stump grinder 13 hp be hired on Friday 6 November 2026?"
+    },
+    {
+      "task_id": "ib-0d23aa6eff",
+      "family": "availability",
+      "sub": "day",
+      "reason": "same template, truth and evidence as an accepted task",
+      "question": "Can the Wood chipper 100 mm be hired on Tuesday 17 November 2026?"
+    },
+    {
+      "task_id": "ib-248c4dd1ec",
+      "family": "availability",
+      "sub": "day",
+      "reason": "same template, truth and evidence as an accepted task",
+      "question": "Can the Fibreglass extension ladder 7.3 m be hired on Tuesday 17 November 2026?"
+    },
+    {
+      "task_id": "ib-da4425bc31",
+      "family": "availability",
+      "sub": "day",
+      "reason": "same template, truth and evidence as an accepted task",
+      "question": "Can the Reversible plate compactor 90 kg be hired on Saturday 14 November 2026?"
+    }
+  ]
+}

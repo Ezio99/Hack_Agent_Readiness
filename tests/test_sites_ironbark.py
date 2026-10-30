@@ -63,6 +63,12 @@ def test_prices_and_terms_are_internally_consistent():
     assert D.WAIVER_RATE == 0.10 and D.DELIVERY_FEES == {"courier": 45, "machine": 120}
 
 
+def test_delivery_class_follows_the_rule_the_terms_page_states():
+    """The terms page says courier delivery is for hand-portable items under about 25 kg and machine delivery for heavier machines and trailers. Found by task verification: the 22 kg core drill was classed 'machine'."""
+    for p in D.PRODUCTS:
+        assert (p.delivery_class == "courier") == (p.weight_kg < 25), f"{p.id}: {p.weight_kg} kg is {p.delivery_class}"
+
+
 def test_cross_references_resolve():
     jobs_used = {j for p in D.PRODUCTS for j in p.jobs}
     assert jobs_used == set(D.JOBS), "every job has at least one product and every product job exists"

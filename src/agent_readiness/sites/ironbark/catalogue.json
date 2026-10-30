@@ -502,7 +502,7 @@
       "deposit": 400,
       "min_days": 1,
       "delivery": "optional",
-      "delivery_class": "machine",
+      "delivery_class": "courier",
       "units": 1,
       "specs": [
         [
