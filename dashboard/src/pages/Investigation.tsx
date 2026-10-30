@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Callout, Kpi, Pill } from "../components/ui";
 import { SideBySide, StorefrontBrowser } from "../components/Storefront";
-import { EXPLORATORY_VERDICT, MODE_LABEL, compare, parseInvestigation, roles, tally, type EvalResult, type Exploratory, type InvestigationExport, type Mode, type TrialRow } from "../lib/investigation";
+import { EXPLORATORY_VERDICT, MODE_LABEL, compare, parseInvestigation, roles, tally, type EvalResult, type Exploratory, type Hypothesis, type InvestigationExport, type Mode, type TrialRow } from "../lib/investigation";
 
 const pct = (a: number, b: number) => (b ? `${Math.round((100 * a) / b)}%` : "—");
 const num = (x: number | null | undefined, d = 2) => (typeof x === "number" ? x.toFixed(d) : "—");
@@ -288,6 +288,12 @@ export function EffortBars({ d }: { d: InvestigationExport }) {
   );
 }
 
+/** Prominent, noncausal summary of a deterministic pattern. The investigator's own statement is kept verbatim in the record and behind "original wording"; only claim kinds with a known structural meaning are rephrased. */
+export function neutralSummary(h: Hypothesis): string {
+  if (h.claim_kind === "info_absent_on_template") return "Pattern observed: information shown on the detail pages is not shown on the listing page. The check supports the pattern; whether it affects agents is untested.";
+  return h.statement;
+}
+
 /** Who found what: what the investigator actually established, kept apart from what the owner chose to test. Neither is presented as a verified causal finding. */
 export function ProvenanceSplit({ d }: { d: InvestigationExport }) {
   const pattern = d.hypotheses.filter((h) => h.tier === "verifiable" && h.status === "supported" && !h.promoted);
@@ -299,7 +305,8 @@ export function ProvenanceSplit({ d }: { d: InvestigationExport }) {
       <section className="card prov-inv" aria-label="Discovered by the investigator">
         <p className="eyebrow">Discovered by the investigator ({d.investigation.model ?? "model"})</p>
         <h4>{d.findings.length ? `${d.findings.length} verified finding(s)` : "No verified findings"}</h4>
-        {pattern.map((h) => <p key={h.id}><Pill tone="neutral">structurally supported · not promoted</Pill> {h.statement}<br /><span className="muted">Deterministic check: {h.verification?.verifier ?? "—"} → {h.verification?.result ?? "—"}. Not promoted to a finding: a pattern in the pages is not proof that it causes agent friction.</span></p>)}
+        {pattern.map((h) => <p key={h.id}><Pill tone="neutral">structurally supported · not promoted</Pill> {neutralSummary(h)}<br /><span className="muted">Deterministic check: {h.verification?.verifier ?? "—"} → {h.verification?.result ?? "—"}. Not promoted to a finding: a pattern in the pages is not proof that it causes agent friction.</span>
+          {neutralSummary(h) !== h.statement ? <details><summary className="muted">Investigator’s original wording (unchanged)</summary><p className="muted">{h.statement}</p></details> : null}</p>)}
         {!pattern.length && !d.findings.length ? <p className="muted">The investigator did not establish a supported pattern.</p> : null}
         {refuted ? <p className="muted">{refuted} other hypothesis(es) were checked and refuted.</p> : null}
       </section>

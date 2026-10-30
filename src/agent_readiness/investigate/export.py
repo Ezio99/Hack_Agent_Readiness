@@ -144,7 +144,8 @@ UNSAFE_HTML = re.compile(r"<script|<iframe|<object|<embed|<link\b|<img\b|<form\b
 def _pages(snap: Snapshot) -> dict[str, str] | None:
     """Captured HTML pages of a snapshot, or None when they would break the size limits or contain anything a static, inert view must not carry (scripts, frames, forms, images, external addresses)."""
     pages = {r.path: r.text() for r in snap.pages()}
-    if not pages or len(pages) > STOREFRONT_MAX_PAGES or sum(map(len, pages.values())) > STOREFRONT_MAX_TOTAL_BYTES or any(len(h.encode()) > STOREFRONT_MAX_PAGE_BYTES or UNSAFE_HTML.search(h) for h in pages.values()):
+    size = {p: len(h.encode("utf-8")) for p, h in pages.items()}                 # limits are in UTF-8 bytes, per page and in total
+    if not pages or len(pages) > STOREFRONT_MAX_PAGES or sum(size.values()) > STOREFRONT_MAX_TOTAL_BYTES or any(n > STOREFRONT_MAX_PAGE_BYTES for n in size.values()) or any(UNSAFE_HTML.search(h) for h in pages.values()):
         return None
     return pages
 

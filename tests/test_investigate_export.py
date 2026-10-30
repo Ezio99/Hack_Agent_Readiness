@@ -379,3 +379,24 @@ def test_public_view_keeps_the_storefront_and_refuses_unsafe_html(pub):
         with pytest.raises(ExportError):
             check_public({"storefront": {"original": {"pages": {"/": bad}}}})
     check_public({"storefront": {"original": {"pages": {"/": "<!DOCTYPE html><html><body><a href=\"/cabins\">Cabins</a></body></html>"}}}})
+
+
+def test_storefront_total_limit_counts_utf8_bytes_not_characters(expb):
+    import shutil
+    from agent_readiness.investigate.export import STOREFRONT_MAX_PAGE_BYTES, STOREFRONT_MAX_TOTAL_BYTES
+    from agent_readiness.investigate.sitemodel.snapshot import Resource, Snapshot
+    snap = Snapshot.load(expb / "snapshot")
+
+    def with_pages(n: int, chars: int) -> int:
+        res = dict(snap.resources)
+        for i in range(n):                                                               # "é" is one character and two bytes
+            res[f"/x{i}"] = Resource(f"/x{i}", 200, "text/html; charset=utf-8", f"<!DOCTYPE html><html><body>{'é' * chars}</body></html>".encode())
+        shutil.rmtree(expb / "snapshot")
+        Snapshot(res, {}).save(expb / "snapshot")
+        return sum(len(r.text().encode()) for r in Snapshot.load(expb / "snapshot").pages())
+    base = sum(len(r.text()) for r in snap.pages())
+    total_bytes = with_pages(6, 9_400)                                                   # each page under the per-page byte limit
+    total_chars = sum(len(r.text()) for r in Snapshot.load(expb / "snapshot").pages())
+    assert total_chars <= STOREFRONT_MAX_TOTAL_BYTES < total_bytes and base < 5_000 and 6 * (9_400 * 2 + 40) < STOREFRONT_MAX_PAGE_BYTES * 6
+    assert export_run(expb)["storefront"]["state"] == "omitted"                          # a character count would have let this through
+    assert with_pages(3, 9_400) <= STOREFRONT_MAX_TOTAL_BYTES and export_run(expb)["storefront"]["state"] == "ok"
