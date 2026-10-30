@@ -8,6 +8,8 @@ Safety properties (tested offline with `httpx.MockTransport`; this module has ne
 Request shape follows https://dev.meta.ai/docs/protocols/chat-completions and /structured-output; real behaviour against the hosted API is NOT yet verified (that is the L0 probe)."""
 from __future__ import annotations
 
+import re
+
 import httpx
 
 from ...agent import ModelConfig
@@ -15,6 +17,41 @@ from ...capture import GateRefused
 from ...ledger import Halt, Ledger, cost_of, preflight
 from ...spend_gate import RequestGate
 from .client import LLMRequest, LLMResponse, request_sha256
+
+
+class ProviderError(RuntimeError):
+    """A failed model request, classified so the cause is not lost. `category`: `transport` (no HTTP response: timeout / connection / other httpx error), `http` (a non-200 status) or
+    `parse` (a 200 whose body was not the expected shape). `status` is the HTTP status when there was one. `summary` is short and sanitized: a transport/parse error is its class name only; an HTTP
+    error adds the provider's own `error.type` / `error.code` / `error.message` when the body is JSON (truncated, credentials redacted). Request bodies, headers and model text are never included.
+    Model-output validation failures are a different layer (`StructuredOutputError`). The reservation stays counted in every case, exactly as before."""
+
+    def __init__(self, category: str, status: int | None, summary: str):
+        self.category, self.status, self.summary = category, status, summary
+        super().__init__(f"model request failed ({category}{f' HTTP {status}' if status is not None else ''}: {summary}); the reservation stays counted")
+
+
+_SECRETS = re.compile(r"Bearer\s+\S+|\bsk-[A-Za-z0-9_-]{8,}")
+
+
+def _clean(text: object, key: str | None, limit: int = 160) -> str:
+    t = " ".join(str(text).split())
+    t = t.replace(key, "[redacted]") if key else t
+    return _SECRETS.sub("[redacted]", t)[:limit]
+
+
+def _http_summary(response: httpx.Response, key: str | None) -> str:
+    """The provider's own error fields when the body is a JSON object, else just the reason phrase. Never the raw body."""
+    try:
+        err = response.json().get("error")
+    except Exception:
+        err = None
+    if isinstance(err, dict):
+        parts = [f"{k}={_clean(err[k], key)}" for k in ("type", "code", "message") if isinstance(err.get(k), (str, int)) and err.get(k) != ""]
+        if parts:
+            return "; ".join(parts)[:240]
+    elif isinstance(err, str) and err:
+        return f"message={_clean(err, key)}"
+    return _clean(response.reason_phrase or "no error detail", key)
 
 
 class MetaClient:
@@ -51,16 +88,20 @@ class MetaClient:
         record: dict = {"http_status": None}
         try:
             r = self._client.post(self.config.base_url.rstrip("/") + "/chat/completions", json=body, headers={"Authorization": f"Bearer {self._key}", "Content-Type": "application/json"})
-            record["http_status"] = r.status_code
-            if r.status_code != 200:
-                raise RuntimeError(f"provider returned HTTP {r.status_code}")
+        except httpx.TimeoutException as exc:
+            raise ProviderError("transport", None, f"timeout ({type(exc).__name__})") from None
+        except httpx.HTTPError as exc:
+            raise ProviderError("transport", None, type(exc).__name__) from None
+        record["http_status"] = r.status_code
+        if r.status_code != 200:
+            raise ProviderError("http", r.status_code, _http_summary(r, self._key)) from None
+        try:
             data = r.json()
             text = data["choices"][0]["message"]["content"] or ""
             usage = data.get("usage") or {}
             record["usage"] = usage
-        except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError, RuntimeError) as exc:
-            if record["http_status"] == 200:
-                self.gate.settle(index, record)
-            raise RuntimeError(f"model request failed ({type(exc).__name__}); the reservation stays counted") from None
+        except (ValueError, KeyError, IndexError, TypeError, AttributeError) as exc:
+            self.gate.settle(index, record)                        # a 200 was received: settle (no usable usage keeps the full reservation, as before)
+            raise ProviderError("parse", 200, f"unexpected response shape ({type(exc).__name__})") from None
         self.gate.settle(index, record)
         return LLMResponse(text=text, mode=self.mode, model=self.model, usage={k: usage.get(k) for k in ("prompt_tokens", "completion_tokens")}, cost_usd=cost_of(usage), request_sha256=request_sha256(request))
