@@ -68,8 +68,12 @@ def _tier_and_params(d: HypothesisOut):
 
 
 class _Metered:
-    """Counts every request at the moment its response (or a provider error) comes back, BEFORE any parsing or validation, so a later structured-output failure or crash can never hide a paid
-    request. `Halt` (a spend-gate refusal) is raised before anything is sent and is not counted as sent. Wraps any `LLMClient`; passes `mode` / `model` through."""
+    """Counts every request at the moment its outcome comes back, BEFORE any parsing or validation, so a later structured-output failure or crash can never hide a paid request. Outcomes:
+      * `responses`           a provider response was delivered (HTTP 200): the request definitely reached the provider;
+      * provider errors with `send_status` `response_received`  (HTTP non-200, or a 200 with an unreadable body): also definitely reached it, but failed;
+      * provider errors with `send_status` `uncertain`  (transport timeout / connection errors, or any unclassified exception): the request MAY OR MAY NOT have left the process;
+      * `refused`             a spend-gate `Halt` (raised before anything is sent): not a request.
+    `sent` is the conservative count used for budget accounting (confirmed + uncertain): an uncertain request keeps its full reservation counted, but it is never reported as definitely sent."""
 
     def __init__(self, inner):
         self.inner, self.mode, self.model = inner, inner.mode, inner.model
@@ -83,7 +87,9 @@ class _Metered:
             self.refused += 1
             raise
         except Exception as exc:
-            self.provider_errors.append({"category": getattr(exc, "category", type(exc).__name__), "http_status": getattr(exc, "status", None)})
+            category = getattr(exc, "category", None)
+            self.provider_errors.append({"category": category or type(exc).__name__, "http_status": getattr(exc, "status", None),
+                                         "send_status": "response_received" if category in ("http", "parse") else "uncertain"})
             raise
         u = resp.usage or {}
         self.responses += 1
@@ -95,8 +101,16 @@ class _Metered:
         return resp
 
     @property
+    def confirmed(self) -> int:
+        return self.responses + sum(e["send_status"] == "response_received" for e in self.provider_errors)
+
+    @property
+    def uncertain(self) -> int:
+        return sum(e["send_status"] == "uncertain" for e in self.provider_errors)
+
+    @property
     def sent(self) -> int:
-        return self.responses + len(self.provider_errors)
+        return self.confirmed + self.uncertain
 
 
 def terminal_status(res: dict) -> str:
@@ -122,10 +136,10 @@ def investigate(ws: Workspace, llm: LLMClient, *, max_calls: int = 12, focus: st
         _run(ws, meter, store, msgs, state, max_calls)
     except Exception as exc:                                                       # provider outage, spend-gate refusal, blindness halt, parsing crash ...
         state["error"] = type(exc).__name__
-        state["incomplete"] = f"aborted after {meter.sent} model request(s): {type(exc).__name__}: {str(exc)[:160]}"
+        state["incomplete"] = f"aborted after {meter.sent} model request(s){f' ({meter.uncertain} with uncertain send status)' if meter.uncertain else ''}: {type(exc).__name__}: {str(exc)[:160]}"
     if not state["finished"] and state["incomplete"] is None:
         state["incomplete"] = "no finish action"
-    res = {"finished": state["finished"], "incomplete": state["incomplete"], "tool_calls": len(state["log"]), "model_requests": meter.sent, "tool_log": state["log"],
+    res = {"finished": state["finished"], "incomplete": state["incomplete"], "tool_calls": len(state["log"]), "model_requests": meter.sent, "requests_confirmed": meter.confirmed, "requests_uncertain": meter.uncertain, "tool_log": state["log"],
            "rejected_hypotheses": state["rejected"], "verification": state["rows"], "novel_changes": state["novel"], "pending_trial_requests": ws.pending_requests,
            "cost_usd": round(meter.cost, 6), "prompt_tokens": meter.pin, "completion_tokens": meter.pout, "reasoning_tokens": meter.reasoning, "finish_reasons": meter.finish,
            "provider_errors": meter.provider_errors, "refused_before_send": meter.refused, "error": state["error"], "transcript": msgs}

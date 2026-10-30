@@ -31,23 +31,33 @@ def manifest(ctx: Context) -> dict:
 
 
 def ledger_accounting(run, res: dict) -> dict:
-    """Reconcile what the client meter saw with the durable spend ledger for this stage's gate ids. A request the ledger reserved but the meter never saw (or vice versa) is flagged, never hidden."""
+    """Reconcile what the client meter saw with the durable spend ledger for THIS stage's gate ids (exactly `<run id>-investigate:req<N>`; other ids that merely share the prefix are ignored). `reconciled` is
+    strict: every reservation settled, none outstanding, request count and settled cost equal to the meter's. A provider error keeps its full reservation unsettled by design, so such a run is reported
+    as NOT reconciled with the outstanding amount and the count of requests whose send status is uncertain spelled out - never silently as clean."""
     import json as _json
+    import re
     path = run.dir / "spend" / "ledger.jsonl"
     if not path.exists():
         return {"ledger": "none (mock / scripted run)", "metered_requests": res["model_requests"], "metered_cost_usd": res["cost_usd"], "reconciled": True}
-    prefix = f"{run.state['id']}-investigate:req"
+    mine = re.compile(rf"{re.escape(run.state['id'])}-investigate:req\d+")
     reserved, settled = {}, {}
     for line in path.read_text().splitlines():
         e = _json.loads(line)
-        if e["id"].startswith(prefix):
+        if mine.fullmatch(e["id"]):
             (reserved if e["kind"] == "reserve" else settled)[e["id"]] = e["usd"]
     settled_usd = round(sum(settled.values()), 6)
-    unsettled = round(sum(v for k, v in reserved.items() if k not in settled), 6)
-    ok = len(reserved) == res["model_requests"] and abs(settled_usd - res["cost_usd"]) < 1e-6
-    return {"ledger_requests_reserved": len(reserved), "ledger_requests_settled": len(settled), "ledger_settled_usd": settled_usd, "ledger_unsettled_reserved_usd": unsettled,
-            "metered_requests": res["model_requests"], "metered_cost_usd": res["cost_usd"], "reconciled": ok,
-            "note": "requests/cost the investigator reported equal the durable ledger" if ok else "MISMATCH between the investigator's meter and the durable ledger: inspect spend/ledger.jsonl"}
+    unsettled_ids = sorted(k for k in reserved if k not in settled)
+    unsettled = round(sum(reserved[k] for k in unsettled_ids), 6)
+    orphan_settles = sorted(k for k in settled if k not in reserved)
+    checks = {"all_reservations_settled": not unsettled_ids, "no_outstanding_reservation_usd": unsettled == 0, "no_settlement_without_reservation": not orphan_settles,
+              "request_count_matches": len(reserved) == res["model_requests"] == len(settled), "settled_cost_matches": abs(settled_usd - res["cost_usd"]) < 1e-6}
+    ok = all(checks.values())
+    why = [k for k, v in checks.items() if not v]
+    return {"ledger_requests_reserved": len(reserved), "ledger_requests_settled": len(settled), "ledger_settled_usd": settled_usd, "ledger_unsettled_reservations": len(unsettled_ids),
+            "ledger_unsettled_reserved_usd": unsettled, "metered_requests": res["model_requests"], "requests_confirmed": res.get("requests_confirmed"), "requests_uncertain": res.get("requests_uncertain"),
+            "metered_cost_usd": res["cost_usd"], "checks": checks, "reconciled": ok,
+            "note": "requests, settlements and cost equal the durable ledger; nothing outstanding" if ok else
+                    f"NOT reconciled ({', '.join(why)}): {len(unsettled_ids)} reservation(s) unsettled (US${unsettled}) stay counted at their full bound; {res.get('requests_uncertain')} request(s) have an uncertain send status. Inspect spend/ledger.jsonl"}
 
 
 def investigate_stage(ctx: Context) -> dict:
@@ -73,7 +83,7 @@ def report_stage(ctx: Context, *, final: bool = False) -> dict:
     inv = run.artifact("investigation") if run.has_artifact("investigation") else {"skipped": True}
     att = run.artifact("attribution") if run.has_artifact("attribution") else {}
     manifest_ = run.artifact("tasks-manifest")
-    rep["investigation"] = {k: inv.get(k) for k in ("skipped", "reason", "finished", "incomplete", "tool_calls", "model_requests", "model", "mode", "cost_usd", "status", "prompt_tokens", "completion_tokens", "reasoning_tokens", "finish_reasons", "provider_errors", "refused_before_send", "error", "accounting", "verification", "rejected_hypotheses", "novel_changes", "pending_trial_requests", "tool_log")}
+    rep["investigation"] = {k: inv.get(k) for k in ("skipped", "reason", "finished", "incomplete", "tool_calls", "model_requests", "requests_confirmed", "requests_uncertain", "model", "mode", "cost_usd", "status", "prompt_tokens", "completion_tokens", "reasoning_tokens", "finish_reasons", "provider_errors", "refused_before_send", "error", "accounting", "verification", "rejected_hypotheses", "novel_changes", "pending_trial_requests", "tool_log")}
     status = inv.get("status") or ("not_run" if inv.get("skipped") else "completed" if inv.get("finished") else "incomplete_no_finish")
     rep["investigation_status"] = status
     if status != "completed" and rep["outcome"] == "no_supported_issue":

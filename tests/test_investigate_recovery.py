@@ -36,8 +36,13 @@ SHAPE = PROSE + json.dumps(FINISH)                                              
 def test_prose_prefixed_single_action_step_is_recovered_not_a_crash():
     r = recover(SHAPE, Step)
     assert r["status"] == "recovered" and r["validated"] is True and r["raw_protocol_compliant"] is False
-    assert r["actions"] == [sorted({"tool": "finish", "evidence_id": None}.keys() | set())] or isinstance(r["actions"], list) and len(r["actions"]) == 1      # one action recorded, no crash
+    assert r["actions"] == [["tool"]]                                                                  # exactly the recovered action's non-null fields (finish carries only its tool name)
     assert r["normalized"] == json.dumps(FINISH) and r["prefix_chars"] == len(PROSE)
+
+
+def test_recovered_action_fields_are_exact_for_a_step_with_arguments():
+    r = recover(PROSE + json.dumps(step("check_claim", claim_kind="info_absent_on_template", label="price")), Step)
+    assert r["status"] == "recovered" and r["actions"] == [["claim_kind", "label", "tool"]]
 
 
 def test_complete_structured_accepts_the_incident_shape_end_to_end():
@@ -89,7 +94,7 @@ def test_unusable_output_counts_every_paid_attempt_including_the_retry(tmp_path)
     assert res["model_requests"] == 2 and res["status"] == "incomplete_unusable_model_output" and res["finished"] is False
 
 
-def test_provider_errors_count_as_sent_but_a_gate_refusal_does_not(tmp_path):
+def test_confirmed_responses_uncertain_sends_and_gate_refusals_are_told_apart(tmp_path):
     class Boom:
         mode, model = "live", "m"
 
@@ -98,10 +103,15 @@ def test_provider_errors_count_as_sent_but_a_gate_refusal_does_not(tmp_path):
 
         def complete(self, request):
             raise self.exc
-    res = investigate(ws_for(tmp_path, name="a"), Boom(ProviderError("http", 429, "rate_limit")), max_calls=2)
-    assert res["model_requests"] == 1 and res["provider_errors"] == [{"category": "http", "http_status": 429}] and res["status"] == "incomplete_due_to_infrastructure_error"
+    cases = [(ProviderError("http", 429, "rate_limit"), 1, 0, "response_received"), (ProviderError("parse", 200, "shape"), 1, 0, "response_received"),
+             (ProviderError("transport", None, "ConnectError"), 0, 1, "uncertain"), (RuntimeError("provider down"), 0, 1, "uncertain")]
+    for i, (exc, confirmed, uncertain, send) in enumerate(cases):
+        res = investigate(ws_for(tmp_path, name=f"c{i}"), Boom(exc), max_calls=2)
+        assert (res["requests_confirmed"], res["requests_uncertain"], res["model_requests"]) == (confirmed, uncertain, 1)       # model_requests = conservative upper bound (confirmed + uncertain)
+        assert res["provider_errors"][0]["send_status"] == send and res["status"] == "incomplete_due_to_infrastructure_error"
+        assert ("uncertain send status" in res["incomplete"]) == bool(uncertain)                                              # the message never claims an uncertain request was sent
     res2 = investigate(ws_for(tmp_path, name="b"), Boom(Halt("spend gate refused the request")), max_calls=2)
-    assert res2["model_requests"] == 0 and res2["refused_before_send"] == 1 and res2["status"] == "incomplete_due_to_infrastructure_error"
+    assert res2["model_requests"] == 0 and res2["requests_confirmed"] == res2["requests_uncertain"] == 0 and res2["refused_before_send"] == 1
 
 
 def _live_client(run, handler, ceiling=2.05, cap=0.40):
@@ -137,7 +147,45 @@ def test_a_mismatch_between_meter_and_ledger_is_flagged(tmp_path):
     led.reserve(f"{run.state['id']}-investigate:req02", 0.02)                                   # the ledger holds two requests; the scripted investigator metered one
     investigate_stage(Context(run, options={"investigator_llm": ScriptedClient([json.dumps(FINISH)]), "max_calls": 3}))
     acc = run.artifact("investigation")["accounting"]
-    assert acc["reconciled"] is False and "MISMATCH" in acc["note"]
+    assert acc["reconciled"] is False and "NOT reconciled" in acc["note"] and acc["checks"]["request_count_matches"] is False
+
+
+def test_counts_and_costs_can_match_while_a_reservation_is_unsettled_and_that_is_not_reconciled(tmp_path):
+    """Negative case: the meter saw 1 request and US$0, the ledger holds 1 reservation and US$0 settled - but the reservation was never settled (a transport error leaves it counted at its full bound)."""
+    run = ws_for(tmp_path).run
+
+    def refuse_connection(request):
+        raise httpx.ConnectError("no route")
+    investigate_stage(Context(run, options={"investigator_llm": _live_client(run, refuse_connection), "max_calls": 3}))
+    inv = run.artifact("investigation")
+    acc = inv["accounting"]
+    assert acc["ledger_requests_reserved"] == acc["metered_requests"] == 1 and acc["ledger_settled_usd"] == acc["metered_cost_usd"] == 0.0                      # counts and costs match ...
+    assert acc["ledger_unsettled_reservations"] == 1 and acc["ledger_unsettled_reserved_usd"] > 0 and acc["checks"]["all_reservations_settled"] is False         # ... but a reservation is outstanding
+    assert acc["reconciled"] is False and acc["requests_uncertain"] == 1 and acc["requests_confirmed"] == 0 and "uncertain send status" in acc["note"]
+    assert inv["status"] == "incomplete_due_to_infrastructure_error"
+
+
+def test_an_http_error_is_a_confirmed_response_but_also_leaves_an_unsettled_reservation(tmp_path):
+    run = ws_for(tmp_path).run
+    investigate_stage(Context(run, options={"investigator_llm": _live_client(run, lambda r: httpx.Response(429, json={"error": {"type": "rate_limit"}})), "max_calls": 3}))
+    acc = run.artifact("investigation")["accounting"]
+    assert acc["requests_confirmed"] == 1 and acc["requests_uncertain"] == 0 and acc["reconciled"] is False and acc["ledger_unsettled_reservations"] == 1
+
+
+def test_only_this_stages_exact_request_ids_are_reconciled(tmp_path):
+    run = ws_for(tmp_path).run
+    led = run.ledger(2.05)
+    rid = run.state["id"]
+    for other in (f"{rid}-investigate:req99x", f"{rid}-investigate:reqabc", f"{rid}-investigate:req01-copy:req01", f"{rid}-investigate:req"):
+        led.reserve(other, 0.03)                                                                                # share the prefix but are not this stage's request ids
+    out = investigate_stage(Context(run, options={"investigator_llm": _live_client(run, _ok(SHAPE)), "max_calls": 3}))
+    acc = run.artifact("investigation")["accounting"]
+    assert acc["ledger_requests_reserved"] == 1 and acc["reconciled"] is True and out["status"] == "completed"       # the four look-alikes are ignored
+    from agent_readiness.investigate.taskgen.stage import _reserved_requests
+    led.reserve(f"{rid}-taskgen:req01", 0.03)
+    led.reserve(f"{rid}-taskgen:req01x", 0.03)
+    led.reserve(f"{rid}-taskgen:req", 0.03)
+    assert _reserved_requests(run) == 1
 
 
 # ------------------------------------------------------------------------------------------------------------ 3. terminal status

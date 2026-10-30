@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 from ...ledger import Halt
 from ..inspect.stage import load_snapshot
@@ -44,8 +45,8 @@ def _reserved_requests(run) -> int:
     path = run.dir / "spend" / "ledger.jsonl"
     if not path.exists():
         return 0
-    prefix = f"{run.state['id']}-taskgen:req"
-    return sum(1 for line in path.read_text().splitlines() if (e := json.loads(line))["kind"] == "reserve" and e["id"].startswith(prefix))
+    mine = re.compile(rf"{re.escape(run.state['id'])}-taskgen:req\d+")                  # exactly this stage's gate ids, not ids that merely share the prefix
+    return sum(1 for line in path.read_text().splitlines() if (e := json.loads(line))["kind"] == "reserve" and mine.fullmatch(e["id"]))
 
 
 def _attempt_marker(run, i: int):
