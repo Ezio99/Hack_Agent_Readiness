@@ -44,7 +44,7 @@ export function TaskTable({ d }: { d: InvestigationExport }) {
   const hasControl = d.tasks.some((t) => Object.keys(t.placebo ?? {}).length > 0);
   if (!d.tasks.length) return <p className="muted">No frozen tasks in this export (the task stages had not completed).</p>;
   return (
-    <div className="table-wrap">
+    <div className="table-wrap" role="region" aria-label="Task outcomes table (scrollable)" tabIndex={0}>
       <table className="runs">
         <caption className="sr-only">Task outcomes per arm</caption>
         <thead><tr><th scope="col">Task</th><th scope="col">Set</th><th scope="col">{hasControl ? "Historical baseline" : "Baseline"}</th>{hasControl ? <th scope="col">Unmodified repeat (control)</th> : null}{pids.map((p) => <th scope="col" key={p}>Patched <code>{short(p)}</code></th>)}</tr></thead>
@@ -85,7 +85,7 @@ export function Findings({ d }: { d: InvestigationExport }) {
               </ul>
             </li>))}
         </ul>)}
-      <details open><summary><strong>Hypotheses that are not findings</strong> (full records)</summary>
+      <details className="disc"><summary>Hypotheses that are not findings: full records</summary>
       <ul className="findings">
         {novel.map((h) => (
           <li key={h.id} className="finding conf-hypothesis">
@@ -121,10 +121,12 @@ function ResultCard({ d, r }: { d: InvestigationExport; r: EvalResult }) {
   const b = c.baseline, p = c.patched;
   const tone = r.verdict === "improvement" ? "good" : r.verdict === "regression" ? "bad" : "info";
   return (
-    <section className="card" aria-label={`Baseline versus patched for ${r.proposal_id}`}>
+    <details className="disc" aria-label={`Baseline versus patched for ${r.proposal_id}`}>
+      <summary>Frozen rule details: pairs, p-values, holdout flag and how to read them</summary>
+      <section className="card">
       <h4>Patch <code>{short(r.proposal_id)}</code>{d.synthetic ? <> <span className="mode mode-scripted">ILLUSTRATIVE — synthetic numbers</span></> : null} <Pill tone={r.verdict === "improvement" ? "pass" : r.verdict === "regression" ? "fail" : "neutral"}>{r.verdict}</Pill>{" "}
         {r.measured ? <span className="mode mode-live">MEASURED (live)</span> : <span className="mode mode-unmeasured">NOT MEASURED — {r.effect_mode ? MODE_LABEL[r.effect_mode].toLowerCase() : "no"} evidence, a pipeline check only</span>}</h4>
-      <figure className="paired" role="group" aria-label={`Evidence-backed pass rate: baseline ${pct(b.passed, b.usable)}, patched ${pct(p.passed, p.usable)}`}>
+      <figure className="paired" aria-label={`Evidence-backed pass rate: baseline ${pct(b.passed, b.usable)}, patched ${pct(p.passed, p.usable)}`}>
         <figcaption>Evidence-backed pass rate on {c.tasks} usable task{c.tasks === 1 ? "" : "s"} (descriptive)</figcaption>
         <Bar label="Baseline" cls="B" value={b.usable ? b.passed / b.usable : 0} text={`${b.passed}/${b.usable}`} />
         <Bar label="Patched" cls="A" value={p.usable ? p.passed / p.usable : 0} text={`${p.passed}/${p.usable}`} />
@@ -140,38 +142,69 @@ function ResultCard({ d, r }: { d: InvestigationExport; r: EvalResult }) {
       <Callout title="How to read this" tone={tone === "bad" ? "warn" : "info"}>
         <p>{r.measured ? "A measured effect is for these frozen tasks, this agent profile and this patched mirror only; it does not prove why the change worked." : "This effect was not measured with live trials. It shows the pipeline works end to end; it is not evidence about agent behaviour."}</p>
       </Callout>
-    </section>
+      </section>
+    </details>
   );
 }
 
 const ARM_BAR = { baseline: { label: "Historical baseline", cls: "H" }, placebo: { label: "Unmodified repeat", cls: "C" }, patched: { label: "Patched", cls: "A" } } as const;
 
-/** Model requests per task in the three arms, with the role each task plays in the pre-registered design. Descriptive; the verdicts are computed by the rules, not by this chart. */
+/** Model requests per task in the three arms on one shared scale, with the role each task plays in the pre-registered design. Descriptive; the verdicts are computed by the rules, not by this chart. */
 export function ThreeArmChart({ d, x }: { d: InvestigationExport; x: Exploratory }) {
   const q = new Map(d.tasks.map((t) => [t.task_id, t.question]));
   const all = roles(x).flatMap(({ task_id }) => (["baseline", "placebo", "patched"] as const).map((a) => x.tasks[a][task_id]?.requests ?? 0));
   const top = Math.max(1, ...all);
+  const main = roles(x).filter((r) => r.role !== "Detail-page control"), detail = roles(x).filter((r) => r.role === "Detail-page control");
+  const cell = (a: "baseline" | "placebo" | "patched", id: string) => { const r = x.tasks[a][id]; return r ? `${r.requests} req · ${r.pass ? "pass" : "fail"}` : "—"; };
   return (
     <div className="threearm" role="group" aria-label="Model requests per task in each arm">
       <ul className="legend" aria-label="Legend">{Object.values(ARM_BAR).map((a) => <li key={a.cls}><span className={`swatch bar-${a.cls}`} aria-hidden="true" />{a.label}</li>)}</ul>
-      {roles(x).map(({ task_id, role }) => (
-        <section key={task_id} className="card" aria-label={`${role}: ${task_id}`}>
+      {main.map(({ task_id, role }) => (
+        <section key={task_id} className={`card armcard ${role === "Affected" ? "armcard-aff" : ""}`} aria-label={`${role}: ${task_id}`}>
           <h4><Pill tone={role === "Affected" ? "pass" : "neutral"}>{role}</Pill> <span>{q.get(task_id) ?? task_id}</span></h4>
           {(["baseline", "placebo", "patched"] as const).map((a) => {
             const r = x.tasks[a][task_id];
-            if (!r) return a === "placebo" ? null : <div key={a} className="bar-row"><span className="bar-label">{ARM_BAR[a].label}</span><span /><span className="bar-value muted">no trial</span></div>;
-            return <div key={a} className="bar-row"><span className="bar-label">{ARM_BAR[a].label}</span><span className="bar-track" aria-hidden="true"><span className={`bar bar-${ARM_BAR[a].cls}`} style={{ width: `${Math.max(2, (100 * r.requests) / top)}%` }} /></span>
-              <span className="bar-value">{r.requests} req · {r.pass ? "pass" : "fail"}</span></div>;
+            return <div key={a} className="bar-row"><span className="bar-label">{ARM_BAR[a].label}</span>
+              {r ? <><span className="bar-track" aria-hidden="true"><span className={`bar bar-${ARM_BAR[a].cls}`} style={{ width: `${Math.max(3, (100 * r.requests) / top)}%` }} /></span><span className="bar-value">{r.requests} req · {r.pass ? "pass" : "fail"}</span></>
+                : <><span /><span className="bar-value muted">no trial</span></>}</div>;
           })}
         </section>))}
+      {detail.length ? (
+        <section className="card armwide" aria-label="Negative controls on detail pages">
+          <h4>Negative controls on detail pages <span className="muted">(not expected to change)</span></h4>
+          <div className="table-wrap" role="region" aria-label="Negative controls table (scrollable)" tabIndex={0}><table className="runs compact">
+            <caption className="sr-only">Detail-page controls: historical baseline and patched</caption>
+            <thead><tr><th scope="col">Task</th><th scope="col">Historical baseline</th><th scope="col">Patched</th></tr></thead>
+            <tbody>{detail.map(({ task_id, role }) => <tr key={task_id}><th scope="row"><Pill tone="neutral">{role}</Pill> {q.get(task_id) ?? task_id}</th><td>{cell("baseline", task_id)}</td><td>{cell("patched", task_id)}</td></tr>)}</tbody>
+          </table></div>
+        </section>) : null}
     </div>
   );
 }
 
-/** Headline request changes (unmodified repeat → patched) for the affected tasks, and any control whose pass status differs between arms. Derived only from the exported rows. */
-export function Headline({ d, x }: { d: InvestigationExport; x: Exploratory }) {
+const dropPct = (from?: number, to?: number) => (from && typeof to === "number" ? `−${Math.round(100 * (1 - to / from))}%` : "");
+
+/** Unmodified repeat → patched model requests for each affected task: the headline comparison of the exploratory analysis. */
+export function RequestDrops({ d, x, compact }: { d: InvestigationExport; x: Exploratory; compact?: boolean }) {
   const q = new Map(d.tasks.map((t) => [t.task_id, t.question]));
-  const aff = roles(x).filter((r) => r.role === "Affected");
+  return (
+    <ul className={`drops${compact ? " drops-compact" : ""}`} aria-label="Affected-task request changes">
+      {roles(x).filter((r) => r.role === "Affected").map(({ task_id }) => {
+        const from = x.tasks.placebo[task_id]?.requests, to = x.tasks.patched[task_id]?.requests, hist = x.tasks.baseline[task_id]?.requests;
+        return (
+          <li key={task_id} className="card drop">
+            <span className="big">{from ?? "—"} → {to ?? "—"}</span> <span className="unit">model requests</span> <span className="pct">{dropPct(from, to)}</span>
+            <span className="dq">{q.get(task_id) ?? task_id}</span>
+            <span className="muted">unmodified repeat → patched{!compact && hist != null ? ` · historical baseline ${hist}` : ""}</span>
+          </li>);
+      })}
+    </ul>
+  );
+}
+
+/** Controls whose pass status differs between arms, disclosed prominently. Derived only from the exported rows. */
+export function HeadlineFlips({ d, x }: { d: InvestigationExport; x: Exploratory }) {
+  const q = new Map(d.tasks.map((t) => [t.task_id, t.question]));
   const flips = roles(x).filter((r) => r.role !== "Affected").flatMap(({ task_id, role }) => {
     const b = x.tasks.baseline[task_id], c = x.tasks.placebo[task_id], p = x.tasks.patched[task_id];
     if (!p) return [];
@@ -180,9 +213,6 @@ export function Headline({ d, x }: { d: InvestigationExport; x: Exploratory }) {
   });
   return (
     <>
-      <ul className="headline" aria-label="Affected-task request changes">
-        {aff.map(({ task_id }) => <li key={task_id} className="card"><span className="big">{x.tasks.placebo[task_id]?.requests ?? "—"} → {x.tasks.patched[task_id]?.requests ?? "—"}</span> model requests<br /><span className="muted">{q.get(task_id) ?? task_id} (unmodified repeat → patched)</span></li>)}
-      </ul>
       {flips.map((f) => (
         <Callout key={f.task_id} title="A control task changed outcome" tone="warn">
           <p><strong>{q.get(f.task_id) ?? f.task_id}</strong> ({f.role.toLowerCase()}, <code>{f.task_id}</code>) went from <strong>{f.was.pass ? "pass" : "fail"}</strong> ({f.was.requests} requests, {f.vs}) to <strong>{f.p.pass ? "pass" : "fail"}</strong> ({f.p.requests} requests, patched).
@@ -197,12 +227,13 @@ export function ExploratoryPanel({ d, x }: { d: InvestigationExport; x: Explorat
   const frozen = d.evaluation.results[0];
   return (
     <>
+      <RequestDrops d={d} x={x} />
       <div className="grid2 verdicts">
         <section className="card verdict-frozen" aria-label="Frozen pre-registered verdict">
           <p className="eyebrow">Frozen rule · fixed before any trial</p>
           <h4><code>{d.evaluation.rule?.id ?? "paired-signflip-v1"}</code> <Pill tone={frozen?.verdict === "improvement" ? "pass" : frozen?.verdict === "regression" ? "fail" : "neutral"}>{frozen?.verdict ?? "—"}</Pill></h4>
           <p className="muted">Historical baseline vs patched, {frozen?.pairs ?? "—"} task pairs. Reported unchanged. With only two tasks that can be affected, this rule can at best say “inconclusive”.</p>
-          {frozen ? <p className="muted">Pass Δ {num(frozen.pass_delta)} · request Δ {num(frozen.request_change)} (p = {num(frozen.p_requests)})</p> : null}
+          {frozen ? <p className="muted">Pass Δ {num(frozen.pass_delta)} · request Δ {num(frozen.request_change)} (p = {num(frozen.p_requests)}) {frozen.measured ? <span className="mode mode-live">MEASURED (live)</span> : <span className="mode mode-unmeasured">NOT MEASURED — pipeline check only</span>}</p> : null}
         </section>
         <section className={`card verdict-exploratory verdict-${v.tone}`} aria-label="Exploratory verdict">
           <p className="eyebrow">Exploratory rules · owner-selected change · not a replacement</p>
@@ -211,8 +242,14 @@ export function ExploratoryPanel({ d, x }: { d: InvestigationExport; x: Explorat
           {x.reasons.map((r) => <p key={r} className="muted">{r}</p>)}
         </section>
       </div>
-      <Headline d={d} x={x} />
+      <HeadlineFlips d={d} x={x} />
+      <Callout title="What this does and does not show" tone="info">
+        <p>One trial per task per arm, one site, one model. {x.rules?.claims ?? "Allowed wording: consistent with / not consistent with a reduction in browsing effort for this exploratory change on this site and these tasks."}</p>
+        <p>The change was chosen by the site owner after an unpromoted pattern was observed. It is <strong>not</strong> an investigator-verified finding, and the holdout tasks were not blind to the owner.</p>
+      </Callout>
+      <h4 className="sub-h">Task by task</h4>
       <ThreeArmChart d={d} x={x} />
+      <details className="disc"><summary>Rules and checks: noise estimate, tolerances, rules hash</summary>
       <dl className="facts">
         <dt>Noise estimate</dt><dd>{x.noise_estimate_requests ?? "—"} request(s): the largest gap between an unmodified repeat and its historical trial</dd>
         <dt>Controls within tolerance</dt><dd>{x.controls_within_tolerance == null ? "—" : x.controls_within_tolerance ? "yes" : "no — the result is uninterpretable"}</dd>
@@ -220,10 +257,7 @@ export function ExploratoryPanel({ d, x }: { d: InvestigationExport; x: Explorat
         <dt>Rules hash</dt><dd><code>{short(x.rules_sha256)}</code> {x.rules_match_code ? "· matches the pre-registered rules" : "· does NOT match the code"}</dd>
         {x.missing_or_void.length ? <><dt>Missing or void</dt><dd>{x.missing_or_void.join(", ")}</dd></> : null}
       </dl>
-      <Callout title="What this does and does not show" tone="info">
-        <p>One trial per task per arm, one site, one model. {x.rules?.claims ?? "Allowed wording: consistent with / not consistent with a reduction in browsing effort for this exploratory change on this site and these tasks."}</p>
-        <p>The change was chosen by the site owner after an unpromoted pattern was observed. It is <strong>not</strong> an investigator-verified finding, and the holdout tasks were not blind to the owner.</p>
-      </Callout>
+      </details>
     </>
   );
 }
@@ -255,8 +289,10 @@ export function Spend({ d }: { d: InvestigationExport }) {
   if (!s || s.state !== "ok") return null;
   const usd = (x: number | null | undefined) => (typeof x === "number" ? `US$${x.toFixed(4)}` : "—");
   return (
+    <details className="disc"><summary>Calculated model spend (not a bill)</summary>
     <p className="muted" aria-label="Spend">Calculated model spend (published prices, <strong>not a bill</strong>): {usd(s.committed_usd)} of a {usd(s.ceiling_usd)} ceiling, {usd(s.remaining_usd)} remaining, {s.open_reservations ?? 0} open reservation(s).
       {" "}By arm: {Object.entries(s.by_arm_usd ?? {}).map(([k, v]) => `${k === "other" ? "task generation + investigator" : k} ${usd(v)}`).join(" · ")}.</p>
+    </details>
   );
 }
 
@@ -276,7 +312,7 @@ export function EffortBars({ d }: { d: InvestigationExport }) {
   if (!rows.length) return null;
   const top = Math.max(1, ...rows.map((x) => x.t.limits?.max_model_requests ?? x.r!.model_requests!));
   return (
-    <figure className="paired effort" role="group" aria-label="Baseline model requests per task">
+    <figure className="paired effort" aria-label="Baseline model requests per task">
       <figcaption>Model requests per task in the baseline run (limit {rows[0].t.limits?.max_model_requests ?? "—"})</figcaption>
       {rows.map(({ t, r }) => (
         <div key={t.task_id} className="bar-row">
@@ -338,7 +374,7 @@ export function ChangeSection({ d, proposalId }: { d: InvestigationExport; propo
       {x ? (
         <section aria-label="Tasks this change can affect">
           <h4>Tasks this change can affect</h4>
-          <div className="table-wrap"><table className="runs">
+          <div className="table-wrap" role="region" aria-label="Affected tasks table (scrollable)" tabIndex={0}><table className="runs">
             <caption className="sr-only">Affected tasks: baseline, unmodified repeat and patched</caption>
             <thead><tr><th scope="col">Task</th><th scope="col">Historical baseline</th><th scope="col">Unmodified repeat (control)</th><th scope="col">Patched</th></tr></thead>
             <tbody>{roles(x).filter((r) => r.role === "Affected").map(({ task_id }) => (
@@ -351,15 +387,68 @@ export function ChangeSection({ d, proposalId }: { d: InvestigationExport; propo
   );
 }
 
+/** First screen: what the product does, then the headline experimental result, labelled exploratory. */
+export function Hero({ d }: { d: InvestigationExport }) {
+  const x = d.evaluation.exploratory;
+  const frozen = d.evaluation.results[0];
+  const v = x ? EXPLORATORY_VERDICT[x.verdict] ?? { label: x.verdict, tone: "info" as const } : null;
+  const bt = tally(d.tasks.flatMap((t) => t.baseline));
+  return (
+    <header className="hero2">
+      <div className="hero-copy">
+      <p className="eyebrow">Agent Readiness</p>
+      <h1>Make your website ready for AI agents</h1>
+      <p className="lead">We watch an AI agent try to use your site, find where it struggles, test a change on a controlled copy, and measure whether it helped.</p>
+      <ol className="flow3" aria-label="How it works">
+        <li><span className="n">1</span><strong>Inspect</strong><span>An agent attempts real tasks; outcomes are graded independently.</span></li>
+        <li><span className="n">2</span><strong>Recommend</strong><span>Evidence-linked suggestions, labelled by who found or chose them.</span></li>
+        <li><span className="n">3</span><strong>Controlled retest</strong><span>The change is applied to a copy and measured against controls.</span></li>
+      </ol>
+      </div>
+      {x ? (
+        <div className="herometrics">
+          <p className="eyebrow">Example result from this run · exploratory · n = 1 per arm · owner-selected change</p>
+          <RequestDrops d={d} x={x} compact />
+          <div className="verdictchips" aria-label="Verdicts">
+            <span className="vchip"><span className="vk">Frozen rule</span><strong>{frozen?.verdict ?? "—"}</strong></span>
+            <span className={`vchip vchip-${v?.tone ?? "info"}`}><span className="vk">Exploratory rule</span><strong>{v?.label ?? "—"}</strong></span>
+          </div>
+        </div>) : (
+        <div className="herometrics"><p className="eyebrow">This run</p><p className="muted">{d.tasks.length} frozen tasks · baseline pass rate {pct(bt.passed, bt.usable)} ({bt.passed}/{bt.usable} usable trials) · outcome: {d.run.outcome.replace(/_/g, " ")}</p></div>)}
+      <p className="muted">{d.run.target} · run <code>{d.run.id}</code> · mode {d.run.mode}</p>
+    </header>
+  );
+}
+
+export function useActiveStep(ids: readonly string[]): string {
+  const [active, setActive] = useState(ids[0]);
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") return;
+    const seen = new Map<string, number>();
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) seen.set(e.target.id.replace(/^inv-/, ""), e.isIntersecting ? e.intersectionRatio : 0);
+      const best = [...seen.entries()].sort((a, b) => b[1] - a[1])[0];
+      if (best && best[1] > 0) setActive(best[0]);
+    }, { rootMargin: "-20% 0px -55% 0px", threshold: [0, 0.1, 0.5] });
+    ids.forEach((id) => { const el = document.getElementById(`inv-${id}`); if (el) io.observe(el); });
+    return () => io.disconnect();
+  }, [ids]);
+  return active;
+}
+
+const STEP_IDS = STEPS.map(([id]) => id);
+
 export function InvestigationView({ d }: { d: InvestigationExport }) {
   const t = d.tasks.flatMap((x) => x.baseline), bt = tally(t);
   const inspect = d.stages.find((s) => s.name === "inspect")?.summary ?? {};
   const owner = d.proposals.some((p) => p.owner_selected);
   const [selected, setSelected] = useState<string | null>(null);
+  const active = useActiveStep(STEP_IDS);
   const seeChange = (pid: string) => { setSelected(pid); setTimeout(() => goTo("changes"), 0); };
   return (
     <div className="investigation">
       {d.synthetic ? <p className="replay-banner" role="note">SYNTHETIC FIXTURE — hand-written test data, not produced by any model, agent or website.</p> : null}
+      <Hero d={d} />
       {d.audience === "public-demo" ? <p className="muted" role="note">Public demo view: internal identifiers are replaced by aliases and per-trial narratives, stage hashes and file paths are removed. Outcomes, request counts, controls and both verdicts are unchanged.</p> : null}
       <div className="modes" role="note" aria-label="Evidence modes">
         {d.modes.map((m) => <ModeBadge key={m} mode={m} />)}
@@ -367,15 +456,10 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
       </div>
       {d.run.investigation_status && !["completed"].includes(d.run.investigation_status) ? <Callout title={d.run.investigation_status === "not_run" ? "No investigator ran" : "The investigation did not complete"} tone="bad"><p>Status: <code>{d.run.investigation_status}</code>. Nothing was concluded about the website; this is <strong>not</strong> a finding that no problem exists.</p></Callout> : null}
       {!d.run.complete ? <Callout title="Incomplete investigation" tone="warn"><p>Not every stage finished{d.run.missing_artifacts.length ? ` (missing: ${d.run.missing_artifacts.join(", ")})` : ""}. Sections below show what exists; nothing is inferred for the rest.</p></Callout> : null}
-      <header className="hero">
-        <p className="eyebrow">Agent Readiness · one investigation, end to end</p>
-        <h2>{d.run.target}</h2>
-        <p className="muted">Website → agent analysis → recommendations → website changes → measured impact. Run <code>{d.run.id}</code> · mode {d.run.mode} · outcome: <strong>{d.run.outcome.replace(/_/g, " ")}</strong></p>
-      </header>
-      <nav className="steprail" aria-label="Report journey"><ol>{STEPS.map(([id, label]) => <li key={id}><button type="button" onClick={() => goTo(id)}>{label}</button></li>)}</ol></nav>
+      <nav className="steprail" aria-label="Report journey"><ol>{STEPS.map(([id, label]) => <li key={id}><button type="button" aria-current={active === id ? "step" : undefined} className={active === id ? "on" : ""} onClick={() => goTo(id)}>{label}</button></li>)}</ol></nav>
 
       <section id="inv-website" aria-labelledby="inv-website-h">
-        <h3 id="inv-website-h" className="step">1 · The website being evaluated</h3>
+        <h2 id="inv-website-h" className="step">1 · The website being evaluated</h2>
         {d.storefront?.state === "ok" ? <>
           <p className="muted">A controlled test site built for this project (not a real business). Browse the pages exactly as captured and given to the agent.</p>
           <StorefrontBrowser pages={d.storefront.original.pages} />
@@ -391,7 +475,7 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
       </section>
 
       <section id="inv-analysis" aria-labelledby="inv-analysis-h">
-        <h3 id="inv-analysis-h" className="step">2 · What the agent did on each task</h3>
+        <h2 id="inv-analysis-h" className="step">2 · What the agent did on each task</h2>
         <p className="muted">One browsing agent (frozen configuration) attempted every task. Effort is the number of model requests and pages viewed; success needs evidence-backed correctness, graded independently of the agent.</p>
         <EffortBars d={d} />
         <h3>Task outcomes</h3>
@@ -399,7 +483,7 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
       </section>
 
       <section id="inv-recommendations" aria-labelledby="inv-recommendations-h">
-        <h3 id="inv-recommendations-h" className="step">3 · Findings and recommendations</h3>
+        <h2 id="inv-recommendations-h" className="step">3 · Findings and recommendations</h2>
         {owner ? <Callout title="Owner-selected experiment" tone="warn"><p>The change tested below was chosen by the site owner. It is labelled <strong>EXPERIMENTAL</strong> and is <strong>not</strong> an investigator-verified finding. Neither the investigator’s pattern nor the owner’s change is presented as a verified cause.</p></Callout> : null}
         <ProvenanceSplit d={d} />
         <Findings d={d} />
@@ -408,16 +492,17 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
       </section>
 
       <section id="inv-changes" aria-labelledby="inv-changes-h">
-        <h3 id="inv-changes-h" className="step">4 · The website change</h3>
+        <h2 id="inv-changes-h" className="step">4 · The website change</h2>
         <ChangeSection d={d} proposalId={selected} />
       </section>
 
       <section id="inv-impact" aria-labelledby="inv-impact-h">
-        <h3 id="inv-impact-h" className="step">5 · Measured impact</h3>
+        <h2 id="inv-impact-h" className="step">5 · Measured impact</h2>
         <h3>Baseline versus patched</h3>
         <Comparison d={d} />
         <Spend d={d} />
-        {d.statement ? <p className="muted">{d.statement}</p> : null}
+        {d.findings.length > 0 ? (d.statement ? <p className="muted">{d.statement}</p> : null)
+          : d.evaluation.results.length > 0 ? <p className="muted" role="note">No verified findings in this run. The results above are for an {owner ? "owner-selected exploratory" : "exploratory"} change: they show an association on these tasks, not a verified cause.</p> : null}
       </section>
     </div>
   );
@@ -439,15 +524,15 @@ export function InvestigationPage() {
   useEffect(() => { void pick("public-synthetic"); }, []);
   return (
     <>
-      <h2>Agent Readiness investigation</h2>
-      <p className="lead">How well can an AI agent use this website, what gets in the way, what could change, and did the change help? One investigation, end to end.</p>
+      {error ? <Callout title="Cannot display this file" tone="bad"><p>{error}</p></Callout> : null}
+      {data ? <InvestigationView key={loadId} d={data} /> : !error ? <><h2>Agent Readiness investigation</h2><p className="muted">No report loaded.</p></> : null}
+      <details className="disc loader-d"><summary>Demo data source</summary>
       <div className="loader">
         <label>Demo data <select aria-label="Demo data" defaultValue="public-synthetic" onChange={(e) => void pick(e.target.value as Source)}>{(Object.keys(SOURCES) as Source[]).map((k) => <option key={k} value={k}>{SOURCES[k].label}</option>)}</select></label>
         <label>Open an exported report <input type="file" accept="application/json,.json" onChange={async (e) => { const f = e.target.files?.[0]; if (f) load(await f.text()); }} /></label>
       </div>
       <p className="muted">Files are read in your browser only; nothing is uploaded. Create one with <code>readiness investigate export RUN_DIR --out report.json --public</code>. The example shown first is a labelled synthetic fixture, not an experimental result.</p>
-      {error ? <Callout title="Cannot display this file" tone="bad"><p>{error}</p></Callout> : null}
-      {data ? <InvestigationView key={loadId} d={data} /> : !error ? <p className="muted">No report loaded.</p> : null}
+      </details>
     </>
   );
 }
