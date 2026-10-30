@@ -104,7 +104,7 @@ describe("investigation view", () => {
   });
   it("starts empty with a loader and the export instructions (no data bundled eagerly)", () => {
     const h = renderToStaticMarkup(<InvestigationPage />);
-    expect(h).toContain("No report loaded"); expect(h).toContain("readiness investigate export"); expect(h).toContain("EXP-B synthetic (public view)"); expect(h).toContain("nothing is uploaded"); expect(h).toContain("not an experimental result");
+    expect(h).toContain("No report loaded"); expect(h).toContain("readiness investigate export"); expect(h).toContain("EXP-B synthetic (public view)"); expect(h).toContain("nothing is fetched, uploaded or published"); expect(h).toContain("Load real export"); expect(h).toContain("never kept in session storage");
   });
 });
 
@@ -353,5 +353,22 @@ describe("PR 54 accessibility regressions (found by an axe-core run)", () => {
     expect(regions.length).toBeGreaterThanOrEqual(3); expect(new Set(regions).size).toBe(regions.length);
     expect(out).not.toMatch(/<figure[^>]*role="group"/);
     expect(out).not.toMatch(/<div class="table-wrap">/);
+  });
+});
+
+describe("provenance labels", () => {
+  const live = () => { const d = structuredClone(publicFixture) as unknown as InvestigationExport; delete d.synthetic; d.run.mode = "live"; d.modes = ["live"]; return d; };
+  it("labels a live non-synthetic export as a live experiment and never as synthetic", () => {
+    const h = html(live());
+    expect(h).toContain("LIVE EXPERIMENT · real model trials"); expect(h).not.toContain("SYNTHETIC DEMO DATA"); expect(h).not.toContain("SYNTHETIC FIXTURE");
+  });
+  it("labels fixtures as synthetic demo data and never as a live experiment", () => {
+    for (const f of [fixture, expbFixture, publicFixture]) { const h = html(structuredClone(f) as unknown as InvestigationExport); expect(h).toContain("SYNTHETIC DEMO DATA"); expect(h).not.toContain("LIVE EXPERIMENT"); }
+  });
+  it("names mock, recorded, scripted or mixed evidence and does not call it live", () => {
+    const d = live(); d.run.mode = "mock"; d.modes = ["mock"];
+    expect(html(d)).toContain("MOCK EVIDENCE · not a live experiment"); expect(html(d)).not.toContain("LIVE EXPERIMENT");
+    const m = live(); m.modes = ["live", "scripted"];
+    expect(html(m)).toContain("LIVE + SCRIPTED EVIDENCE · not a live experiment"); expect(html(m)).not.toContain("LIVE EXPERIMENT ·");
   });
 });

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { SAVE_PROBLEM, clearStored, loadStored, saveReport } from "../lib/reportStore";
 import { Callout, Kpi, Pill } from "../components/ui";
 import { SideBySide, StorefrontBrowser } from "../components/Storefront";
 import { EXPLORATORY_VERDICT, MODE_LABEL, compare, parseInvestigation, roles, tally, type EvalResult, type Exploratory, type Hypothesis, type InvestigationExport, type Mode, type TrialRow } from "../lib/investigation";
@@ -387,6 +388,13 @@ export function ChangeSection({ d, proposalId }: { d: InvestigationExport; propo
   );
 }
 
+/** What kind of evidence this report is, stated unmistakably. Live = real model trials; synthetic = hand-written fixture; anything else is named and is not a live experiment. */
+export function provenanceOf(d: InvestigationExport): { kind: "live" | "synthetic" | "other"; label: string } {
+  if (d.synthetic) return { kind: "synthetic", label: "SYNTHETIC DEMO DATA" };
+  if (d.run.mode === "live" && d.modes.length > 0 && d.modes.every((m) => m === "live")) return { kind: "live", label: "LIVE EXPERIMENT · real model trials" };
+  return { kind: "other", label: `${d.modes.map((m) => MODE_LABEL[m]).join(" + ") || MODE_LABEL[d.run.mode]} EVIDENCE · not a live experiment` };
+}
+
 /** First screen: what the product does, then the headline experimental result, labelled exploratory. */
 export function Hero({ d }: { d: InvestigationExport }) {
   const x = d.evaluation.exploratory;
@@ -397,6 +405,7 @@ export function Hero({ d }: { d: InvestigationExport }) {
     <header className="hero2">
       <div className="hero-copy">
       <p className="eyebrow">Agent Readiness</p>
+      <p className={`prov prov-${provenanceOf(d).kind}`} role="status" aria-label="Report provenance">{provenanceOf(d).label}</p>
       <h1>Make your website ready for AI agents</h1>
       <p className="lead">We watch an AI agent try to use your site, find where it struggles, test a change on a controlled copy, and measure whether it helped.</p>
       <ol className="flow3" aria-label="How it works">
@@ -519,19 +528,48 @@ export function InvestigationPage() {
   const [data, setData] = useState<InvestigationExport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadId, setLoadId] = useState(0);                                      // a new report must not inherit the previous report's page selection or scroll state
-  const load = (text: string) => { const p = parseInvestigation(text); if (p.ok) { setData(p.data); setLoadId((n) => n + 1); setError(null); } else { setData(null); setError(p.error); } };
-  const pick = async (k: Source) => load(JSON.stringify(await SOURCES[k].load()));
-  useEffect(() => { void pick("public-synthetic"); }, []);
+  const [kept, setKept] = useState<string | null>(null);                        // name of the explicitly loaded report held in this tab's session storage
+  const [notice, setNotice] = useState<string | null>(null);
+  const picker = useRef<HTMLInputElement>(null);
+  const show = (text: string): boolean => { const p = parseInvestigation(text); if (p.ok) { setData(p.data); setLoadId((n) => n + 1); setError(null); return true; } setData(null); setError(p.error); return false; };
+  const pick = async (k: Source) => { show(JSON.stringify(await SOURCES[k].load())); };
+  const fromFile = async (f: File) => {
+    const text = await f.text();
+    if (!show(text)) return;                                                    // only a report that parses and passes the private-field check is ever stored
+    const r = saveReport(f.name, text);
+    if (r.ok) { setKept(f.name); setNotice(null); }
+    else { setKept(null); setNotice(`${SAVE_PROBLEM[r.reason]} Reloading this page will require selecting the file again.`); }
+  };
+  const remove = () => { const ok = clearStored(); setKept(null); setNotice(ok ? "Loaded report removed from this tab's session storage." : "Could not clear session storage; close this tab to discard it."); void pick("public-synthetic"); };
+  useEffect(() => {
+    const st = loadStored();
+    if (st) {
+      if (show(st.text)) { setKept(st.name); return; }
+      clearStored();                                                            // corrupt or no longer valid: drop it rather than show it
+      setNotice("A previously kept report could not be read and was discarded.");
+    }
+    void pick("public-synthetic");
+  }, []);
+  const useKept = () => { const st = loadStored(); if (st && show(st.text)) { setKept(st.name); setNotice(null); } };
+  const showingKept = kept !== null && data !== null && !data.synthetic;
   return (
     <>
+      <div className="sourcebar" role="region" aria-label="Report source">
+        <input ref={picker} type="file" accept="application/json,.json" hidden aria-label="Open an exported report" onChange={async (e) => { const f = e.target.files?.[0]; if (f) await fromFile(f); e.target.value = ""; }} />
+        <button type="button" className="primary" onClick={() => picker.current?.click()}>Load real export…</button>
+        <span className="muted">Opens a file picker on this computer. The file is read in your browser only; nothing is fetched, uploaded or published.</span>
+        {kept && !showingKept ? <button type="button" onClick={useKept}>Switch back to loaded report</button> : null}
+        {kept ? <button type="button" className="linklike" onClick={remove}>Remove loaded report</button> : null}
+        <span className="muted srcstate" role="status">{kept ? `Loaded “${kept}”. Kept in this tab's session storage only, so a reload keeps it; closing the tab clears it.` : data?.synthetic ? "Showing built-in synthetic demo data." : "Not kept across reloads."}</span>
+        {notice ? <span className="srcnotice" role="alert">{notice}</span> : null}
+      </div>
       {error ? <Callout title="Cannot display this file" tone="bad"><p>{error}</p></Callout> : null}
       {data ? <InvestigationView key={loadId} d={data} /> : !error ? <><h2>Agent Readiness investigation</h2><p className="muted">No report loaded.</p></> : null}
       <details className="disc loader-d"><summary>Demo data source</summary>
       <div className="loader">
-        <label>Demo data <select aria-label="Demo data" defaultValue="public-synthetic" onChange={(e) => void pick(e.target.value as Source)}>{(Object.keys(SOURCES) as Source[]).map((k) => <option key={k} value={k}>{SOURCES[k].label}</option>)}</select></label>
-        <label>Open an exported report <input type="file" accept="application/json,.json" onChange={async (e) => { const f = e.target.files?.[0]; if (f) load(await f.text()); }} /></label>
+        <label>Built-in demo data <select aria-label="Demo data" defaultValue="public-synthetic" onChange={(e) => { setNotice(null); void pick(e.target.value as Source); }}>{(Object.keys(SOURCES) as Source[]).map((k) => <option key={k} value={k}>{SOURCES[k].label}</option>)}</select></label>
       </div>
-      <p className="muted">Files are read in your browser only; nothing is uploaded. Create one with <code>readiness investigate export RUN_DIR --out report.json --public</code>. The example shown first is a labelled synthetic fixture, not an experimental result.</p>
+      <p className="muted">Create a report with <code>readiness investigate export RUN_DIR --out report.json --public</code>. Built-in fixtures are labelled synthetic and are never kept in session storage.</p>
       </details>
     </>
   );
