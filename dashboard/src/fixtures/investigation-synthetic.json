@@ -11,6 +11,7 @@
     }
   ],
   "evaluation": {
+    "exploratory": null,
     "reason": null,
     "results": [
       {
@@ -223,8 +224,10 @@
         ]
       },
       "expected_effect": "Fewer page views on amenity-dependent tasks.",
+      "exploratory": false,
       "id": "prp-5c2e33ac94",
       "label": "VERIFIED-FINDING PROPOSAL (unvalidated until measured)",
+      "owner_selected": false,
       "provenance": {
         "mode": "scripted",
         "source": "fixture:synthetic"
@@ -244,8 +247,10 @@
         "manual": "Add a one-line cue to cards and compare request counts."
       },
       "expected_effect": "If cards listed amenities, model requests on list-and-filter tasks would fall.",
+      "exploratory": false,
       "id": "prp-01fcfe4827",
       "label": "EXPERIMENTAL \u2014 based on an unverified hypothesis, not a verified finding",
+      "owner_selected": false,
       "provenance": {
         "mode": "scripted",
         "source": "fixture:synthetic"
@@ -445,6 +450,7 @@
           }
         ]
       },
+      "placebo": {},
       "question": "Which listed cabins have a fireplace? List their names.",
       "source": "rule",
       "start_path": "/",
@@ -488,6 +494,7 @@
           }
         ]
       },
+      "placebo": {},
       "question": "Which cabin has the lowest nightly price?",
       "source": "rule",
       "start_path": "/",
@@ -531,6 +538,7 @@
           }
         ]
       },
+      "placebo": {},
       "question": "Which cabins allow pets? List their names.",
       "source": "rule",
       "start_path": "/",
@@ -574,6 +582,7 @@
           }
         ]
       },
+      "placebo": {},
       "question": "What is the check-in time for Pine Cabin?",
       "source": "rule",
       "start_path": "/",
@@ -617,6 +626,7 @@
           }
         ]
       },
+      "placebo": {},
       "question": "Which cabins have a hot tub? List their names.",
       "source": "rule",
       "start_path": "/",
@@ -660,6 +670,7 @@
           }
         ]
       },
+      "placebo": {},
       "question": "What is the cancellation window for Lake Cabin?",
       "source": "rule",
       "start_path": "/",
@@ -670,6 +681,8 @@
     "baseline": 6,
     "note": "Void trials (provider, budget, infrastructure, fidelity guard) are never website results and are excluded from comparisons.",
     "patched": 6,
+    "placebo": 0,
+    "quarantined": 0,
     "void": 1
   }
 }

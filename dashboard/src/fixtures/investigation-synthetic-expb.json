@@ -1,0 +1,799 @@
+{
+  "effects": [
+    {
+      "id": "eff-a681c3cc6c",
+      "measured": false,
+      "mode": "scripted",
+      "n_pairs": 6,
+      "note": "ILLUSTRATIVE (synthetic data): neither the improvement nor the regression rule is met",
+      "proposal_id": "prp-9683fc3e5b",
+      "verdict": "inconclusive"
+    }
+  ],
+  "evaluation": {
+    "exploratory": {
+      "affected": {
+        "syn-t1": {
+          "drift_flag": false,
+          "exceeds_noise": true,
+          "historical_requests": 13,
+          "page_views_lower": true,
+          "pass_not_lost": true,
+          "patched_requests": 4,
+          "placebo_requests": 12,
+          "primary_meets_floor": true,
+          "secondary_meets_floor": true
+        },
+        "syn-t2": {
+          "drift_flag": false,
+          "exceeds_noise": true,
+          "historical_requests": 13,
+          "page_views_lower": true,
+          "pass_not_lost": true,
+          "patched_requests": 4,
+          "placebo_requests": 13,
+          "primary_meets_floor": true,
+          "secondary_meets_floor": true
+        }
+      },
+      "controls_within_tolerance": true,
+      "label": "EXPLORATORY - owner-selected change; separate from the frozen paired-signflip-v1 rule; never its replacement",
+      "missing_or_void": [],
+      "noise_estimate_requests": 1,
+      "plan": {
+        "affected": [
+          "syn-t1",
+          "syn-t2"
+        ],
+        "detail_controls": [
+          "syn-t4",
+          "syn-t5",
+          "syn-t6"
+        ],
+        "placebo_tasks": [
+          "syn-t1",
+          "syn-t2",
+          "syn-t3"
+        ],
+        "same_shape_controls": [
+          "syn-t3"
+        ]
+      },
+      "reasons": [
+        "every affected task meets the effect floor against the contemporaneous control, exceeds the noise estimate, shows fewer page views and loses no pass; controls are inside tolerance; the historical comparison agrees"
+      ],
+      "rules": {
+        "claims": "allowed: 'consistent with / not consistent with a reduction in browsing effort for this exploratory change on this site and these tasks'; never 'proved' or a general improvement",
+        "conflict": "any affected task where the two comparisons fall on opposite sides of the effect floor, or a drift flag, while the primary comparison would support H1",
+        "controls": "same-shape controls (have a placebo): |patched - placebo| requests <= tolerance; detail-page controls (no placebo): |patched - historical baseline| requests <= tolerance",
+        "detail_control_tolerance_requests": 1,
+        "drift": "affected task: |placebo - historical| / historical > 0.25 is flagged as drift",
+        "effect_floor": 0.25,
+        "id": "exploratory-listing-v1",
+        "label": "EXPLORATORY - owner-selected change; separate from the frozen paired-signflip-v1 rule; never its replacement",
+        "noise_estimate": "max over the placebo tasks of |placebo requests - historical baseline requests|",
+        "primary_comparison": "contemporaneous unmodified repeat (placebo) vs patched trial, per affected task, model requests",
+        "same_shape_control_tolerance_requests": 3,
+        "secondary_comparison": "imported historical baseline vs patched trial (same tasks)",
+        "support": "for EVERY affected task: patched requests <= (1 - effect_floor) x placebo requests; (placebo - patched) strictly exceeds the noise estimate; patched page views < placebo page views; no evidence-backed pass lost relative to the placebo",
+        "verdicts": {
+          "consistent_with_h1": "all support conditions hold, controls inside tolerance, no conflict",
+          "inconclusive_conflicting_comparisons": "the primary comparison would support H1 but the secondary conflicts or drift is flagged: no support is claimed",
+          "not_supported": "an affected task misses a support condition, or a pass is lost (the contemporaneous comparison governs; a supportive historical comparison alone changes nothing)",
+          "uninterpretable": "a control moved beyond tolerance, a trial is missing or void, or the control is not identical to the baseline"
+        }
+      },
+      "rules_id": "exploratory-listing-v1",
+      "rules_match_code": true,
+      "rules_sha256": "f8c25e461c64eb87c0bd77c5e0a38dce0a5721ddfd471a2d2eb35efc4aa6ea99",
+      "tasks": {
+        "baseline": {
+          "syn-t1": {
+            "page_views": 12,
+            "pass": true,
+            "requests": 13
+          },
+          "syn-t2": {
+            "page_views": 12,
+            "pass": false,
+            "requests": 13
+          },
+          "syn-t3": {
+            "page_views": 12,
+            "pass": false,
+            "requests": 13
+          },
+          "syn-t4": {
+            "page_views": 1,
+            "pass": true,
+            "requests": 2
+          },
+          "syn-t5": {
+            "page_views": 2,
+            "pass": true,
+            "requests": 3
+          },
+          "syn-t6": {
+            "page_views": 2,
+            "pass": true,
+            "requests": 3
+          }
+        },
+        "patched": {
+          "syn-t1": {
+            "page_views": 3,
+            "pass": true,
+            "requests": 4
+          },
+          "syn-t2": {
+            "page_views": 3,
+            "pass": true,
+            "requests": 4
+          },
+          "syn-t3": {
+            "page_views": 11,
+            "pass": false,
+            "requests": 12
+          },
+          "syn-t4": {
+            "page_views": 1,
+            "pass": true,
+            "requests": 2
+          },
+          "syn-t5": {
+            "page_views": 2,
+            "pass": true,
+            "requests": 3
+          },
+          "syn-t6": {
+            "page_views": 2,
+            "pass": true,
+            "requests": 3
+          }
+        },
+        "placebo": {
+          "syn-t1": {
+            "page_views": 11,
+            "pass": true,
+            "requests": 12
+          },
+          "syn-t2": {
+            "page_views": 12,
+            "pass": false,
+            "requests": 13
+          },
+          "syn-t3": {
+            "page_views": 11,
+            "pass": false,
+            "requests": 12
+          }
+        }
+      },
+      "verdict": "consistent_with_h1"
+    },
+    "reason": null,
+    "results": [
+      {
+        "by_partition": {
+          "holdout": {
+            "mean_request_change": -5,
+            "pairs": 2,
+            "pass_delta": 0.5
+          },
+          "investigation": {
+            "mean_request_change": -2.25,
+            "pairs": 4,
+            "pass_delta": 0.0
+          }
+        },
+        "effect_mode": "scripted",
+        "excluded": [],
+        "holdout_consistent": false,
+        "measured": false,
+        "p_pass": 1.0,
+        "p_requests": 0.25,
+        "pairs": 6,
+        "pass_delta": 0.1667,
+        "proposal_id": "prp-9683fc3e5b",
+        "reason": "ILLUSTRATIVE (synthetic data): neither the improvement nor the regression rule is met",
+        "request_change": -0.4043,
+        "rule_preregistered_at_freeze": true,
+        "verdict": "inconclusive"
+      }
+    ],
+    "rule": {
+      "alpha": 0.1,
+      "causal_scope": "these frozen tasks, this profile and this patched mirror only",
+      "id": "paired-signflip-v1",
+      "min_pairs": 4,
+      "pass_delta_floor": 0.25,
+      "primary": "evidence_backed_pass_rate",
+      "request_reduction_floor": 0.25,
+      "secondary": "model_requests",
+      "void_policy": "a pair with any void trial in either arm is excluded and listed"
+    },
+    "state": "evaluated"
+  },
+  "exported_at": "2026-01-01T00:00:00+00:00",
+  "findings": [],
+  "hypotheses": [
+    {
+      "claim_kind": "info_absent_on_template",
+      "id": "hyp-467097c9d6",
+      "observation_ids": [
+        "obs-338deef418",
+        "obs-64464ba4b2"
+      ],
+      "prediction": null,
+      "promoted": false,
+      "provenance": {
+        "mode": "scripted",
+        "source": "fixture:synthetic"
+      },
+      "statement": "Detail fields are present on every detail page but absent from every listing card.",
+      "status": "supported",
+      "tier": "verifiable",
+      "verification": {
+        "evidence": [
+          "obs-338deef418",
+          "obs-64464ba4b2"
+        ],
+        "result": "supported",
+        "verifier": "fixture:info_absent_on_template"
+      }
+    },
+    {
+      "claim_kind": null,
+      "id": "hyp-82189addd3",
+      "observation_ids": [
+        "obs-338deef418",
+        "obs-64464ba4b2"
+      ],
+      "prediction": "Requests on the two fee tasks fall by at least 25 % against an unmodified repeat.",
+      "promoted": false,
+      "provenance": {
+        "mode": "scripted",
+        "source": "owner:project-owner"
+      },
+      "statement": "Showing the nightly fee in each listing card reduces page views on fee-dependent tasks.",
+      "status": "unverified",
+      "tier": "novel",
+      "verification": null
+    }
+  ],
+  "investigation": {
+    "cost_usd": 0.0,
+    "finished": true,
+    "incomplete": false,
+    "mode": "scripted",
+    "model": "scripted-fixture",
+    "model_requests": 8,
+    "reason": null,
+    "rejected_hypotheses": 0,
+    "skipped": false,
+    "tool_calls": 7
+  },
+  "modes": [
+    "scripted"
+  ],
+  "notices": [
+    "SCRIPTED: model and agent behaviour in this run was written by a test fixture; it demonstrates the pipeline, not model capability."
+  ],
+  "observations": [
+    {
+      "id": "obs-338deef418",
+      "kind": "listing_cards",
+      "provenance": {
+        "mode": "scripted",
+        "source": "fixture:synthetic"
+      },
+      "refs": [
+        "page:/cabins"
+      ],
+      "summary": "Listing cards show name and photo; none of the five detail fields appears (0 of 8 cards)."
+    },
+    {
+      "id": "obs-64464ba4b2",
+      "kind": "detail_pages",
+      "provenance": {
+        "mode": "scripted",
+        "source": "fixture:synthetic"
+      },
+      "refs": [
+        "page:/cabins/1"
+      ],
+      "summary": "Condition, availability, nightly fee, deposit and next-open date appear on all 8 detail pages."
+    }
+  ],
+  "proposals": [
+    {
+      "approved": true,
+      "auto_applicable": true,
+      "basis": "unverified_hypothesis",
+      "change": {
+        "ops": [
+          "copy_field_to_listing"
+        ]
+      },
+      "expected_effect": "Requests on the two fee tasks fall by at least 25 % against an unmodified repeat.",
+      "exploratory": true,
+      "id": "prp-9683fc3e5b",
+      "label": "EXPERIMENTAL \u2014 OWNER-SELECTED change; not an investigator-verified finding",
+      "owner_selected": true,
+      "provenance": {
+        "mode": "scripted",
+        "source": "owner:project-owner"
+      },
+      "risks": [
+        "Owner-selected exploratory change: the underlying hypothesis is unverified"
+      ],
+      "source_id": "hyp-82189addd3",
+      "status": "applied",
+      "validation": "unvalidated"
+    }
+  ],
+  "run": {
+    "complete": true,
+    "created_at": "2026-01-01T00:00:00+00:00",
+    "id": "synthetic-expb",
+    "investigation_status": "completed",
+    "missing_artifacts": [],
+    "mode": "scripted",
+    "outcome": "experimental_only",
+    "report_source": "report-final",
+    "target": "synthetic-cabin-site (fixture)"
+  },
+  "schema": "investigation-dashboard-v1",
+  "stages": [
+    {
+      "manifest_sha256": null,
+      "name": "inspect",
+      "reason": null,
+      "skipped": false,
+      "status": "done",
+      "summary": {
+        "synthetic": true
+      },
+      "updated_at": null
+    },
+    {
+      "manifest_sha256": null,
+      "name": "taskgen",
+      "reason": null,
+      "skipped": false,
+      "status": "done",
+      "summary": {
+        "synthetic": true
+      },
+      "updated_at": null
+    },
+    {
+      "manifest_sha256": null,
+      "name": "freeze",
+      "reason": null,
+      "skipped": false,
+      "status": "done",
+      "summary": {
+        "synthetic": true
+      },
+      "updated_at": null
+    },
+    {
+      "manifest_sha256": null,
+      "name": "baseline_trials",
+      "reason": null,
+      "skipped": false,
+      "status": "done",
+      "summary": {
+        "synthetic": true
+      },
+      "updated_at": null
+    },
+    {
+      "manifest_sha256": null,
+      "name": "trace",
+      "reason": null,
+      "skipped": false,
+      "status": "done",
+      "summary": {
+        "synthetic": true
+      },
+      "updated_at": null
+    },
+    {
+      "manifest_sha256": null,
+      "name": "investigate",
+      "reason": null,
+      "skipped": false,
+      "status": "done",
+      "summary": {
+        "synthetic": true
+      },
+      "updated_at": null
+    },
+    {
+      "manifest_sha256": null,
+      "name": "recommend",
+      "reason": null,
+      "skipped": false,
+      "status": "done",
+      "summary": {
+        "synthetic": true
+      },
+      "updated_at": null
+    },
+    {
+      "manifest_sha256": null,
+      "name": "report",
+      "reason": null,
+      "skipped": false,
+      "status": "done",
+      "summary": {
+        "synthetic": true
+      },
+      "updated_at": null
+    },
+    {
+      "manifest_sha256": null,
+      "name": "apply_fix",
+      "reason": null,
+      "skipped": false,
+      "status": "done",
+      "summary": {
+        "synthetic": true
+      },
+      "updated_at": null
+    },
+    {
+      "manifest_sha256": null,
+      "name": "post_trials",
+      "reason": null,
+      "skipped": false,
+      "status": "done",
+      "summary": {
+        "synthetic": true
+      },
+      "updated_at": null
+    },
+    {
+      "manifest_sha256": null,
+      "name": "evaluate",
+      "reason": null,
+      "skipped": false,
+      "status": "done",
+      "summary": {
+        "synthetic": true
+      },
+      "updated_at": null
+    },
+    {
+      "manifest_sha256": null,
+      "name": "final_report",
+      "reason": null,
+      "skipped": false,
+      "status": "done",
+      "summary": {
+        "synthetic": true
+      },
+      "updated_at": null
+    }
+  ],
+  "statement": "SYNTHETIC FIXTURE: no verified finding; the change was chosen by the owner and is exploratory; trials show an association only.",
+  "synthetic": true,
+  "tasks": [
+    {
+      "baseline": [
+        {
+          "attribution": "success",
+          "evidence_backed": true,
+          "mode": "scripted",
+          "model_requests": 13,
+          "page_views": 12,
+          "passed": true,
+          "repeat": 1,
+          "run_status": "completed",
+          "trial_id": "syn-t1-r1",
+          "void": false,
+          "why": "synthetic fixture attribution"
+        }
+      ],
+      "kind": "extremum",
+      "limits": {
+        "max_model_requests": 11,
+        "max_steps": 11,
+        "timeout_seconds": 240
+      },
+      "partition": "investigation",
+      "patched": {
+        "prp-9683fc3e5b": [
+          {
+            "evidence_backed": true,
+            "mode": "scripted",
+            "model_requests": 4,
+            "page_views": 3,
+            "passed": true,
+            "repeat": 1,
+            "run_status": "completed",
+            "trial_id": "patched-syn-t1-r1",
+            "void": false
+          }
+        ]
+      },
+      "placebo": {
+        "prp-9683fc3e5b": [
+          {
+            "evidence_backed": true,
+            "mode": "scripted",
+            "model_requests": 12,
+            "page_views": 11,
+            "passed": true,
+            "repeat": 1,
+            "run_status": "completed",
+            "trial_id": "placebo-syn-t1-r1",
+            "void": false
+          }
+        ]
+      },
+      "question": "Which cabin has the lowest nightly fee?",
+      "source": "model",
+      "start_path": "/",
+      "task_id": "syn-t1"
+    },
+    {
+      "baseline": [
+        {
+          "attribution": "agent",
+          "evidence_backed": false,
+          "mode": "scripted",
+          "model_requests": 13,
+          "page_views": 12,
+          "passed": false,
+          "repeat": 1,
+          "run_status": "completed",
+          "trial_id": "syn-t2-r1",
+          "void": false,
+          "why": "synthetic fixture attribution"
+        }
+      ],
+      "kind": "item_set",
+      "limits": {
+        "max_model_requests": 11,
+        "max_steps": 11,
+        "timeout_seconds": 240
+      },
+      "partition": "holdout",
+      "patched": {
+        "prp-9683fc3e5b": [
+          {
+            "evidence_backed": true,
+            "mode": "scripted",
+            "model_requests": 4,
+            "page_views": 3,
+            "passed": true,
+            "repeat": 1,
+            "run_status": "completed",
+            "trial_id": "patched-syn-t2-r1",
+            "void": false
+          }
+        ]
+      },
+      "placebo": {
+        "prp-9683fc3e5b": [
+          {
+            "evidence_backed": false,
+            "mode": "scripted",
+            "model_requests": 13,
+            "page_views": 12,
+            "passed": false,
+            "repeat": 1,
+            "run_status": "completed",
+            "trial_id": "placebo-syn-t2-r1",
+            "void": false
+          }
+        ]
+      },
+      "question": "Which cabins have a nightly fee under $90? List their names.",
+      "source": "model",
+      "start_path": "/",
+      "task_id": "syn-t2"
+    },
+    {
+      "baseline": [
+        {
+          "attribution": "agent",
+          "evidence_backed": false,
+          "mode": "scripted",
+          "model_requests": 13,
+          "page_views": 12,
+          "passed": false,
+          "repeat": 1,
+          "run_status": "completed",
+          "trial_id": "syn-t3-r1",
+          "void": false,
+          "why": "synthetic fixture attribution"
+        }
+      ],
+      "kind": "extremum",
+      "limits": {
+        "max_model_requests": 11,
+        "max_steps": 11,
+        "timeout_seconds": 240
+      },
+      "partition": "holdout",
+      "patched": {
+        "prp-9683fc3e5b": [
+          {
+            "evidence_backed": false,
+            "mode": "scripted",
+            "model_requests": 12,
+            "page_views": 11,
+            "passed": false,
+            "repeat": 1,
+            "run_status": "completed",
+            "trial_id": "patched-syn-t3-r1",
+            "void": false
+          }
+        ]
+      },
+      "placebo": {
+        "prp-9683fc3e5b": [
+          {
+            "evidence_backed": false,
+            "mode": "scripted",
+            "model_requests": 12,
+            "page_views": 11,
+            "passed": false,
+            "repeat": 1,
+            "run_status": "completed",
+            "trial_id": "placebo-syn-t3-r1",
+            "void": false
+          }
+        ]
+      },
+      "question": "Which cabin has the largest deposit?",
+      "source": "model",
+      "start_path": "/",
+      "task_id": "syn-t3"
+    },
+    {
+      "baseline": [
+        {
+          "attribution": "success",
+          "evidence_backed": true,
+          "mode": "scripted",
+          "model_requests": 2,
+          "page_views": 1,
+          "passed": true,
+          "repeat": 1,
+          "run_status": "completed",
+          "trial_id": "syn-t4-r1",
+          "void": false,
+          "why": "synthetic fixture attribution"
+        }
+      ],
+      "kind": "page_fact",
+      "limits": {
+        "max_model_requests": 11,
+        "max_steps": 11,
+        "timeout_seconds": 240
+      },
+      "partition": "investigation",
+      "patched": {
+        "prp-9683fc3e5b": [
+          {
+            "evidence_backed": true,
+            "mode": "scripted",
+            "model_requests": 2,
+            "page_views": 1,
+            "passed": true,
+            "repeat": 1,
+            "run_status": "completed",
+            "trial_id": "patched-syn-t4-r1",
+            "void": false
+          }
+        ]
+      },
+      "placebo": {},
+      "question": "What is the check-in time for Pine Cabin?",
+      "source": "model",
+      "start_path": "/",
+      "task_id": "syn-t4"
+    },
+    {
+      "baseline": [
+        {
+          "attribution": "success",
+          "evidence_backed": true,
+          "mode": "scripted",
+          "model_requests": 3,
+          "page_views": 2,
+          "passed": true,
+          "repeat": 1,
+          "run_status": "completed",
+          "trial_id": "syn-t5-r1",
+          "void": false,
+          "why": "synthetic fixture attribution"
+        }
+      ],
+      "kind": "page_fact",
+      "limits": {
+        "max_model_requests": 11,
+        "max_steps": 11,
+        "timeout_seconds": 240
+      },
+      "partition": "investigation",
+      "patched": {
+        "prp-9683fc3e5b": [
+          {
+            "evidence_backed": true,
+            "mode": "scripted",
+            "model_requests": 3,
+            "page_views": 2,
+            "passed": true,
+            "repeat": 1,
+            "run_status": "completed",
+            "trial_id": "patched-syn-t5-r1",
+            "void": false
+          }
+        ]
+      },
+      "placebo": {},
+      "question": "What is the cancellation window for Lake Cabin?",
+      "source": "model",
+      "start_path": "/",
+      "task_id": "syn-t5"
+    },
+    {
+      "baseline": [
+        {
+          "attribution": "success",
+          "evidence_backed": true,
+          "mode": "scripted",
+          "model_requests": 3,
+          "page_views": 2,
+          "passed": true,
+          "repeat": 1,
+          "run_status": "completed",
+          "trial_id": "syn-t6-r1",
+          "void": false,
+          "why": "synthetic fixture attribution"
+        }
+      ],
+      "kind": "page_fact",
+      "limits": {
+        "max_model_requests": 11,
+        "max_steps": 11,
+        "timeout_seconds": 240
+      },
+      "partition": "investigation",
+      "patched": {
+        "prp-9683fc3e5b": [
+          {
+            "evidence_backed": true,
+            "mode": "scripted",
+            "model_requests": 3,
+            "page_views": 2,
+            "passed": true,
+            "repeat": 1,
+            "run_status": "completed",
+            "trial_id": "patched-syn-t6-r1",
+            "void": false
+          }
+        ]
+      },
+      "placebo": {},
+      "question": "How many guests does Birch Cabin sleep?",
+      "source": "model",
+      "start_path": "/",
+      "task_id": "syn-t6"
+    }
+  ],
+  "trials": {
+    "baseline": 6,
+    "note": "Void trials (provider, budget, infrastructure, fidelity guard) are never website results and are excluded from comparisons.",
+    "patched": 6,
+    "placebo": 3,
+    "quarantined": 0,
+    "void": 0
+  }
+}

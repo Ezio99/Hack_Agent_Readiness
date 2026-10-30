@@ -145,3 +145,94 @@ def test_fixture_numbers_are_rederivable_from_its_own_trial_rows():
         assert r[k] == c[k], k
     assert r["by_partition"] == c["by_partition"] and [e["task_id"] for e in r["excluded"]] == [e["task_id"] for e in c["excluded"]]
     assert r["measured"] is False and r["reason"].startswith("ILLUSTRATIVE") and d["synthetic"] is True
+
+
+# ---- EXP-B: unmodified-repeat ("placebo") trials and the separate exploratory evaluation ----
+@pytest.fixture
+def expb(tmp_path):
+    from tests.synthetic_investigation import build_expb
+    return build_expb(tmp_path)
+
+
+def test_expb_export_carries_the_three_arms_and_counts(expb):
+    d = export_run(expb)
+    by = {t["task_id"]: t for t in d["tasks"]}
+    (pid,) = by["syn-t1"]["patched"]
+    assert [r["model_requests"] for r in (by["syn-t1"]["baseline"] + by["syn-t1"]["placebo"][pid] + by["syn-t1"]["patched"][pid])] == [13, 12, 4]
+    assert set(t for t, v in by.items() if v["placebo"]) == {"syn-t1", "syn-t2", "syn-t3"}        # detail-page controls have no unmodified repeat
+    assert by["syn-t2"]["placebo"][pid][0]["passed"] is False and by["syn-t2"]["patched"][pid][0]["passed"] is True
+    assert d["trials"]["baseline"] == 6 and d["trials"]["patched"] == 6 and d["trials"]["placebo"] == 3 and d["trials"]["void"] == 0 and d["trials"]["quarantined"] == 0
+    assert d["run"]["outcome"] == "experimental_only" and d["findings"] == []
+
+
+def test_frozen_and_exploratory_verdicts_are_separate_and_both_exported(expb):
+    ev = export_run(expb)["evaluation"]
+    (frozen,) = ev["results"]
+    assert ev["rule"]["id"] == "paired-signflip-v1" and frozen["verdict"] == "inconclusive" and frozen["measured"] is False
+    x = ev["exploratory"]
+    assert x["rules_id"] == "exploratory-listing-v1" and x["verdict"] == "consistent_with_h1" and "never its replacement" in x["label"]
+    assert x["rules_sha256"] == "f8c25e461c64eb87c0bd77c5e0a38dce0a5721ddfd471a2d2eb35efc4aa6ea99" and x["rules_match_code"] is True and x["rules"]["effect_floor"] == 0.25
+    assert x["plan"]["affected"] == ["syn-t1", "syn-t2"] and x["noise_estimate_requests"] == 1 and x["controls_within_tolerance"] is True
+    assert x["tasks"]["placebo"]["syn-t1"]["requests"] == 12 and x["tasks"]["patched"]["syn-t1"]["requests"] == 4 and x["tasks"]["baseline"]["syn-t1"]["requests"] == 13
+    assert x["affected"]["syn-t1"]["primary_meets_floor"] is True
+    assert "exploratory" not in frozen                                                          # the exploratory block never leaks into the frozen result
+
+
+def test_owner_selected_change_is_labelled_and_never_a_verified_finding(expb):
+    d = export_run(expb)
+    (p,) = d["proposals"]
+    assert p["basis"] == "unverified_hypothesis" and p["owner_selected"] is True and p["exploratory"] is True and p["label"].startswith("EXPERIMENTAL — OWNER-SELECTED") and p["approved"] is True
+    hyp = {h["id"]: h for h in d["hypotheses"]}
+    assert hyp[p["source_id"]]["tier"] == "novel" and hyp[p["source_id"]]["status"] == "unverified" and hyp[p["source_id"]]["provenance"]["source"].startswith("owner:")
+    assert any(h["status"] == "supported" and not h["promoted"] for h in hyp.values())            # the verified-but-unpromoted pattern stays a hypothesis
+    assert d["findings"] == []
+
+
+def test_exploratory_block_is_absent_for_a_run_without_one_and_exports_are_clean(full, expb):
+    assert export_run(full)["evaluation"]["exploratory"] is None and export_run(full)["trials"]["placebo"] == 0
+    d = export_run(expb)
+    check_clean(d)
+    assert not (set(_walk(d)) & {"truth", "criteria", "answer", "transcript", "journey"})
+
+
+def test_exploratory_rules_are_dropped_when_the_stored_hash_does_not_match_the_code(expb):
+    ev = json.loads((expb / "artifacts" / "evaluation.json").read_text())
+    ev["exploratory"]["rules_sha256"] = "0" * 64
+    (expb / "artifacts" / "evaluation.json").write_text(json.dumps(ev))
+    x = export_run(expb)["evaluation"]["exploratory"]
+    assert x["rules"] is None and x["rules_match_code"] is False and x["verdict"] == "consistent_with_h1"
+
+
+def test_quarantined_and_void_trials_are_counted_not_hidden(expb):
+    q = expb / "artifacts" / "trials-quarantine"
+    q.mkdir()
+    (q / "placebo-x.json").write_text("{}")
+    t = json.loads((expb / "artifacts" / "trials" / next(p.name for p in (expb / "artifacts" / "trials").glob("placebo-*"))).read_text())
+    t["outcome"]["run_status"] = "infrastructure_error"
+    (expb / "artifacts" / "trials" / next(p.name for p in (expb / "artifacts" / "trials").glob("placebo-*"))).write_text(json.dumps(t))
+    d = export_run(expb)
+    assert d["trials"]["quarantined"] == 1 and d["trials"]["void"] == 1
+
+
+def test_expb_fixture_matches_the_exporter_and_is_labelled_synthetic(tmp_path):
+    from tests.synthetic_investigation import FIXTURE_EXPB, build_expb
+    committed, fresh = json.loads(FIXTURE_EXPB.read_text()), export_run(build_expb(tmp_path))
+    for d in (committed, fresh):
+        d.pop("synthetic", None), d.pop("exported_at"), d["run"].pop("created_at")
+        for s in d["stages"]:
+            s.pop("updated_at")
+    assert committed == fresh, "regenerate with: python -m tests.synthetic_investigation"
+    assert json.loads(FIXTURE_EXPB.read_text())["synthetic"] is True and "fixture" in committed["run"]["target"]
+
+
+def test_expb_fixture_verdicts_rederive_from_its_own_rows():
+    from agent_readiness.investigate.evaluate import exploratory
+    from tests.synthetic_investigation import FIXTURE_EXPB
+    d = json.loads(FIXTURE_EXPB.read_text())
+    (pid,) = d["tasks"][0]["patched"]
+    row = lambda r: [{"void": r["void"], "passed": bool(r["passed"]), "evidence_backed": bool(r["evidence_backed"]), "model_requests": r["model_requests"], "page_views": r["page_views"]}]
+    base = {t["task_id"]: row(t["baseline"][0]) for t in d["tasks"]}
+    plc = {t["task_id"]: row(t["placebo"][pid][0]) for t in d["tasks"] if t["placebo"]}
+    pat = {t["task_id"]: row(t["patched"][pid][0]) for t in d["tasks"]}
+    x = d["evaluation"]["exploratory"]
+    assert exploratory.analyze(x["plan"], base, plc, pat)["verdict"] == x["verdict"]
