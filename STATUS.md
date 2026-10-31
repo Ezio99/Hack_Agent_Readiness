@@ -2,6 +2,9 @@
 
 **Authoritative current state (2026-10-29, Task 015 stack and 015f merged; Task 016 next).** Verify against the repository, not this text. Full historical checkpoints are preserved verbatim in [docs/archive/STATUS-through-2026-10-29.md](docs/archive/STATUS-through-2026-10-29.md); architecture, execution paths, frozen artifacts and technical debt are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## Live product M0 (2026-10-31, branch `live-m0-vertical-slice`, draft PR)
+UI-triggered **mock** evaluation on registered demo sites (Ironbark first) through the existing resumable investigation pipeline, with polled stages/trace/cost and replay of finished runs: see [docs/LIVE_M0.md](docs/LIVE_M0.md). Mock only: no model call, no spend; M1 (live model) not started and needs approval. EXP-2: `exp2-pilot-1` adopted the revised plan and is **paused at the `baseline_main` approval gate** (manifest `17c446aa…`, not approved).
+
 ## EXP-2 (2026-10-31, latest)
 Ironbark Experiment 2: PR #57 merged (`10638f6`); **pilot 1 ran** (8 trials, manifest `29df5a28…`, US$1.1415, run `investigations/exp2-pilot-1`, git-ignored, never modified since). Review found two evaluation defects (a sufficient observation judged insufficient; `18V` ≠ `18 V`) and tasks answerable from the home page. Corrections — evidence rule v2, name rule v2, verification against the model-visible views, start-page rule, revised plan with the executed pilot pinned, versioned re-analysis — are on branch `exp2-eval-corrections` (not merged): see [protocol §3a](collaboration/proposals/EXP2-protocol.md) and `collaboration/experiments/EXP2/pilot-1-corrected-analysis-v2.json`. **Not authorized:** the main baseline (proposed cap US$7.90), the investigator, variant tests; the run has not been amended (`readiness exp2 amend` is pending owner review). Programme ledger and EXP-B untouched.
 

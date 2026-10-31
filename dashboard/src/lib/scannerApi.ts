@@ -31,8 +31,9 @@ export class ApiError extends Error { constructor(public status: number, message
 export const configured = () => API_BASE !== "";
 let memory: string | null = null;      // fallback where sessionStorage is unavailable (tests, SSR)
 const store = () => (typeof sessionStorage === "undefined" ? null : sessionStorage);
-export const getToken = () => store()?.getItem(KEY) ?? memory;
-export const setToken = (t: string | null) => { memory = t; if (t) store()?.setItem(KEY, t); else store()?.removeItem(KEY); };
+const safe = <T,>(f: () => T, fallback: T): T => { try { return f(); } catch { return fallback; } };      // storage may be blocked (privacy mode): fall back to memory, never throw
+export const getToken = () => safe(() => store()?.getItem(KEY) ?? null, null) ?? memory;
+export const setToken = (t: string | null) => { memory = t; safe(() => { if (t) store()?.setItem(KEY, t); else store()?.removeItem(KEY); }, undefined); };
 
 export async function call<T>(path: string, init: RequestInit & { json?: unknown } = {}, fetcher: typeof fetch = fetch): Promise<T> {
   const headers: Record<string, string> = { ...(init.headers as Record<string, string>) };

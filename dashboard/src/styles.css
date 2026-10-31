@@ -238,3 +238,10 @@ h2.step { font-size: 1.5rem; }
 .prov-live { background: #e6f4ea; color: #14532d; border-color: #16a34a; } .prov-synthetic { background: #fff4d6; color: #7a4b00; border-color: #c28a00; } .prov-other { background: #eaf1fb; color: #1d3f78; border-color: #6b8fd6; }
 .hero2 h1 { font-size: clamp(2rem, 3.2vw, 2.8rem); } .sourcebar > .muted:not(.srcstate) { flex: 1 1 22rem; }
 @media (max-width: 560px) { .hero2 h1 { font-size: 1.85rem; } }
+
+/* live evaluation panel (M0) */
+.livepanel{border:1px solid var(--line,#d8d4c8);border-radius:8px;padding:1rem 1.25rem;margin:0 0 1.5rem}
+.liveform{display:grid;gap:.6rem;max-width:46rem}.liveform textarea{width:100%}
+.livejob .stages{list-style:none;padding:0;margin:.5rem 0}.livejob .stages li{padding:.15rem 0}
+.livejob .events{max-height:16rem;overflow:auto;font:12px/1.5 ui-monospace,monospace;padding-left:1.1rem}
+.livejob .ev-stage{font-weight:600}.history{list-style:none;padding:0}

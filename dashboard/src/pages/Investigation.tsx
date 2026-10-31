@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { SAVE_PROBLEM, clearStored, loadStored, saveReport } from "../lib/reportStore";
+import { LivePanel } from "./LivePanel";
 import { Callout, Kpi, Pill } from "../components/ui";
 import { SideBySide, StorefrontBrowser } from "../components/Storefront";
 import { EXPLORATORY_VERDICT, MODE_LABEL, compare, parseInvestigation, roles, tally, type EvalResult, type Exploratory, type Hypothesis, type InvestigationExport, type Mode, type TrialRow } from "../lib/investigation";
@@ -525,6 +526,7 @@ const SOURCES: Record<Source, { label: string; load: () => Promise<unknown> }> =
 };
 
 export function InvestigationPage() {
+  const openLive = (report: unknown, label: string): boolean => { const ok = show(JSON.stringify(report)); if (ok) { setKept(null); setNotice(`Showing live evaluation ${label}. It is held in memory only; the server keeps the run, so it can be reopened.`); document.getElementById("main")?.scrollIntoView(); } return ok; };
   const [data, setData] = useState<InvestigationExport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadId, setLoadId] = useState(0);                                      // a new report must not inherit the previous report's page selection or scroll state
@@ -554,6 +556,7 @@ export function InvestigationPage() {
   const showingKept = kept !== null && data !== null && !data.synthetic;
   return (
     <>
+      <LivePanel onOpen={openLive} />
       <div className="sourcebar" role="region" aria-label="Report source">
         <input ref={picker} type="file" accept="application/json,.json" hidden aria-label="Open an exported report" onChange={async (e) => { const f = e.target.files?.[0]; if (f) await fromFile(f); e.target.value = ""; }} />
         <button type="button" className="primary" onClick={() => picker.current?.click()}>Load real export…</button>
