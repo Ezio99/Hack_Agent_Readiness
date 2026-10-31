@@ -161,7 +161,7 @@ def taskgen_stage(ctx: Context) -> dict:
     topped_up = 0
     if len(accepted) < MIN_TASKS and opts.get("rule_topup", True) and not bound:
         before = len(accepted)
-        _run_gate(candidates(profile), profile, accepted, rejected)
+        _run_gate(candidates(profile, per_kind=opts.get("rule_per_kind", 3)), profile, accepted, rejected)
         topped_up = len(accepted) - before
     limit = max(target, MIN_TASKS)
     goal_block, assessed = None, []
@@ -170,11 +170,13 @@ def taskgen_stage(ctx: Context) -> dict:
         lex = opts.get("goal_lexicon")
         ga = G.analyse(focus, profile, lex)
         assessed = [G.assess(ga, a, lex) for a in accepted]
-        selected = [accepted[i] for i in G.rank(accepted, assessed)][:limit]
+        selected = [accepted[i] for i in G.select(assessed, limit)]
+        cov = G.coverage(ga, [assessed[accepted.index(a)] for a in selected])
         goal_block = {"verifier": "independent goal-relevance check (taskgen/goal.py): grounds the goal in the captured site and judges each gate-accepted task by what its criterion touches; it does not read the model's own links, and it does not change the answerability gate",
-                      "analysis": {k: ga[k] for k in ("asked_aspects", "attribute_labels", "ordering_terms", "entity_terms", "entity_listings", "entity_items", "entity_grounded", "support", "limitations")},
+                      "analysis": {k: ga[k] for k in ("asked_aspects", "attribute_labels", "ordering_terms", "entity_terms", "entity_listings", "entity_items", "entity_grounded", "support", "limitations", "limitation_details")},
                       "model_goal_analysis": [c.get("goal_analysis") for c in calls if c.get("goal_analysis")], "assessments": assessed,
-                      "relevant_tasks": sum(a["goal_relevant"] for a in assessed), "gate_accepted_tasks": len(accepted), "selected": len(selected), "needed": MIN_TASKS}
+                      "relevant_tasks": sum(a["goal_relevant"] for a in assessed), "gate_accepted_tasks": len(accepted), "selected": len(selected), "needed": MIN_TASKS, "coverage": cov,
+                      "criterion": "bounded goal coverage: every aspect/attribute the goal asks for that the site can express is covered by at least one selected relevant verified task (up to the selection limit); unsupported aspects are reported with their cause and do not block"}
     else:
         selected = accepted[:limit]
     sel_keys = {_key(a.draft) for a in selected}
@@ -193,10 +195,11 @@ def taskgen_stage(ctx: Context) -> dict:
     run.write_artifact("taskgen-report", {"accepted": [{"question": a.draft.question, "source": a.draft.source, "kind": a.compiled.kind, "fingerprint": a.fingerprint} for a in accepted],
                                          "rejected": [{"question": r.draft.question, "source": r.draft.source, "reason": r.reason} for r in rejected], "model_calls": calls, "rule_topup": topped_up,
                                          "not_selected": [r for r in accounting_rows if r["status"] == "accepted_not_selected"], "accounting": accounting, **({"goal_binding": goal_block} if goal_block else {})})
-    if len(accepted) < MIN_TASKS:
-        if bound:
-            raise ValueError(f"goal coverage insufficient: {len(accepted)} goal-relevant verified tasks (need {MIN_TASKS}) out of {len(goal_block['assessments'])} gate-accepted; "
-                             f"limitations: {'; '.join(goal_block['analysis']['limitations']) or 'none identified'}. No unrelated tasks were substituted; see goal_binding in the taskgen-report artifact")
+    if bound and not goal_block["coverage"]["passes"]:
+        cv = goal_block["coverage"]
+        raise ValueError(f"goal coverage insufficient: {len(accepted)} goal-relevant verified tasks selected out of {len(goal_block['assessments'])} gate-accepted; uncovered but supportable: {cv['missing_supported'] or 'none (no relevant task)'}; "
+                         f"limitations: {'; '.join(goal_block['analysis']['limitations']) or 'none identified'}. No unrelated tasks were substituted; see goal_binding in the taskgen-report artifact")
+    if not bound and len(accepted) < MIN_TASKS:
         raise ValueError(f"only {len(accepted)} acceptable tasks (need {MIN_TASKS}); see the rejection reasons in the taskgen-report artifact")
     run.write_private("accepted-drafts", [{"question": a.draft.question, "start_path": a.draft.start_path, "criterion": a.criterion, "source": a.draft.source, "rationale": a.draft.rationale} for a in accepted])
     return {"accepted": len(accepted), "rejected": len(rejected), "model_calls": len(calls), "by_source": {s: sum(a.draft.source == s for a in accepted) for s in ("owner", "model", "rule")}}

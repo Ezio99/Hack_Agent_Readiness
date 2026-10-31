@@ -382,17 +382,16 @@ def test_after_a_failure_or_a_restart_a_smoke_job_cannot_reach_any_other_paid_st
 
 
 @pytest.mark.browser
-def test_the_exact_goal_through_the_real_path_reports_the_coverage_limit_instead_of_substituting_tasks(tmp_path, monkeypatch, provider):
+def test_the_exact_goal_through_the_real_path_is_covered_and_reports_only_the_verifier_limit(tmp_path, monkeypatch, provider):
     exact = "Can a shopper compare the hire price and availability of the two cheapest cutting tools?"
     monkeypatch.setenv("META_MODEL_API_KEY", KEY)
     prov, url = provider()
     m = JobManager(tmp_path / "live", live=smoke_settings(base_url=url))
     j = m.create("o", "ironbark", exact, "live", 0.15)
     v = wait_for(lambda: (lambda x: x if x["state"] not in ("queued", "running") else None)(m.get(j["id"], "o")), 240)
-    assert v["state"] == "stopped" and v["stop"]["kind"] == "coverage" and "goal coverage insufficient" in v["error"], (v["state"], v["error"])
+    assert v["state"] == "completed", (v["state"], v["error"])
     assert prov.calls == {"taskgen": 3, "agent": 0, "investigator": 0} and v["spend"]["committed_usd"] <= 0.15
     rep = v["smoke"]
-    assert rep["yield"]["meets_minimum"] is False and rep["yield"]["rule_topup_tasks"] == 0 and rep["proposal_accounting"]["unaccounted"] == 0
     rel = rep["relevance_to_goal"]
-    assert any(l.startswith("price:") for l in rel["limitations"]) and rel["relevant_tasks"] == 3 and all("availability" in p["aspects_matched"] for p in rel["per_task"] if p["goal_relevant"])
-    assert {s["name"]: s["status"] for s in v["stages"]}["freeze"] == "pending", "no task set was frozen from an insufficient selection"
+    assert rep["yield"]["meets_minimum"] is True and rep["yield"]["rule_topup_tasks"] == 0 and rep["proposal_accounting"]["unaccounted"] == 0
+    assert rel["coverage"]["passes"] and set(rel["coverage"]["covered"]) >= {"price", "availability"} and [d["kind"] for d in rel["limitation_details"]] == ["verifier"]

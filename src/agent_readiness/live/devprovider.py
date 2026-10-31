@@ -42,20 +42,32 @@ def _wrap(content: str, usage: dict, model: str = "dev-provider") -> dict:
 
 
 def follow_goal(goal: str, profile: dict, n: int = 12) -> tuple[dict, list[dict]]:
+    """A deterministic stand-in for a goal-following MODEL (dev provider and tests only): tasks about the goal's entities and aspects, written from the captured site. Answers are never supplied; the gate
+    derives them by code."""
     ga = G.analyse(goal, profile, RENTAL)
     pages = profile["pages"]
+    name = lambda i: (pages[i]["headings"][0]["text"] if pages[i]["headings"] else pages[i]["title"].split("|")[0]).strip()
     tasks = []
+
+    def add(q, crit, link):
+        tasks.append({"question": q, "start_path": "/", "criterion": crit, "rationale": "stand-in for a goal-following model", "goal_link": link})
     for item in ga["entity_items"]:
-        name = (pages[item]["headings"][0]["text"] if pages[item]["headings"] else pages[item]["title"].split("|")[0]).strip()
+        have = {f["label"] for f in pages[item]["facts"]}
+        if "price" in ga["asked_aspects"] and "per day" in have:
+            add(f"What is the per day hire rate listed on the page of the {name(item)}?", {"kind": "page_fact", "page": item, "label": "per day"}, f"{name(item)}: price")
+        if "availability" in ga["asked_aspects"]:
+            cal = item + "/availability"
+            cells = [f["label"] for f in pages.get(cal, {"facts": []})["facts"] if f["how"] == "calendar-cell"]
+            if cal in pages:
+                add(f"Find the live availability calendar for the {name(item)} hire.", {"kind": "reach_page", "target": cal}, f"{name(item)}: availability")
+            if "14 nov" in cells:
+                add(f"What does the booking calendar of the {name(item)} show for 14 Nov?", {"kind": "page_fact", "page": cal, "label": "14 nov"}, f"{name(item)}: availability")
         for label in ga["attribute_labels"]:
-            if any(f["label"] == label for f in pages[item]["facts"]):
-                tasks.append({"question": f"What is the {label} listed on the page of the {name}?", "start_path": "/", "criterion": {"kind": "page_fact", "page": item, "label": label},
-                              "rationale": "stand-in for a goal-following model", "goal_link": f"{name}: {label}"})
-        if "availability" in ga["asked_aspects"] and item + "/availability" in pages:
-            tasks.append({"question": f"Find the live availability calendar for the {name} hire.", "start_path": "/", "criterion": {"kind": "reach_page", "target": item + "/availability"},
-                          "rationale": "stand-in for a goal-following model", "goal_link": f"{name}: availability"})
-    analysis = {"entities": [(pages[i]["headings"][0]["text"] if pages[i]["headings"] else i) for i in ga["entity_items"]], "attributes": ga["attribute_labels"] + ga["asked_aspects"],
-                "comparisons": ga["ordering_terms"], "information_gaps": ga["limitations"]}
+            if label in have:
+                add(f"What is the {label} listed on the page of the {name(item)}?", {"kind": "page_fact", "page": item, "label": label}, f"{name(item)}: {label}")
+    if "price" in ga["asked_aspects"] and ga["entity_listings"] and all("per day" in {f["label"] for f in pages[i]["facts"]} for i in ga["entity_items"]):
+        add("Which item in the cutting category has the lowest per day hire rate on its own page?", {"kind": "extremum", "listing": ga["entity_listings"][0], "label": "per day", "direction": "min"}, "cheapest cutting tool: price")
+    analysis = {"entities": [name(i) for i in ga["entity_items"]], "attributes": ga["attribute_labels"] + ga["asked_aspects"], "comparisons": ga["ordering_terms"], "information_gaps": [d["detail"] for d in ga["limitation_details"]]}
     return analysis, tasks[:n]
 
 

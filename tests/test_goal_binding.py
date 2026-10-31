@@ -73,7 +73,7 @@ def test_the_real_step_a_proposals_pass_the_gate_but_none_serves_the_goal():
 
 def test_replaying_the_real_proposals_reports_the_limitation_accounts_for_all_twelve_and_substitutes_nothing(tmp_path):
     run, err, llm = stage(tmp_path, REAL)
-    assert err and err.startswith("goal coverage insufficient: 0 goal-relevant verified tasks (need 4) out of 7 gate-accepted") and "No unrelated tasks were substituted" in err
+    assert err and err.startswith("goal coverage insufficient: 0 goal-relevant verified tasks selected out of 7 gate-accepted") and "uncovered but supportable: ['availability', 'price']" in err and "No unrelated tasks were substituted" in err
     rep = run.artifact("taskgen-report")
     acc = rep["accounting"]
     assert acc["proposed"] == 12 and acc["rejected"] == 5 and acc["accepted_not_selected"] == 7 and acc["selected"] == 0 and acc["unaccounted"] == 0
@@ -81,26 +81,78 @@ def test_replaying_the_real_proposals_reports_the_limitation_accounts_for_all_tw
     assert not run.has_artifact("accepted-drafts") if hasattr(run, "has_artifact") else True
     gb = rep["goal_binding"]
     assert gb["relevant_tasks"] == 0 and gb["gate_accepted_tasks"] == 7
-    assert any(l.startswith("price:") and "labelled price or rate fact" in l for l in gb["analysis"]["limitations"]) and any(l.startswith("ordering:") for l in gb["analysis"]["limitations"])
-    assert gb["analysis"]["support"]["availability"]["supported"] is True and len(gb["analysis"]["entity_items"]) == 3
+    assert [d["kind"] for d in gb["analysis"]["limitation_details"]] == ["verifier"] and gb["analysis"]["limitations"][0].startswith("ordering [verifier limitation]")
+    assert gb["analysis"]["support"]["availability"]["supported"] is True and gb["analysis"]["support"]["price"]["supported"] is True and len(gb["analysis"]["entity_items"]) == 3
+    assert gb["coverage"]["passes"] is False and gb["coverage"]["missing_supported"] == ["availability", "price"]
 
 
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------------ what the site can and cannot support for the exact goal
-def test_for_the_exact_goal_the_site_supports_availability_of_three_cutting_tools_and_not_price():
+def test_for_the_exact_goal_the_rendered_site_supports_price_and_availability_of_three_cutting_tools():
     ga = G.analyse(GOAL, profile(), RENTAL)
     assert ga["asked_aspects"] == ["availability", "price"] and ga["entity_listings"] == ["/hire/category/cutting"] and ga["ordering_terms"] == ["cheapest", "two"]
     assert ga["entity_items"] == ["/hire/wet-tile-saw-250mm", "/hire/petrol-cut-off-saw-350mm", "/hire/petrol-chainsaw-45cm"]
-    assert ga["support"]["price"] == {"supported": False, "labelled_facts_found": [], "pages_found": []} and len(ga["support"]["availability"]["pages_found"]) == 3
+    assert ga["support"]["price"]["supported"] and {"per day", "weekend", "per week"} <= set(ga["support"]["price"]["labelled_facts_found"])
+    assert ga["support"]["availability"]["supported"] and len(ga["support"]["availability"]["pages_found"]) == 3
+    assert [(d["aspect"], d["kind"]) for d in ga["limitation_details"]] == [("ordering", "verifier")], "the only remaining limit is the verifier's: no exact top-N ranking criterion"
 
 
-def test_goal_following_proposals_are_selected_relevant_but_only_three_exist_so_the_stage_reports_the_limit(tmp_path):
-    ga = G.analyse(GOAL, profile(), RENTAL)
-    tasks = [{"question": f"Find the live availability calendar for the {n} hire.", "criterion": {"kind": "reach_page", "target": i + "/availability"}, "goal_link": f"{n}: availability"} for i, n in
-             zip(ga["entity_items"], ("Wet tile saw 250 mm", "Petrol cut-off saw 350 mm", "Petrol chainsaw 45 cm"))]
-    run, err, _ = stage(tmp_path, [tasks, [], []])
+def test_the_exact_goal_is_covered_offline_with_goal_following_fixture_responses_and_the_unchanged_gate(tmp_path):
+    from agent_readiness.live.devprovider import follow_goal
+    _, tasks = follow_goal(GOAL, profile(), 30)
+    assert len(tasks) >= 9
+    run, err, _ = stage(tmp_path, [tasks[:4], tasks[4:8], tasks[8:]])
+    assert err is None, err
     rep = run.artifact("taskgen-report")
-    assert rep["goal_binding"]["relevant_tasks"] == 3 and rep["goal_binding"]["selected"] == 3 and rep["accounting"]["selected"] == 3 and rep["accounting"]["unaccounted"] == 0
-    assert err and "3 goal-relevant verified tasks (need 4)" in err and "price:" in err, "three real tasks are reported as insufficient coverage and the missing price part is named; nothing unrelated fills the gap"
+    gb, acc = rep["goal_binding"], rep["accounting"]
+    assert gb["coverage"]["passes"] and set(gb["coverage"]["covered"]) >= {"price", "availability"} and gb["coverage"]["missing_supported"] == [] and len(gb["coverage"]["entities_covered"]) == 3
+    assert len(rep["accepted"]) <= 4 and rep["rule_topup"] == 0 and acc["unaccounted"] == 0 and acc["proposed"] == len(tasks)
+    reasons = " | ".join(r["reason"] for r in rep["rejected"])
+    assert "visible on the start page" in reasons and "does not compile" in reasons, "the gate still rejects what it must (an answer visible on the home page; an extremum over a filter-chip listing): not weakened to raise yield"
+    assert [d["kind"] for d in gb["analysis"]["limitation_details"]] == ["verifier"]
+
+
+def test_a_smaller_set_that_covers_the_supportable_goal_is_enough_and_missing_aspects_are_reported_by_cause():
+    """A capture whose price facts were NOT extracted (the situation before this change): the rendered pages still show amounts, so price is a CAPTURE limitation; availability is covered by a small set."""
+    import copy
+    from agent_readiness.live.devprovider import follow_goal
+    p = copy.deepcopy(profile())
+    for rec in p["pages"].values():
+        rec["facts"] = [f for f in rec["facts"] if f["how"] != "amount-caption"]
+    ga = G.analyse(GOAL, p, RENTAL)
+    kinds = {d["aspect"]: d["kind"] for d in ga["limitation_details"]}
+    assert kinds == {"price": "capture", "ordering": "verifier"} and ga["support"]["price"]["supported"] is False
+    _, tasks = follow_goal(GOAL, p, 30)
+    assert tasks and all("per day" not in t["question"] for t in tasks)
+    cov = G.coverage(ga, [{"aspects_matched": ["availability"], "entities_touched": ga["entity_items"][:1], "goal_relevant": True}])
+    assert cov["passes"] is True and cov["unsupported_aspects"] == ["price"] and cov["missing_supported"] == [], "availability covered; the unsupported price is reported, not fatal"
+    none = G.coverage(ga, [])
+    assert none["passes"] is False, "no relevant task at all fails"
+    uncovered = G.coverage({**ga, "support": {**ga["support"], "price": {"supported": True}}}, [{"aspects_matched": ["availability"], "entities_touched": [], "goal_relevant": True}])
+    assert uncovered["passes"] is False and uncovered["missing_supported"] == ["price"], "a supportable aspect left uncovered still fails"
+
+
+def test_a_goal_aspect_shown_nowhere_on_the_site_is_a_website_limitation():
+    lex = {"warranty": {"terms": {"warranty", "guarantee"}, "labels": {"warranty", "guarantee"}, "path_suffix": None, "text_pattern": r"(?i)warrant", "unsupported_note": ""}}
+    ga = G.analyse("Compare the warranty of the cutting tools", profile(), lex)
+    assert [(d["aspect"], d["kind"]) for d in ga["limitation_details"]] == [("warranty", "website")] and ga["limitations"][0].startswith("warranty [website limitation]")
+
+
+def test_extracted_price_and_calendar_facts_are_exactly_what_the_rendered_page_shows():
+    from bs4 import BeautifulSoup
+    from agent_readiness.exp2.pool import control_pages
+    pages, prof = control_pages(), profile()["pages"]
+    n = 0
+    for path, rec in prof.items():
+        text = BeautifulSoup(pages[path], "html.parser").get_text(" ", strip=True) if path in pages else ""
+        for f in rec["facts"]:
+            if f["how"] in ("amount-caption", "calendar-cell"):
+                n += 1
+                assert f["value"] in text and (f["label"].lower() in text.lower()), (path, f)
+                assert f["how"] != "amount-caption" or f["value"].startswith("$"), "a value is the page's own amount text, never computed"
+    assert n > 900
+    saw = {f["label"]: f["value"] for f in prof["/hire/petrol-cut-off-saw-350mm"]["facts"] if f["how"] == "amount-caption"}
+    assert saw == {"per day": "$110", "weekend": "$175", "per week": "$395"}
+    assert {f["label"]: f["value"] for f in prof["/hire/petrol-cut-off-saw-350mm"]["facts"] if f["how"] == "dated-status"} == {"availability today": "fully booked"}
 
 
 def test_a_goal_the_site_can_express_yields_four_relevant_tasks_ranked_ahead_of_earlier_unrelated_ones(tmp_path):

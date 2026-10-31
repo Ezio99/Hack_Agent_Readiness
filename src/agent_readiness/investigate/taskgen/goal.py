@@ -112,16 +112,25 @@ def analyse(goal: str, profile: dict, lexicon: dict | None = None) -> dict:
         found_labels = sorted({l for p in (items or list(pages)) for f in pages.get(p, {"facts": []})["facts"] for l in [f["label"]] if set(words(l)) & set(spec["labels"])})
         found_pages = sorted(p for p in ({i + (spec["path_suffix"] or "") for i in items} if spec["path_suffix"] else set()) if p in pages)
         support[name] = {"supported": bool(found_labels or found_pages), "labelled_facts_found": found_labels, "pages_found": found_pages}
-    limits = []
+    limits, details = [], []
     for a in sorted(asked):
-        if not support[a]["supported"]:
-            limits.append(f"{a}: " + ASPECTS[a].get("unsupported_note", "no labelled fact or page for this aspect exists for the goal's entities in the captured site, so it cannot be expressed or verified by the task criteria"))
+        if support[a]["supported"]:
+            continue
+        pat = ASPECTS[a].get("text_pattern")
+        shown = bool(pat and any(re.search(pat, pages.get(p, {"text": ""})["text"]) for p in (items or [])))
+        kind = "capture" if shown else "website"
+        detail = ("the captured pages of the goal's entities SHOW this to a browser agent (matching text is on the page) but it was not extracted as a labelled fact or page the criteria can use" if shown
+                  else "none of the captured pages of the goal's entities shows it, so no task about it can be verified")
+        details.append({"aspect": a, "kind": kind, "detail": detail})
+        limits.append(f"{a} [{kind} limitation]: {detail}")
     if ent_terms and not items and not listings:
-        limits.append(f"entity: the goal's subject words {ent_terms} could not be matched to any listing or item on the site")
-    if ordering and any(a in asked and not support[a]["supported"] for a in asked):
-        limits.append(f"ordering: the goal ranks its entities ({', '.join(o for o in ordering if o in ORDER_TERMS) or 'ordering'}), which cannot be established while an aspect it depends on is not verifiable on the site")
+        details.append({"aspect": "entity", "kind": "verifier", "detail": f"the goal's subject words {ent_terms} could not be matched to any listing or item on the site"})
+        limits.append(f"entity [verifier limitation]: {details[-1]['detail']}")
+    if any(w in NUMBERS for w in ordering) and any(w in ORDER_TERMS for w in ordering):
+        details.append({"aspect": "ordering", "kind": "verifier", "detail": "an exact top-N ranking (e.g. 'the two cheapest') is not a criterion kind: it is covered by per-item facts and single lowest/highest comparisons, not verified as a ranking"})
+        limits.append(f"ordering [verifier limitation]: {details[-1]['detail']}")
     return {"goal": goal, "asked_aspects": sorted(asked), "aspect_words": aspect_words, "attribute_labels": attr_labels, "ordering_terms": ordering, "entity_terms": ent_terms, "entity_listings": listings,
-            "entity_items": items, "entity_grounded": bool(items or listings), "support": support, "limitations": limits}
+            "entity_items": items, "entity_grounded": bool(items or listings), "support": support, "limitations": limits, "limitation_details": details}
 
 
 def _labels_of(criterion: dict) -> list[str]:
@@ -151,10 +160,11 @@ def assess(ga: dict, accepted, lexicon: dict | None = None) -> dict:
     hit += [f"attribute:{l}" for l in attr]
     entity_scope = set(ga["entity_items"]) | set(ga["entity_listings"])
     entity = None if not ga["entity_terms"] else ((any(p in entity_scope or any(p.startswith(i + "/") for i in ga["entity_items"]) for p in paths)) if ga["entity_grounded"] else None)
+    touched = sorted({i for i in ga["entity_items"] for p in paths if p == i or p.startswith(i + "/")})
     relevant = bool(hit) and entity is not False and (entity is True or not ga["entity_terms"] or entity is None)
     why = ("serves the goal: touches " + ", ".join(hit) + ("" if entity is None else " of the goal's entities")) if relevant else (
         "not relevant: " + ("it touches no aspect or attribute the goal asks about" if not hit else "it is about an entity outside the goal's subject") + (f" (labels: {labels})" if labels else ""))
-    return {"question": accepted.draft.question, "aspects_matched": hit, "entity_match": entity, "goal_relevant": relevant, "why": why, "model_goal_link": _link(accepted.draft.rationale)}
+    return {"question": accepted.draft.question, "aspects_matched": hit, "entity_match": entity, "goal_relevant": relevant, "entities_touched": touched, "why": why, "model_goal_link": _link(accepted.draft.rationale)}
 
 
 def _link(rationale: str) -> str | None:
@@ -162,6 +172,27 @@ def _link(rationale: str) -> str | None:
     return m.group(1) if m else None
 
 
-def rank(accepted: list, assessed: list[dict]) -> list[int]:
-    """Indices of the relevant tasks, in proposal order (relevant tasks only: unrelated ones are never used to fill)."""
-    return [i for i, a in enumerate(assessed) if a["goal_relevant"]]
+def select(assessed: list[dict], limit: int) -> list[int]:
+    """Choose up to `limit` goal-relevant tasks (indices) by marginal coverage of the goal's (aspect, entity) cells, earliest first on ties. Unrelated tasks are never used to fill."""
+    cells = lambda v: {(a, e) for a in v["aspects_matched"] for e in (v["entities_touched"] or ["*"])}
+    pool, chosen, covered = [i for i, v in enumerate(assessed) if v["goal_relevant"]], [], set()
+    while pool and len(chosen) < limit:
+        best = max(pool, key=lambda i: (len(cells(assessed[i]) - covered), -i))
+        chosen.append(best)
+        covered |= cells(assessed[best])
+        pool.remove(best)
+    return sorted(chosen)
+
+
+def coverage(ga: dict, selected: list[dict]) -> dict:
+    """Bounded, evidence-based goal coverage: every aspect the goal asks for AND the site can express must be covered by at least one selected relevant task, and when the goal names attributes at least
+    one of them must be. Aspects the site cannot express are reported with their cause (website, capture or verifier limitation) and do not block a run that covers the rest; a run with no relevant
+    task, or with a supportable aspect uncovered, fails."""
+    covered = {a for v in selected for a in v["aspects_matched"]}
+    needed = [a for a in ga["asked_aspects"] if ga["support"][a]["supported"]]
+    missing = [a for a in needed if a not in covered]
+    if ga["attribute_labels"] and not any(c.startswith("attribute:") for c in covered):
+        missing.append("attribute (any of: " + ", ".join(ga["attribute_labels"]) + ")")
+    ents = sorted({e for v in selected for e in v["entities_touched"]})
+    return {"needed_aspects": needed, "covered": sorted(covered), "missing_supported": missing, "unsupported_aspects": [d["aspect"] for d in ga["limitation_details"] if d["aspect"] in ga["asked_aspects"]],
+            "entities_total": len(ga["entity_items"]), "entities_covered": ents, "passes": bool(selected) and not missing}

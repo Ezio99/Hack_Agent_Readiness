@@ -58,7 +58,7 @@ def execute(root: Path, job_id: str) -> None:
         update(root, job_id, state="failed", error="Unknown evaluation mode.", finished_at=time.time())
         return
     target = TARGETS[job["target_id"]]
-    run, pipe, ctx = flow.build(root, job_id, target.id, mode="mock", options={"snapshot": target.snapshot(), "n_tasks": job.get("n_tasks", 4), "goal": job["goal"]})
+    run, pipe, ctx = flow.build(root, job_id, target.id, mode="mock", options={"snapshot": target.snapshot(), "n_tasks": job.get("n_tasks", 4), "goal": job["goal"], "rule_per_kind": 10})
     ctx.options["investigator_llm"] = mock_investigator.make(run)
     res = pipe.run(ctx)
     if res.status == "done":

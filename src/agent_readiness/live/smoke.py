@@ -48,14 +48,14 @@ def build_report(run, job: dict, *, cap_usd: float, state: str) -> dict:
     if gb:
         asm = gb["assessments"]
         rel = {"method": gb["verifier"], "relevant_tasks": gb["relevant_tasks"], "gate_accepted_tasks": gb["gate_accepted_tasks"], "needed": gb["needed"], "goal_analysis_site_grounded": gb["analysis"],
-               "model_goal_analysis": gb["model_goal_analysis"], "limitations": gb["analysis"]["limitations"], "per_task": [{k: a[k] for k in ("question", "aspects_matched", "entity_match", "goal_relevant", "why", "model_goal_link")} for a in asm],
+               "model_goal_analysis": gb["model_goal_analysis"], "limitations": gb["analysis"]["limitations"], "limitation_details": gb["analysis"].get("limitation_details", []), "coverage": gb["coverage"], "per_task": [{k: a[k] for k in ("question", "aspects_matched", "entity_match", "goal_relevant", "why", "model_goal_link")} for a in asm],
                "tasks_sharing_a_goal_term": gb["relevant_tasks"], "of": gb["gate_accepted_tasks"]}
     else:
         rel = relevance(goal, [a["question"] for a in accepted])
     return {
         "schema": "live-smoke-report-v1", "job_id": job["id"], "job_state": state, "goal": goal, "stopped_after": "taskgen + freeze (no browser trial, investigator or recommendation ran)",
         "yield": {"requests_made": len(calls), "max_requests": 3, "batches_ok": sum(c["status"] == "ok" for c in calls), "tasks_proposed": sum(c.get("proposed") or 0 for c in calls),
-                  "tasks_accepted": len(accepted), "tasks_rejected": len(tg["rejected"]), "needed": 4, "meets_minimum": len(accepted) >= 4, "rule_topup_tasks": tg.get("rule_topup", 0),
+                  "tasks_accepted": len(accepted), "tasks_rejected": len(tg["rejected"]), "needed": 4, "meets_minimum": (gb["coverage"]["passes"] if gb else len(accepted) >= 4), "rule_topup_tasks": tg.get("rule_topup", 0),
                   "accepted_by_source": dict(Counter(a["source"] for a in accepted))},
         "independent_verification": {"how": "each accepted task's criterion was compiled and evaluated against the captured site by the gate (code, not the model); the model supplied no answers",
                                      "rejection_reasons": dict(rej), "rejected_examples": [{"question": r["question"][:160], "reason": r["reason"][:160]} for r in tg["rejected"][:12]]},
