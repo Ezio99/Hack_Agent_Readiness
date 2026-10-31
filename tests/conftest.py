@@ -7,6 +7,16 @@ from pathlib import Path
 
 import pytest
 
+from agent_readiness import netguard
+
+netguard.install()                      # the whole pytest process is loopback-only: no test can reach a real model endpoint, whatever is in the environment or .env
+
+
+@pytest.fixture(autouse=True)
+def _no_production_key_by_default(monkeypatch):
+    """Browser Use loads the repository .env at import, which would put the production key in os.environ of any test. Tests that need a key set one explicitly."""
+    monkeypatch.delenv("META_MODEL_API_KEY", raising=False)
+
 
 def pytest_addoption(parser):
     g = parser.getgroup("sharding")

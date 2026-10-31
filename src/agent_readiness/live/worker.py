@@ -84,16 +84,16 @@ def execute_live(root: Path, job_id: str, job: dict) -> None:
     except G.GrantRefused as exc:
         update(root, job_id, state="stopped", error=f"Not started: {exc.reason}", stop={"kind": exc.kind, "stage": None, "reason": exc.reason}, finished_at=time.time())
         return
+    smoke = job.get("until") == "taskgen"                                           # operator smoke test: nothing after task generation + freeze may run
+    if smoke and list(g["stages"]) != list(G.SMOKE_STAGES):
+        update(root, job_id, state="stopped", error="Not started: a smoke job's grant must cover task generation only.", stop={"kind": "scope", "stage": None, "reason": "smoke grant too broad"}, finished_at=time.time())
+        return
     budget = g["budget_usd"]
     cfg = ModelConfig(model=g["model"], base_url=g["endpoint"])
     opts = {"snapshot": snap, "n_tasks": job.get("n_tasks", 4), "goals": {"focus": sanitize_goal(job["goal"])}, "focus": sanitize_goal(job["goal"]), "rule_topup": False, "model_config": cfg, "allow_model_calls": True,
             "total_cap_usd": budget, "repeats": 1}
     run, pipe, ctx = flow.build(root, job_id, target.id, mode="live", options=opts)
     run.write_artifact("live-grant", g)                                        # the authorization, kept with the run it covers
-    smoke = job.get("until") == "taskgen"                                           # operator smoke test: nothing after task generation + freeze may run
-    if smoke and list(g["stages"]) != list(G.SMOKE_STAGES):
-        update(root, job_id, state="stopped", error="Not started: a smoke job's grant must cover task generation only.", stop={"kind": "scope", "stage": None, "reason": "smoke grant too broad"}, finished_at=time.time())
-        return
 
     def finish(state: str, **fields) -> None:
         if smoke:
@@ -136,7 +136,15 @@ def start_watchdog(root: Path, job_id: str, seconds: float) -> threading.Timer:
     return t
 
 
+def neutralize_dotenv() -> None:
+    """Browser Use calls `dotenv.load_dotenv()` when imported and finds the repository `.env` (the operator's model key). A worker must hold exactly the credential the manager gave it (none for a
+    mock job): make that call inert before anything imports it."""
+    import dotenv
+    dotenv.load_dotenv = lambda *args, **kwargs: False
+
+
 def main(argv: list[str]) -> int:
+    neutralize_dotenv()
     root, job_id = Path(argv[1]), argv[2]
 
     def on_term(signum, frame):

@@ -278,3 +278,102 @@ def test_a_test_process_can_never_start_a_live_job_against_the_real_endpoint_eve
     w.execute_live(tmp_path / "live3", j["id"], w.read(tmp_path / "live3", j["id"]))
     got = w.read(tmp_path / "live3", j["id"])
     assert got["state"] == "stopped" and "real model endpoint" in got["error"] and not (tmp_path / "live3" / j["id"]).exists(), "the worker itself refuses before building any run"
+
+
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------------ final readiness checks
+def test_a_test_process_is_loopback_only_and_so_is_any_worker_it_spawns(tmp_path):
+    import socket
+    import subprocess
+    import sys
+    srv = socket.create_server(("127.0.0.1", 0))
+    s = socket.create_connection(srv.getsockname(), timeout=2)                       # loopback works
+    s.close(); srv.close()
+    for target in (("8.8.8.8", 53), ("93.184.216.34", 443), ("api.meta.ai", 443)):
+        with pytest.raises(OSError, match="netguard"):
+            socket.create_connection(target, timeout=1)
+        with pytest.raises(OSError, match="netguard"):
+            socket.socket().connect_ex(target)
+    code = "import socket,sys\ntry:\n    socket.create_connection(('8.8.8.8',53),timeout=1); print('REACHED')\nexcept OSError as e:\n    print('BLOCKED' if 'netguard' in str(e) else 'OTHER '+str(e))\n"
+    out = subprocess.run([sys.executable, "-c", "import agent_readiness\n" + code], capture_output=True, text=True, env={**__import__("os").environ, "PYTEST_CURRENT_TEST": "x"}, timeout=30)
+    assert out.stdout.strip() == "BLOCKED", out
+    out = subprocess.run([sys.executable, "-c", "import agent_readiness\n" + code], capture_output=True, text=True, env={**{k: v for k, v in __import__("os").environ.items() if k != "PYTEST_CURRENT_TEST"}, "AR_BLOCK_NONLOOPBACK": "1"}, timeout=30)
+    assert out.stdout.strip() == "BLOCKED", out
+
+
+def test_no_production_key_is_in_the_environment_of_a_test_and_workers_neutralise_dotenv(tmp_path, monkeypatch):
+    import os
+    import subprocess
+    import sys
+    assert "META_MODEL_API_KEY" not in os.environ, "the autouse fixture removed whatever Browser Use loaded from the repository .env"
+    (tmp_path / ".env").write_text("META_MODEL_API_KEY=from-a-dotenv-file\n")
+    code = ("import os\nfrom agent_readiness.live import worker\nworker.neutralize_dotenv()\nimport dotenv\n"
+            f"print(dotenv.load_dotenv({str(tmp_path / '.env')!r}), 'META_MODEL_API_KEY' in os.environ)\n")
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, env={k: v for k, v in os.environ.items() if k != "META_MODEL_API_KEY"}, timeout=60)
+    assert out.stdout.strip() == "False False", out
+    from agent_readiness.env import REPO_ROOT
+    if (REPO_ROOT / ".env").is_file():                                                  # only meaningful on a machine that has the operator's file
+        probe = "import os\nfrom agent_readiness.live import worker\nworker.neutralize_dotenv()\nimport agent_readiness.agent as a\na.prepare_browser_environment()\nimport browser_use\nprint('META_MODEL_API_KEY' in os.environ)\n"
+        out = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True, env={k: v for k, v in os.environ.items() if k != "META_MODEL_API_KEY"}, timeout=120)
+        assert out.stdout.strip() == "False", "a worker that imports Browser Use must not pick up the operator's key"
+
+
+def test_the_plan_hash_is_the_hash_of_the_manifest_the_worker_will_present(tmp_path, monkeypatch):
+    """The approval hash printed by `--plan` must be what the worker's pipeline presents: build the worker's exact options (captured from execute_live) with the production model config and compare."""
+    from agent_readiness.agent import ModelConfig
+    from agent_readiness.investigate import flow
+    captured = {}
+    monkeypatch.setenv("META_MODEL_API_KEY", KEY)
+    m = JobManager(tmp_path / "live", spawn=lambda jid: 0, live=smoke_settings(base_url="https://api.meta.ai/v1", allow_dev_provider=False))
+    monkeypatch.setattr("agent_readiness.live.jobs.under_test_with_real_endpoint", lambda e: False)
+    j = m.create("o", "ironbark", GOAL, "live", 0.15)
+    real_build = flow.build
+
+    def spy(root, job_id, site, *, mode, options):
+        captured.update(options)
+        raise RuntimeError("stop after capturing the options")
+    monkeypatch.setattr(flow, "build", spy)
+    monkeypatch.setattr("agent_readiness.live.worker.under_test_with_real_endpoint" if False else "agent_readiness.live.jobs.under_test_with_real_endpoint", lambda e: False)
+    with pytest.raises(RuntimeError):
+        worker.execute_live(m.root, j["id"], worker.read(m.root, j["id"]))
+    monkeypatch.setattr(flow, "build", real_build)
+    assert captured["model_config"] == ModelConfig() and captured["total_cap_usd"] == 0.15 and captured["rule_topup"] is False and captured["goals"] == {"focus": GOAL} and captured["n_tasks"] == 4
+    run, pipe, ctx = flow.build(tmp_path / "plan", "p", "ironbark", mode="live", options=captured)
+    assert pipe.run(ctx, until="inspect").status == "done"
+    assert run.manifest_sha256(flow.taskgen_manifest(ctx)) == live_cli.plan(GOAL)["manifest_sha256"]
+
+
+def test_after_a_failure_or_a_restart_a_smoke_job_cannot_reach_any_other_paid_stage(tmp_path, monkeypatch):
+    """The REAL pipeline against a dead loopback port (nothing real is reachable): task generation fails, then the worker is re-run, then the record is reset to 'running' as after a crash, then the
+    scope is widened in the job file. In none of these does a trial, an investigation or a further approval happen, and the ledger never grows beyond the three task-generation requests."""
+    monkeypatch.setenv("META_MODEL_API_KEY", KEY)
+    monkeypatch.setenv("AR_ALLOW_LOOPBACK_MODEL", "1")
+    m = JobManager(tmp_path / "live", spawn=lambda jid: 0, live=smoke_settings())
+    j = m.create("o", "ironbark", GOAL, "live", 0.15)
+    job = worker.read(m.root, j["id"])
+    worker.execute_live(m.root, j["id"], job)
+    run = InvestigationRun(m.root / j["id"])
+    state = lambda: {s: run.state["stages"][s]["status"] for s in run.state["stages"]}
+    led = lambda: [e["id"] for e in run.ledger(0.15).entries()]
+    first = led()
+    assert worker.read(m.root, j["id"])["state"] in ("failed", "stopped") and state()["taskgen"] == "failed" and all(v == "pending" for k, v in state().items() if k not in ("inspect", "taskgen"))
+    assert 1 <= len({i.split(":")[0] for i in first}) <= 1 and len([i for i in first if i.endswith(("req01", "req02", "req03"))]) <= 6 and all("-taskgen" in i for i in first)
+    assert [a["stage"] for a in run.approvals()] == ["taskgen"] and run.has_artifact("smoke-report")
+    # a plain re-run (a restart): the failed spending stage is not re-run, nothing is sent, nothing new is approved
+    worker.execute_live(m.root, j["id"], worker.read(m.root, j["id"]))
+    assert led() == first and [a["stage"] for a in InvestigationRun(m.root / j["id"]).approvals()] == ["taskgen"]
+    # a crash left the record 'running': same result
+    raw = worker.read(m.root, j["id"])
+    (m.root / f"{j['id']}.job.json").write_text(json.dumps({**raw, "state": "running"}))
+    worker.execute_live(m.root, j["id"], worker.read(m.root, j["id"]))
+    assert led() == first and all(v == "pending" for k, v in {s: InvestigationRun(m.root / j["id"]).state["stages"][s]["status"] for s in run.state["stages"]}.items() if k not in ("inspect", "taskgen"))
+    # the job file is edited to drop the smoke marker: the grant still covers taskgen only, so no other stage can be approved
+    raw = worker.read(m.root, j["id"])
+    raw.pop("until")
+    (m.root / f"{j['id']}.job.json").write_text(json.dumps({**raw, "state": "running"}))
+    worker.execute_live(m.root, j["id"], worker.read(m.root, j["id"]))
+    assert led() == first and [a["stage"] for a in InvestigationRun(m.root / j["id"]).approvals()] == ["taskgen"]
+    # ... and if the grant itself is replaced by a broad one, the worker refuses to start
+    broad = G.make_grant(job_id=j["id"], owner="o", target_id="ironbark", goal=GOAL, budget_usd=0.15, model=raw["grant"]["model"], endpoint=raw["grant"]["endpoint"], snapshot_sha256=raw["grant"]["snapshot_sha256"])
+    (m.root / f"{j['id']}.job.json").write_text(json.dumps({**raw, "grant": broad, "until": "taskgen", "state": "running"}))
+    worker.execute_live(m.root, j["id"], worker.read(m.root, j["id"]))
+    assert worker.read(m.root, j["id"])["state"] == "stopped" and led() == first
