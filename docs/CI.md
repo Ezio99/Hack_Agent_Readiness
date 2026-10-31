@@ -38,4 +38,10 @@ The nightly `full.yml` (unsharded cross-check) runs from the default branch.
 Edit the matrix and the `--num-shards` value in `test.yml`, and the expected counts in `scripts/ci_check_shards.py` (`SUITES`) and `tests/test_markers.py`; the guard tests fail if they disagree.
 
 ## Local development
-`scripts/dev-tests.sh` (≈40 s, 534 tests; uses `./.venv` when present; `DEV_TESTS_PARALLEL=1` adds `-n auto` if `pytest-xdist` is installed locally — dev-only, not in `requirements.lock`, not used by CI). Before opening a PR run `python -m pytest -q`.
+Three local commands, from cheapest to most complete (measured 2026-11-01 on the development machine; the suite keeps growing, so treat times as an order of magnitude):
+| Command | What | Time |
+|---|---|---|
+| `scripts/critical-tests.sh` | live product correctness: grants/approvals, spend gate and ledger, credential handling, test network isolation, cancellation and kill switch, goal-bound task generation and coverage, config/budget, sharding and marker guards. 184 tests, offline, no `browser`-marked tests | **about 40 s** |
+| `scripts/dev-tests.sh` | every logic-level test: `-m "not browser and not slow"` (1170 tests; `DEV_TESTS_PARALLEL=1` adds `-n auto` if `pytest-xdist` is installed locally, dev-only, not in `requirements.lock`, not used by CI) | about 2.5 min |
+| `python -m pytest -q` | the complete suite (1355 tests, includes 138 real-Chromium and 47 slow tests) | about 33 min serially; prefer CI, which runs it sharded in about 6 min |
+Run the tests a change affects first, then the critical suite; leave the full regression to the sharded CI of the PR. Do not run builds, screenshots or other browser work while a local browser test run is in progress.

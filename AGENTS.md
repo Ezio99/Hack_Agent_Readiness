@@ -21,6 +21,15 @@ Read `AGENTS.md`, `STATUS.md`, `docs/PROJECT.md`, `docs/DECISIONS.md`, relevant 
 - Verify the Meta AI model/API integration instead of assuming model or endpoint compatibility.
 - Never commit API keys, .env files, private truth records, raw traces with credentials, or generated run data.
 
+## Testing policy (risk-based)
+1. Run the tests that exercise the change first (the affected files, with `-x` and a timeout).
+2. Then `scripts/critical-tests.sh` (about 40 s) for cross-cutting confidence: grants, ledger/spend gate, credentials, network isolation, cancellation, goal-bound task generation and report coverage. `scripts/dev-tests.sh` (about 2.5 min) covers all logic-level tests.
+3. Run focused integration/browser tests by file when the change touches the worker, the trial runner or the report/dashboard (`pytest tests/test_context_pack.py -k end_to_end`, `cd dashboard && npx vitest run`).
+4. Leave the full PR regression to sharded CI (`docs/CI.md`); a full local run takes about 33 minutes and is rarely needed.
+5. Do not run resource-intensive browser tests, dashboard builds, screenshots or servers concurrently: a failure seen only during concurrent work is not a finding until it is repeated alone.
+6. Use bounded timeouts (`timeout N ...`, or a background run checked a limited number of times) and never poll indefinitely; if a run is slow, inspect the process and log instead of waiting.
+7. No paid model call is ever part of testing: tests are loopback-only and the dev provider is a fixture, not a model.
+
 ## Handoff protocol
 Discuss → propose → approve → task → implement → report → review. Tasks saved as historical references are not automatically approved to execute. Codex can make routine technical choices but must escalate experiment-design changes. Commit work in reviewable units, record checks actually run and limitations, update `STATUS.md`, and link the relevant task/report. No unapproved spending on model calls or external actions.
 
