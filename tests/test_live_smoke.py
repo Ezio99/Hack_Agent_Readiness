@@ -217,7 +217,9 @@ def test_a_smoke_job_makes_at_most_three_requests_and_stops_before_any_trial(tmp
     rep = v["smoke"]
     assert rep["yield"]["requests_made"] == 3 and rep["yield"]["meets_minimum"] and rep["yield"]["rule_topup_tasks"] == 0 and rep["yield"]["accepted_by_source"] == {"model": rep["yield"]["tasks_accepted"]}
     assert rep["cost"]["calculated_usd"] == pytest.approx(sp["committed_usd"]) and rep["cost"]["unsettled_requests"] == [] and all(c["usage_has_prompt_and_completion_tokens"] for c in rep["provider_compatibility"])
-    assert rep["relevance_to_goal"]["of"] == rep["yield"]["tasks_accepted"] and all(GOAL in p for p in prov.taskgen_prompts)
+    rel = rep["relevance_to_goal"]
+    assert rel["relevant_tasks"] >= 4 and rel["gate_accepted_tasks"] >= rel["relevant_tasks"] and rep["proposal_accounting"]["unaccounted"] == 0 and all(p["goal_relevant"] for p in rel["per_task"] if p["question"] in {a["question"] for a in rep["accepted_tasks"]})
+    assert all(GOAL in p for p in prov.taskgen_prompts) and all("EVALUATION GOAL (binding)" in p for p in prov.taskgen_prompts)
     man = run.artifact([p.stem for p in (run.dir / "artifacts" / "manifests").glob("taskgen-*.json")][0].join(["manifests/", ""]))
     assert man["max_requests"] == 3 and man["run_cap_usd"] == 0.15 and man["retries_per_request"] == 0 and man["worst_case_stage_usd"] <= 0.15
     assert m.export(j["id"], "o")["run"]["complete"] is False, "a partial run exports as incomplete, never as a finished evaluation"
@@ -377,3 +379,20 @@ def test_after_a_failure_or_a_restart_a_smoke_job_cannot_reach_any_other_paid_st
     (m.root / f"{j['id']}.job.json").write_text(json.dumps({**raw, "grant": broad, "until": "taskgen", "state": "running"}))
     worker.execute_live(m.root, j["id"], worker.read(m.root, j["id"]))
     assert worker.read(m.root, j["id"])["state"] == "stopped" and led() == first
+
+
+@pytest.mark.browser
+def test_the_exact_goal_through_the_real_path_reports_the_coverage_limit_instead_of_substituting_tasks(tmp_path, monkeypatch, provider):
+    exact = "Can a shopper compare the hire price and availability of the two cheapest cutting tools?"
+    monkeypatch.setenv("META_MODEL_API_KEY", KEY)
+    prov, url = provider()
+    m = JobManager(tmp_path / "live", live=smoke_settings(base_url=url))
+    j = m.create("o", "ironbark", exact, "live", 0.15)
+    v = wait_for(lambda: (lambda x: x if x["state"] not in ("queued", "running") else None)(m.get(j["id"], "o")), 240)
+    assert v["state"] == "stopped" and v["stop"]["kind"] == "coverage" and "goal coverage insufficient" in v["error"], (v["state"], v["error"])
+    assert prov.calls == {"taskgen": 3, "agent": 0, "investigator": 0} and v["spend"]["committed_usd"] <= 0.15
+    rep = v["smoke"]
+    assert rep["yield"]["meets_minimum"] is False and rep["yield"]["rule_topup_tasks"] == 0 and rep["proposal_accounting"]["unaccounted"] == 0
+    rel = rep["relevance_to_goal"]
+    assert any(l.startswith("price:") for l in rel["limitations"]) and rel["relevant_tasks"] == 3 and all("availability" in p["aspects_matched"] for p in rel["per_task"] if p["goal_relevant"])
+    assert {s["name"]: s["status"] for s in v["stages"]}["freeze"] == "pending", "no task set was frozen from an insufficient selection"

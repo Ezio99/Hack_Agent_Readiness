@@ -31,10 +31,11 @@ def plan(goal: str) -> dict:
     from ..investigate import flow
     from ..investigate.taskgen import propose
     from . import grant as G, worker
+    from .lexicon import RENTAL
     from .targets import TARGETS
     target = TARGETS["ironbark"]
     with tempfile.TemporaryDirectory() as tmp:
-        run, pipe, ctx = flow.build(Path(tmp), "smoke-plan", "ironbark", mode="live", options={"snapshot": target.snapshot(), "n_tasks": 4, "goals": {"focus": worker.sanitize_goal(goal)}, "rule_topup": False,
+        run, pipe, ctx = flow.build(Path(tmp), "smoke-plan", "ironbark", mode="live", options={"snapshot": target.snapshot(), "n_tasks": 4, "goals": {"focus": worker.sanitize_goal(goal)}, "rule_topup": False, "goal_binding": True, "goal_lexicon": RENTAL,
                                                                                                    "model_config": ModelConfig(), "total_cap_usd": G.SMOKE_CAP_USD})
         res = pipe.run(ctx, until="inspect")
         if res.status != "done":

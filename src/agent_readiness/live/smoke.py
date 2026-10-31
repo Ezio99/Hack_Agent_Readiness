@@ -44,6 +44,14 @@ def build_report(run, job: dict, *, cap_usd: float, state: str) -> dict:
                        "usage_has_prompt_and_completion_tokens": u.get("prompt_tokens") is not None and u.get("completion_tokens") is not None, "prompt_tokens": u.get("prompt_tokens"),
                        "completion_tokens": u.get("completion_tokens"), "error": c.get("error"), "unusable_output": (c.get("diagnostics") or None)})
     goal = job["goal"]
+    gb = tg.get("goal_binding")
+    if gb:
+        asm = gb["assessments"]
+        rel = {"method": gb["verifier"], "relevant_tasks": gb["relevant_tasks"], "gate_accepted_tasks": gb["gate_accepted_tasks"], "needed": gb["needed"], "goal_analysis_site_grounded": gb["analysis"],
+               "model_goal_analysis": gb["model_goal_analysis"], "limitations": gb["analysis"]["limitations"], "per_task": [{k: a[k] for k in ("question", "aspects_matched", "entity_match", "goal_relevant", "why", "model_goal_link")} for a in asm],
+               "tasks_sharing_a_goal_term": gb["relevant_tasks"], "of": gb["gate_accepted_tasks"]}
+    else:
+        rel = relevance(goal, [a["question"] for a in accepted])
     return {
         "schema": "live-smoke-report-v1", "job_id": job["id"], "job_state": state, "goal": goal, "stopped_after": "taskgen + freeze (no browser trial, investigator or recommendation ran)",
         "yield": {"requests_made": len(calls), "max_requests": 3, "batches_ok": sum(c["status"] == "ok" for c in calls), "tasks_proposed": sum(c.get("proposed") or 0 for c in calls),
@@ -51,7 +59,7 @@ def build_report(run, job: dict, *, cap_usd: float, state: str) -> dict:
                   "accepted_by_source": dict(Counter(a["source"] for a in accepted))},
         "independent_verification": {"how": "each accepted task's criterion was compiled and evaluated against the captured site by the gate (code, not the model); the model supplied no answers",
                                      "rejection_reasons": dict(rej), "rejected_examples": [{"question": r["question"][:160], "reason": r["reason"][:160]} for r in tg["rejected"][:12]]},
-        "accepted_tasks": accepted, "relevance_to_goal": relevance(goal, [a["question"] for a in accepted]),
+        "accepted_tasks": accepted, "relevance_to_goal": rel, "proposal_accounting": tg.get("accounting"),
         "cost": {"calculated_usd": spent, "cap_usd": cap_usd, "basis": "calculated from provider-reported tokens at published prices; not a bill", "per_request": list(led.values()),
                  "unsettled_requests": [r["id"] for r in led.values() if r["settled_usd"] is None]},
         "provider_compatibility": compat,

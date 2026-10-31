@@ -17,7 +17,7 @@ from agent_readiness.ledger import Halt
 from agent_readiness.live import devprovider as D, grant as G, worker
 from agent_readiness.live.jobs import JobError, JobManager, LiveSettings
 
-GOAL = "Can an agent compare hire prices and availability?"
+GOAL = "Can a shopper compare the engine, power and fuel of the cutting tools?"           # a goal this site can express with >= 4 verifiable tasks (the dev-provider stand-in follows it)
 KEY = "dev-key-not-a-real-key-0123456789"
 ENDPOINT = "http://127.0.0.1:9/v1"                         # nothing listens here: tests that reach it would fail loudly
 SNAP = "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f"

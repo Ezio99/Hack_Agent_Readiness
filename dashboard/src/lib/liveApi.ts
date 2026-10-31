@@ -17,7 +17,7 @@ export interface SmokeReport {
   yield: { requests_made: number; max_requests: number; tasks_proposed: number; tasks_accepted: number; tasks_rejected: number; needed: number; meets_minimum: boolean; rule_topup_tasks: number };
   independent_verification: { how: string; rejection_reasons: Record<string, number> };
   accepted_tasks: { question: string; criterion_kind: string; source: string }[];
-  relevance_to_goal: { method: string; tasks_sharing_a_goal_term: number; of: number };
+  relevance_to_goal: { method: string; tasks_sharing_a_goal_term: number; of: number; limitations?: string[] };
   cost: { calculated_usd: number; cap_usd: number; basis: string };
   provider_compatibility: { batch: number; status: string; usage_has_prompt_and_completion_tokens?: boolean; error?: string | null }[];
 }

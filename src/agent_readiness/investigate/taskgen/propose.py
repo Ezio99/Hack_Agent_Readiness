@@ -106,24 +106,35 @@ def build_prompt(profile: dict, n: int, focus: str | None = None, feedback: list
     return text
 
 
-def build_request(profile: dict, n: int, focus: str | None = None, feedback: list[str] | None = None, angle: str | None = None) -> LLMRequest:
+def build_request(profile: dict, n: int, focus: str | None = None, feedback: list[str] | None = None, angle: str | None = None, bound: bool = False) -> LLMRequest:
+    if bound and focus:                                           # the goal is a BINDING objective: decomposed first, every task linked to it (taskgen/goal.py)
+        from . import goal as G
+        text = build_prompt(profile, n, None, feedback, angle) + G.bound_text(focus)
+        return LLMRequest(messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": text}], purpose=G.PURPOSE, max_tokens=MAX_TOKENS, response_schema=G.GoalTaskProposals.model_json_schema())
     return LLMRequest(messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": build_prompt(profile, n, focus, feedback, angle)}], purpose="taskgen", max_tokens=MAX_TOKENS,
                       response_schema=TaskProposals.model_json_schema())
 
 
-def batch_requests(profile: dict, focus: str | None = None) -> list[LLMRequest]:
+def batch_requests(profile: dict, focus: str | None = None, bound: bool = False) -> list[LLMRequest]:
     """The exact requests the L1a taskgen stage sends (deterministic: no batch depends on another's output), in order. The approval manifest hashes these same requests."""
+    if bound and focus:
+        from . import goal as G
+        return [build_request(profile, BATCH_SIZE, focus, None, angle, True) for angle in G.ANGLES[:BATCHES]]
     return [build_request(profile, BATCH_SIZE, focus, None, angle) for angle in BATCH_ANGLES[:BATCHES]]
 
 
 def propose(llm: LLMClient, profile: dict, *, n: int = 10, focus: str | None = None, feedback: list[str] | None = None, angle: str | None = None, retries: int = 1,
             request: LLMRequest | None = None) -> tuple[list[Draft], dict]:
     req = request or build_request(profile, n, focus, feedback, angle)
-    parsed, resp, attempts = complete_structured(llm, req, TaskProposals, retries=retries)
+    goal_mode = req.purpose == "taskgen-goal"
+    if goal_mode:
+        from . import goal as G
+    parsed, resp, attempts = complete_structured(llm, req, G.GoalTaskProposals if goal_mode else TaskProposals, retries=retries)
     drafts = []
     for t in parsed.tasks:
         try:
-            drafts.append(Draft(t.question, t.start_path, t.criterion.to_dict(), "model", t.rationale))
+            drafts.append(Draft(t.question, t.start_path, t.criterion.to_dict(), "model", t.rationale + (f" || goal_link: {t.goal_link}" if goal_mode else "")))
         except ValueError:
             drafts.append(Draft(t.question, t.start_path, {"kind": t.criterion.kind}, "model", t.rationale))        # malformed: the gate records it as a rejection
-    return drafts, {"model": resp.model, "mode": resp.mode, "attempts": attempts, "usage": resp.usage, "cost_usd": resp.cost_usd, "request_sha256": resp.request_sha256, "proposed": len(drafts)}
+    extra = {"goal_analysis": parsed.goal_analysis.model_dump()} if goal_mode else {}
+    return drafts, {**extra, "model": resp.model, "mode": resp.mode, "attempts": attempts, "usage": resp.usage, "cost_usd": resp.cost_usd, "request_sha256": resp.request_sha256, "proposed": len(drafts)}

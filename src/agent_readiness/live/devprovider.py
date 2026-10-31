@@ -17,7 +17,9 @@ from ..investigate.run import InvestigationRun
 from ..investigate.taskgen import freeze as freezer
 from ..investigate.taskgen.candidates import candidates
 from ..investigate.trials.runner import mock_handler
+from ..investigate.taskgen import goal as G
 from . import mock_investigator
+from .lexicon import RENTAL
 
 TASKGEN_MARK, INVESTIGATOR_MARK = "You design evaluation tasks", "You are an investigator of why browsing agents"
 CRITERION_KEYS = ("page", "label", "target", "listing", "direction", "conditions")
@@ -37,6 +39,24 @@ def _chars(text: str) -> int:
 
 def _wrap(content: str, usage: dict, model: str = "dev-provider") -> dict:
     return {"id": "dev-1", "object": "chat.completion", "created": 0, "model": model, "choices": [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": content}}], "usage": usage}
+
+
+def follow_goal(goal: str, profile: dict, n: int = 12) -> tuple[dict, list[dict]]:
+    ga = G.analyse(goal, profile, RENTAL)
+    pages = profile["pages"]
+    tasks = []
+    for item in ga["entity_items"]:
+        name = (pages[item]["headings"][0]["text"] if pages[item]["headings"] else pages[item]["title"].split("|")[0]).strip()
+        for label in ga["attribute_labels"]:
+            if any(f["label"] == label for f in pages[item]["facts"]):
+                tasks.append({"question": f"What is the {label} listed on the page of the {name}?", "start_path": "/", "criterion": {"kind": "page_fact", "page": item, "label": label},
+                              "rationale": "stand-in for a goal-following model", "goal_link": f"{name}: {label}"})
+        if "availability" in ga["asked_aspects"] and item + "/availability" in pages:
+            tasks.append({"question": f"Find the live availability calendar for the {name} hire.", "start_path": "/", "criterion": {"kind": "reach_page", "target": item + "/availability"},
+                          "rationale": "stand-in for a goal-following model", "goal_link": f"{name}: availability"})
+    analysis = {"entities": [(pages[i]["headings"][0]["text"] if pages[i]["headings"] else i) for i in ga["entity_items"]], "attributes": ga["attribute_labels"] + ga["asked_aspects"],
+                "comparisons": ga["ordering_terms"], "information_gaps": ga["limitations"]}
+    return analysis, tasks[:n]
 
 
 class DevProvider:
@@ -73,6 +93,16 @@ class DevProvider:
         self.taskgen_prompts.append(text)
         i = self.calls["taskgen"]
         self.calls["taskgen"] += 1
+        if "taskgen_goal" in json.dumps(body.get("response_format", {})):                                      # goal-bound request: emulate a model that follows the goal when the site allows it (deterministic stand-in), else an ignoring one
+            m = re.search(r"EVALUATION GOAL \(binding\): (.*?)\\nStep 1", text)
+            analysis, tasks = follow_goal(m.group(1) if m else "", run.artifact("site-profile"), 12)
+            if not tasks:
+                drafts = candidates(run.artifact("site-profile"))
+                tasks = [{"question": d.question, "start_path": d.start_path, "criterion": {"kind": d.criterion["kind"], **{k: None for k in CRITERION_KEYS}, **d.criterion}, "rationale": "DEV PROVIDER fixture (ignores the goal)", "goal_link": "none"} for d in drafts[i * 3:i * 3 + 4]]
+            else:
+                tasks = [{**t, "criterion": {**{k: None for k in CRITERION_KEYS}, **t["criterion"]}} for t in tasks[i * 2: i * 2 + 4]] or tasks[:1]
+            content = json.dumps({"goal_analysis": analysis, "tasks": tasks})
+            return _wrap(content, self.usage(_chars(text), len(content), "taskgen"))
         drafts = candidates(run.artifact("site-profile"))
         pick = [drafts[(i * 3 + k) % len(drafts)] for k in range(4)] if drafts else []
         tasks = [{"question": d.question, "start_path": d.start_path, "criterion": {"kind": d.criterion["kind"], **{k: None for k in CRITERION_KEYS}, **d.criterion}, "rationale": f"DEV PROVIDER fixture: {d.rationale}"[:300]} for d in pick]

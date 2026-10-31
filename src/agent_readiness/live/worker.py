@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import signal
 import sys
 import threading
@@ -40,7 +41,10 @@ def sanitize_goal(goal: str) -> str:
 
 
 def stop_kind(error: str) -> str:
-    return "budget" if any(w in error.lower() for w in ("budget", "spend gate", "ceiling", " cap", "estimated_cost_limit", "bound violation", "cost limit")) else "error"
+    e = error.lower()
+    if "goal coverage insufficient" in e:
+        return "coverage"                                          # a controlled stop: the site cannot support enough goal-relevant verified tasks
+    return "budget" if re.search(r"budget|spend gate|ceiling|\bcap\b|estimated_cost_limit|bound violation|cost limit", e) else "error"
 
 
 def execute(root: Path, job_id: str) -> None:
@@ -69,6 +73,7 @@ def execute_live(root: Path, job_id: str, job: dict) -> None:
     from ..agent import ModelConfig
     from ..investigate import flow
     from . import grant as G
+    from .lexicon import RENTAL
     from .targets import TARGETS
     g = job.get("grant")
     from .jobs import under_test_with_real_endpoint
@@ -90,7 +95,7 @@ def execute_live(root: Path, job_id: str, job: dict) -> None:
         return
     budget = g["budget_usd"]
     cfg = ModelConfig(model=g["model"], base_url=g["endpoint"])
-    opts = {"snapshot": snap, "n_tasks": job.get("n_tasks", 4), "goals": {"focus": sanitize_goal(job["goal"])}, "focus": sanitize_goal(job["goal"]), "rule_topup": False, "model_config": cfg, "allow_model_calls": True,
+    opts = {"snapshot": snap, "n_tasks": job.get("n_tasks", 4), "goals": {"focus": sanitize_goal(job["goal"])}, "focus": sanitize_goal(job["goal"]), "rule_topup": False, "goal_binding": True, "goal_lexicon": RENTAL, "model_config": cfg, "allow_model_calls": True,
             "total_cap_usd": budget, "repeats": 1}
     run, pipe, ctx = flow.build(root, job_id, target.id, mode="live", options=opts)
     run.write_artifact("live-grant", g)                                        # the authorization, kept with the run it covers
@@ -110,7 +115,7 @@ def execute_live(root: Path, job_id: str, job: dict) -> None:
             return
         if res.status == "failed":
             err = res.error or "pipeline failed"
-            finish("stopped" if stop_kind(err) == "budget" else "failed", error=f"Stopped at {res.stage}: {err}"[:400], stop={"kind": stop_kind(err), "stage": res.stage, "reason": err[:300]})
+            finish("stopped" if stop_kind(err) in ("budget", "coverage") else "failed", error=f"Stopped at {res.stage}: {err}"[:400], stop={"kind": stop_kind(err), "stage": res.stage, "reason": err[:300]})
             return
         manifest = run.artifact(f"manifests/{res.stage}-{res.manifest_sha256[:16]}")
         try:
