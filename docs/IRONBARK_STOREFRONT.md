@@ -18,7 +18,7 @@ No network, model, or credentials are used. The server binds loopback, serves GE
 A fictional Sydney equipment-hire business (the name, makers *Kestrel / Marlow / Torvald*, phone number, `.example` e-mail address and street address are invented; the footer says so on every page).
 
 * **16 hire products** in 5 categories (drilling & breaking, cutting, landscaping, access & height, ground & concrete), **8 accessories/consumables**, **3 kits**.
-* Pages: home, catalogue (all, three sort orders, five category pages), 16 product pages, 16 booking-calendar pages, accessories (index + 8), kits, hire terms and pricing, about, contact. 106 files in the control build.
+* Pages: home, catalogue (all, three sort orders, five category pages), 16 product pages, 16 booking-calendar pages, accessories (index + 8), kits, hire terms and pricing, about, contact. 55 pages and 51 assets (106 files) in the control build.
 * Product data: stable IDs (`IB-DRL-001` …), slugs, maker/model, daily/weekend/weekly rates, refundable deposit, minimum hire, delivery optional/required, fleet size, a specification table, what is included, hire conditions, and an eight-week booking calendar.
 * Deliberate overlap so tasks are non-trivial: e.g. three items can cut (tile saw 80 mm deep, cut-off saw 125 mm deep, chainsaw); two can drill masonry (10 mm vs 26 mm); delivery is required for four heavy items and optional for the rest; some items are booked out on specific days; accessories fit by shank/blade/battery/voltage tags.
 
@@ -58,3 +58,7 @@ Combine with `+`, e.g. `--variant cost+availability`.
 * Fixed "today"; no live availability; no search; prices are invented.
 * The investigation snapshot/mirror crawler has **not** been run on this site. It uses an external stylesheet and SVG images, so a snapshot would need to capture non-HTML assets; that is untested integration work, not part of this change.
 * Variant additions are written to be realistic, not to be effective; whether any of them changes agent behaviour is unknown until measured.
+
+## Experiment 2 infrastructure (added later)
+`readiness exp2 assess|pool|plan|rules|run|status`: crawl integration, deterministic task generation with independent verification, study plan, cost model and the approval-gated baseline driver. See [collaboration/proposals/EXP2-protocol.md](../collaboration/proposals/EXP2-protocol.md).
+Two corrections made by that work: the core drill is now classed courier delivery (22 kg, under the terms page's 25 kg rule), and the pipeline's default crawl limits are replaced by explicit ones for this site (the defaults would drop 31 of 51 assets).

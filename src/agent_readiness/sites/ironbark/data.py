@@ -107,7 +107,7 @@ PRODUCTS = [
     P(id="IB-DRL-004", slug="diamond-core-drill-152mm", category="drilling-and-breaking", name="Diamond core drill 152 mm (wet)", maker="Torvald", model="CD-152",
       summary="Wet diamond core drill with stand for large holes through concrete and brick.",
       description="A rig-mounted core drill that cuts clean holes up to 152 mm through reinforced concrete for pipes and vents. Supplied with a stand, a water pressure tank and one 152 mm core bit.",
-      power="240 V mains", weight_kg=22.0, daily=120, weekend=190, weekly=430, deposit=400, min_days=1, delivery="optional", delivery_class="machine", units=1, popularity=0.09,
+      power="240 V mains", weight_kg=22.0, daily=120, weekend=190, weekly=430, deposit=400, min_days=1, delivery="optional", delivery_class="courier", units=1, popularity=0.09,
       specs=(("Max hole diameter", "152 mm"), ("Max depth with bit", "300 mm"), ("Water supply", "Pressure tank (supplied)"), ("Speeds", "3"), ("Stand", "Included"), ("Weight (drill and stand)", "22.0 kg")),
       included=("Drill stand", "Water pressure tank", "1 × 152 mm core bit"),
       conditions=("Operator must be 18 or over.", "Wet use: connect through a safety switch (RCD)."),
