@@ -1,6 +1,11 @@
-# Plan: ONE full real-provider Ironbark investigation (proposal; nothing here has been run)
+# Plan: ONE full real-provider Ironbark investigation (proposal; this full investigation has not been run)
 
 Needs the owner's explicit authorization of this plan, this goal, this context and the spend. The numbers are estimates from measured data (Step A: 3 taskgen requests, about 12 s each; EXP-2 pilot: US$0.01435 and 3-20 requests per browsing task, 25-100 s per task) and from the approved caps.
+
+## Prior real spend and open exposure (record)
+- **Completed real task-generation smoke test, job `live-96a6c3ab04` (2026-10-31, `muse-spark-1.3` at `api.meta.ai`, grant `taskgen` only, cap US$0.15):** 3 requests, **US$0.105844 calculated** (settles 0.036645 + 0.033298 + 0.035901; not a bill). It ran the earlier, pre-goal-binding generator; none of its tasks served the goal, which led to the current goal-bound design. The current prompts, schema and relevance verifier have **not** been run against the real model.
+- **Unresolved: one stray reservation** from a test on 2026-10-31 (about 08:51 UTC): US$0.047682 upper bound reserved against `api.meta.ai` and never settled, so it is unknown whether a request left the machine (if it did, at most that bound, realistically about a cent). Not in any ledger the owner has reconciled; the provider usage page has not been checked. Now made impossible (see LIVE_SMOKE_TEST.md).
+- Neither item is recorded in `collaboration/budget/programme-ledger.json` (unchanged, per the frozen-ledger rule); this document and LIVE_SMOKE_TEST.md are the record.
 
 ## What runs
 Goal: *"Can a shopper compare the hire price and availability of the two cheapest cutting tools?"* Website context: `docs/sample-context-ironbark.txt` (client-supplied, unverified; guides, never evidence). One user grant, three stages, nothing else (no fix, no retest, no other site, no EXP-2).
@@ -19,7 +24,9 @@ Likely runtime: 8-12 minutes (inspect < 10 s; task generation about 40 s; trials
 ```
 # 1. free, offline: exact task-generation approval hash (binds goal, context, prompts, schema, model, endpoint, capture, caps)
 readiness live run --goal "Can a shopper compare the hire price and availability of the two cheapest cutting tools?" --context-file docs/sample-context-ironbark.txt --plan
-#    expected taskgen manifest sha256: d8164aec4a492183d73a90b4522e44ac0902f75837a2a3edac19e986d2c20067  (context sha256 8ee42e11863e207d...)
+#    expected taskgen manifest sha256: 3720fd83f9837be3da49106738c51dc06443e0838a04b463c6960eb0e512a8bd  (context sha256 8ee42e11863e207d...; ledger ceiling 2.00)
+#    (an earlier revision of this plan printed d8164aec... : that was the hash with the SMOKE ceiling (US$0.15), computed by a plan command that did not use the full-run configuration. It never applied to this run.)
+#    `--plan` now builds the manifest from the same options function (`worker.live_options`), model/endpoint settings and ceiling the worker uses; a test compares it with the options a real UI-style job passes to the pipeline.
 
 # 2. paid (only after explicit authorization); key from the repository .env
 export SCANNER_DATA_DIR=scanner-data SCANNER_LIVE_ENABLED=1 SCANNER_LIVE_BUDGET_USD=2.00

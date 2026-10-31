@@ -67,13 +67,21 @@ def execute(root: Path, job_id: str) -> None:
         update(root, job_id, state="failed", error=f"pipeline stopped: {res.status}" + (f" at {res.stage}" if res.stage else "") + (f": {res.error}" if res.error else ""), finished_at=time.time())
 
 
+def live_options(snapshot, goal: str, context: str | None, *, budget: float, cfg, n_tasks: int = 4) -> dict:
+    """The ONE definition of the options a live run is built with. The worker uses it for the real run and `readiness live run/smoke --plan` uses it to compute the approval manifest, so the printed hash is the
+    hash the run presents (the budget is the ledger ceiling and is part of the manifest's allocation)."""
+    from .lexicon import RENTAL
+    g = sanitize_goal(goal)
+    return {"snapshot": snapshot, "n_tasks": n_tasks, "goals": {"focus": g}, "focus": g, "rule_topup": False, "goal_binding": True, "goal_lexicon": RENTAL, "context": context, "model_config": cfg, "allow_model_calls": True,
+            "total_cap_usd": budget, "repeats": 1}
+
+
 def execute_live(root: Path, job_id: str, job: dict) -> None:
     """A user-approved live evaluation: the real model drives task generation, browsing and investigation through the unchanged pipeline. Every paid stage still presents its manifest; the worker
     records the approval ONLY through `grant.Approver` (this job's grant: scope, caps, budget, model), and the ledger ceiling equals the budget. Anything outside the grant stops the run safely."""
     from ..agent import ModelConfig
     from ..investigate import flow
     from . import grant as G
-    from .lexicon import RENTAL
     from .targets import TARGETS
     g = job.get("grant")
     from .jobs import under_test_with_real_endpoint
@@ -95,8 +103,7 @@ def execute_live(root: Path, job_id: str, job: dict) -> None:
         return
     budget = g["budget_usd"]
     cfg = ModelConfig(model=g["model"], base_url=g["endpoint"])
-    opts = {"snapshot": snap, "n_tasks": job.get("n_tasks", 4), "goals": {"focus": sanitize_goal(job["goal"])}, "focus": sanitize_goal(job["goal"]), "rule_topup": False, "goal_binding": True, "goal_lexicon": RENTAL, "context": job.get("context"), "model_config": cfg, "allow_model_calls": True,
-            "total_cap_usd": budget, "repeats": 1}
+    opts = live_options(snap, job["goal"], job.get("context"), budget=budget, cfg=cfg, n_tasks=job.get("n_tasks", 4))
     run, pipe, ctx = flow.build(root, job_id, target.id, mode="live", options=opts)
     run.write_artifact("live-grant", g)
     if job.get("context"):                                                         # the exact context, kept with the run; its hash is in the grant and in every approved manifest

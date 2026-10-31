@@ -33,30 +33,35 @@ def register(sub) -> None:
     f.add_argument("--wait", type=int, default=1800)
 
 
-def plan(goal: str, context: str | None = None) -> dict:
+def plan(goal: str, context: str | None = None, smoke: bool = False) -> dict:
+    """The approval manifest of the task-generation stage EXACTLY as the worker will present it: same options (`worker.live_options`), same model/endpoint (the server configuration) and the same ledger
+    ceiling (the smoke cap for a smoke job, else the job cap), so the printed hash is the hash of the real run."""
     from ..agent import ModelConfig
     from ..investigate import flow
-    from ..investigate.taskgen import propose
+    from ..scanner.service.config import load_config
     from . import grant as G, worker
-    from .lexicon import RENTAL
+    from .jobs import LiveSettings
     from .targets import TARGETS
+    settings = LiveSettings.from_config(load_config())
+    budget = G.SMOKE_CAP_USD if smoke else settings.cap_usd
     target = TARGETS["ironbark"]
     with tempfile.TemporaryDirectory() as tmp:
-        run, pipe, ctx = flow.build(Path(tmp), "smoke-plan", "ironbark", mode="live", options={"snapshot": target.snapshot(), "n_tasks": 4, "goals": {"focus": worker.sanitize_goal(goal)}, "rule_topup": False, "goal_binding": True, "goal_lexicon": RENTAL, "context": context,
-                                                                                                   "model_config": ModelConfig(), "total_cap_usd": G.SMOKE_CAP_USD})
+        opts = worker.live_options(target.snapshot(), goal, context, budget=budget, cfg=ModelConfig(model=settings.model, base_url=settings.base_url))
+        run, pipe, ctx = flow.build(Path(tmp), "plan", "ironbark", mode="live", options=opts)
         res = pipe.run(ctx, until="inspect")
         if res.status != "done":
             raise SystemExit(f"plan failed: {res.status} {res.error}")
         m = flow.taskgen_manifest(ctx)
-        return {"manifest_sha256": run.manifest_sha256(m), "stage": m["stage"], "model": m["model"], "endpoint": m["endpoint"], "max_provider_requests": m["max_requests"], "batches": m["batches"],
-                "retries_per_request": m["retries_per_request"], "run_cap_usd": m["run_cap_usd"], "per_request_cap_usd": m["per_request_cap_usd"], "per_request_reservation_usd": m["per_request_reservation_usd"],
-                "worst_case_stage_usd": m["worst_case_stage_usd"], "grant_budget_usd": G.SMOKE_CAP_USD, "snapshot_sha256": m["snapshot_sha256"], "goal": worker.sanitize_goal(goal), "client_context_sha256": m.get("client_context_sha256"),
-                "stops_after": "taskgen and freeze; no browser trial, investigator or recommendation", "rule_topup": False}
-
-
-def G_LIVE_STAGES():
-    from .grant import LIVE_STAGES
-    return LIVE_STAGES
+        out = {"manifest_sha256": run.manifest_sha256(m), "stage": m["stage"], "model": m["model"], "endpoint": m["endpoint"], "max_provider_requests": m["max_requests"], "batches": m["batches"],
+               "retries_per_request": m["retries_per_request"], "run_cap_usd": m["run_cap_usd"], "per_request_cap_usd": m["per_request_cap_usd"], "per_request_reservation_usd": m["per_request_reservation_usd"],
+               "worst_case_stage_usd": m["worst_case_stage_usd"], "grant_budget_usd": budget, "ledger_ceiling_usd": m["allocation"]["ledger_ceiling_usd"], "snapshot_sha256": m["snapshot_sha256"], "goal": worker.sanitize_goal(goal),
+               "client_context_sha256": m.get("client_context_sha256"), "rule_topup": False}
+        if smoke:
+            return {**out, "stops_after": "taskgen and freeze; no browser trial, investigator or recommendation"}
+        lim = G.default_limits()
+        return {**out, "full_run_scope": {"stages": list(G.LIVE_STAGES), "grant_budget_usd": budget, "stage_caps_usd": lim["stage_caps_usd"], "allocated_usd": m["allocation"]["allocated_usd"], "max_tasks": lim["max_tasks"],
+                                           "repeats": lim["repeats"], "per_request_cap_usd": lim["per_request_cap_usd"], "max_retries_per_request": lim["max_retries_per_request"],
+                                           "note": "baseline and investigate manifests depend on the tasks that are generated, so their hashes exist only at run time; they are approved only if they stay inside this grant"}}
 
 
 def _context(args) -> str | None:
@@ -67,10 +72,7 @@ def _context(args) -> str | None:
 def main(args) -> int:
     smoke = args.live_command == "smoke"
     if args.plan:
-        out = plan(args.goal, _context(args))
-        if not smoke:
-            out = {**out, "full_run_scope": {"stages": list(G_LIVE_STAGES()), "grant_budget_usd": 2.0, "stage_caps_usd": {"taskgen": 0.15, "baseline_trials": 1.40, "investigate": 0.40}, "max_tasks": 4,
-                                             "note": "baseline and investigate manifests depend on the tasks that are generated, so their hashes exist only at run time; they are approved only if they stay inside this grant"}}
+        out = plan(args.goal, _context(args), smoke)
         print(json.dumps(out, indent=2))
         return 0
     from ..scanner.service.config import load_config

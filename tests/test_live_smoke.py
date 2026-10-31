@@ -178,10 +178,10 @@ def args(**kw):
 
 def test_the_plan_is_offline_deterministic_and_states_the_request_and_cost_bounds(monkeypatch, capsys):
     monkeypatch.delenv("META_MODEL_API_KEY", raising=False)
-    p1, p2 = live_cli.plan(GOAL), live_cli.plan(GOAL)
+    p1, p2 = live_cli.plan(GOAL, smoke=True), live_cli.plan(GOAL, smoke=True)
     assert p1 == p2 and p1["max_provider_requests"] == 3 and p1["retries_per_request"] == 0 and p1["run_cap_usd"] == 0.15 and p1["per_request_cap_usd"] == 0.05 and p1["grant_budget_usd"] == 0.15
     assert p1["worst_case_stage_usd"] <= 0.15 and sum(p1["per_request_reservation_usd"]) == pytest.approx(p1["worst_case_stage_usd"], abs=1e-5) and p1["endpoint"] == "https://api.meta.ai/v1/chat/completions"
-    assert live_cli.plan("a completely different goal about accessories")["manifest_sha256"] != p1["manifest_sha256"], "the approval hash binds the goal"
+    assert live_cli.plan("a completely different goal about accessories", smoke=True)["manifest_sha256"] != p1["manifest_sha256"], "the approval hash binds the goal"
     assert live_cli.main(args(plan=True)) == 0 and "manifest_sha256" in capsys.readouterr().out
 
 
@@ -341,7 +341,7 @@ def test_the_plan_hash_is_the_hash_of_the_manifest_the_worker_will_present(tmp_p
     assert captured["model_config"] == ModelConfig() and captured["total_cap_usd"] == 0.15 and captured["rule_topup"] is False and captured["goals"] == {"focus": GOAL} and captured["n_tasks"] == 4
     run, pipe, ctx = flow.build(tmp_path / "plan", "p", "ironbark", mode="live", options=captured)
     assert pipe.run(ctx, until="inspect").status == "done"
-    assert run.manifest_sha256(flow.taskgen_manifest(ctx)) == live_cli.plan(GOAL)["manifest_sha256"]
+    assert run.manifest_sha256(flow.taskgen_manifest(ctx)) == live_cli.plan(GOAL, smoke=True)["manifest_sha256"]
 
 
 def test_after_a_failure_or_a_restart_a_smoke_job_cannot_reach_any_other_paid_stage(tmp_path, monkeypatch):
@@ -395,3 +395,34 @@ def test_the_exact_goal_through_the_real_path_is_covered_and_reports_only_the_ve
     rel = rep["relevance_to_goal"]
     assert rep["yield"]["meets_minimum"] is True and rep["yield"]["rule_topup_tasks"] == 0 and rep["proposal_accounting"]["unaccounted"] == 0
     assert rel["coverage"]["passes"] and set(rel["coverage"]["covered"]) >= {"price", "availability"} and [d["kind"] for d in rel["limitation_details"]] == ["verifier"]
+
+
+def test_the_full_run_plan_prints_the_hash_and_scope_of_the_run_the_ui_would_launch(tmp_path, monkeypatch):
+    """`live run --plan` must describe the US$2.00 full run, not the smoke test: the options captured from the worker of a real UI-style job (full grant, context) give the same manifest hash, the ledger ceiling in
+    the manifest is the grant budget, and the printed scope is the grant's."""
+    from agent_readiness.agent import ModelConfig
+    from agent_readiness.investigate import flow
+    ctx_text = "Ironbark Hire Co. serves tradespeople who hire tools by the day; price and availability matter most."
+    captured = {}
+    monkeypatch.setenv("META_MODEL_API_KEY", KEY)
+    m = JobManager(tmp_path / "live", spawn=lambda jid: 0, live=settings(base_url="https://api.meta.ai/v1", allow_dev_provider=False))
+    monkeypatch.setattr("agent_readiness.live.jobs.under_test_with_real_endpoint", lambda e: False)
+    j = m.create("o", "ironbark", GOAL, "live", 2.0, ctx_text)
+    real_build = flow.build
+
+    def spy(root, job_id, site, *, mode, options):
+        captured.update(options)
+        raise RuntimeError("stop after capturing the options")
+    monkeypatch.setattr(flow, "build", spy)
+    with pytest.raises(RuntimeError):
+        worker.execute_live(m.root, j["id"], worker.read(m.root, j["id"]))
+    monkeypatch.setattr(flow, "build", real_build)
+    assert captured["total_cap_usd"] == 2.0 and captured["model_config"] == ModelConfig()
+    run, pipe, ctx = flow.build(tmp_path / "plan", "p", "ironbark", mode="live", options=captured)
+    assert pipe.run(ctx, until="inspect").status == "done"
+    man = flow.taskgen_manifest(ctx)
+    monkeypatch.delenv("META_MODEL_API_KEY", raising=False)
+    plan = live_cli.plan(GOAL, ctx_text)
+    assert plan["manifest_sha256"] == run.manifest_sha256(man) and plan["ledger_ceiling_usd"] == 2.0 == plan["grant_budget_usd"] == worker.read(m.root, j["id"])["grant"]["budget_usd"]
+    assert plan["full_run_scope"]["stage_caps_usd"] == worker.read(m.root, j["id"])["grant"]["limits"]["stage_caps_usd"] and "stops_after" not in plan
+    assert plan["manifest_sha256"] != live_cli.plan(GOAL, ctx_text, smoke=True)["manifest_sha256"], "the full run and the smoke test are different approvals"
