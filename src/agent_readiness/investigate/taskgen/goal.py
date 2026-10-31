@@ -75,7 +75,13 @@ def bound_text(focus: str, context: str | None = None) -> str:
             "`information_gaps`: what has to be found on the site to answer it.\n"
             "Step 2, in `tasks`: propose only tasks that directly advance answering the goal: each must retrieve a fact the goal needs about one of its entities, or reach the page that holds it, or compare "
             "those entities on a needed attribute. Fill `goal_link` with the entity and attribute (or gap) the task serves. Do NOT propose generic catalogue trivia or tasks about other items or attributes, "
-            "even if they would be easy. If the site cannot express part of the goal in the allowed criteria, propose fewer tasks rather than unrelated ones.")
+            "even if they would be easy. If the site cannot express part of the goal in the allowed criteria, propose fewer tasks rather than unrelated ones.\n"
+            "Spread the tasks over the goal's entities and attributes instead of returning to one item: when the goal concerns several items, use different items and the different facts it needs. Prefer a fact read from an "
+            "item's own page (page_fact) when it can be checked independently there, and prefer facts the start page does not already show. This is a preference, not a quota: if the goal or the site does not suit one task per "
+            "entity, propose what best serves the goal.\n"
+            "A comparison or filter task (item_set, extremum) must name its entity scope in the question (for example 'among the <category> items', never just 'in the list'), and its `listing` should be the page that lists exactly "
+            "the goal's items when the site has one; if only a broader listing exists, say so in the question rather than imply the narrower scope.\n"
+            "For reach_page, `target` is a page path exactly as written in the summary (preferred) or the exact title of that page; a title shared by several pages is refused.")
 
 
 # --------------------------------------------------------------------------------------------------------------------------------------------------- verifier side: ground the goal in the site

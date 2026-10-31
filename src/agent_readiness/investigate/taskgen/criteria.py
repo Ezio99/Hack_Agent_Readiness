@@ -120,6 +120,21 @@ def _page(profile: dict, path: str) -> dict:
     return profile["pages"][path]
 
 
+def resolve_target(profile: dict, target: str) -> str:
+    """A reach_page target is a captured page PATH (preferred, exactly as written in the site summary) or the exact TITLE of exactly one captured page (case and spacing ignored). A path always wins; a title
+    is resolved to its path deterministically from the snapshot; a title shared by several pages or by none is refused, so a target can never silently point at the wrong page."""
+    pages = profile["pages"]
+    if target in pages:
+        return target
+    want = " ".join(str(target).split()).casefold()
+    hits = sorted(p for p, rec in pages.items() if want and " ".join((rec.get("title") or "").split()).casefold() == want)
+    if len(hits) == 1:
+        return hits[0]
+    if hits:
+        raise CriterionError(f"target {target!r} is not a captured page path and its title matches {len(hits)} pages ({', '.join(hits[:4])}); use the page path")
+    raise CriterionError(f"target {target!r} is neither a captured page path nor the title of a captured page")
+
+
 def _fact(page: dict, label: str) -> list[str]:
     return sorted({f["value"] for f in page["facts"] if f["label"] == norm(label).lower()})
 
@@ -164,11 +179,12 @@ def compile_criterion(c: Criterion | dict, profile: dict) -> Compiled:
         others = sorted({f["value"] for p in profile["pages"].values() for f in p["facts"] if f["label"] == norm(c.label).lower()} - {vals[0]})
         return Compiled("page_fact", "string", vals[0], [c.page], [(c.page, vals[0])], distractors=others)
     if isinstance(c, ReachPage):
-        page = _page(profile, c.target)
+        page = _page(profile, resolve_target(profile, c.target))
         title = page["title"]
         if not title or sum(1 for p in profile["pages"].values() if p["title"] == title) != 1:
             raise CriterionError("target page has no unique title")
-        return Compiled("reach_page", "string", title, [c.target], [(c.target, title)], distractors=sorted({p["title"] for q, p in profile["pages"].items() if q != c.target and p["title"]} - {title}))
+        path = resolve_target(profile, c.target)
+        return Compiled("reach_page", "string", title, [path], [(path, title)], distractors=sorted({p["title"] for q, p in profile["pages"].items() if q != path and p["title"]} - {title}))
     if isinstance(c, ItemSet):
         items = _items(profile, c.listing)
         hit, need = [], []

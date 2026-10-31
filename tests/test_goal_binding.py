@@ -62,10 +62,10 @@ def test_the_real_step_a_proposals_pass_the_gate_but_none_serves_the_goal():
         for d in b:
             r = evaluate(Draft(d["question"], d["start_path"], d["criterion"], "model", ""), p, acc)
             (acc if hasattr(r, "compiled") else rej).append(r)
-    assert (len(acc), len(rej)) == (7, 5), "12 proposals: 5 rejected by the gate (as reported) and 7 accepted; the old stage then kept the first 4 and dropped 3 silently"
+    assert (len(acc), len(rej)) == (8, 4), "12 proposals: 4 rejected by the gate and 8 accepted (it was 5 and 7 when a reach_page target given as a page TITLE was refused; titles that name exactly one captured page now resolve to its path); the old stage kept the first 4 and dropped the rest silently"
     ga = G.analyse(GOAL, p, RENTAL)
     verdicts = [G.assess(ga, a, RENTAL) for a in acc]
-    assert [v["goal_relevant"] for v in verdicts] == [False] * 7, "the answerable-but-irrelevant tasks are exactly what a person found: 0 of 4 (and 0 of the 3 hidden ones)"
+    assert [v["goal_relevant"] for v in verdicts] == [False] * 8, "the answerable-but-irrelevant tasks are exactly what a person found: 0 of 4 (and 0 of the 3 hidden ones)"
     hammer = next(v for v in verdicts if "availability page" in v["question"])
     assert hammer["aspects_matched"] == ["availability"] and hammer["entity_match"] is False, "right aspect, wrong entity (an electric hammer is not a cutting tool)"
     assert next(v for v in verdicts if "deposit" in v["question"])["aspects_matched"] == [], "a deposit is not a hire price"
@@ -73,14 +73,14 @@ def test_the_real_step_a_proposals_pass_the_gate_but_none_serves_the_goal():
 
 def test_replaying_the_real_proposals_reports_the_limitation_accounts_for_all_twelve_and_substitutes_nothing(tmp_path):
     run, err, llm = stage(tmp_path, REAL)
-    assert err and err.startswith("goal coverage insufficient: 0 goal-relevant verified tasks selected out of 7 gate-accepted") and "uncovered but supportable: ['availability', 'price']" in err and "No unrelated tasks were substituted" in err
+    assert err and err.startswith("goal coverage insufficient: 0 goal-relevant verified tasks selected out of 8 gate-accepted") and "uncovered but supportable: ['availability', 'price']" in err and "No unrelated tasks were substituted" in err
     rep = run.artifact("taskgen-report")
     acc = rep["accounting"]
-    assert acc["proposed"] == 12 and acc["rejected"] == 5 and acc["accepted_not_selected"] == 7 and acc["selected"] == 0 and acc["unaccounted"] == 0
+    assert acc["proposed"] == 12 and acc["rejected"] == 4 and acc["accepted_not_selected"] == 8 and acc["selected"] == 0 and acc["unaccounted"] == 0
     assert all(r["reason"] == "not goal-relevant" for r in rep["not_selected"]) and rep["rule_topup"] == 0 and rep["accepted"] == []
     assert not run.has_artifact("accepted-drafts") if hasattr(run, "has_artifact") else True
     gb = rep["goal_binding"]
-    assert gb["relevant_tasks"] == 0 and gb["gate_accepted_tasks"] == 7
+    assert gb["relevant_tasks"] == 0 and gb["gate_accepted_tasks"] == 8
     assert [d["kind"] for d in gb["analysis"]["limitation_details"]] == ["verifier"] and gb["analysis"]["limitations"][0].startswith("ordering [verifier limitation]")
     assert gb["analysis"]["support"]["availability"]["supported"] is True and gb["analysis"]["support"]["price"]["supported"] is True and len(gb["analysis"]["entity_items"]) == 3
     assert gb["coverage"]["passes"] is False and gb["coverage"]["missing_supported"] == ["availability", "price"]
@@ -186,8 +186,8 @@ def test_relevance_is_reported_separately_and_does_not_change_which_tasks_the_ga
     run_u, _, _ = stage(tmp_path / "u", REAL, bound=False, goal_binding=False, rule_topup=False)
     rb, ru = run_b.artifact("taskgen-report"), run_u.artifact("taskgen-report")
     assert sorted(r["question"] for r in rb["rejected"]) == sorted(r["question"] for r in ru["rejected"]), "identical gate rejections with and without binding"
-    assert rb["accounting"]["accepted_not_selected"] + rb["accounting"]["selected"] == 7 and len(ru["accepted"]) + len(ru["not_selected"]) == 7
-    assert len(ru["accepted"]) == 4 and len(ru["not_selected"]) == 3, "the old behaviour: 3 gate-accepted tasks were cut by position, now at least reported"
+    assert rb["accounting"]["accepted_not_selected"] + rb["accounting"]["selected"] == 8 and len(ru["accepted"]) + len(ru["not_selected"]) == 8
+    assert len(ru["accepted"]) == 4 and len(ru["not_selected"]) == 4, "the old behaviour: 3 gate-accepted tasks were cut by position, now at least reported"
 
 
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------------ the prompt and schema
