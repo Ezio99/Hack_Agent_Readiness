@@ -3,7 +3,7 @@ import { ApiError, call, configured, getToken, setToken } from "../lib/scannerAp
 import { Callout, Pill } from "../components/ui";
 import { LiveJob, LiveSummary, LiveTarget, cancelJob, exportJob, getJob, isActive, listJobs, liveTargets, startJob } from "../lib/liveApi";
 
-const POLL_MS = 1500;
+const POLL_MS = 2000;                                                      // well inside the API rate limit (60 requests/minute per client)
 const STAGE_LABEL: Record<string, string> = { inspect: "Explore the website", taskgen: "Generate customer tasks", freeze: "Freeze tasks", baseline_trials: "Agents attempt the tasks", trace: "Analyse traces", investigate: "Investigator", recommend: "Recommendations", report: "Report", apply_fix: "Apply a fix", post_trials: "Retest", evaluate: "Evaluate", final_report: "Final report" };
 
 /** Live evaluation (M0): start a bounded backend job on a registered demo site, watch the real pipeline stages, trace events and recorded cost, then open the result in the page below (the same

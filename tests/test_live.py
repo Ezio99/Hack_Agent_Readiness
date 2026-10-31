@@ -86,7 +86,9 @@ def test_the_worker_never_receives_a_credential(tmp_path, monkeypatch):
 
     def fake(cmd, **kw):
         seen.update(kw["env"])
-        class P: pid = 0
+        class P:
+            pid = 0
+            def wait(self): return 0
         return P()
     monkeypatch.setattr(subprocess, "Popen", fake)
     m = JobManager(tmp_path / "live")
@@ -151,6 +153,58 @@ def test_a_real_mock_evaluation_runs_the_pipeline_and_is_replayable(tmp_path):
     assert d["schema"] == "investigation-dashboard-v1" and d["run"]["mode"] == "mock" and d["notices"][0].startswith("MOCK EVALUATION") and d["goal"] == GOAL
     assert d["investigation"]["mode"] == "scripted" and any(h["status"] == "supported" for h in d["hypotheses"]) and len(d["proposals"]) >= 1
     assert all("unvalidated" in p["validation"] for p in d["proposals"]) and json.dumps(d).count("sk-") == 0
+    rd = m.root / j["id"]
+    assert json.loads((rd / "run.json").read_text())["mode"] == "mock"
+    assert not (rd / "calls").exists() and not list(rd.glob("private/llm-transcript*")) and not list(rd.glob("private/investigator-llm-transcript*")), "no model request was made or recorded (the scripted investigator keeps only its own fixture transcript)"
+    assert not (rd / "spend").exists() or json.loads(json.dumps(v["spend"]))["committed_usd"] == 0
+    assert all(json.loads(f.read_text())["trial"]["mode"] == "mock" for f in (rd / "artifacts" / "trials").glob("*.json")), "every trial used the scripted agent"
     again = m.export(j["id"], "owner")                   # replay: reading the stored run again executes nothing and costs nothing
     assert again["run"]["id"] == d["run"]["id"]
     assert JobManager(m.root).get(j["id"], "owner")["state"] == "completed", "a restarted server shows the same finished job"
+
+
+def _group_gone(pgid: int) -> bool:
+    try:
+        os.killpg(pgid, 0)
+        return False
+    except ProcessLookupError:
+        return True
+
+
+def _wait(fn, seconds=60, step=0.5):
+    t0 = time.time()
+    while time.time() - t0 < seconds:
+        if fn():
+            return True
+        time.sleep(step)
+    return False
+
+
+@pytest.mark.browser
+def test_cancelling_a_running_job_stops_the_worker_and_its_browser_and_keeps_the_run(tmp_path, monkeypatch):
+    monkeypatch.setenv("META_MODEL_API_KEY", "sk-test-not-real")
+    m = JobManager(tmp_path / "live")
+    j = m.create("o", "ironbark", GOAL)
+    pid = None
+    assert _wait(lambda: (worker.read(m.root, j["id"]).get("pid") or 0) > 0 and m.get(j["id"], "o")["progress"] > 0.2, 90), "job did not get going"
+    pid = worker.read(m.root, j["id"])["pid"]
+    env = open(f"/proc/{pid}/environ", "rb").read().decode(errors="replace")
+    assert "META_MODEL_API_KEY" not in env and "sk-test" not in env, "the running worker holds no credential"
+    v = m.cancel(j["id"], "o")
+    assert v["state"] == "cancelled"
+    assert _wait(lambda: _group_gone(pid), 20), "the worker and every child it started (the browser) are gone"
+    assert m.get(j["id"], "o")["state"] == "cancelled", "the dying worker did not turn the cancel into a failure"
+    assert (m.root / j["id"] / "run.json").exists() and m.export(j["id"], "o")["run"]["complete"] is False, "the partial run is kept and exportable as incomplete"
+    assert m.create("o", "ironbark", GOAL)["state"] == "queued", "the slot is free again"
+    m.cancel_all()
+
+
+@pytest.mark.browser
+def test_the_worker_enforces_its_own_deadline_even_if_the_api_never_does(tmp_path):
+    m = JobManager(tmp_path / "live", timeout=6)
+    m._expire = lambda job_id: None                      # simulate an API restart: no server-side timer
+    j = m.create("o", "ironbark", GOAL)
+    assert _wait(lambda: m.get(j["id"], "o")["state"] == "timed_out", 60), m.get(j["id"], "o")
+    pid = worker.read(m.root, j["id"])["pid"]
+    assert _wait(lambda: _group_gone(pid), 15)
+    assert "exceeded" in m.get(j["id"], "o")["error"]

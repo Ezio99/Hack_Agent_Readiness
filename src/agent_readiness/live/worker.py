@@ -7,6 +7,7 @@ import json
 import os
 import signal
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -52,6 +53,20 @@ def execute(root: Path, job_id: str) -> None:
         update(root, job_id, state="failed", error=f"pipeline stopped: {res.status}" + (f" at {res.stage}" if res.stage else "") + (f": {res.error}" if res.error else ""), finished_at=time.time())
 
 
+def start_watchdog(root: Path, job_id: str, seconds: float) -> threading.Timer:
+    """The worker enforces its OWN deadline, so a job cannot outlive its limit if the API process that spawned it restarted (the API's timer would be gone)."""
+    def expire():
+        update(root, job_id, state="timed_out", error=f"The evaluation exceeded its {int(seconds)}s limit and was stopped.", finished_at=time.time())
+        try:
+            os.killpg(os.getpgid(0), signal.SIGKILL)                  # the worker, its browser and any children
+        finally:
+            os._exit(124)
+    t = threading.Timer(seconds, expire)
+    t.daemon = True
+    t.start()
+    return t
+
+
 def main(argv: list[str]) -> int:
     root, job_id = Path(argv[1]), argv[2]
 
@@ -60,6 +75,9 @@ def main(argv: list[str]) -> int:
         os._exit(143)
     signal.signal(signal.SIGTERM, on_term)
     update(root, job_id, state="running", started_at=time.time(), pid=os.getpid())
+    for name in ("META_MODEL_API_KEY", "META_API_KEY"):                  # defence in depth: the manager already scrubbed the environment; M0 must never be able to authenticate
+        os.environ.pop(name, None)
+    start_watchdog(root, job_id, read(root, job_id).get("timeout_seconds", 900))
     try:
         execute(root, job_id)
     except BaseException as exc:                                   # a worker never dies silently: the failure is recorded for the API

@@ -46,30 +46,38 @@ class JobManager:
         env = {k: v for k, v in os.environ.items() if not SECRET_ENV.search(k)}                 # the worker never holds a credential in M0
         log = open(self.root / f"{job_id}.log", "ab")
         p = subprocess.Popen([sys.executable, "-m", "agent_readiness.live.worker", str(self.root), job_id], stdout=log, stderr=log, env=env, start_new_session=True)
+        threading.Thread(target=lambda: (p.wait(), log.close()), daemon=True).start()          # reap the child: a finished worker must not linger as a zombie
         return p.pid
 
     @staticmethod
-    def alive(pid: int | None) -> bool:
+    def alive(pid: int | None, job_id: str | None = None) -> bool:
+        """The worker process of this job is running (not a zombie, and not some other process that reused the pid)."""
         if not pid:
             return False
         try:
             os.kill(pid, 0)
             with open(f"/proc/{pid}/stat") as f:
-                return f.read().rsplit(")", 1)[1].split()[0] != "Z"
+                if f.read().rsplit(")", 1)[1].split()[0] == "Z":
+                    return False
+            if job_id:
+                with open(f"/proc/{pid}/cmdline", "rb") as f:
+                    cmd = f.read().decode(errors="replace")
+                return "agent_readiness.live.worker" in cmd and job_id in cmd
+            return True
         except (OSError, IndexError):
             return False
 
     def recover(self) -> None:
         for p in self.root.glob("*.job.json"):
             job = json.loads(p.read_text())
-            if job["state"] in ("queued", "running") and not self.alive(job.get("pid")):
+            if job["state"] in ("queued", "running") and not self.alive(job.get("pid"), job["id"]):
                 worker.update(self.root, job["id"], state="failed", error="The worker stopped unexpectedly (server restart or crash). The run directory is intact.", finished_at=time.time())
 
     def running(self) -> dict | None:
         for p in self.root.glob("*.job.json"):
             job = json.loads(p.read_text())
             if job["state"] in ("queued", "running"):
-                if self.alive(job.get("pid")) or job["state"] == "queued" and time.time() - job["created_at"] < 30:
+                if self.alive(job.get("pid"), job["id"]) or job["state"] == "queued" and time.time() - job["created_at"] < 30:
                     return job
         return None
 
@@ -104,7 +112,7 @@ class JobManager:
             worker.update(self.root, job_id, state="timed_out", error=f"The evaluation exceeded its {self.timeout}s limit and was stopped.", finished_at=time.time())
 
     def _kill(self, job: dict) -> None:
-        if self.alive(job.get("pid")):
+        if self.alive(job.get("pid"), job["id"]):
             try:
                 os.killpg(job["pid"], signal.SIGTERM)
             except OSError:
@@ -143,7 +151,7 @@ class JobManager:
 
     def get(self, job_id: str, owner: str) -> dict:
         job = self._owned(job_id, owner)
-        if job["state"] in ("queued", "running") and not self.alive(job.get("pid")) and time.time() - job["created_at"] > 30:
+        if job["state"] in ("queued", "running") and not self.alive(job.get("pid"), job["id"]) and time.time() - job["created_at"] > 30:
             job = worker.update(self.root, job_id, state="failed", error="The worker stopped unexpectedly.", finished_at=time.time())
         return {**{k: job.get(k) for k in ("id", "target_id", "goal", "mode", "state", "error", "created_at", "started_at", "finished_at", "timeout_seconds")}, "mock": job["mode"] == "mock",
                 "notice": MOCK_NOTICE if job["mode"] == "mock" else None, **self._progress(job)}
