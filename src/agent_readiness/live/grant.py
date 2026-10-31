@@ -30,12 +30,16 @@ class GrantRefused(Exception):
         self.reason, self.kind = reason, kind                       # kind: scope | budget | integrity
 
 
-def default_limits(n_tasks: int = 4) -> dict:
+SMOKE_CAP_USD = 0.15                                                   # the existing task-generation allocation; a smoke job is granted exactly this and nothing else
+SMOKE_STAGES = ("taskgen",)
+
+
+def default_limits(n_tasks: int = 4, smoke: bool = False) -> dict:
     """The SHAPE of the run the user approved, not just its total: per-stage caps (the existing allocation), the task count, one repeat, the per-request cap. A manifest that asks for more is refused
     even when the total would still fit the budget."""
     from ..investigate import allocation as alloc
-    return {"stage_caps_usd": {"taskgen": alloc.TASKGEN_CAP_USD, "baseline_trials": alloc.BASELINE_CAP_USD, "investigate": alloc.INVESTIGATE_CAP_USD}, "max_tasks": n_tasks, "repeats": 1,
-            "per_request_cap_usd": alloc.PER_REQUEST_CAP_USD, "max_retries_per_request": 1}
+    caps = {"taskgen": alloc.TASKGEN_CAP_USD} if smoke else {"taskgen": alloc.TASKGEN_CAP_USD, "baseline_trials": alloc.BASELINE_CAP_USD, "investigate": alloc.INVESTIGATE_CAP_USD}
+    return {"stage_caps_usd": caps, "max_tasks": n_tasks, "repeats": 1, "per_request_cap_usd": alloc.PER_REQUEST_CAP_USD, "max_retries_per_request": 0 if smoke else 1}
 
 
 def make_grant(*, job_id: str, owner: str, target_id: str, goal: str, budget_usd: float, model: str, endpoint: str, snapshot_sha256: str, stages=LIVE_STAGES, limits: dict | None = None) -> dict:

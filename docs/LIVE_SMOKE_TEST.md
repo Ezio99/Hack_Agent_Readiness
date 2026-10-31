@@ -18,10 +18,26 @@ Plus, in the worst case, the overshoot of one request (see "Is US$2 a real ceili
 4. Credential hygiene: the key value is never printed; `git grep` for it is empty; the dev provider is not running.
 5. A second terminal ready to run `readiness scanner kill on` (kill switch: refuses new jobs and cancels the running one).
 
-## Step A (recommended, needs a ~20-line change to be built and reviewed first): taskgen-only
-Add an operator-only `LIVE_SMOKE_UNTIL=taskgen` (worker stops after the `freeze` stage). Cost <= US$0.15 worst case, about US$0.04 expected. It answers questions 2 and 3 below at one-fifth of the risk. Skip only if the owner accepts going straight to Step B.
+## Step A: taskgen-only smoke test (implemented; NOT run; needs the owner's explicit spending authorization)
+What it does: the normal live path (goal-driven proposal prompts -> real Meta endpoint -> independent gate -> freeze) for **task generation only**. One grant covering `taskgen` alone, budget US$0.15, per-request cap US$0.05, **no retries**, no rule top-up. The worker runs the pipeline `until="freeze"`; a manifest for any other stage is refused. No browser trial, investigator or recommendation can run.
 
-## Step B: one full evaluation through the UI
+**Maximum provider requests: 3** (three fixed batches, one request each). Reserved upper bounds 0.0477 + 0.0477 + 0.0477 = **US$0.1431** (`worst_case_stage_usd`), inside the 0.15 stage cap and ledger ceiling. Expected actual cost about US$0.02-0.05. Plus, in the worst case, one request's overshoot (see LIVE_M1.md). The approval manifest is bound to the goal: its hash is printed by the free `--plan` step (for the example goal below: `a2ce6642...`; recompute with the exact goal you will use).
+
+```
+# 1. free, offline: prints the exact manifest hash, request count, caps and reservations; no key, no network
+readiness live smoke --goal "Can a shopper compare the hire price and availability of the two cheapest cutting tools?" --plan
+
+# 2. the paid step (only after explicit authorization). The model key comes from the repository .env (mode 600) or the environment; nothing else is needed
+export SCANNER_DATA_DIR=scanner-data SCANNER_LIVE_ENABLED=1 SCANNER_LIVE_BUDGET_USD=0.15
+readiness live smoke --goal "Can a shopper compare the hire price and availability of the two cheapest cutting tools?" --confirm-spend 0.15
+```
+It prints, as JSON, the job state and a smoke report: **task yield** (requests made, tasks proposed/accepted/rejected, needed 4), **independent verification** (gate rejection reasons by category with examples; accepted tasks by criterion kind; no criteria or answers), **relevance to the goal** (a lexical heuristic plus the accepted questions for a person to judge), **actual cost** (per request: reserved, settled, tokens; unsettled requests), and **provider compatibility** (per batch: status, reported model, attempts, whether usage had prompt and completion tokens, any structured-output diagnostics or provider error). Exit code 0 only if the job completed with at least 4 verified tasks.
+
+Stop conditions: any `stopped`/`awaiting_approval` state, a provider error, a bound violation, fewer than 4 verified tasks (reported, not retried), the key in any output. Success: completed within the grant, <= 3 requests, committed spend <= US$0.15 and equal in ledger, report and job view, >= 4 gate-verified `model`-sourced tasks, `rule_topup` 0, and a human reading of the questions finds at least 2 related to the goal.
+
+## Incident record (2026-10-31, found while testing this option)
+A CLI test with `SCANNER_LIVE_ENABLED=1` made `load_config` read the repository `.env`, so the model key became available and the default endpoint was the real one: the test started a real worker that approved `taskgen` and **reserved one request (US$0.047682 upper bound) against `api.meta.ai`** before the test cancelled it 1.6 s later (pytest temp ledger only; no settle, so it is unknown whether the request left the machine; if it did, the cost is at most that bound and realistically about a cent). Nothing else ran. Fixes: `load_repo_env()` never reads the implicit `.env` under pytest; `JobManager.create` and the worker both refuse a live job against a non-loopback endpoint from a test process; a regression test booby-traps process spawning. The owner may want to check the provider usage page for one stray request on 2026-10-31 around 08:51 UTC.
+## Step B: one full evaluation through the UI (after Step A, separately authorized)
 1. Open Investigation, sign in, choose **Ironbark**, **Live**, goal: *"Can a shopper compare the hire price and availability of the two cheapest cutting tools?"* (specific, checkable, related to Ironbark's actual catalogue), read the confirmation (US$2.00), tick, confirm.
 2. Watch: stage progress, spend by stage, approvals in the trace, browser trace events. Keep the kill switch ready.
 

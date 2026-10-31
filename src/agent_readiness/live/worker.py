@@ -71,6 +71,10 @@ def execute_live(root: Path, job_id: str, job: dict) -> None:
     from . import grant as G
     from .targets import TARGETS
     g = job.get("grant")
+    from .jobs import under_test_with_real_endpoint
+    if g and under_test_with_real_endpoint(g.get("endpoint", "")):
+        update(root, job_id, state="stopped", error="Not started: a test process may not reach a real model endpoint.", stop={"kind": "scope", "stage": None, "reason": "test process, real endpoint"}, finished_at=time.time())
+        return
     try:
         approver = G.Approver(g, job_id=job_id, owner=job["owner"], run_id=job_id)
         target = TARGETS[job["target_id"]]
@@ -86,23 +90,36 @@ def execute_live(root: Path, job_id: str, job: dict) -> None:
             "total_cap_usd": budget, "repeats": 1}
     run, pipe, ctx = flow.build(root, job_id, target.id, mode="live", options=opts)
     run.write_artifact("live-grant", g)                                        # the authorization, kept with the run it covers
+    smoke = job.get("until") == "taskgen"                                           # operator smoke test: nothing after task generation + freeze may run
+    if smoke and list(g["stages"]) != list(G.SMOKE_STAGES):
+        update(root, job_id, state="stopped", error="Not started: a smoke job's grant must cover task generation only.", stop={"kind": "scope", "stage": None, "reason": "smoke grant too broad"}, finished_at=time.time())
+        return
+
+    def finish(state: str, **fields) -> None:
+        if smoke:
+            from . import smoke as S
+            try:
+                run.write_artifact("smoke-report", S.build_report(run, job, cap_usd=budget, state=state))
+            except Exception:                                                        # the report must never mask the real outcome
+                pass
+        update(root, job_id, state=state, finished_at=time.time(), **fields)
     for _ in range(len(G.LIVE_STAGES) + 2):
-        res = pipe.run(ctx)
+        res = pipe.run(ctx, until="freeze" if smoke else None)
         if res.status == "done":
-            update(root, job_id, state="completed", finished_at=time.time())
+            finish("completed")
             return
         if res.status == "failed":
             err = res.error or "pipeline failed"
-            update(root, job_id, state="stopped" if stop_kind(err) == "budget" else "failed", error=f"Stopped at {res.stage}: {err}"[:400], stop={"kind": stop_kind(err), "stage": res.stage, "reason": err[:300]}, finished_at=time.time())
+            finish("stopped" if stop_kind(err) == "budget" else "failed", error=f"Stopped at {res.stage}: {err}"[:400], stop={"kind": stop_kind(err), "stage": res.stage, "reason": err[:300]})
             return
         manifest = run.artifact(f"manifests/{res.stage}-{res.manifest_sha256[:16]}")
         try:
             approver.decide(run, res.stage, res.manifest_sha256, manifest, run.ledger(budget).committed())
         except G.GrantRefused as exc:
-            update(root, job_id, state="awaiting_approval", error=f"Stopped before {res.stage}: {exc.reason}. Nothing further was spent; a person must approve this stage.",
-                   stop={"kind": exc.kind, "stage": res.stage, "reason": exc.reason, "manifest_sha256": res.manifest_sha256}, finished_at=time.time())
+            finish("awaiting_approval", error=f"Stopped before {res.stage}: {exc.reason}. Nothing further was spent; a person must approve this stage.",
+                   stop={"kind": exc.kind, "stage": res.stage, "reason": exc.reason, "manifest_sha256": res.manifest_sha256})
             return
-    update(root, job_id, state="failed", error="The pipeline kept asking for approvals beyond the expected stages; stopped.", finished_at=time.time())
+    finish("failed", error="The pipeline kept asking for approvals beyond the expected stages; stopped.")
 
 
 def start_watchdog(root: Path, job_id: str, seconds: float) -> threading.Timer:

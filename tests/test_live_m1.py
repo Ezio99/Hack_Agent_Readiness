@@ -519,8 +519,9 @@ def test_the_loopback_flag_reaches_only_a_live_worker_for_a_dev_provider(tmp_pat
     assert seen[0].get("AR_ALLOW_LOOPBACK_MODEL") == "1" or True
     assert seen[1]["AR_ALLOW_LOOPBACK_MODEL"] == "1"
     prod = JobManager(tmp_path / "prod", live=settings(base_url="https://api.meta.ai/v1", allow_dev_provider=False))
-    prod.create("o", "ironbark", GOAL, "live", 2.0)
-    assert "AR_ALLOW_LOOPBACK_MODEL" not in seen[2] or seen[2]["AR_ALLOW_LOOPBACK_MODEL"] == "1"   # inherited only from a server that set it itself; the manager never adds it for a real endpoint
+    with pytest.raises(JobError, match="test process"):
+        prod.create("o", "ironbark", GOAL, "live", 2.0)                 # and a test can never start a job against the real endpoint at all
+    assert len(seen) == 2
 
 
 def test_the_dev_provider_listens_on_loopback_only():

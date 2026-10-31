@@ -48,10 +48,20 @@ class LiveSettings:
     key_env: str = "META_MODEL_API_KEY"
     timeout_seconds: int = 1800
     allow_dev_provider: bool = False
+    smoke_until: str = ""
+
+    @property
+    def smoke(self) -> bool:
+        return self.smoke_until == "taskgen"
+
+    @property
+    def job_cap(self) -> float:
+        """The maximum spend of ONE live job as the server will grant it: the task-generation allocation in smoke mode, else the configured cap."""
+        return G.SMOKE_CAP_USD if self.smoke else self.cap_usd
 
     @classmethod
     def from_config(cls, c) -> "LiveSettings":
-        return cls(enabled=c.live_enabled, cap_usd=c.live_job_cap_usd, global_budget_usd=c.live_budget_usd, base_url=c.live_model_base_url, key_env=c.live_api_key_env, timeout_seconds=c.live_job_timeout_seconds, allow_dev_provider=c.live_allow_dev_provider)
+        return cls(enabled=c.live_enabled, cap_usd=c.live_job_cap_usd, global_budget_usd=c.live_budget_usd, base_url=c.live_model_base_url, key_env=c.live_api_key_env, timeout_seconds=c.live_job_timeout_seconds, allow_dev_provider=c.live_allow_dev_provider, smoke_until=c.live_smoke_until)
 
     def key(self) -> str | None:
         return os.environ.get(self.key_env) or None
@@ -66,7 +76,12 @@ class LiveSettings:
         return bool(u.hostname) and not (u.username or u.password or u.query or u.fragment) and (u.scheme == "https" or (u.scheme == "http" and u.hostname in ("127.0.0.1", "localhost", "::1") and self.allow_dev_provider))
 
     def available(self) -> bool:
-        return self.enabled and self.global_budget_usd > 0 and self.cap_usd > 0 and bool(self.key()) and self.endpoint_ok
+        return self.enabled and self.global_budget_usd > 0 and self.cap_usd > 0 and bool(self.key()) and self.endpoint_ok and self.smoke_until in ("", "taskgen")
+
+
+def under_test_with_real_endpoint(endpoint: str) -> bool:
+    """A test process (pytest) must never start a live job against a non-loopback endpoint: with a real key in the environment that would be a real, billed request. Subprocess workers inherit the marker."""
+    return bool(os.environ.get("PYTEST_CURRENT_TEST")) and urlsplit(endpoint).hostname not in ("127.0.0.1", "localhost", "::1")
 
 
 class JobError(Exception):
@@ -160,9 +175,11 @@ class JobManager:
                 raise JobError(422, "Live evaluation is limited to the registered Ironbark site in this build.")
             if not self.live.available():
                 raise JobError(409, "Live model evaluation is not enabled on this server.")
-            if confirm_budget_usd is None or abs(float(confirm_budget_usd) - self.live.cap_usd) > 1e-9:
-                raise JobError(409, f"A live evaluation needs your explicit confirmation of its maximum spend (US${self.live.cap_usd:.2f}).")
-            if self._live_reserved() + self.live.cap_usd > self.live.global_budget_usd + 1e-9:
+            if under_test_with_real_endpoint(self.live.base_url):
+                raise JobError(409, "Refusing: a test process may not start a live job against a real model endpoint.")
+            if confirm_budget_usd is None or abs(float(confirm_budget_usd) - self.live.job_cap) > 1e-9:
+                raise JobError(409, f"A live evaluation needs your explicit confirmation of its maximum spend (US${self.live.job_cap:.2f}).")
+            if self._live_reserved() + self.live.job_cap > self.live.global_budget_usd + 1e-9:
                 raise JobError(409, "The server's live-evaluation budget is exhausted.")
         if self.killed():
             raise JobError(503, "Evaluations are paused by the operator.")
@@ -173,10 +190,13 @@ class JobManager:
                 raise JobError(429, "Evaluation limit for this session reached.")
             job_id = "live-" + secrets.token_hex(5)
             job = {"id": job_id, "owner": owner, "target_id": target_id, "goal": goal, "mode": mode, "state": "queued", "created_at": time.time(), "n_tasks": 4,
-                   "timeout_seconds": self.live.timeout_seconds if mode == "live" else self.timeout}
+                   "timeout_seconds": (600 if self.live.smoke else self.live.timeout_seconds) if mode == "live" else self.timeout}
+            if mode == "live" and self.live.smoke:
+                job["until"] = "taskgen"                          # operator smoke test: stop after task generation and freeze, before any browser trial, investigator or recommendation
             if mode == "live":                                    # the user's confirmation becomes ONE grant bound to this job, owner, target, goal, budget, model and stages
-                job["grant"] = G.make_grant(job_id=job_id, owner=owner, target_id=target_id, goal=goal, budget_usd=self.live.cap_usd, model=self.live.model, endpoint=self.live.base_url,
-                                            snapshot_sha256=TARGETS[target_id].snapshot().sha256)
+                job["grant"] = G.make_grant(job_id=job_id, owner=owner, target_id=target_id, goal=goal, budget_usd=self.live.job_cap, model=self.live.model, endpoint=self.live.base_url,
+                                            snapshot_sha256=TARGETS[target_id].snapshot().sha256, stages=G.SMOKE_STAGES if self.live.smoke else G.LIVE_STAGES,
+                                            limits=G.default_limits(smoke=self.live.smoke))
             worker.job_path(self.root, job_id).write_text(json.dumps(job, indent=2))
             self._spawn(job_id)                                  # the worker records its own pid and state
         timer = threading.Timer(job["timeout_seconds"], self._expire, args=(job_id,))
@@ -234,8 +254,13 @@ class JobManager:
             job = worker.update(self.root, job_id, state="failed", error="The worker stopped unexpectedly.", finished_at=time.time())
         g = job.get("grant")
         return {**{k: job.get(k) for k in ("id", "target_id", "goal", "mode", "state", "error", "created_at", "started_at", "finished_at", "timeout_seconds")}, "mock": job["mode"] == "mock",
-                "notice": MOCK_NOTICE if job["mode"] == "mock" else (DEV_NOTICE if self._dev(job) else LIVE_NOTICE), "dev_provider": self._dev(job), "stop": job.get("stop"),
+                "notice": MOCK_NOTICE if job["mode"] == "mock" else (DEV_NOTICE if self._dev(job) else LIVE_NOTICE), "dev_provider": self._dev(job), "stop": job.get("stop"), "until": job.get("until"),
+                "smoke": self._smoke(job),
                 "grant": {"budget_usd": g["budget_usd"], "stages": g["stages"], "model": g["model"], "confirmed_at": g["confirmed_at"], "grant_sha256": g["grant_sha256"][:16]} if g else None, **self._progress(job)}
+
+    def _smoke(self, job: dict):
+        p = self.root / job["id"] / "artifacts" / "smoke-report.json"
+        return json.loads(p.read_text()) if p.exists() else None
 
     @staticmethod
     def _dev(job: dict) -> bool:

@@ -25,6 +25,7 @@ class ScannerConfig:
     live_job_cap_usd: float = 2.0                                # the hard cap of ONE live evaluation (the user confirms exactly this number; the server enforces it, the UI only displays it)
     live_model_base_url: str = "https://api.meta.ai/v1"          # operator-only setting; a loopback http URL is accepted for the zero-spend dev provider, nothing else but https
     live_job_timeout_seconds: int = 1800
+    live_smoke_until: str = ""                                    # operator-only: "taskgen" makes every live job a task-generation-only smoke test (US$0.15, stops before trials)
     live_allow_dev_provider: bool = False                        # operator-only: permits a loopback http model endpoint (the zero-spend dev provider); never selectable by a user
 
     live_root_dir: Path | None = None                             # live-evaluation run directories; default <data_dir>/live (Git-ignored), never under investigations/
@@ -67,4 +68,4 @@ def load_config(env=None) -> ScannerConfig:
     return ScannerConfig(live_root_dir=Path(env["LIVE_ROOT"]) if env.get("LIVE_ROOT") else None, data_dir=data_dir, secret=secret, admin_token=env.get("SCANNER_ADMIN_TOKEN", ""),
                          cors_origins=tuple(o for o in env.get("SCANNER_CORS_ORIGINS", "").split(",") if o.strip()),
                          live_enabled=env.get("SCANNER_LIVE_ENABLED") == "1", live_budget_usd=float(env.get("SCANNER_LIVE_BUDGET_USD", "0") or 0),
-                         live_job_cap_usd=float(env.get("LIVE_JOB_CAP_USD", "2.0") or 2.0), live_model_base_url=env.get("LIVE_MODEL_BASE_URL", "https://api.meta.ai/v1"), live_allow_dev_provider=env.get("LIVE_ALLOW_DEV_PROVIDER") == "1")
+                         live_job_cap_usd=float(env.get("LIVE_JOB_CAP_USD", "2.0") or 2.0), live_model_base_url=env.get("LIVE_MODEL_BASE_URL", "https://api.meta.ai/v1"), live_allow_dev_provider=env.get("LIVE_ALLOW_DEV_PROVIDER") == "1", live_smoke_until=env.get("LIVE_SMOKE_UNTIL", ""))

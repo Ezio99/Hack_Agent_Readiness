@@ -16,9 +16,10 @@ def _groups():
     from .remediation import cli_impl as remediation
     from .scanner import cli as scanner
     from .exp2 import cli as exp2
+    from .live import cli as live
     from .sites import cli as sites
     from .suite import cli as suite
-    return (scanner, suite, remediation, experiments, investigate, sites, exp2)
+    return (scanner, suite, remediation, experiments, investigate, sites, exp2, live)
 
 
 def main():

@@ -24,6 +24,9 @@ Investigation page -> choose Ironbark and a goal -> **Live (real model, maximum 
 ## Server configuration (operator only)
 `SCANNER_LIVE_ENABLED=1`, `SCANNER_LIVE_BUDGET_USD=<total>`, `LIVE_JOB_CAP_USD` (default 2.0), `LIVE_MODEL_BASE_URL` (default `https://api.meta.ai/v1`), the key in `META_MODEL_API_KEY` or the repository `.env`. A loopback `http` endpoint (the dev provider) additionally needs `LIVE_ALLOW_DEV_PROVIDER=1`; the server then sets `AR_ALLOW_LOOPBACK_MODEL=1` for that one live worker only (the shared preflight refuses plain http without it). No request field can name a model, endpoint, key or budget. Live is offered in the UI only when everything is present.
 
+## Operator smoke option
+`LIVE_SMOKE_UNTIL=taskgen` (or `readiness live smoke`) turns every live job into a task-generation-only job: grant for `taskgen` alone, US$0.15, no retries, pipeline stopped after `freeze`, plus a report (yield, verification, goal relevance, cost, provider compatibility). See LIVE_SMOKE_TEST.md.
+
 ## Zero-spend demonstration
 ```
 python -m agent_readiness.live.devprovider --root scanner-data/live --port 8199      # NOT a model: fixtures built from the run's own capture

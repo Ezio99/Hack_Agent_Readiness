@@ -36,7 +36,7 @@ def add_live_routes(app: FastAPI, jobs: JobManager, current_session) -> None:
     async def live_targets(session: dict = Depends(current_session)):
         live = jobs.live.available()
         return {"targets": listing() if not live else [t for t in listing() if t["id"] == "ironbark"] + [t for t in listing() if t["id"] != "ironbark"], "modes": {"mock": True, "live": live},
-                "live": {"cap_usd": jobs.live.cap_usd, "model": jobs.live.model, "targets": ["ironbark"], "dev_provider": jobs.live.dev_provider} if live else None}
+                "live": {"cap_usd": jobs.live.job_cap, "smoke": "taskgen" if jobs.live.smoke else None, "model": jobs.live.model, "targets": ["ironbark"], "dev_provider": jobs.live.dev_provider} if live else None}
 
     @app.post("/api/live/jobs", status_code=202)
     async def live_start(body: NewJob, session: dict = Depends(current_session)):
