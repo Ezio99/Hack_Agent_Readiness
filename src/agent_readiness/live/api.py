@@ -21,7 +21,8 @@ class NewJob(BaseModel):
     model_config = ConfigDict(extra="forbid")                      # no url, no prompt, no key, no command
     target_id: str = Field(max_length=60)
     goal: str = Field(max_length=400)
-    mode: Literal["mock", "live"] = "mock"                         # `live` is refused in M0; the field exists so M1 does not change the contract
+    mode: Literal["mock", "live"] = "mock"
+    confirm_budget_usd: float | None = Field(default=None, ge=0, le=100)   # live only: the user's explicit confirmation of the maximum spend; must equal the server's cap
 
 
 def add_live_routes(app: FastAPI, jobs: JobManager, current_session) -> None:
@@ -33,11 +34,13 @@ def add_live_routes(app: FastAPI, jobs: JobManager, current_session) -> None:
 
     @app.get("/api/live/targets")
     async def live_targets(session: dict = Depends(current_session)):
-        return {"targets": listing(), "modes": {"mock": True, "live": False}}
+        live = jobs.live.available()
+        return {"targets": listing() if not live else [t for t in listing() if t["id"] == "ironbark"] + [t for t in listing() if t["id"] != "ironbark"], "modes": {"mock": True, "live": live},
+                "live": {"cap_usd": jobs.live.cap_usd, "model": jobs.live.model, "targets": ["ironbark"], "dev_provider": jobs.live.dev_provider} if live else None}
 
     @app.post("/api/live/jobs", status_code=202)
     async def live_start(body: NewJob, session: dict = Depends(current_session)):
-        return await run(jobs.create, session["id"], body.target_id, body.goal, body.mode)
+        return await run(jobs.create, session["id"], body.target_id, body.goal, body.mode, body.confirm_budget_usd)
 
     @app.get("/api/live/jobs")
     async def live_list(session: dict = Depends(current_session)):

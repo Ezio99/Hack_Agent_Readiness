@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, call, configured, getToken, setToken } from "../lib/scannerApi";
 import { Callout, Pill } from "../components/ui";
-import { LiveJob, LiveSummary, LiveTarget, cancelJob, exportJob, getJob, isActive, listJobs, liveTargets, startJob } from "../lib/liveApi";
+import { LiveInfo, LiveJob, LiveSummary, LiveTarget, cancelJob, exportJob, getJob, isActive, listJobs, liveTargets, startJob } from "../lib/liveApi";
 
 const POLL_MS = 2000;                                                      // well inside the API rate limit (60 requests/minute per client)
 const STAGE_LABEL: Record<string, string> = { inspect: "Explore the website", taskgen: "Generate customer tasks", freeze: "Freeze tasks", baseline_trials: "Agents attempt the tasks", trace: "Analyse traces", investigate: "Investigator", recommend: "Recommendations", report: "Report", apply_fix: "Apply a fix", post_trials: "Retest", evaluate: "Evaluate", final_report: "Final report" };
 
-/** Live evaluation (M0): start a bounded backend job on a registered demo site, watch the real pipeline stages, trace events and recorded cost, then open the result in the page below (the same
- *  view that replays any exported run). M0 jobs run in MOCK mode; the panel says so on every screen. */
+const STATE_LABEL: Record<string, string> = { queued: "Queued", running: "Running", completed: "Completed", failed: "Failed", cancelled: "Cancelled", timed_out: "Timed out",
+  awaiting_approval: "Stopped: waiting for an approval this evaluation may not grant", stopped: "Stopped safely" };
+
+/** Live evaluation: start a bounded backend job on a registered demo site, watch the real pipeline stages, trace events and recorded cost, then open the result in the page below (the same
+ *  view that replays any exported run). A MOCK job spends nothing; a LIVE job needs the user's explicit confirmation of its maximum spend, which the server enforces independently. */
 export function LivePanel({ onOpen }: { onOpen: (report: unknown, label: string) => boolean }) {
   const [authed, setAuthed] = useState<boolean>(!!getToken());
   const [code, setCode] = useState("");
@@ -15,6 +18,10 @@ export function LivePanel({ onOpen }: { onOpen: (report: unknown, label: string)
   const [target, setTarget] = useState("");
   const [goal, setGoal] = useState("Can an agent compare hire prices and availability across the catalogue?");
   const [job, setJob] = useState<LiveJob | null>(null);
+  const [live, setLive] = useState<LiveInfo | null>(null);
+  const [mode, setMode] = useState<"mock" | "live">("mock");
+  const [confirming, setConfirming] = useState(false);
+  const [agreed, setAgreed] = useState(false);
   const [history, setHistory] = useState<LiveSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -26,7 +33,7 @@ export function LivePanel({ onOpen }: { onOpen: (report: unknown, label: string)
   }, []);
   const refreshHistory = useCallback(async () => { try { setHistory((await listJobs()).jobs); } catch (e) { fail(e); } }, [fail]);
 
-  useEffect(() => { if (configured() && authed) liveTargets().then((r) => { setTargets(r.targets); setTarget((t) => t || r.targets[0]?.id || ""); void refreshHistory(); }).catch(fail); }, [authed, fail, refreshHistory]);
+  useEffect(() => { if (configured() && authed) liveTargets().then((r) => { setLive(r.live); setTargets(r.targets); setTarget((t) => t || r.targets[0]?.id || ""); void refreshHistory(); }).catch(fail); }, [authed, fail, refreshHistory]);
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
   const follow = useCallback((id: string) => {
@@ -50,9 +57,13 @@ export function LivePanel({ onOpen }: { onOpen: (report: unknown, label: string)
   };
   const start = async () => {
     setError(null); setBusy(true);
-    try { const j = await startJob(target, goal); setJob(j); follow(j.id); } catch (e) { fail(e); }
+    try {
+      const j = mode === "live" && live ? await startJob(target, goal, { confirm_budget_usd: live.cap_usd }) : await startJob(target, goal);
+      setConfirming(false); setAgreed(false); setJob(j); follow(j.id);
+    } catch (e) { fail(e); }
     setBusy(false);
   };
+  const liveOk = !!live && live.targets.includes(target);
   const cancel = async () => { if (!job) return; try { setJob(await cancelJob(job.id)); window.clearTimeout(timer.current); void refreshHistory(); } catch (e) { fail(e); } };
   const open = async (id: string, label: string) => { setError(null); try { if (!onOpen(await exportJob(id), label)) setError("The returned report could not be displayed."); } catch (e) { fail(e); } };
 
@@ -67,28 +78,48 @@ export function LivePanel({ onOpen }: { onOpen: (report: unknown, label: string)
   );
 
   const active = job ? isActive(job.state) : false;
-  const tone = (s: string) => (s === "done" ? "pass" : s === "failed" ? "fail" : s === "running" ? "warn" : "neutral") as "pass" | "fail" | "warn" | "neutral";
+  const tone = (s: string) => (s === "done" ? "pass" : s === "failed" ? "fail" : s === "running" || s === "awaiting_approval" ? "warn" : "neutral") as "pass" | "fail" | "warn" | "neutral";
   return (
     <section className="livepanel" aria-label="Live evaluation">
       <h2>Live evaluation</h2>
-      <p className="badge" role="note">M0 · MOCK execution: a real backend job runs the real pipeline (site capture, task generation, browser agent, trace analysis, investigator) with scripted stand-ins for the language model. Nothing is spent.</p>
+      <p className="badge" role="note">{mode === "live" ? (live?.dev_provider ? "LIVE path · DEV PROVIDER: the real pipeline, spend gate and ledger against a loopback stand-in for the model. No real model, no real spend." : `LIVE · real model calls (${live?.model}), hard-capped at US$${live?.cap_usd.toFixed(2)} per evaluation.`) : "MOCK execution: a real backend job runs the real pipeline (site capture, task generation, browser agent, trace analysis, investigator) with scripted stand-ins for the language model. Nothing is spent."}</p>
       {error && <p role="alert" className="scan-error">{error}</p>}
       <div className="liveform">
         <label>Website <select aria-label="Website to evaluate" value={target} onChange={(e) => setTarget(e.target.value)} disabled={active}>{targets.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}</select></label>
+        {live && <fieldset className="modes" disabled={active}><legend>Execution</legend>
+          <label><input type="radio" name="mode" checked={mode === "mock"} onChange={() => { setMode("mock"); setConfirming(false); }} /> Mock (free, scripted stand-ins)</label>{" "}
+          <label><input type="radio" name="mode" checked={mode === "live"} onChange={() => setMode("live")} disabled={!liveOk} /> Live (real model, maximum US${live.cap_usd.toFixed(2)}){!liveOk ? " — Ironbark only" : ""}</label>
+        </fieldset>}
         <label>Evaluation goal <textarea aria-label="Evaluation goal" value={goal} maxLength={300} rows={2} onChange={(e) => setGoal(e.target.value)} disabled={active} /></label>
-        <button type="button" className="primary" disabled={busy || active || !target || goal.trim().length < 5} onClick={() => void start()}>Start mock evaluation</button>
+        {mode === "mock"
+          ? <button type="button" className="primary" disabled={busy || active || !target || goal.trim().length < 5} onClick={() => void start()}>Start mock evaluation</button>
+          : <button type="button" className="primary" disabled={busy || active || !liveOk || goal.trim().length < 5} onClick={() => setConfirming(true)}>Review and start live evaluation…</button>}
         {active && <button type="button" onClick={() => void cancel()}>Cancel</button>}
       </div>
+      {confirming && mode === "live" && live && (
+        <div className="confirm" role="dialog" aria-label="Confirm live evaluation spend">
+          <h3>Confirm a paid evaluation</h3>
+          <p>This starts a <strong>live</strong> evaluation of <strong>{targets.find((t) => t.id === target)?.label}</strong>: the model <code>{live.model}</code> will propose tasks for your goal, drive a browser through them and investigate the traces.</p>
+          <p><strong>Maximum spend: US${live.cap_usd.toFixed(2)}.</strong> The server enforces this cap itself: every request is reserved against it before it is sent, and the evaluation stops safely if any stage would exceed it. Cost is calculated from reported tokens at published prices; it is not a bill.</p>
+          {live.dev_provider && <p className="muted">This server uses the DEV PROVIDER (a loopback stand-in): no real model is called and nothing real is spent.</p>}
+          <p>Goal: <q>{goal.trim()}</q></p>
+          <label><input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} /> I authorize up to US${live.cap_usd.toFixed(2)} for this one evaluation.</label>
+          <p><button type="button" className="primary" disabled={!agreed || busy} onClick={() => void start()}>Confirm and start live evaluation</button> <button type="button" onClick={() => { setConfirming(false); setAgreed(false); }}>Back</button></p>
+        </div>
+      )}
       {targets.find((t) => t.id === target) && <p className="muted">{targets.find((t) => t.id === target)!.description}</p>}
       {job && (
         <div className="livejob" aria-live="polite">
-          <p><strong>{job.state === "completed" ? "Completed" : job.state === "running" || job.state === "queued" ? "Running" : job.state.replace("_", " ")}</strong> · {Math.round(job.progress * 100)}% · <progress max={1} value={job.progress} aria-label="Progress" /> · recorded cost US${job.spend.committed_usd.toFixed(4)} <span className="muted">({job.spend.basis})</span></p>
+          <p><strong>{job.mock ? "MOCK" : job.dev_provider ? "LIVE path (dev provider)" : "LIVE"} · {STATE_LABEL[job.state] ?? job.state}</strong> · {Math.round(job.progress * 100)}% · <progress max={1} value={job.progress} aria-label="Progress" /> · recorded cost US${job.spend.committed_usd.toFixed(4)}{job.spend.hard_cap_usd ? ` of US$${job.spend.hard_cap_usd.toFixed(2)} cap` : ""} <span className="muted">({job.spend.basis})</span></p>
+          {Object.keys(job.spend.stages ?? {}).length > 0 && <p className="muted">Spend by stage: {Object.entries(job.spend.stages).map(([k, v]) => `${STAGE_LABEL[k] ?? k} US$${v.toFixed(4)}`).join(" · ")}</p>}
+          {job.grant && <p className="muted">Approved by you: up to US${job.grant.budget_usd.toFixed(2)} on stages {job.grant.stages.join(", ")} (grant {job.grant.grant_sha256}). Each paid stage's manifest approval is recorded in the run's audit trail.</p>}
           {job.notice && <p className="muted" role="note">{job.notice}</p>}
-          {job.error && <p role="alert" className="scan-error">{job.error}</p>}
-          <ol className="stages">{job.stages.map((s) => <li key={s.name}><Pill tone={tone(s.status)}>{s.status}</Pill> {STAGE_LABEL[s.name] ?? s.name}{s.detail ? <span className="muted"> — {s.detail}</span> : null}</li>)}</ol>
+          {job.state === "awaiting_approval" && job.stop && <Callout title="Waiting for an approval this evaluation is not permitted to grant" tone="warn"><p>{job.stop.reason}</p><p className="muted">Nothing further was spent. The run is preserved; only a person with access to the run can approve this stage ({job.stop.kind}).</p></Callout>}
+          {job.error && job.state !== "awaiting_approval" && <p role="alert" className="scan-error">{job.error}</p>}
+          <ol className="stages">{job.stages.map((s) => <li key={s.name}><Pill tone={tone(s.status)}>{s.status === "awaiting_approval" ? "needs approval" : s.status}</Pill> {STAGE_LABEL[s.name] ?? s.name}{s.detail ? <span className="muted"> — {s.detail}</span> : null}</li>)}</ol>
           {job.trials.length > 0 && <p className="muted">Trials: {job.trials.length}{job.tasks_planned ? ` of ${job.tasks_planned}` : ""} · {job.trials.filter((t) => t.passed).length} passed · {job.trials.reduce((n, t) => n + (t.page_views ?? 0), 0)} page views</p>}
           <details open><summary>Trace and events ({job.events.length})</summary><ul className="events" aria-label="Events">{job.events.slice(-60).map((e, i) => <li key={i} className={`ev-${e.kind}`}>{e.text}</li>)}</ul></details>
-          {(job.state === "completed" || (!active && job.opened)) && <p><button type="button" className="primary" onClick={() => void open(job.id, `${job.target_id} · ${job.id}`)}>Open results</button> <span className="muted">Evidence, findings and recommendations open in the report below, labelled as mock.</span></p>}
+          {(job.state === "completed" || (!active && job.opened && job.state !== "awaiting_approval") || (job.state === "awaiting_approval" && job.opened)) && <p><button type="button" className="primary" onClick={() => void open(job.id, `${job.target_id} · ${job.id}`)}>Open results</button> <span className="muted">Evidence, findings and recommendations open in the report below, labelled as mock.</span></p>}
         </div>
       )}
       {history.length > 0 && (

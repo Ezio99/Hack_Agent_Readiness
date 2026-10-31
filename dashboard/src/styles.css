@@ -245,3 +245,5 @@ h2.step { font-size: 1.5rem; }
 .livejob .stages{list-style:none;padding:0;margin:.5rem 0}.livejob .stages li{padding:.15rem 0}
 .livejob .events{max-height:16rem;overflow:auto;font:12px/1.5 ui-monospace,monospace;padding-left:1.1rem}
 .livejob .ev-stage{font-weight:600}.history{list-style:none;padding:0}
+.livepanel .confirm{border:2px solid #b45309;border-radius:8px;padding:.8rem 1rem;margin:.8rem 0;background:#fffbeb;max-width:46rem}
+.livepanel .modes{border:0;padding:0;display:flex;gap:1rem;flex-wrap:wrap}.ev-approval,.ev-stop{font-weight:600}

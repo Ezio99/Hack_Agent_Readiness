@@ -1,0 +1,127 @@
+"""Zero-spend DEV PROVIDER: a loopback stand-in for the Meta chat-completions endpoint, used to exercise the whole live path (preflight, spend gate, ledger, approvals, key handling, browser agent over HTTP,
+structured outputs) without any real model. It is NOT a model: it replies from fixtures built out of the run's own captured site (rule candidates for task proposals, the scripted mock agent for browsing,
+the scripted investigator). It refuses to listen on anything but loopback, and a real key is never needed (any string is accepted). Nothing it returns is evidence about model behaviour.
+
+    python -m agent_readiness.live.devprovider --root scanner-data/live --port 8199
+Then run the server with LIVE_MODEL_BASE_URL=http://127.0.0.1:8199/v1, SCANNER_LIVE_ENABLED=1, SCANNER_LIVE_BUDGET_USD=10 and any META_MODEL_API_KEY value."""
+from __future__ import annotations
+
+import argparse
+import json
+import re
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException, Request
+
+from ..investigate.run import InvestigationRun
+from ..investigate.taskgen import freeze as freezer
+from ..investigate.taskgen.candidates import candidates
+from ..investigate.trials.runner import mock_handler
+from . import mock_investigator
+
+TASKGEN_MARK, INVESTIGATOR_MARK = "You design evaluation tasks", "You are an investigator of why browsing agents"
+CRITERION_KEYS = ("page", "label", "target", "listing", "direction", "conditions")
+
+
+IMAGE = re.compile(r"data:image/[^\"]+")
+
+
+def _text(body: dict) -> str:
+    return json.dumps(body.get("messages", []))
+
+
+def _chars(text: str) -> int:
+    """Characters that would be billed as text: embedded images are replaced by a fixed small allowance, as a vision model counts them in tiles, not bytes."""
+    return len(IMAGE.sub("", text)) + 800 * len(IMAGE.findall(text))
+
+
+def _wrap(content: str, usage: dict, model: str = "dev-provider") -> dict:
+    return {"id": "dev-1", "object": "chat.completion", "created": 0, "model": model, "choices": [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": content}}], "usage": usage}
+
+
+class DevProvider:
+    def __init__(self, root: Path, usage_scale: float = 1.0):
+        self.root, self.scale = Path(root), usage_scale
+        self.calls = {"taskgen": 0, "agent": 0, "investigator": 0}
+        self._handlers: dict[tuple, object] = {}
+        self._inv: dict[str, object] = {}
+        self.keys_seen: set[str | None] = set()
+        self.taskgen_prompts: list[str] = []
+
+    def run(self) -> InvestigationRun:
+        runs = sorted((p.parent for p in self.root.glob("live-*/run.json")), key=lambda d: d.stat().st_mtime)
+        if not runs:
+            raise RuntimeError("no live run directory yet")
+        return InvestigationRun(runs[-1])
+
+    def usage(self, prompt_chars: int, completion_chars: int) -> dict:
+        p, c = int(max(1, prompt_chars // 4) * self.scale), int(max(1, completion_chars // 4) * self.scale)
+        return {"prompt_tokens": p, "completion_tokens": c, "total_tokens": p + c}
+
+    def handle(self, body: dict) -> dict:
+        text = _text(body)
+        run = self.run()
+        if TASKGEN_MARK in text:
+            return self._taskgen(run, body, text)
+        if INVESTIGATOR_MARK in text:
+            return self._investigator(run, body, text)
+        return self._agent(run, body, text)
+
+    def _taskgen(self, run, body, text) -> dict:
+        self.taskgen_prompts.append(text)
+        i = self.calls["taskgen"]
+        self.calls["taskgen"] += 1
+        drafts = candidates(run.artifact("site-profile"))
+        pick = [drafts[(i * 3 + k) % len(drafts)] for k in range(4)] if drafts else []
+        tasks = [{"question": d.question, "start_path": d.start_path, "criterion": {"kind": d.criterion["kind"], **{k: None for k in CRITERION_KEYS}, **d.criterion}, "rationale": f"DEV PROVIDER fixture: {d.rationale}"[:300]} for d in pick]
+        content = json.dumps({"tasks": tasks})
+        return _wrap(content, self.usage(_chars(text), len(content)))
+
+    def _agent(self, run, body, text) -> dict:
+        self.calls["agent"] += 1
+        inst = next((x for x in freezer.instances(run) if x.spec.objective in text), None)
+        if inst is None:
+            raise RuntimeError("the browser agent asked about a task that is not in the run")
+        base = re.search(r"http://127\.0\.0\.1:\d+", text)
+        key = (run.state["id"], inst.spec.task_id)
+        if key not in self._handlers:
+            self._handlers[key] = mock_handler(inst, base.group(0) if base else "http://127.0.0.1", "correct", [r.value for r in inst.evidence if r.kind == "visited_path"])
+        r = self._handlers[key](type("R", (), {"content": json.dumps(body).encode()})())
+        data = r.json()
+        content = data["choices"][0]["message"]["content"]
+        return _wrap(content, self.usage(_chars(text), len(content)))
+
+    def _investigator(self, run, body, text) -> dict:
+        self.calls["investigator"] += 1
+        client = self._inv.setdefault(run.state["id"], mock_investigator.make(run))
+        req = type("Q", (), {"messages": body["messages"]})()
+        content = client._responses(req)
+        return _wrap(content, self.usage(_chars(text), len(content)))
+
+
+def make_app(provider: DevProvider):
+    app = FastAPI(docs_url=None, openapi_url=None)
+    app.state.provider = provider
+
+    @app.post("/v1/chat/completions")
+    async def completions(request: Request):
+        provider.keys_seen.add(request.headers.get("authorization"))
+        try:
+            return provider.handle(await request.json())
+        except Exception as exc:
+            raise HTTPException(500, f"dev provider: {type(exc).__name__}: {exc}"[:200])
+    return app
+
+
+def main(argv=None) -> None:
+    ap = argparse.ArgumentParser(description="Zero-spend loopback stand-in for the Meta endpoint (NOT a model)")
+    ap.add_argument("--root", type=Path, required=True)
+    ap.add_argument("--port", type=int, default=8199)
+    ap.add_argument("--usage-scale", type=float, default=1.0, help="multiply reported token usage (to exercise the budget stop)")
+    a = ap.parse_args(argv)
+    import uvicorn
+    uvicorn.run(make_app(DevProvider(a.root, a.usage_scale)), host="127.0.0.1", port=a.port, log_level="warning")
+
+
+if __name__ == "__main__":
+    main()

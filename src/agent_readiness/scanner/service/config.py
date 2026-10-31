@@ -22,6 +22,9 @@ class ScannerConfig:
     live_enabled: bool = False                                   # live Meta inference; NEVER enabled by tests; needs approval, key and budget
     live_budget_usd: float = 0.0                                 # global ceiling of RESERVED estimated cost for live scans; 0 = live disabled
     live_api_key_env: str = "META_MODEL_API_KEY"
+    live_job_cap_usd: float = 2.0                                # the hard cap of ONE live evaluation (the user confirms exactly this number; the server enforces it, the UI only displays it)
+    live_model_base_url: str = "https://api.meta.ai/v1"          # operator-only setting; a loopback http URL is accepted for the zero-spend dev provider, nothing else but https
+    live_job_timeout_seconds: int = 1800
 
     live_root_dir: Path | None = None                             # live-evaluation run directories; default <data_dir>/live (Git-ignored), never under investigations/
 
@@ -48,6 +51,9 @@ class ScannerConfig:
 
 def load_config(env=None) -> ScannerConfig:
     env = os.environ if env is None else env
+    if env is os.environ and os.environ.get("SCANNER_LIVE_ENABLED") == "1":
+        from ...env import load_repo_env
+        load_repo_env()                                          # the operator's .env supplies the model key to THIS (server) process only; workers get it solely for approved live jobs
     data_dir = Path(env.get("SCANNER_DATA_DIR", "scanner-data"))
     secret = env.get("SCANNER_SECRET", "")
     if not secret:                                               # local development convenience only; a deployment must set SCANNER_SECRET
@@ -59,4 +65,5 @@ def load_config(env=None) -> ScannerConfig:
         secret = path.read_text().strip()
     return ScannerConfig(live_root_dir=Path(env["LIVE_ROOT"]) if env.get("LIVE_ROOT") else None, data_dir=data_dir, secret=secret, admin_token=env.get("SCANNER_ADMIN_TOKEN", ""),
                          cors_origins=tuple(o for o in env.get("SCANNER_CORS_ORIGINS", "").split(",") if o.strip()),
-                         live_enabled=env.get("SCANNER_LIVE_ENABLED") == "1", live_budget_usd=float(env.get("SCANNER_LIVE_BUDGET_USD", "0") or 0))
+                         live_enabled=env.get("SCANNER_LIVE_ENABLED") == "1", live_budget_usd=float(env.get("SCANNER_LIVE_BUDGET_USD", "0") or 0),
+                         live_job_cap_usd=float(env.get("LIVE_JOB_CAP_USD", "2.0") or 2.0), live_model_base_url=env.get("LIVE_MODEL_BASE_URL", "https://api.meta.ai/v1"))

@@ -2,6 +2,9 @@
 
 **Authoritative current state (2026-10-29, Task 015 stack and 015f merged; Task 016 next).** Verify against the repository, not this text. Full historical checkpoints are preserved verbatim in [docs/archive/STATUS-through-2026-10-29.md](docs/archive/STATUS-through-2026-10-29.md); architecture, execution paths, frozen artifacts and technical debt are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## Live product M1 (2026-10-31, branch `live-m1-llm-evaluation`, draft PR)
+Real-model path for UI-started evaluations of Ironbark, built and tested **only against a zero-spend loopback dev provider**: user spend confirmation -> job/owner/budget/stage-bound grant -> existing manifest approvals recorded by the worker within that grant -> hard cap enforced by the run's ledger ceiling. No real model call has been made; a real paid smoke test needs explicit approval. See [docs/LIVE_M1.md](docs/LIVE_M1.md). EXP-2 `baseline_main` remains unapproved.
+
 ## Live product M0 (2026-10-31, branch `live-m0-vertical-slice`, draft PR)
 UI-triggered **mock** evaluation on registered demo sites (Ironbark first) through the existing resumable investigation pipeline, with polled stages/trace/cost and replay of finished runs: see [docs/LIVE_M0.md](docs/LIVE_M0.md). Mock only: no model call, no spend; M1 (live model) not started and needs approval. EXP-2 status is in the next section.
 

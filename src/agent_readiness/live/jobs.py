@@ -11,12 +11,14 @@ import subprocess
 import sys
 import threading
 import time
+from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from ..investigate import export as exporter
 from ..investigate.flow import STAGES
 from ..investigate.run import InvestigationRun
-from . import worker
+from . import grant as G, worker
 from .targets import TARGETS
 
 JOB_TIMEOUT_SECONDS = 900
@@ -27,6 +29,45 @@ MOCK_NOTICE = ("MOCK EVALUATION: pages were visited by a scripted browser agent,
                "verified by the deterministic checker. No language model was called and nothing was spent. The goal is recorded but does not steer mock task generation.")
 
 
+LIVE_NOTICE = ("LIVE EVALUATION: the language model was called for task generation, browsing and investigation. Cost is calculated from reported tokens at published prices (not a bill) and is hard-capped "
+               "by the approved budget. Findings are labelled by how they were checked: verified by the deterministic checker, supported hypothesis, or unvalidated proposal.")
+LIVE_TARGETS = ("ironbark",)                        # M1: live evaluations are restricted to the registered Ironbark demo site
+DEV_NOTICE = ("DEV PROVIDER: this run used the loopback stand-in for the model endpoint (a fixture, not a model). The plumbing, spend gate and ledger are real; token counts and cost are calculated from "
+              "fixture output, and nothing here says anything about model behaviour. Labels below that say LIVE describe the code path, not a model.")
+ACTIVE = ("queued", "running")
+
+
+@dataclass(frozen=True)
+class LiveSettings:
+    """Server-side live-evaluation policy. `key_env` names the variable the SERVER holds; the key value is read only when spawning an approved live worker."""
+    enabled: bool = False
+    cap_usd: float = 2.0
+    global_budget_usd: float = 0.0
+    base_url: str = "https://api.meta.ai/v1"
+    model: str = "muse-spark-1.3"
+    key_env: str = "META_MODEL_API_KEY"
+    timeout_seconds: int = 1800
+
+    @classmethod
+    def from_config(cls, c) -> "LiveSettings":
+        return cls(enabled=c.live_enabled, cap_usd=c.live_job_cap_usd, global_budget_usd=c.live_budget_usd, base_url=c.live_model_base_url, key_env=c.live_api_key_env, timeout_seconds=c.live_job_timeout_seconds)
+
+    def key(self) -> str | None:
+        return os.environ.get(self.key_env) or None
+
+    @property
+    def dev_provider(self) -> bool:
+        return urlsplit(self.base_url).hostname in ("127.0.0.1", "localhost", "::1")
+
+    @property
+    def endpoint_ok(self) -> bool:
+        u = urlsplit(self.base_url)
+        return bool(u.hostname) and not (u.username or u.password or u.query or u.fragment) and (u.scheme == "https" or (u.scheme == "http" and u.hostname in ("127.0.0.1", "localhost", "::1")))
+
+    def available(self) -> bool:
+        return self.enabled and self.global_budget_usd > 0 and self.cap_usd > 0 and bool(self.key()) and self.endpoint_ok
+
+
 class JobError(Exception):
     def __init__(self, status: int, message: str):
         super().__init__(message)
@@ -34,8 +75,8 @@ class JobError(Exception):
 
 
 class JobManager:
-    def __init__(self, root: Path, *, timeout: int = JOB_TIMEOUT_SECONDS, killed=lambda: False, spawn=None):
-        self.root, self.timeout, self.killed = Path(root), timeout, killed
+    def __init__(self, root: Path, *, timeout: int = JOB_TIMEOUT_SECONDS, killed=lambda: False, spawn=None, live: LiveSettings | None = None):
+        self.root, self.timeout, self.killed, self.live = Path(root), timeout, killed, live or LiveSettings()
         self.root.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
         self._spawn = spawn or self._spawn_worker
@@ -43,7 +84,9 @@ class JobManager:
 
     # -- lifecycle -----------------------------------------------------------------------------------------------------------------
     def _spawn_worker(self, job_id: str) -> int:
-        env = {k: v for k, v in os.environ.items() if not SECRET_ENV.search(k)}                 # the worker never holds a credential in M0
+        env = {k: v for k, v in os.environ.items() if not SECRET_ENV.search(k)}                 # no worker inherits a credential
+        if worker.read(self.root, job_id)["mode"] == "live" and self.live.key():
+            env[self.live.key_env] = self.live.key()                                            # ONLY an approved live job's worker receives the model key (environment, never argv, never a file)
         log = open(self.root / f"{job_id}.log", "ab")
         p = subprocess.Popen([sys.executable, "-m", "agent_readiness.live.worker", str(self.root), job_id], stdout=log, stderr=log, env=env, start_new_session=True)
         threading.Thread(target=lambda: (p.wait(), log.close()), daemon=True).start()          # reap the child: a finished worker must not linger as a zombie
@@ -81,14 +124,43 @@ class JobManager:
                     return job
         return None
 
-    def create(self, owner: str, target_id: str, goal: str, mode: str = "mock") -> dict:
+    def _live_reserved(self) -> float:
+        """Budget already promised to live jobs: the full grant for one still running, what was actually committed (ledger) for a finished one."""
+        total = 0.0
+        for p in self.root.glob("*.job.json"):
+            j = json.loads(p.read_text())
+            if j["mode"] != "live" or not j.get("grant"):
+                continue
+            if j["state"] in ACTIVE:
+                total += j["grant"]["budget_usd"]
+            else:
+                total += self._committed(j)
+        return round(total, 6)
+
+    def _committed(self, job: dict) -> float:
+        rd = self.root / job["id"]
+        try:
+            return round(InvestigationRun(rd).ledger(job["grant"]["budget_usd"]).committed(), 6) if (rd / "run.json").exists() else 0.0
+        except Exception:
+            return float(job["grant"]["budget_usd"])                          # unknown: assume the worst
+
+    def create(self, owner: str, target_id: str, goal: str, mode: str = "mock", confirm_budget_usd: float | None = None) -> dict:
         goal = " ".join(goal.split())
         if target_id not in TARGETS:
             raise JobError(422, "Unknown target: only registered demo websites can be evaluated.")
         if not GOAL_MIN <= len(goal) <= GOAL_MAX:
             raise JobError(422, f"The evaluation goal must be {GOAL_MIN}-{GOAL_MAX} characters.")
-        if mode != "mock":
-            raise JobError(409, "Live model evaluation is not enabled in this build; only mock evaluations can be started.")
+        if mode not in ("mock", "live"):
+            raise JobError(422, "Unknown evaluation mode.")
+        if mode == "live":
+            if target_id not in LIVE_TARGETS:
+                raise JobError(422, "Live evaluation is limited to the registered Ironbark site in this build.")
+            if not self.live.available():
+                raise JobError(409, "Live model evaluation is not enabled on this server.")
+            if confirm_budget_usd is None or abs(float(confirm_budget_usd) - self.live.cap_usd) > 1e-9:
+                raise JobError(409, f"A live evaluation needs your explicit confirmation of its maximum spend (US${self.live.cap_usd:.2f}).")
+            if self._live_reserved() + self.live.cap_usd > self.live.global_budget_usd + 1e-9:
+                raise JobError(409, "The server's live-evaluation budget is exhausted.")
         if self.killed():
             raise JobError(503, "Evaluations are paused by the operator.")
         with self._lock:
@@ -97,10 +169,14 @@ class JobManager:
             if sum(1 for j in self.jobs(owner)) >= MAX_JOBS_PER_SESSION:
                 raise JobError(429, "Evaluation limit for this session reached.")
             job_id = "live-" + secrets.token_hex(5)
-            job = {"id": job_id, "owner": owner, "target_id": target_id, "goal": goal, "mode": mode, "state": "queued", "created_at": time.time(), "n_tasks": 4, "timeout_seconds": self.timeout}
+            job = {"id": job_id, "owner": owner, "target_id": target_id, "goal": goal, "mode": mode, "state": "queued", "created_at": time.time(), "n_tasks": 4,
+                   "timeout_seconds": self.live.timeout_seconds if mode == "live" else self.timeout}
+            if mode == "live":                                    # the user's confirmation becomes ONE grant bound to this job, owner, target, goal, budget, model and stages
+                job["grant"] = G.make_grant(job_id=job_id, owner=owner, target_id=target_id, goal=goal, budget_usd=self.live.cap_usd, model=self.live.model, endpoint=self.live.base_url,
+                                            snapshot_sha256=TARGETS[target_id].snapshot().sha256)
             worker.job_path(self.root, job_id).write_text(json.dumps(job, indent=2))
             self._spawn(job_id)                                  # the worker records its own pid and state
-        timer = threading.Timer(self.timeout, self._expire, args=(job_id,))
+        timer = threading.Timer(job["timeout_seconds"], self._expire, args=(job_id,))
         timer.daemon = True                                  # never keeps the server (or a test) alive
         timer.start()
         return self.get(job_id, owner)
@@ -109,7 +185,7 @@ class JobManager:
         job = worker.read(self.root, job_id)
         if job["state"] in ("queued", "running"):
             self._kill(job)
-            worker.update(self.root, job_id, state="timed_out", error=f"The evaluation exceeded its {self.timeout}s limit and was stopped.", finished_at=time.time())
+            worker.update(self.root, job_id, state="timed_out", error=f"The evaluation exceeded its {job['timeout_seconds']}s limit and was stopped.", finished_at=time.time())
 
     def _kill(self, job: dict) -> None:
         if self.alive(job.get("pid"), job["id"]):
@@ -153,14 +229,21 @@ class JobManager:
         job = self._owned(job_id, owner)
         if job["state"] in ("queued", "running") and not self.alive(job.get("pid"), job["id"]) and time.time() - job["created_at"] > 30:
             job = worker.update(self.root, job_id, state="failed", error="The worker stopped unexpectedly.", finished_at=time.time())
+        g = job.get("grant")
         return {**{k: job.get(k) for k in ("id", "target_id", "goal", "mode", "state", "error", "created_at", "started_at", "finished_at", "timeout_seconds")}, "mock": job["mode"] == "mock",
-                "notice": MOCK_NOTICE if job["mode"] == "mock" else None, **self._progress(job)}
+                "notice": MOCK_NOTICE if job["mode"] == "mock" else (DEV_NOTICE if self._dev(job) else LIVE_NOTICE), "dev_provider": self._dev(job), "stop": job.get("stop"),
+                "grant": {"budget_usd": g["budget_usd"], "stages": g["stages"], "model": g["model"], "confirmed_at": g["confirmed_at"], "grant_sha256": g["grant_sha256"][:16]} if g else None, **self._progress(job)}
+
+    @staticmethod
+    def _dev(job: dict) -> bool:
+        g = job.get("grant")
+        return bool(g) and urlsplit(g["endpoint"]).hostname in ("127.0.0.1", "localhost", "::1")
 
     def _progress(self, job: dict) -> dict:
         rd = self.root / job["id"]
         if not (rd / "run.json").exists():
             return {"stages": [{"name": s, "status": "pending", "detail": None} for s in STAGES], "progress": 0.0, "trials": [], "events": [{"t": job["created_at"], "kind": "job", "text": "Evaluation queued."}],
-                    "spend": {"committed_usd": 0.0, "hard_cap_usd": 0.0, "basis": "mock: no model call, nothing spent"}, "opened": False}
+                    "spend": self._spend(job, None), "opened": False}
         run = InvestigationRun(rd)
         st = run.state["stages"]
         stages = [{"name": s, "status": st[s]["status"], "detail": (st[s].get("summary") or {}).get("reason") if st[s].get("summary", {}).get("skipped") else None, "updated_at": st[s].get("updated_at")} for s in STAGES]
@@ -186,13 +269,30 @@ class JobManager:
         prog = done / len(STAGES)
         if planned and st["baseline_trials"]["status"] != "done":
             prog += (len(trials) / planned) / len(STAGES) * (1 if st["baseline_trials"]["status"] == "running" else 0)
-        try:
-            committed = round(run.ledger(20.0).committed(), 6)
-        except Exception:
-            committed = 0.0
+        for a in run.approvals():
+            events.append({"t": _ts(a["at"]), "kind": "approval", "text": f"Approved stage {a['stage']} (manifest {a['manifest_sha256'][:12]}) within the user's grant"})
+        if job.get("stop"):
+            events.append({"t": job.get("finished_at"), "kind": "stop", "text": f"Stopped safely ({job['stop'].get('kind')}): {job['stop'].get('reason')}"})
         return {"stages": stages, "progress": round(min(prog, 1.0), 3) if job["state"] != "completed" else 1.0, "trials": trials, "tasks_planned": planned,
-                "events": sorted(events, key=lambda e: e["t"] or 0)[-300:], "spend": {"committed_usd": committed, "hard_cap_usd": 0.0 if job["mode"] == "mock" else None, "basis": "mock: no model call, nothing spent" if job["mode"] == "mock" else "calculated"},
-                "opened": True}
+                "events": sorted(events, key=lambda e: e["t"] or 0)[-300:], "spend": self._spend(job, run), "opened": True}
+
+    def _spend(self, job: dict, run) -> dict:
+        """Recorded spend from the run's durable ledger, in total and per stage. Mock: always zero. Live: calculated at published prices (not a bill), against the grant's hard cap."""
+        if job["mode"] == "mock":
+            return {"committed_usd": 0.0, "hard_cap_usd": 0.0, "basis": "mock: no model call, nothing spent", "stages": {}}
+        cap = job["grant"]["budget_usd"]
+        if run is None:
+            return {"committed_usd": 0.0, "hard_cap_usd": cap, "basis": "calculated at published prices; not a bill", "stages": {}}
+        state: dict[str, float] = {}
+        for e in run.ledger(cap).entries():
+            if e["kind"] == "reserve":
+                state.setdefault(e["id"], e["usd"])
+            elif e["kind"] == "settle":
+                state[e["id"]] = e["usd"]
+        by = {"taskgen": 0.0, "baseline_trials": 0.0, "investigate": 0.0}
+        for i, usd in state.items():
+            by["taskgen" if "-taskgen" in i else "investigate" if "-investigate" in i else "baseline_trials"] += usd           # gate ids: <run>-taskgen:reqN, <run>-investigate:reqN, baseline-<task>-rN:reqN
+        return {"committed_usd": round(sum(state.values()), 6), "hard_cap_usd": cap, "basis": "calculated at published prices; not a bill", "stages": {k: round(v, 6) for k, v in by.items()}}
 
     def export(self, job_id: str, owner: str) -> dict:
         job = self._owned(job_id, owner)
@@ -200,8 +300,7 @@ class JobManager:
             raise JobError(409, "The evaluation has not produced a run yet.")
         data = exporter.export_run(self.root / job_id)
         exporter.check_clean(data)
-        if job["mode"] == "mock":
-            data["notices"] = [MOCK_NOTICE, *data.get("notices", [])]
+        data["notices"] = [MOCK_NOTICE if job["mode"] == "mock" else (DEV_NOTICE if self._dev(job) else LIVE_NOTICE), *data.get("notices", [])]
         data["goal"] = job["goal"]
         return data
 

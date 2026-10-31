@@ -11,7 +11,7 @@ import threading
 import time
 from pathlib import Path
 
-TERMINAL = ("completed", "failed", "cancelled", "timed_out")
+TERMINAL = ("completed", "failed", "cancelled", "timed_out", "awaiting_approval", "stopped")      # no further transition by a dying worker; awaiting_approval/stopped never occupy the job slot
 
 
 def job_path(root: Path, job_id: str) -> Path:
@@ -35,13 +35,23 @@ def update(root: Path, job_id: str, **fields) -> dict:
     return job
 
 
+def sanitize_goal(goal: str) -> str:
+    return " ".join("".join(ch for ch in goal if ch.isprintable()).split())[:300]
+
+
+def stop_kind(error: str) -> str:
+    return "budget" if any(w in error.lower() for w in ("budget", "spend gate", "ceiling", " cap")) else "error"
+
+
 def execute(root: Path, job_id: str) -> None:
+    job = read(root, job_id)
+    if job["mode"] == "live":
+        return execute_live(root, job_id, job)
     from ..investigate import flow
     from . import mock_investigator
     from .targets import TARGETS
-    job = read(root, job_id)
     if job["mode"] != "mock":
-        update(root, job_id, state="failed", error="Live model execution is not enabled in this build (M0 runs mock mode only).", finished_at=time.time())
+        update(root, job_id, state="failed", error="Unknown evaluation mode.", finished_at=time.time())
         return
     target = TARGETS[job["target_id"]]
     run, pipe, ctx = flow.build(root, job_id, target.id, mode="mock", options={"snapshot": target.snapshot(), "n_tasks": job.get("n_tasks", 4), "goal": job["goal"]})
@@ -51,6 +61,48 @@ def execute(root: Path, job_id: str) -> None:
         update(root, job_id, state="completed", finished_at=time.time())
     else:
         update(root, job_id, state="failed", error=f"pipeline stopped: {res.status}" + (f" at {res.stage}" if res.stage else "") + (f": {res.error}" if res.error else ""), finished_at=time.time())
+
+
+def execute_live(root: Path, job_id: str, job: dict) -> None:
+    """A user-approved live evaluation: the real model drives task generation, browsing and investigation through the unchanged pipeline. Every paid stage still presents its manifest; the worker
+    records the approval ONLY through `grant.Approver` (this job's grant: scope, caps, budget, model), and the ledger ceiling equals the budget. Anything outside the grant stops the run safely."""
+    from ..agent import ModelConfig
+    from ..investigate import flow
+    from . import grant as G
+    from .targets import TARGETS
+    g = job.get("grant")
+    try:
+        approver = G.Approver(g, job_id=job_id, owner=job["owner"], run_id=job_id)
+        target = TARGETS[job["target_id"]]
+        snap = target.snapshot()
+        if snap.sha256 != g["snapshot_sha256"] or g["goal"] != job["goal"] or g["target_id"] != job["target_id"]:
+            raise G.GrantRefused("the job no longer matches the grant (site capture, goal or target changed)", "integrity")
+    except G.GrantRefused as exc:
+        update(root, job_id, state="stopped", error=f"Not started: {exc.reason}", stop={"kind": exc.kind, "stage": None, "reason": exc.reason}, finished_at=time.time())
+        return
+    budget = g["budget_usd"]
+    cfg = ModelConfig(model=g["model"], base_url=g["endpoint"])
+    opts = {"snapshot": snap, "n_tasks": job.get("n_tasks", 4), "goals": {"focus": sanitize_goal(job["goal"])}, "rule_topup": False, "model_config": cfg, "allow_model_calls": True,
+            "total_cap_usd": budget, "repeats": 1}
+    run, pipe, ctx = flow.build(root, job_id, target.id, mode="live", options=opts)
+    run.write_artifact("live-grant", g)                                        # the authorization, kept with the run it covers
+    for _ in range(len(G.LIVE_STAGES) + 2):
+        res = pipe.run(ctx)
+        if res.status == "done":
+            update(root, job_id, state="completed", finished_at=time.time())
+            return
+        if res.status == "failed":
+            err = res.error or "pipeline failed"
+            update(root, job_id, state="stopped" if stop_kind(err) == "budget" else "failed", error=f"Stopped at {res.stage}: {err}"[:400], stop={"kind": stop_kind(err), "stage": res.stage, "reason": err[:300]}, finished_at=time.time())
+            return
+        manifest = run.artifact(f"manifests/{res.stage}-{res.manifest_sha256[:16]}")
+        try:
+            approver.decide(run, res.stage, res.manifest_sha256, manifest, run.ledger(budget).committed())
+        except G.GrantRefused as exc:
+            update(root, job_id, state="awaiting_approval", error=f"Stopped before {res.stage}: {exc.reason}. Nothing further was spent; a person must approve this stage.",
+                   stop={"kind": exc.kind, "stage": res.stage, "reason": exc.reason, "manifest_sha256": res.manifest_sha256}, finished_at=time.time())
+            return
+    update(root, job_id, state="failed", error="The pipeline kept asking for approvals beyond the expected stages; stopped.", finished_at=time.time())
 
 
 def start_watchdog(root: Path, job_id: str, seconds: float) -> threading.Timer:
@@ -75,8 +127,9 @@ def main(argv: list[str]) -> int:
         os._exit(143)
     signal.signal(signal.SIGTERM, on_term)
     update(root, job_id, state="running", started_at=time.time(), pid=os.getpid())
-    for name in ("META_MODEL_API_KEY", "META_API_KEY"):                  # defence in depth: the manager already scrubbed the environment; M0 must never be able to authenticate
-        os.environ.pop(name, None)
+    if read(root, job_id)["mode"] != "live":
+        for name in ("META_MODEL_API_KEY", "META_API_KEY"):               # defence in depth: the manager already scrubbed the environment; a mock job must never be able to authenticate
+            os.environ.pop(name, None)
     start_watchdog(root, job_id, read(root, job_id).get("timeout_seconds", 900))
     try:
         execute(root, job_id)
