@@ -34,7 +34,14 @@ readiness live run --goal "Can a shopper compare the hire price and availability
 ```
 The baseline and investigator manifests depend on the generated tasks, so their hashes exist only at run time; each is approved only if it stays inside the grant (stage caps 1.40 / 0.40, max 4 tasks, 1 repeat, no trial retries, per-request cap 0.05, model, endpoint, capture and context hash). Any other stage, or a changed context, is refused.
 
-## Stop conditions (kill switch `readiness scanner kill on`; do not retry)
+## How to stop a running job (read before launching)
+`readiness scanner kill on` only writes the kill-switch file: it **blocks new jobs** and does **not** terminate an active one.
+1. **Primary: the UI Cancel button** (the session that started the job). It marks the job cancelled and sends SIGTERM to the worker's whole process group (browser included).
+2. **Fallback: authenticated admin cancellation**, which does not need the browser tab: start the server with `SCANNER_ADMIN_TOKEN` set, then `curl -X POST http://127.0.0.1:8100/api/admin/kill -H "x-admin-token: $SCANNER_ADMIN_TOKEN" -H 'content-type: application/json' -d '{"enabled": true}'` (sets the kill switch and cancels every running job; `{"enabled": false}` clears the switch afterwards).
+3. Last resort: the worker's own 30-minute watchdog; or SIGTERM to the worker pid recorded in the job file.
+A cancelled job keeps what was reserved counted in the ledger. The investigator's single retry per request (bounded by its US$0.40 stage cap) is allowed; there is no automatic restart of the whole investigation.
+
+## Stop conditions (stop with Cancel or the admin fallback above; do not retry)
 - Any state other than `completed`: `awaiting_approval`, `stopped` (budget, coverage or scope), `failed`, `timed_out`.
 - Total committed above US$1.30, or any stage above 2x its expected spend, or any bound violation.
 - Goal coverage `insufficient` (the run stops after task generation; nothing is spent on trials).

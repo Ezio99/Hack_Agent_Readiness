@@ -16,7 +16,7 @@ Plus, in the worst case, the overshoot of one request (see "Is US$2 a real ceili
 2. Server environment: `SCANNER_LIVE_ENABLED=1`, `SCANNER_LIVE_BUDGET_USD=2.5` (one run plus a little room), `LIVE_JOB_CAP_USD=2.0`, key in `.env` (mode 600) or the environment, **no** `LIVE_MODEL_BASE_URL` (default Meta https), **no** `LIVE_ALLOW_DEV_PROVIDER`.
 3. `readiness investigate l0 plan` shows the endpoint, model and prices as expected. If the L0 probe evidence from the earlier capability probe is not current, run the L0 probe first (its own approved manifest, at most US$0.04 for all four requests); otherwise skip it.
 4. Credential hygiene: the key value is never printed; `git grep` for it is empty; the dev provider is not running.
-5. A second terminal ready to run `readiness scanner kill on` (kill switch: refuses new jobs and cancels the running one).
+5. A way to stop a running job: the UI Cancel button, or the authenticated admin fallback (see LIVE_FULL_RUN_PLAN.md "How to stop a running job"). `readiness scanner kill on` alone only blocks NEW jobs.
 
 ## Step A: taskgen-only smoke test (implemented; NOT run; needs the owner's explicit spending authorization)
 What it does: the normal live path (goal-driven proposal prompts -> real Meta endpoint -> independent gate -> freeze) for **task generation only**. One grant covering `taskgen` alone, budget US$0.15, per-request cap US$0.05, **no retries**, no rule top-up. The worker runs the pipeline `until="freeze"`; a manifest for any other stage is refused. No browser trial, investigator or recommendation can run.
