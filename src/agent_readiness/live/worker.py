@@ -72,7 +72,7 @@ def live_options(snapshot, goal: str, context: str | None, *, budget: float, cfg
     hash the run presents (the budget is the ledger ceiling and is part of the manifest's allocation)."""
     from .lexicon import RENTAL
     g = sanitize_goal(goal)
-    return {"snapshot": snapshot, "n_tasks": n_tasks, "goals": {"focus": g}, "focus": g, "rule_topup": False, "goal_binding": True, "goal_lexicon": RENTAL, "context": context, "model_config": cfg, "allow_model_calls": True,
+    return {"snapshot": snapshot, "n_tasks": n_tasks, "goals": {"focus": g}, "focus": g, "rule_topup": False, "goal_binding": True, "first_page_policy": "tag", "goal_lexicon": RENTAL, "context": context, "model_config": cfg, "allow_model_calls": True,
             "total_cap_usd": budget, "repeats": 1}
 
 

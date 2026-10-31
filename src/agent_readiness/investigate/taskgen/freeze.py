@@ -57,7 +57,7 @@ def build(accepted: list[Accepted], *, snapshot_sha256: str, generator: dict, ag
         tid = task_id(a.fingerprint)
         lim = _limits(a.hops)
         tasks.append({"task_id": tid, "question": a.draft.question, "start_path": a.draft.start_path, "kind": a.compiled.kind, "source": a.draft.source, "partition": part[a.fingerprint],
-                      "outcome_type": "set" if a.compiled.style == "set" else "unique", "answer_schema": _answer_schema(a.compiled.style), "limits": asdict(lim), "criterion_sha256": canonical_hash(a.criterion)})
+                      "outcome_type": "set" if a.compiled.style == "set" else "unique", "answer_schema": _answer_schema(a.compiled.style), "limits": asdict(lim), "criterion_sha256": canonical_hash(a.criterion), **({"tags": list(a.tags)} if a.tags else {})})
         private[tid] = {"criterion": a.criterion, "kind": a.compiled.kind, "style": a.compiled.style, "truth": a.compiled.truth, "evidence_paths": a.compiled.evidence_paths,
                         "evidence_texts": [list(t) for t in a.compiled.evidence_texts], "detail": a.compiled.detail, "min_hops": max(a.hops.values(), default=0),
                         "distractors": a.compiled.distractors}

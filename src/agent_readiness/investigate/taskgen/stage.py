@@ -22,9 +22,9 @@ DEFAULT_N = 8
 MIN_TASKS = 4
 
 
-def _run_gate(drafts: list[Draft], profile: dict, accepted: list[Accepted], rejected: list[Rejected]) -> None:
+def _run_gate(drafts: list[Draft], profile: dict, accepted: list[Accepted], rejected: list[Rejected], first_page: str = "reject") -> None:
     for d in drafts:
-        r = evaluate(d, profile, accepted)
+        r = evaluate(d, profile, accepted, first_page=first_page)
         (accepted if isinstance(r, Accepted) else rejected).append(r)
 
 
@@ -144,7 +144,7 @@ def taskgen_stage(ctx: Context) -> dict:
     rejected: list[Rejected] = []
     calls = []
     proposed: list[tuple[int, Draft]] = []
-    _run_gate(owner, profile, accepted, rejected)
+    _run_gate(owner, profile, accepted, rejected, opts.get("first_page_policy", "reject"))
     target = opts.get("n_tasks", DEFAULT_N)
     if ctx.llm is not None:
         for i, req in enumerate(propose_mod.batch_requests(profile, focus, bound, opts.get("context"))):
@@ -152,7 +152,7 @@ def taskgen_stage(ctx: Context) -> dict:
             calls.append({"batch": i, "status": rec["status"], **rec["meta"]})
             batch = [Draft(**d) for d in rec["drafts"]]
             proposed += [(i, d) for d in batch]
-            _run_gate(batch, profile, accepted, rejected)
+            _run_gate(batch, profile, accepted, rejected, opts.get("first_page_policy", "reject"))
             violation = getattr(ctx.llm, "violation", None)
             if violation:
                 raise Halt(f"spend gate bound violation after batch {i}: {violation}; stopping the stage (completed batches are kept)")
@@ -192,7 +192,7 @@ def taskgen_stage(ctx: Context) -> dict:
     accounting = {"proposed": len(proposed), **counts, "unaccounted": len(proposed) - sum(counts.values()), "per_proposal": accounting_rows,
                   "note": "every model proposal is either rejected by the gate (with its reason), accepted but not selected (with why), or selected; owner and rule tasks are listed under accepted/rejected only"}
     accepted = selected
-    run.write_artifact("taskgen-report", {"accepted": [{"question": a.draft.question, "source": a.draft.source, "kind": a.compiled.kind, "fingerprint": a.fingerprint} for a in accepted],
+    run.write_artifact("taskgen-report", {"accepted": [{"question": a.draft.question, "source": a.draft.source, "kind": a.compiled.kind, "fingerprint": a.fingerprint, **({"tags": a.tags} if a.tags else {})} for a in accepted],
                                          "rejected": [{"question": r.draft.question, "source": r.draft.source, "reason": r.reason} for r in rejected], "model_calls": calls, "rule_topup": topped_up,
                                          "not_selected": [r for r in accounting_rows if r["status"] == "accepted_not_selected"], "accounting": accounting, **({"goal_binding": goal_block} if goal_block else {})})
     if bound and not goal_block["coverage"]["passes"]:
@@ -211,7 +211,7 @@ def freeze_stage(ctx: Context) -> dict:
     snap = load_snapshot(run)
     accepted: list[Accepted] = []
     for d in run.private("accepted-drafts"):
-        r = evaluate(Draft(d["question"], d["start_path"], d["criterion"], d["source"], d["rationale"]), profile, accepted)
+        r = evaluate(Draft(d["question"], d["start_path"], d["criterion"], d["source"], d["rationale"]), profile, accepted, first_page=opts.get("first_page_policy", "reject"))
         if not isinstance(r, Accepted):
             raise ValueError("a previously accepted task no longer passes the gate")
         accepted.append(r)

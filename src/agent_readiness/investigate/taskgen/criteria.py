@@ -139,13 +139,19 @@ def _fact(page: dict, label: str) -> list[str]:
     return sorted({f["value"] for f in page["facts"] if f["label"] == norm(label).lower()})
 
 
-def _items(profile: dict, listing: str) -> list[dict]:
-    groups = _page(profile, listing)["item_groups"]
-    groups = [g for g in groups if sum(i["href"] in profile["pages"] for i in g["items"]) >= 3]
+def _items(profile: dict, listing: str, labels: tuple[str, ...] = ()) -> list[dict]:
+    """The listed items of a page. Candidate groups are the repeated link groups with at least 3 items linking to captured pages. Without `labels` the largest group wins (unchanged). With `labels` (the
+    facts a comparison needs) the largest group whose every item page carries each label exactly once wins, so a category page's product group is chosen over its larger category-navigation group; when no
+    group carries the labels the largest group is used, which then fails with the usual precise error."""
+    pages = profile["pages"]
+    groups = [g for g in _page(profile, listing)["item_groups"] if sum(i["href"] in pages for i in g["items"]) >= 3]
     if not groups:
         raise CriterionError(f"{listing!r} has no repeated items linking to captured pages")
-    g = max(groups, key=lambda g: len(g["items"]))
-    items = [i for i in g["items"] if i["href"] in profile["pages"]]
+    groups.sort(key=lambda g: -len(g["items"]))                                 # stable: equal sizes keep page order
+    g = groups[0]
+    if labels:
+        g = next((x for x in groups if all(len(_fact(pages[i["href"]], l)) == 1 for i in x["items"] if i["href"] in pages for l in labels)), g)
+    items = [i for i in g["items"] if i["href"] in pages]
     names = [i["name"] for i in items]
     if any(not n for n in names) or len(set(names)) != len(names):
         raise CriterionError("listing items do not have unique visible names")
@@ -186,7 +192,7 @@ def compile_criterion(c: Criterion | dict, profile: dict) -> Compiled:
         path = resolve_target(profile, c.target)
         return Compiled("reach_page", "string", title, [path], [(path, title)], distractors=sorted({p["title"] for q, p in profile["pages"].items() if q != path and p["title"]} - {title}))
     if isinstance(c, ItemSet):
-        items = _items(profile, c.listing)
+        items = _items(profile, c.listing, tuple(cond.label for cond in c.conditions))
         hit, need = [], []
         for it in items:
             ok, vals_seen = True, []
@@ -204,7 +210,7 @@ def compile_criterion(c: Criterion | dict, profile: dict) -> Compiled:
             raise CriterionError(f"criterion selects {len(hit)} of {len(items)} items; it must select some but not all")
         return Compiled("item_set", "set", sorted(i["name"] for i in hit), [c.listing] + need, [(None, i["name"]) for i in hit], [c.listing],
                         {"items": len(items), "selected": len(hit), "detail_visits_required": len(need)})
-    items = _items(profile, c.listing)
+    items = _items(profile, c.listing, (c.label,))
     vals = []
     for it in items:
         v = _fact(profile["pages"][it["href"]], c.label)

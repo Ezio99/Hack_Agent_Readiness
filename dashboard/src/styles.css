@@ -250,3 +250,4 @@ h2.step { font-size: 1.5rem; }
 
 .coverage{border-left:4px solid #6b7280;padding:.4rem .8rem;margin:.6rem 0;background:#f9fafb}.cov-partial{border-color:#b45309;background:#fffbeb}.cov-insufficient{border-color:#b91c1c;background:#fef2f2}.cov-complete{border-color:#15803d}
 .ctxbox{border:1px dashed #9ca3af;padding:.5rem .7rem;background:#f3f4f6;white-space:pre-wrap}
+.goalbanner{border-left:4px solid #6b7280;padding:.6rem 1rem;margin:.8rem 0;background:#f9fafb;border-radius:4px}.goalbanner .goaltext{font-size:1.1rem;font-weight:600;margin:.1rem 0 .5rem}.goalbanner .entities{list-style:none;padding:0;margin:.3rem 0}.goalbanner.cov-unknown{border-color:#b45309;background:#fffbeb}.herostat{font-size:1.15rem;margin:.2rem 0}.cov-word.cov-partial{color:#b45309}.cov-word.cov-insufficient{color:#b91c1c}.cov-word.cov-complete{color:#15803d}

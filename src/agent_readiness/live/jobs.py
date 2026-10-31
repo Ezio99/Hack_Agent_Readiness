@@ -357,8 +357,36 @@ class JobManager:
         exporter.check_clean(data)
         data["notices"] = [MOCK_NOTICE if job["mode"] == "mock" else (DEV_NOTICE if self._dev(job) else LIVE_NOTICE), *data.get("notices", [])]
         data["goal"] = job["goal"]
+        run = InvestigationRun(self.root / job_id)
+        data["goal_coverage"] = goal_coverage(run)                                      # persisted in the run's own artifacts (taskgen-report), so a replay or an older run without it simply reports null
+        tags = {t["task_id"]: t.get("tags") for t in (run.artifact("tasks-manifest")["tasks"] if run.has_artifact("tasks-manifest") else [])}
+        for t in data.get("tasks", []):
+            if tags.get(t["task_id"]):
+                t["tags"] = tags[t["task_id"]]
         data["client_context"] = {"text": job["context"], "sha256": job["grant"]["context_sha256"] if job.get("grant") else None, "label": CONTEXT_LABEL} if job.get("context") else None
         return data
+
+
+def goal_coverage(run) -> dict | None:
+    """How well the SELECTED tasks serve the evaluation goal, from the run's taskgen report: status (complete / partial / insufficient), the goal's entities and which were covered, the aspects, the named
+    limitations and how many selected tasks are answerable from the start page. None when the run has no goal-bound task generation (mock runs, older runs)."""
+    if not run.has_artifact("taskgen-report"):
+        return None
+    gb = run.artifact("taskgen-report").get("goal_binding")
+    if not gb:
+        return None
+    cv, an = gb["coverage"], gb["analysis"]
+    prof = run.artifact("site-profile") if run.has_artifact("site-profile") else {"pages": {}}
+    def name(p: str) -> str:
+        rec = prof["pages"].get(p) or {}
+        return ((rec.get("headings") or [{"text": ""}])[0]["text"] or (rec.get("title") or "").split("|")[0]).strip() or p
+    sel_q = {a["question"] for a in run.artifact("taskgen-report").get("accepted", [])}
+    easy = [a for a in gb["assessments"] if a.get("first_page_answerable") and a["question"] in sel_q]
+    return {"status": cv["status"], "selected_tasks": gb["selected"], "gate_accepted_tasks": gb["gate_accepted_tasks"], "relevant_tasks": gb["relevant_tasks"],
+            "asked_aspects": an["asked_aspects"], "covered_aspects": cv["covered"], "missing_supported_aspects": cv["missing_supported"],
+            "entities": [{"path": p, "name": name(p), "covered": p in cv["entities_covered"]} for p in an["entity_items"]], "entities_total": cv["entities_total"], "entities_covered": len(cv["entities_covered"]),
+            "partial_because": cv["partial_because"], "limitations": [{"aspect": d["aspect"], "kind": d["kind"], "detail": d["detail"]} for d in an["limitation_details"]],
+            "first_page_answerable_selected": len(easy), "note": "Coverage describes the verified tasks that were SELECTED. Passing them does not show the goal was achieved or evaluated beyond what they cover."}
 
 
 def _ts(s) -> float | None:

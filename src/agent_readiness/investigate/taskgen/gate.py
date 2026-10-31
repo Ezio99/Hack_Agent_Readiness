@@ -35,6 +35,7 @@ class Accepted:
     criterion: dict
     fingerprint: str
     hops: dict[str, int] = field(default_factory=dict)
+    tags: list[str] = field(default_factory=list)          # live evaluations only: "first_page_answerable" (the answer text is visible on the start page; kept, not rejected)
 
 
 @dataclass
@@ -74,7 +75,12 @@ def _signature(criterion: dict, start: str) -> str:
     return canonical_hash({"c": criterion, "s": start})
 
 
-def evaluate(draft: Draft, profile: dict, accepted: list[Accepted]) -> Accepted | Rejected:
+FIRST_PAGE_TAG = "first_page_answerable"
+
+
+def evaluate(draft: Draft, profile: dict, accepted: list[Accepted], *, first_page: str = "reject") -> Accepted | Rejected:
+    """`first_page`: "reject" (default; the benchmark rule, unchanged) refuses a task whose answer text is visible on the start page; "tag" (live product) keeps it and marks it `first_page_answerable`, so it is
+    reported as an easy task instead of being silently dropped. Every other rule is identical in both modes."""
     proposed = draft                                                       # outcomes always carry the draft AS PROPOSED (accounting keys on it); `draft` below may be the title-resolved working copy
 
     def no(reason):
@@ -120,8 +126,11 @@ def evaluate(draft: Draft, profile: dict, accepted: list[Accepted]) -> Accepted 
     if any(norm_answer(t) in qn for t in truths if len(norm_answer(t)) >= 3):
         return no("the question contains the expected answer")
     start_text = norm_answer(profile["pages"][draft.start_path]["text"] + " " + profile["pages"][draft.start_path]["title"])
+    tags: list[str] = []
     if crit.style == "string" and norm_answer(crit.truth) in start_text and crit.kind != "extremum":
-        return no("the expected answer is visible on the start page")
+        if first_page != "tag":
+            return no("the expected answer is visible on the start page")
+        tags.append(FIRST_PAGE_TAG)
     # ambiguity: the question must single out its target
     c = draft.criterion
     if c["kind"] == "page_fact":
@@ -143,4 +152,4 @@ def evaluate(draft: Draft, profile: dict, accepted: list[Accepted]) -> Accepted 
         ta, tb = _tokens(a.draft.question), _tokens(q)
         if ta and tb and len(ta & tb) / len(ta | tb) >= DUP_JACCARD and a.compiled.truth == crit.truth:
             return no("near-duplicate wording of an accepted task with the same answer")
-    return Accepted(proposed, crit, draft.criterion, sig, {p: dist[p] for p in crit.evidence_paths})
+    return Accepted(proposed, crit, draft.criterion, sig, {p: dist[p] for p in crit.evidence_paths}, tags)

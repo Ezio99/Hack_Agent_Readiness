@@ -5,7 +5,7 @@ export type StageStatus = "pending" | "running" | "done" | "failed" | "awaiting_
 export interface Prov { mode: Mode; source: string }
 export interface StageInfo { name: string; status: StageStatus; updated_at: string | null; skipped: boolean; reason: string | null; manifest_sha256: string | null; summary: Record<string, string | number | boolean | null> }
 export interface TrialRow { trial_id: string; repeat: number; run_status: string | null; void: boolean; passed: boolean | null; evidence_backed: boolean | null; model_requests: number | null; page_views: number | null; mode: Mode | null; attribution?: string; why?: string }
-export interface TaskInfo { task_id: string; question: string; kind: string; source: string; partition: "investigation" | "holdout"; start_path: string; limits: Record<string, number> | null; baseline: TrialRow[]; patched: Record<string, TrialRow[]>; placebo?: Record<string, TrialRow[]> }
+export interface TaskInfo { tags?: string[]; task_id: string; question: string; kind: string; source: string; partition: "investigation" | "holdout"; start_path: string; limits: Record<string, number> | null; baseline: TrialRow[]; patched: Record<string, TrialRow[]>; placebo?: Record<string, TrialRow[]> }
 export interface Observation { id: string; kind: string; summary: string; refs: string[]; provenance: Prov }
 export interface Hypothesis { id: string; tier: "verifiable" | "novel"; statement: string; claim_kind: string | null; prediction: string | null; status: "unverified" | "supported" | "refuted" | "unverifiable"; observation_ids: string[]; verification: { verifier: string; result: string; evidence: string[] } | null; promoted: boolean; provenance: Prov }
 export interface Finding { id: string; hypothesis_id: string; statement: string; attribution: string; structural_proof: boolean; provenance: Prov; observation_ids: string[]; unresolved_observation_ids: string[]; support: { ref: string; resolved: boolean }[] }
@@ -24,7 +24,14 @@ export interface Exploratory {
 }
 export interface Evaluation { state: "evaluated" | "not_evaluated" | "missing"; reason: string | null; rule: Record<string, string | number | null> | null; results: EvalResult[]; exploratory?: Exploratory | null }
 export interface Effect { id: string; proposal_id: string; verdict: string; n_pairs: number; note: string; measured: boolean; mode: Mode }
+export interface GoalCoverage {
+  status: "complete" | "partial" | "insufficient"; selected_tasks: number; gate_accepted_tasks: number; relevant_tasks: number; asked_aspects: string[]; covered_aspects: string[]; missing_supported_aspects: string[];
+  entities: { path: string; name: string; covered: boolean }[]; entities_total: number; entities_covered: number; partial_because: string[]; limitations: { aspect: string; kind: string; detail: string }[];
+  first_page_answerable_selected: number; note: string;
+}
 export interface InvestigationExport {
+  /** live evaluations only: the user's goal, the client briefing and how well the selected tasks serve the goal (absent in older exports and in non-live modes) */
+  goal?: string | null; client_context?: { text: string; sha256: string | null; label: string } | null; goal_coverage?: GoalCoverage | null;
   schema: "investigation-dashboard-v1"; exported_at: string | null; synthetic?: boolean; audience?: "public-demo";
   run: { id: string; target: string; mode: Mode; created_at: string | null; outcome: "findings" | "experimental_only" | "no_supported_issue" | "not_investigated" | "incomplete_due_to_infrastructure_error" | "incomplete_unusable_model_output" | "incomplete_no_finish"; investigation_status: "completed" | "not_run" | "incomplete_due_to_infrastructure_error" | "incomplete_unusable_model_output" | "incomplete_no_finish" | null; report_source: "report-final" | "report" | "evidence"; complete: boolean; missing_artifacts: string[] };
   modes: Mode[]; notices: string[]; stages: StageInfo[]; tasks: TaskInfo[];

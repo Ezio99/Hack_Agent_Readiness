@@ -107,7 +107,8 @@ def test_the_exact_goal_is_covered_offline_with_goal_following_fixture_responses
     assert gb["coverage"]["passes"] and set(gb["coverage"]["covered"]) >= {"price", "availability"} and gb["coverage"]["missing_supported"] == [] and len(gb["coverage"]["entities_covered"]) == 3
     assert len(rep["accepted"]) <= 4 and rep["rule_topup"] == 0 and acc["unaccounted"] == 0 and acc["proposed"] == len(tasks)
     reasons = " | ".join(r["reason"] for r in rep["rejected"])
-    assert "visible on the start page" in reasons and "does not compile" in reasons, "the gate still rejects what it must (an answer visible on the home page; an extremum over a filter-chip listing): not weakened to raise yield"
+    assert "visible on the start page" in reasons, "the benchmark rule is unchanged: an answer visible on the home page is rejected unless the live policy tags it"
+    assert "does not compile" not in reasons, "the category-scoped extremum used to fail on the category-navigation group; it now compiles on the category's own products"
     assert [d["kind"] for d in gb["analysis"]["limitation_details"]] == ["verifier"]
 
 

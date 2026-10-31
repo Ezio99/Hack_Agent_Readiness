@@ -176,7 +176,7 @@ def assess(ga: dict, accepted, lexicon: dict | None = None) -> dict:
     relevant = bool(hit) and entity is not False and (entity is True or not ga["entity_terms"] or entity is None)
     why = ("serves the goal: touches " + ", ".join(hit) + ("" if entity is None else " of the goal's entities")) if relevant else (
         "not relevant: " + ("it touches no aspect or attribute the goal asks about" if not hit else "it is about an entity outside the goal's subject") + (f" (labels: {labels})" if labels else ""))
-    return {"question": accepted.draft.question, "aspects_matched": hit, "entity_match": entity, "goal_relevant": relevant, "entities_touched": touched, "why": why, "model_goal_link": _link(accepted.draft.rationale)}
+    return {"question": accepted.draft.question, "aspects_matched": hit, "entity_match": entity, "goal_relevant": relevant, "entities_touched": touched, "first_page_answerable": "first_page_answerable" in getattr(accepted, "tags", ()), "nav_hops": max(accepted.hops.values(), default=0), "why": why, "model_goal_link": _link(accepted.draft.rationale)}
 
 
 def _link(rationale: str) -> str | None:
@@ -189,7 +189,7 @@ def select(assessed: list[dict], limit: int) -> list[int]:
     cells = lambda v: {(a, e) for a in v["aspects_matched"] for e in (v["entities_touched"] or ["*"])}
     pool, chosen, covered = [i for i, v in enumerate(assessed) if v["goal_relevant"]], [], set()
     while pool and len(chosen) < limit:
-        best = max(pool, key=lambda i: (len(cells(assessed[i]) - covered), -i))
+        best = max(pool, key=lambda i: (len(cells(assessed[i]) - covered), not assessed[i].get("first_page_answerable"), assessed[i].get("nav_hops", 0), -i))     # coverage first; then a task that needs navigation over one answerable from the home page; then deeper navigation; then earliest
         chosen.append(best)
         covered |= cells(assessed[best])
         pool.remove(best)

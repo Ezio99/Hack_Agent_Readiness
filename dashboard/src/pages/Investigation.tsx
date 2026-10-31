@@ -53,7 +53,7 @@ export function TaskTable({ d }: { d: InvestigationExport }) {
         <tbody>
           {d.tasks.map((t) => (
             <tr key={t.task_id} className={t.baseline.some((r) => !r.void && !r.passed) ? "row-fail" : undefined}>
-              <th scope="row"><span>{t.question}</span><br /><code>{t.task_id}</code> <span className="muted">{t.kind}</span></th>
+              <th scope="row"><span>{t.question}</span><br /><code>{t.task_id}</code> <span className="muted">{t.kind}</span>{t.tags?.includes(FIRST_PAGE_TAG) ? <> <span className="pill pill-warn" title="The answer text is visible on the start page, so this task needs little or no navigation">easy · answer on the home page</span></> : null}</th>
               <td>{t.partition}</td>
               <td><Cell rows={t.baseline} />{t.baseline.some((r) => r.attribution && !["success", "infrastructure"].includes(r.attribution)) ? <div className="muted">{t.baseline.map((r) => r.attribution).filter(Boolean).join(", ")}</div> : null}</td>
               {hasControl ? <td><Cell rows={Object.values(t.placebo ?? {}).flat()} /></td> : null}
@@ -267,7 +267,7 @@ export function ExploratoryPanel({ d, x }: { d: InvestigationExport; x: Explorat
 export function Comparison({ d }: { d: InvestigationExport }) {
   const e = d.evaluation;
   if (e.state === "missing") return <Callout title="No evaluation data" tone="warn"><p>{e.reason} Baseline results are shown above; no before/after comparison is available.</p></Callout>;
-  if (e.state === "not_evaluated") return <Callout title="Not evaluated" tone="info"><p>{e.reason ?? "No evaluation was run"}. Nothing was retested, so nothing is compared.</p></Callout>;
+  if (e.state === "not_evaluated") return <p className="muted" role="note"><strong>Not evaluated.</strong> {e.reason ?? "No evaluation was run"}. Nothing was retested, so nothing is compared.</p>;
   return <>{e.exploratory ? <ExploratoryPanel d={d} x={e.exploratory} /> : null}{e.results.map((r) => <ResultCard key={r.proposal_id} d={d} r={r} />)}{e.rule?.causal_scope ? <p className="muted">Scope: {e.rule.causal_scope}</p> : null}</>;
 }
 
@@ -396,6 +396,30 @@ export function provenanceOf(d: InvestigationExport): { kind: "live" | "syntheti
   return { kind: "other", label: `${d.modes.map((m) => MODE_LABEL[m]).join(" + ") || MODE_LABEL[d.run.mode]} EVIDENCE · not a live experiment` };
 }
 
+const COVERAGE_TONE = { complete: "pass", partial: "warn", insufficient: "fail" } as const;
+export const FIRST_PAGE_TAG = "first_page_answerable";
+
+/** The evaluation goal and how well the SELECTED tasks serve it. Shown for live evaluations; an export that has a goal but no coverage details (older run) says so instead of implying completeness. */
+export function GoalBanner({ d }: { d: InvestigationExport }) {
+  if (!d.goal) return null;
+  const c = d.goal_coverage;
+  const easy = d.tasks.filter((t) => t.tags?.includes(FIRST_PAGE_TAG)).length;
+  return (
+    <section className={`goalbanner ${c ? `cov-${c.status}` : "cov-unknown"}`} aria-label="Evaluation goal and coverage">
+      <p className="eyebrow">Evaluation goal</p>
+      <p className="goaltext">“{d.goal}”</p>
+      {c ? <>
+        <p role="status"><Pill tone={COVERAGE_TONE[c.status]}>Goal coverage: {c.status.toUpperCase()}</Pill> {c.selected_tasks} verified {c.selected_tasks === 1 ? "task" : "tasks"} selected · {c.entities_covered} of {c.entities_total} of the goal's items covered · aspects covered: {c.covered_aspects.join(", ") || "none"}</p>
+        {c.entities.length > 0 ? <ul className="entities" aria-label="Goal items and whether a selected task covers them">{c.entities.map((e) => <li key={e.path}>{e.covered ? "✓" : "✗"} {e.name} <span className="muted">{e.covered ? "covered" : "not covered"}</span></li>)}</ul> : null}
+        {[...c.limitations.map((l) => `${l.aspect} (${l.kind} limitation): ${l.detail}`), ...c.missing_supported_aspects.map((a) => `supportable aspect not covered: ${a}`)].map((t, i) => <p key={i} className="muted" role="note">Limitation: {t}</p>)}
+        {easy > 0 ? <p className="muted" role="note">{easy} of the selected tasks {easy === 1 ? "is" : "are"} answerable from the home page (marked “easy” below) and measure less than a navigation task.</p> : null}
+        <p className="muted">{c.note}</p>
+      </> : <p className="muted" role="note">Goal coverage is not recorded in this export (an older run, or a run without goal-bound task generation). Do not read the task results below as evidence about the whole goal.</p>}
+      {d.client_context ? <details><summary>Client-supplied context (unverified; guided task generation, not evidence)</summary><p className="ctxbox">{d.client_context.text}</p></details> : null}
+    </section>
+  );
+}
+
 /** First screen: what the product does, then the headline experimental result, labelled exploratory. */
 export function Hero({ d }: { d: InvestigationExport }) {
   const x = d.evaluation.exploratory;
@@ -424,7 +448,12 @@ export function Hero({ d }: { d: InvestigationExport }) {
             <span className={`vchip vchip-${v?.tone ?? "info"}`}><span className="vk">Exploratory rule</span><strong>{v?.label ?? "—"}</strong></span>
           </div>
         </div>) : (
-        <div className="herometrics"><p className="eyebrow">This run</p><p className="muted">{d.tasks.length} frozen tasks · baseline pass rate {pct(bt.passed, bt.usable)} ({bt.passed}/{bt.usable} usable trials) · outcome: {d.run.outcome.replace(/_/g, " ")}</p></div>)}
+        <div className="herometrics"><p className="eyebrow">This run</p>
+          {d.goal ? <>
+            <p className="herostat"><strong>{bt.passed} of {bt.usable} selected {bt.usable === 1 ? "task" : "tasks"} passed</strong>{d.goal_coverage ? <> — goal coverage <strong className={`cov-word cov-${d.goal_coverage.status}`}>{d.goal_coverage.status.toUpperCase()}</strong></> : <> — goal coverage not recorded in this export</>}</p>
+            <p className="muted">Passing the selected tasks is not proof that the goal was achieved or evaluated{d.goal_coverage ? `: ${d.goal_coverage.entities_covered} of ${d.goal_coverage.entities_total} of the goal's items are covered` : ""}. Outcome: {d.run.outcome.replace(/_/g, " ")}.</p>
+          </> : <p className="muted">{d.tasks.length} frozen tasks · baseline pass rate {pct(bt.passed, bt.usable)} ({bt.passed}/{bt.usable} usable trials) · outcome: {d.run.outcome.replace(/_/g, " ")}</p>}
+        </div>)}
       <p className="muted">{d.run.target} · run <code>{d.run.id}</code> · mode {d.run.mode}</p>
     </header>
   );
@@ -459,6 +488,7 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
     <div className="investigation">
       {d.synthetic ? <p className="replay-banner" role="note">SYNTHETIC FIXTURE — hand-written test data, not produced by any model, agent or website.</p> : null}
       <Hero d={d} />
+      <GoalBanner d={d} />
       {d.audience === "public-demo" ? <p className="muted" role="note">Public demo view: internal identifiers are replaced by aliases and per-trial narratives, stage hashes and file paths are removed. Outcomes, request counts, controls and both verdicts are unchanged.</p> : null}
       <div className="modes" role="note" aria-label="Evidence modes">
         {d.modes.map((m) => <ModeBadge key={m} mode={m} />)}
@@ -473,11 +503,12 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
         {d.storefront?.state === "ok" ? <>
           <p className="muted">A controlled test site built for this project (not a real business). Browse the pages exactly as captured and given to the agent.</p>
           <StorefrontBrowser pages={d.storefront.original.pages} />
-        </> : <Callout title="Site pages not included" tone="info"><p>{d.storefront && "reason" in d.storefront ? d.storefront.reason : "This export contains no captured pages."}</p></Callout>}
+        </> : d.goal ? <p className="muted" role="note">Captured pages are stored with the run and are not embedded in this report.</p>
+          : <Callout title="Site pages not included" tone="info"><p>{d.storefront && "reason" in d.storefront ? d.storefront.reason : "This export contains no captured pages."}</p></Callout>}
         <div className="kpis">
           <Kpi label="Pages inspected" value={typeof inspect.pages === "number" ? inspect.pages : "—"} note={inspect.fidelity ? `inspection fidelity: ${inspect.fidelity}` : undefined} />
           <Kpi label="Frozen tasks" value={d.tasks.length} note={`${d.tasks.filter((x) => x.partition === "holdout").length} held out from the investigator`} />
-          <Kpi label="Baseline pass rate" value={pct(bt.passed, bt.usable)} note={`${bt.passed}/${bt.usable} usable trials`} tone={bt.usable && bt.passed < bt.usable ? "bad" : "neutral"} />
+          <Kpi label={d.goal ? "Selected tasks passed" : "Baseline pass rate"} value={pct(bt.passed, bt.usable)} note={`${bt.passed}/${bt.usable} usable trials${d.goal ? " · selected tasks only, not the whole goal" : ""}`} tone={bt.usable && bt.passed < bt.usable ? "bad" : "neutral"} />
           <Kpi label="Void trials" value={d.trials.void} note="excluded, never a website result" tone={d.trials.void ? "b" : "neutral"} />
         </div>
         <Coverage d={d} />
@@ -503,7 +534,7 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
 
       <section id="inv-changes" aria-labelledby="inv-changes-h">
         <h2 id="inv-changes-h" className="step">4 · The website change</h2>
-        <ChangeSection d={d} proposalId={selected} />
+        {d.proposals.length === 0 && d.storefront?.state !== "ok" ? <p className="muted">No change was proposed or applied in this run.</p> : <ChangeSection d={d} proposalId={selected} />}
       </section>
 
       <section id="inv-impact" aria-labelledby="inv-impact-h">

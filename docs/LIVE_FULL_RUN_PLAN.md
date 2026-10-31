@@ -2,6 +2,9 @@
 
 Needs the owner's explicit authorization of this plan, this goal, this context and the spend. The numbers are estimates from measured data (Step A: 3 taskgen requests, about 12 s each; EXP-2 pilot: US$0.01435 and 3-20 requests per browsing task, 25-100 s per task) and from the approved caps.
 
+## Hash history
+`3720fd83…` (first run, stopped at taskgen) -> `cd44f345…` (revised prompt; run `live-bb5d48501b` completed, US$0.195084) -> `1fc8019b…` (current: live evaluations tag homepage-answerable tasks instead of rejecting them, `first_page_policy: tag` is part of the manifest). Smoke-mode hash for the same goal/context: `1c7cd761…`. Only the latest applies and a new run needs fresh authorization.
+
 ## First full-run attempt (2026-11-01, job `live-cb37cc9849`): stopped at task generation, US$0.071032
 Approved hash `3720fd83f9837be3da49106738c51dc06443e0838a04b463c6960eb0e512a8bd`. 12 proposals: 1 selected, 2 accepted but outside the goal's entity scope (whole-catalogue comparisons), 5 rejected by the start-page rule, 4 rejected because a `reach_page` target was a page title while the compiler expected a path. Coverage `insufficient`; no trial ran. Since then: `reach_page` accepts a path or a unique title, and the goal-bound prompt asks for distribution across entities/attributes and named comparison scopes. **That hash no longer applies; the hash below (`cd44f345…`) needs fresh authorization.** Nothing else changed (gate rules, relevance verifier, benchmark paths).
 
@@ -27,7 +30,7 @@ Likely runtime: 8-12 minutes (inspect < 10 s; task generation about 40 s; trials
 ```
 # 1. free, offline: exact task-generation approval hash (binds goal, context, prompts, schema, model, endpoint, capture, caps)
 readiness live run --goal "Can a shopper compare the hire price and availability of the two cheapest cutting tools?" --context-file docs/sample-context-ironbark.txt --plan
-#    expected taskgen manifest sha256: cd44f345f6b26cebd6d501e90a139657094036dde278a7fc3c09e17f209331e7  (context sha256 8ee42e11863e207d...; ledger ceiling 2.00)
+#    expected taskgen manifest sha256: 1fc8019b496840110f498b76f4aeb6ab93a0ea3edbba290044816d3743f032ad  (context sha256 8ee42e11863e207d...; ledger ceiling 2.00)
 #    (an earlier revision of this plan printed d8164aec... : that was the hash with the SMOKE ceiling (US$0.15), computed by a plan command that did not use the full-run configuration. It never applied to this run.)
 #    `--plan` now builds the manifest from the same options function (`worker.live_options`), model/endpoint settings and ceiling the worker uses; a test compares it with the options a real UI-style job passes to the pipeline.
 
