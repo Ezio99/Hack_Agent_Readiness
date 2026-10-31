@@ -27,6 +27,15 @@ def register(sub) -> None:
     st.add_argument("run_id")
     st.add_argument("--root", type=Path, default=DEFAULT_ROOT)
     s.add_parser("rules", help="Print the pre-registered eligibility and comparison rules and their hash")
+    v = s.add_parser("views", help="Check (default) or re-capture (--write, needs Chromium) the model-visible text of every page of every arm that evidence criteria are verified against")
+    v.add_argument("--write", action="store_true")
+    am = s.add_parser("amend", help="Adopt the revised plan and corrected private criteria as NEW artifacts next to the frozen ones of a run (executed pilot, snapshot and kept tasks' truths must be unchanged). Free; no model call")
+    am.add_argument("run_id")
+    am.add_argument("--root", type=Path, default=DEFAULT_ROOT)
+    ra = s.add_parser("reanalyse", help="Read-only corrected re-analysis of a finished run beside its original outcomes (no model call, the run is not modified)")
+    ra.add_argument("run_id")
+    ra.add_argument("--root", type=Path, default=DEFAULT_ROOT)
+    ra.add_argument("--out", type=Path, required=True)
 
 
 def main(args) -> None:
@@ -46,7 +55,7 @@ def main(args) -> None:
             print(text)
     elif cmd == "plan":
         report, _ = P.build_pool()
-        plan = study.build_plan(report.accepted)
+        plan = study.build_plan(report.accepted, executed=study.EXECUTED_PILOT)
         text = json.dumps(plan, indent=2)
         if args.out:
             args.out.write_text(text + "\n"); print(f"wrote {args.out}  plan_sha256={plan['plan_sha256']}")
@@ -55,6 +64,22 @@ def main(args) -> None:
                              | {"variant_tests": {v: {"trials": x["trial_count"], "repeats": x["repeats"], "expected_usd": x["cost"]["p50_usd"], "cap_usd": x["cost"]["cap_usd"]} for v, x in plan["variant_tests"].items()}}, indent=2))
     elif cmd == "rules":
         print(json.dumps({"eligibility": analysis.ELIGIBILITY, "compare": analysis.COMPARE, "rules_sha256": analysis.RULES_SHA256}, indent=2))
+    elif cmd == "views":
+        from . import modelview
+        if args.write:
+            import asyncio
+            print("raw sha256", modelview.write(asyncio.run(modelview.capture_all())))
+        stale = modelview.stale()
+        print(json.dumps({"stale": stale, "views_sha256": modelview.views_sha256()}, indent=2))
+        raise SystemExit(1 if stale else 0)
+    elif cmd == "amend":
+        from ..investigate.run import InvestigationRun
+        print(json.dumps(flow.amend(InvestigationRun(args.root / args.run_id)), indent=2))
+    elif cmd == "reanalyse":
+        from . import reanalysis
+        out = reanalysis.reanalyse(args.root / args.run_id)
+        args.out.write_text(json.dumps(out, indent=2) + "\n")
+        print(f"wrote {args.out}  unchanged_original={out['integrity']['unchanged']}  {out['summary']['original']} -> {out['summary']['corrected']}")
     elif cmd == "status":
         from ..investigate.run import InvestigationRun
         run = InvestigationRun(args.root / args.run_id)

@@ -6,7 +6,7 @@ from functools import lru_cache
 
 from ..sites.ironbark import variants as V
 from ..sites.ironbark.build import build_site, is_page
-from . import tasks as T
+from . import modelview, tasks as T
 from .facts import PageFacts
 from .verify import Report, verify
 
@@ -23,18 +23,9 @@ def control_pages() -> dict[str, str]:
 
 
 def arm_texts() -> dict[str, dict[str, str]]:
-    """Page TEXT of every arm of the site: control, each single candidate variant and the combined build."""
-    return {name: dict(texts) for name, texts in _arm_texts()}
-
-
-@lru_cache(maxsize=None)
-def _arm_texts() -> tuple:
-    from bs4 import BeautifulSoup
-    out = []
-    for v in (*V.all_single(), V.parse("discoverability+availability+cost+compatibility")):
-        pages = {p: BeautifulSoup(b.decode(), "html.parser").get_text(" ") for p, b in build_site(v).items() if is_page(p)}
-        out.append((v.name, tuple(pages.items())))
-    return tuple(out)
+    """What the model is SHOWN on every page of every arm of the site (control, each single candidate variant and the combined build): the captured `llm_representation()` of the real browser session
+    (`modelview.py`), not the HTML's plain text. Evidence criteria are verified against this."""
+    return modelview.all_views()
 
 
 @lru_cache(maxsize=1)

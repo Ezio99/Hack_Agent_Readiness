@@ -16,6 +16,8 @@ QUOTAS = {"lookup": 4, "discovery": 6, "availability": 7, "kit_vs_items": 5, "to
 HOLDOUT_FRACTION = 1 / 3
 REPEAT_TASKS = 8                       # tasks that get a second baseline trial (early variance estimate), spread over families and both partitions; the variant test's contemporaneous control (K = 2) is the main noise estimate
 PILOT_TRIALS = 8
+# The eight trials ACTUALLY RUN in pilot 1 (run exp2-pilot-1, manifest 29df5a28..., 2026-10-31), in execution order. A revised plan keeps them first and unchanged: only the not-yet-run trials may change.
+EXECUTED_PILOT = tuple({"task_id": t, "repeat": 1} for t in ("ib-d9260f2d9a", "ib-39484fe9c0", "ib-e3d8f94923", "ib-004e62ff61", "ib-729f03a2cf", "ib-d60a326ffd", "ib-22a62928c8", "ib-7ac16db8c4"))
 MIN_AFFECTED = 6                       # a variant needs at least this many sensitive baseline tasks to be testable
 N_AFFECTED, N_NEG = 6, 3               # tasks per variant test: affected (3 investigation + 3 holdout where available) and negative controls
 K_AFFECTED, K_NEG = 2, 1               # trials per task PER ARM: affected tasks twice (the comparison rule needs K >= 2 in both arms), negative controls once
@@ -129,12 +131,18 @@ def variant_test_plan(plan: dict, variant: str, seed: int = 0) -> dict:
             "meets_rule": len(chosen) >= MIN_AFFECTED and len(neg) >= 3, "rule": "exp2-compare-v1"}
 
 
-def build_plan(pool: list[Candidate], *, seed: int = 0, quotas: dict[str, int] = QUOTAS, pilot_trials: int = PILOT_TRIALS, repeat_tasks: int = REPEAT_TASKS) -> dict:
+def build_plan(pool: list[Candidate], *, seed: int = 0, quotas: dict[str, int] = QUOTAS, pilot_trials: int = PILOT_TRIALS, repeat_tasks: int = REPEAT_TASKS, executed: tuple = ()) -> dict:
+    """`executed` = trials that have already been run (the pilot): they stay first, in that order, and the pilot phase is exactly them; the remaining trials follow in the standard order."""
     tasks = select(pool, quotas, seed)
     part = partition(tasks, seed)
     reps = repeat_set(tasks, part, repeat_tasks, seed)
     order = trial_order(tasks, reps, seed)
     by_id = {t.task_id: t for t in tasks}
+    if executed:
+        done = [dict(x) for x in executed]
+        if (gone := [x["task_id"] for x in done if x["task_id"] not in by_id]):
+            raise ValueError(f"executed trials are no longer in the task selection: {gone}")
+        order, pilot_trials = done + [o for o in order if o not in done], len(done)
     pages = [by_id[o["task_id"]].pages_needed for o in order]
     pilot, main = order[:pilot_trials], order[pilot_trials:]
     pc, mc = costs.phase_cost(pages[:pilot_trials]), costs.phase_cost(pages[pilot_trials:])
