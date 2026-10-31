@@ -129,12 +129,12 @@
       ]
     },
     {
-      "task_id": "ib-1397f4571b",
+      "task_id": "ib-156c91c4a3",
       "family": "discovery",
       "template": "need",
       "difficulty": "medium",
       "partition": "investigation",
-      "question": "A customer wants to compact the sand bedding before laying pavers. Which single item in Ironbark's hire range is the best fit? Give the exact name of one item as shown on the site.",
+      "question": "A customer wants to remove thatch and moss from a lawn. Which single item in Ironbark's hire range is the best fit? Give the exact name of one item as shown on the site.",
       "start_path": "/",
       "answer_kind": "product",
       "answer_schema": {
@@ -475,37 +475,6 @@
       ]
     },
     {
-      "task_id": "ib-4f88a60000",
-      "family": "discovery",
-      "template": "need",
-      "difficulty": "medium",
-      "partition": "investigation",
-      "question": "A customer wants to break up an old concrete path. Which single item in Ironbark's hire range is the best fit? Give the exact name of one item as shown on the site.",
-      "start_path": "/",
-      "answer_kind": "product",
-      "answer_schema": {
-        "type": "object",
-        "properties": {
-          "answer": {
-            "type": "string",
-            "description": "the answer, stated briefly"
-          }
-        },
-        "required": [
-          "answer"
-        ]
-      },
-      "pages_needed": 3,
-      "limits": {
-        "max_model_requests": 15,
-        "max_steps": 15,
-        "timeout_seconds": 600
-      },
-      "sensitive_to": [
-        "discoverability"
-      ]
-    },
-    {
       "task_id": "ib-6bc18bb3aa",
       "family": "total_cost",
       "template": "weekly_cap",
@@ -727,6 +696,37 @@
       },
       "sensitive_to": [
         "availability"
+      ]
+    },
+    {
+      "task_id": "ib-872790b40f",
+      "family": "discovery",
+      "template": "need",
+      "difficulty": "medium",
+      "partition": "investigation",
+      "question": "A customer wants to turn pruned branches into mulch. Which single item in Ironbark's hire range is the best fit? Give the exact name of one item as shown on the site.",
+      "start_path": "/",
+      "answer_kind": "product",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 3,
+      "limits": {
+        "max_model_requests": 15,
+        "max_steps": 15,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "discoverability"
       ]
     },
     {
@@ -1138,42 +1138,11 @@
       ]
     },
     {
-      "task_id": "ib-e4c2dbaaee",
-      "family": "discovery",
-      "template": "synonym",
-      "difficulty": "medium",
-      "partition": "holdout",
-      "question": "A customer asks Ironbark whether they hire out a \"stump removal machine\". Which item in the hire range is that? Give the exact name of one item as shown on the site.",
-      "start_path": "/",
-      "answer_kind": "product",
-      "answer_schema": {
-        "type": "object",
-        "properties": {
-          "answer": {
-            "type": "string",
-            "description": "the answer, stated briefly"
-          }
-        },
-        "required": [
-          "answer"
-        ]
-      },
-      "pages_needed": 3,
-      "limits": {
-        "max_model_requests": 15,
-        "max_steps": 15,
-        "timeout_seconds": 600
-      },
-      "sensitive_to": [
-        "discoverability"
-      ]
-    },
-    {
       "task_id": "ib-e6e59d50c2",
       "family": "discovery",
       "template": "need",
       "difficulty": "medium",
-      "partition": "investigation",
+      "partition": "holdout",
       "question": "A customer wants to cut a 150 mm hole through a concrete wall for a pipe. Which single item in Ironbark's hire range is the best fit? Give the exact name of one item as shown on the site.",
       "start_path": "/",
       "answer_kind": "product",
@@ -1206,6 +1175,37 @@
       "difficulty": "medium",
       "partition": "holdout",
       "question": "A customer asks Ironbark whether they hire out a \"dethatcher\". Which item in the hire range is that? Give the exact name of one item as shown on the site.",
+      "start_path": "/",
+      "answer_kind": "product",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 3,
+      "limits": {
+        "max_model_requests": 15,
+        "max_steps": 15,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "discoverability"
+      ]
+    },
+    {
+      "task_id": "ib-ef271baf68",
+      "family": "discovery",
+      "template": "synonym",
+      "difficulty": "medium",
+      "partition": "investigation",
+      "question": "A customer asks Ironbark whether they hire out a \"hedge cutter\". Which item in the hire range is that? Give the exact name of one item as shown on the site.",
       "start_path": "/",
       "answer_kind": "product",
       "answer_schema": {
@@ -1299,6 +1299,10 @@
       "repeat": 1
     },
     {
+      "task_id": "ib-ef271baf68",
+      "repeat": 1
+    },
+    {
       "task_id": "ib-39fdb8562a",
       "repeat": 1
     },
@@ -1308,10 +1312,6 @@
     },
     {
       "task_id": "ib-017a6bda99",
-      "repeat": 1
-    },
-    {
-      "task_id": "ib-e4c2dbaaee",
       "repeat": 1
     },
     {
@@ -1359,11 +1359,11 @@
       "repeat": 1
     },
     {
-      "task_id": "ib-1397f4571b",
+      "task_id": "ib-872790b40f",
       "repeat": 1
     },
     {
-      "task_id": "ib-4f88a60000",
+      "task_id": "ib-156c91c4a3",
       "repeat": 1
     },
     {
@@ -1459,7 +1459,7 @@
       "repeat": 2
     }
   ],
-  "trial_order_sha256": "b27c1be0696ac7ce76839f47e3272fdd0edca9f863bce540656c904144ebaaee",
+  "trial_order_sha256": "8bd18b8feede105e446297a9571b73cb92f651c2bb09f2927a9532abe6fd02e4",
   "phases": {
     "baseline_pilot": {
       "trials": [
@@ -1506,6 +1506,10 @@
     "baseline_main": {
       "trials": [
         {
+          "task_id": "ib-ef271baf68",
+          "repeat": 1
+        },
+        {
           "task_id": "ib-39fdb8562a",
           "repeat": 1
         },
@@ -1515,10 +1519,6 @@
         },
         {
           "task_id": "ib-017a6bda99",
-          "repeat": 1
-        },
-        {
-          "task_id": "ib-e4c2dbaaee",
           "repeat": 1
         },
         {
@@ -1566,11 +1566,11 @@
           "repeat": 1
         },
         {
-          "task_id": "ib-1397f4571b",
+          "task_id": "ib-872790b40f",
           "repeat": 1
         },
         {
-          "task_id": "ib-4f88a60000",
+          "task_id": "ib-156c91c4a3",
           "repeat": 1
         },
         {
@@ -1717,10 +1717,10 @@
     "discoverability": {
       "variant": "discoverability",
       "affected": [
-        "ib-e6e59d50c2",
-        "ib-1397f4571b",
+        "ib-156c91c4a3",
+        "ib-ef271baf68",
         "ib-e3d8f94923",
-        "ib-e4c2dbaaee",
+        "ib-e6e59d50c2",
         "ib-d60a326ffd",
         "ib-eef90c55a9"
       ],
@@ -1739,6 +1739,66 @@
       },
       "trials": [
         {
+          "task_id": "ib-156c91c4a3",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-156c91c4a3",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-156c91c4a3",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-156c91c4a3",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-ef271baf68",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-ef271baf68",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-ef271baf68",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-ef271baf68",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-e3d8f94923",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-e3d8f94923",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-e3d8f94923",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-e3d8f94923",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
           "task_id": "ib-e6e59d50c2",
           "arm": "control",
           "repeat": 1
@@ -1756,66 +1816,6 @@
         {
           "task_id": "ib-e6e59d50c2",
           "arm": "control",
-          "repeat": 2
-        },
-        {
-          "task_id": "ib-1397f4571b",
-          "arm": "control",
-          "repeat": 1
-        },
-        {
-          "task_id": "ib-1397f4571b",
-          "arm": "variant",
-          "repeat": 1
-        },
-        {
-          "task_id": "ib-1397f4571b",
-          "arm": "variant",
-          "repeat": 2
-        },
-        {
-          "task_id": "ib-1397f4571b",
-          "arm": "control",
-          "repeat": 2
-        },
-        {
-          "task_id": "ib-e3d8f94923",
-          "arm": "control",
-          "repeat": 1
-        },
-        {
-          "task_id": "ib-e3d8f94923",
-          "arm": "variant",
-          "repeat": 1
-        },
-        {
-          "task_id": "ib-e3d8f94923",
-          "arm": "variant",
-          "repeat": 2
-        },
-        {
-          "task_id": "ib-e3d8f94923",
-          "arm": "control",
-          "repeat": 2
-        },
-        {
-          "task_id": "ib-e4c2dbaaee",
-          "arm": "variant",
-          "repeat": 1
-        },
-        {
-          "task_id": "ib-e4c2dbaaee",
-          "arm": "control",
-          "repeat": 1
-        },
-        {
-          "task_id": "ib-e4c2dbaaee",
-          "arm": "control",
-          "repeat": 2
-        },
-        {
-          "task_id": "ib-e4c2dbaaee",
-          "arm": "variant",
           "repeat": 2
         },
         {
@@ -1915,7 +1915,7 @@
       },
       "negative_controls": [
         "ib-6cd1332c1b",
-        "ib-eef90c55a9",
+        "ib-156c91c4a3",
         "ib-f6510f42c3"
       ],
       "repeats": {
@@ -2054,12 +2054,12 @@
           "repeat": 1
         },
         {
-          "task_id": "ib-eef90c55a9",
+          "task_id": "ib-156c91c4a3",
           "arm": "variant",
           "repeat": 1
         },
         {
-          "task_id": "ib-eef90c55a9",
+          "task_id": "ib-156c91c4a3",
           "arm": "control",
           "repeat": 1
         },
@@ -2099,7 +2099,7 @@
         "holdout": 3
       },
       "negative_controls": [
-        "ib-eef90c55a9",
+        "ib-156c91c4a3",
         "ib-2f75ebc4d9",
         "ib-f6510f42c3"
       ],
@@ -2229,12 +2229,12 @@
           "repeat": 2
         },
         {
-          "task_id": "ib-eef90c55a9",
+          "task_id": "ib-156c91c4a3",
           "arm": "variant",
           "repeat": 1
         },
         {
-          "task_id": "ib-eef90c55a9",
+          "task_id": "ib-156c91c4a3",
           "arm": "control",
           "repeat": 1
         },
@@ -2286,7 +2286,7 @@
       "negative_controls": [
         "ib-a843fdbfbb",
         "ib-6cd1332c1b",
-        "ib-eef90c55a9"
+        "ib-156c91c4a3"
       ],
       "repeats": {
         "affected_per_arm": 2,
@@ -2434,12 +2434,12 @@
           "repeat": 1
         },
         {
-          "task_id": "ib-eef90c55a9",
+          "task_id": "ib-156c91c4a3",
           "arm": "variant",
           "repeat": 1
         },
         {
-          "task_id": "ib-eef90c55a9",
+          "task_id": "ib-156c91c4a3",
           "arm": "control",
           "repeat": 1
         }
@@ -2473,5 +2473,5 @@
   },
   "warnings": [],
   "cost_basis": "calculated at published prices; assumptions in exp2/costs.py; not a bill",
-  "plan_sha256": "4f7056bf273a2d9c37865a97e7dfd27593005f7780fe711d2f862a2b9d742f3d"
+  "plan_sha256": "f7d7d71f7d0e853d49b3913397386bc57e88b9f7ee23973598b3a81e622e253a"
 }

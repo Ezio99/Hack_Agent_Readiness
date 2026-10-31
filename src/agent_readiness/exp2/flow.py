@@ -7,6 +7,7 @@ Nothing paid runs in `mock` mode (scripted agent through the real browser, no ke
 `pilot_review` is a free checkpoint where the measured cost per request replaces the planning assumption and the main phase is trimmed to fit its cap. This module never touches EXP-B."""
 from __future__ import annotations
 
+import json
 from collections import Counter
 from pathlib import Path
 
@@ -17,12 +18,12 @@ from ..investigate.run import InvestigationRun
 from ..investigate.trials.stage import VOID_STATUSES, run_plan
 from ..ledger import Halt
 from ..suite.core import canonical_hash
-from . import costs
+from . import answers as A, costs, evidence as E, modelview
 from .instances import instance, private_record
 from .pool import build_pool, facts_invariance, summary
 from .snapshot import assess, snapshot
 from .analysis import RULES_SHA256
-from .study import PILOT_TRIALS, QUOTAS, REPEAT_TASKS, build_plan
+from .study import EXECUTED_PILOT, PILOT_TRIALS, QUOTAS, REPEAT_TASKS, build_plan
 from ..sites.ironbark import variants as V
 
 STAGES = ("inspect", "pool", "freeze", "baseline_pilot", "pilot_review", "baseline_main", "baseline_report")
@@ -42,7 +43,8 @@ def _opts(ctx: Context) -> dict:
 
 def _plan_args(ctx: Context) -> dict:
     o = _opts(ctx)
-    return {"seed": o.get("seed", 0), "quotas": o.get("quotas", QUOTAS), "pilot_trials": o.get("pilot_trials", PILOT_TRIALS), "repeat_tasks": o.get("repeat_tasks", REPEAT_TASKS)}
+    return {"seed": o.get("seed", 0), "quotas": o.get("quotas", QUOTAS), "pilot_trials": o.get("pilot_trials", PILOT_TRIALS), "repeat_tasks": o.get("repeat_tasks", REPEAT_TASKS),
+            "executed": o.get("executed", EXECUTED_PILOT if "quotas" not in o else ())}
 
 
 def inspect_stage(ctx: Context) -> dict:
@@ -67,7 +69,7 @@ def pool_stage(ctx: Context) -> dict:
 def freeze_stage(ctx: Context) -> dict:
     report, _ = build_pool()
     a = _plan_args(ctx)
-    plan = build_plan(report.accepted, seed=a["seed"], quotas=a["quotas"], pilot_trials=a["pilot_trials"], repeat_tasks=a["repeat_tasks"])
+    plan = build_plan(report.accepted, seed=a["seed"], quotas=a["quotas"], pilot_trials=a["pilot_trials"], repeat_tasks=a["repeat_tasks"], executed=a["executed"])
     snap = load_snapshot(ctx.run)
     plan["snapshot_sha256"] = snap.sha256
     plan["plan_sha256"] = canonical_hash({k: v for k, v in plan.items() if k != "plan_sha256"})
@@ -77,29 +79,101 @@ def freeze_stage(ctx: Context) -> dict:
     return {"tasks": plan["counts"]["tasks"], "trials": plan["counts"]["trials"], "plan_sha256": plan["plan_sha256"]}
 
 
+AMENDMENT = "amendment-v2"
+PLAN_V2 = "study-plan-v2"
+CRITERIA_V2 = "criteria-v2"
+SAME_IN_V2 = ("kind", "truth", "expected_text", "options", "family", "template", "params", "pages_needed", "visit", "verified")
+
+
+def plan_in_force(run: InvestigationRun) -> dict:
+    """The study plan IN FORCE: the revised plan if the run adopted one, else the plan frozen first. Both are kept; neither is ever overwritten."""
+    return run.artifact(PLAN_V2) if run.has_artifact(PLAN_V2) else run.artifact("study-plan")
+
+
+def criteria(run: InvestigationRun) -> dict:
+    """The private criteria IN FORCE (the corrected set if the run adopted one, else the set frozen with the plan)."""
+    return run.private(CRITERIA_V2) if (run.dir / "private" / f"{CRITERIA_V2}.json").exists() else run.private("criteria")
+
+
+def _revised(run: InvestigationRun):
+    """The plan and private criteria the CURRENT rules produce for this run's snapshot, with the executed pilot pinned."""
+    old = run.artifact("study-plan")
+    report, _ = build_pool()
+    plan = build_plan(report.accepted, executed=EXECUTED_PILOT)
+    plan["snapshot_sha256"] = old["snapshot_sha256"]
+    plan["plan_sha256"] = canonical_hash({k: v for k, v in plan.items() if k != "plan_sha256"})
+    by_id = {c.task_id: c for c in report.accepted}
+    plain = lambda o: json.loads(json.dumps(o, default=str))                           # exactly what the run's write-once files store (dates become text)
+    return old, plan, plain({t["task_id"]: private_record(by_id[t["task_id"]]) for t in plan["tasks"]})
+
+
+def stale(run: InvestigationRun) -> list[str]:
+    """What differs between the plan and criteria in force and those the current rules produce (empty = the run is current)."""
+    _, plan, crit = _revised(run)
+    cur, priv = plan_in_force(run), criteria(run)
+    out = [] if cur["plan_sha256"] == plan["plan_sha256"] else ["plan"]
+    return out + sorted(t for t in crit if t not in priv or canonical_hash(priv[t]) != canonical_hash(crit[t]))
+
+
+def amend(run: InvestigationRun) -> dict:
+    """Adopt the revised plan and corrected private criteria (evidence rule v2, name rule v2, start-page rule) as NEW write-once artifacts next to the frozen ones. Refuses unless: the executed pilot
+    trials and their tasks are untouched, the snapshot is the same, and every task that stays has the same truth, expected answer, options, parameters and page budget. Idempotent."""
+    from . import modelview
+    old, plan, v2 = _revised(run)
+    v1 = run.private("criteria")
+    ot, nt = {t["task_id"]: t for t in old["tasks"]}, {t["task_id"]: t for t in plan["tasks"]}
+    if plan["phases"]["baseline_pilot"]["trials"] != old["phases"]["baseline_pilot"]["trials"] or plan["phases"]["baseline_pilot"]["cost"] != old["phases"]["baseline_pilot"]["cost"]:
+        raise Halt("the revised plan would change the executed pilot; not applied")
+    for x in old["phases"]["baseline_pilot"]["trials"]:
+        if nt.get(x["task_id"]) != ot[x["task_id"]]:
+            raise Halt(f"the executed pilot task {x['task_id']} would change; not applied")
+    ran = {x["task_id"] for x in old["phases"]["baseline_pilot"]["trials"]}
+    flips = {}
+    for t in set(ot) & set(nt):
+        if ot[t] != nt[t]:
+            if t in ran or {k: v for k, v in ot[t].items() if k != "partition"} != {k: v for k, v in nt[t].items() if k != "partition"}:
+                raise Halt(f"the public record of kept task {t} would change beyond the partition of a task that has not run; not applied")
+            flips[t] = [ot[t]["partition"], nt[t]["partition"]]
+        diff = [k for k in SAME_IN_V2 if canonical_hash(v1[t][k]) != canonical_hash(v2[t][k])]
+        if diff:
+            raise Halt(f"the corrected criteria of {t} change more than the evidence facts ({diff}); not applied")
+    run.write_private(CRITERIA_V2, v2)
+    run.write_artifact(PLAN_V2, plan)
+    rec = {"schema": "exp2-amendment-v1", "original_plan_sha256": old["plan_sha256"], "revised_plan_sha256": plan["plan_sha256"], "original_criteria_sha256": canonical_hash(v1), "corrected_criteria_sha256": canonical_hash(v2),
+           "evidence_rule": E.RULE_VERSION, "name_rule": A.NAME_RULE, "model_views_sha256": modelview.views_sha256(), "executed_pilot_trials_unchanged": True, "snapshot_sha256": old["snapshot_sha256"],
+           "tasks_removed": sorted(set(ot) - set(nt)), "tasks_added": sorted(set(nt) - set(ot)), "partition_changes_of_unrun_tasks": flips, "changed_fact_sets": sum(1 for t in v2 if t in v1 and v1[t]["facts"] != v2[t]["facts"]),
+           "reason": "pilot 1 showed (a) a sufficient observation judged insufficient and (b) a right answer judged wrong by unit spacing; re-verification against the model-visible views also found tasks answerable from the "
+                     "start page alone (removed). Truths of kept tasks, the executed pilot and the snapshot are unchanged."}
+    run.write_artifact(AMENDMENT, rec)
+    return rec
+
+
 def _load(ctx: Context):
     run = ctx.run
-    plan, priv, snap = run.artifact("study-plan"), run.private("criteria"), load_snapshot(run)
+    plan, priv, snap = plan_in_force(run), criteria(run), load_snapshot(run)
     if snap.sha256 != plan["snapshot_sha256"]:
         raise Halt("the snapshot is not the one the plan was frozen against")
     return plan, priv, snap
 
 
 def _phase_trials(ctx: Context, phase: str) -> list[dict]:
-    plan = ctx.run.artifact("study-plan")
+    plan = plan_in_force(ctx.run)
     return plan["phases"]["baseline_pilot"]["trials"] if phase == "baseline_pilot" else ctx.run.artifact("main-plan")["trials"]
 
 
 def _phase_cap(ctx: Context, phase: str) -> float:
-    plan = ctx.run.artifact("study-plan")
+    plan = plan_in_force(ctx.run)
     return plan["phases"]["baseline_pilot"]["cost"]["cap_usd"] if phase == "baseline_pilot" else ctx.run.artifact("main-plan")["cap_usd"]
 
 
 def manifest(ctx: Context, phase: str) -> dict:
-    plan = ctx.run.artifact("study-plan")
+    plan = plan_in_force(ctx.run)
+    if phase == "baseline_main" and (late := stale(ctx.run)):
+        raise Halt(f"the run's plan/criteria are not the current rules ({late[:3]}...); adopt the revised ones first (readiness exp2 amend {ctx.run.dir.name})")
     cfg = _opts(ctx).get("model_config") or ModelConfig()
     trials = _phase_trials(ctx, phase)
-    extra = {"main_plan_sha256": canonical_hash(ctx.run.artifact("main-plan"))} if phase == "baseline_main" else {}
+    extra = ({"main_plan_sha256": canonical_hash(ctx.run.artifact("main-plan")), "criteria_sha256": canonical_hash(criteria(ctx.run)), "evidence_rule_version": E.RULE_VERSION, "name_rule": A.NAME_RULE,
+              "model_views_sha256": modelview.views_sha256()} if phase == "baseline_main" else {})
     cost = plan["phases"]["baseline_pilot"]["cost"] if phase == "baseline_pilot" else ctx.run.artifact("main-plan")["cost"]
     return {"stage": phase, "experiment": "EXP-2 Ironbark baseline", "site_variant": "control", "snapshot_sha256": plan["snapshot_sha256"], "plan_sha256": plan["plan_sha256"],
             "trials": [f"{t['task_id']}-r{t['repeat']}" for t in trials], "trial_count": len(trials), "trial_order_sha256": canonical_hash(trials), "model": cfg.model, "endpoint": cfg.base_url,
@@ -133,7 +207,7 @@ def annotate(run: InvestigationRun) -> dict[str, dict]:
     """Evidence-sufficiency assessment per recorded trial, from the private task facts and the observations the trial stored."""
     import json
     from . import evidence as E
-    priv = run.private("criteria")
+    priv = criteria(run)
     out = {}
     for rec in trial_records(run):
         f = run.dir / rec["trial_dir"] / "observations.json"
@@ -158,7 +232,7 @@ def measured_rate(records: list[dict]) -> dict | None:
 
 def review_manifest(ctx: Context) -> dict:
     """The checkpoint the owner approves before ANY main-phase spending: what the pilot measured and exactly which trials the main phase would run, trimmed to fit its cap at the measured rate."""
-    run, plan = ctx.run, ctx.run.artifact("study-plan")
+    run, plan = ctx.run, plan_in_force(ctx.run)
     recs = trial_records(run)
     rate = measured_rate(recs)
     main = plan["phases"]["baseline_main"]["trials"]
@@ -179,7 +253,7 @@ def review_stage(ctx: Context) -> dict:
     m = review_manifest(ctx)
     if m["replan_required"]:
         raise Halt("the measured cost per request is more than 1.5x the planning rate; the main phase must be re-planned by the owner, not run as approved")
-    plan = ctx.run.artifact("study-plan")
+    plan = plan_in_force(ctx.run)
     main = plan["phases"]["baseline_main"]["trials"][:m["main_trials_proposed"]]
     ctx.run.write_artifact("main-plan", {"trials": main, "cap_usd": m["proposed_cap_usd"], "cost": {"p50_usd": m["proposed_expected_usd"], "cap_usd": m["proposed_cap_usd"]}, "review": m})
     return {"main_trials": len(main), "cap_usd": m["proposed_cap_usd"]}
@@ -187,7 +261,7 @@ def review_stage(ctx: Context) -> dict:
 
 def report_stage(ctx: Context) -> dict:
     from .analysis import baseline_summary
-    plan = ctx.run.artifact("study-plan")
+    plan = plan_in_force(ctx.run)
     out = baseline_summary(trial_records(ctx.run), plan, annotate(ctx.run))
     ctx.run.write_artifact("baseline-report", out)
     return {"trials": out["trials"], "void": out["void"]}

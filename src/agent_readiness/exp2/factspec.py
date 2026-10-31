@@ -5,7 +5,9 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 from ..sites.ironbark import data as D
-from .evidence import Fact, clause as C, fact
+from itertools import product as _product
+
+from .evidence import Fact, Ident, clause as C, fact
 
 TERMS = "Hire terms and pricing"
 PRODUCT = {p.id: p for p in D.PRODUCTS}
@@ -15,8 +17,20 @@ FEE_LABEL = {"courier": "Courier", "machine": "Machine delivery"}
 ATTR = {"IB-ACX-001": ("Chuck", "SDS-Plus"), "IB-ACX-002": ("Chuck", "30 mm hex"), "IB-ACX-003": ("Blade diameter", "350 mm"), "IB-ACX-004": ("Blade diameter", "250 mm")}
 
 
-def sigp(pid):                 # identifies a product page
-    return f"Product code {pid}"
+def sigp(pid):                 # identifies the item a page or a card is about, by the name the site displays (its code is an optional extra)
+    return Ident(PRODUCT[pid].name, pid, f"/hire/{PRODUCT[pid].slug}")
+
+
+def siga(aid):                 # the same for an accessory
+    return Ident(ACCESSORY[aid].name, aid, f"/accessories/{ACCESSORY[aid].slug}")
+
+
+def sigk(b):                   # and for a kit
+    return Ident(b.name, b.id, None, 450)
+
+
+# Accessories whose LISTING CARD (not only their own page) states what they fit, so a card is an honest alternative route for the fit fact (asserted against the real text in the tests)
+CARD_STATES_FIT = {"IB-ACX-002": "30 mm hex demolition hammers", "IB-ACX-005": "Kestrel 18 V", "IB-ACX-008": "cut-off saws"}
 
 
 def sigc(pid):                 # identifies a booking-calendar page
@@ -100,38 +114,58 @@ def described(pid: str, kw: str | None = None) -> Fact:
     return fact(f"description of {p.name}", *routes)
 
 
-def attr(aid: str, pid: str) -> list:
-    """The product-side text that decides whether an accessory fits (chuck, blade size, battery platform, engine type)."""
+def attr_options(aid: str, pid: str) -> list:
+    """Alternative product-side clauses that show what decides whether an accessory fits (chuck, blade size, battery platform, engine type): the specification row, or the chuck named in prose."""
     p = PRODUCT[pid]
     if aid in ATTR:
         label, _ = ATTR[aid]
         value = dict(p.specs).get(label)
-        return [C(sigp(pid), f"{label} {value}")] if value else [C(sigp(pid), f"Power {p.power}")]
+        if not value:
+            return [[C(sigp(pid), f"Power {p.power}")]]
+        return [[C(sigp(pid), f"{label} {value}")]] + ([[C(sigp(pid), f"{value} chuck")]] if label == "Chuck" else [])
     if aid == "IB-ACX-005":
-        return [C(sigp(pid), "Kestrel"), C(sigp(pid), f"Power {p.power}")]
-    return [C(sigp(pid), f"Power {p.power}")]
+        return [[C(sigp(pid), "Kestrel"), C(sigp(pid), f"Power {p.power}")]]
+    return [[C(sigp(pid), f"Power {p.power}")]]
+
+
+def fit_options(aid: str) -> list:
+    """Alternative accessory-side clauses that state what it fits: its own page, or its listing card where the card says so."""
+    a = ACCESSORY[aid]
+    out = [[C(siga(aid), a.fits_text)]]
+    if aid in CARD_STATES_FIT:
+        out.append([C(siga(aid), a.summary)])
+    return out
+
+
+def fit_routes(aid: str, pids, fit_first: bool = False) -> list:
+    """Every combination of (one option per product's attributes) x (one accessory-side option): any of them shows both halves of the compatibility. `fit_first` only orders the clauses (the scripted
+    mock agent walks the first route's pages in that order)."""
+    out = []
+    for combo in _product(*[attr_options(aid, i) for i in pids], fit_options(aid)):
+        parts = [combo[-1], *combo[:-1]] if fit_first else list(combo)
+        out.append(tuple(cl for part in parts for cl in part))
+    return out
 
 
 def fits(aid: str) -> Fact:
-    a = ACCESSORY[aid]
-    return fact("accessory fit text", route(C(f"Product code {aid}", a.fits_text)))
+    return fact("accessory fit text", *[tuple(o) for o in fit_options(aid)])
 
 
 def kit_rate(b: D.Bundle, n: int):
     r = D.bundle_rates(b)["hire"]
-    return C(f"Kit code {b.id}", f"{M(r['daily'] if n == 1 else r['weekly'])} Per {'day' if n == 1 else 'week'}")
+    return C(sigk(b), f"{M(r['daily'] if n == 1 else r['weekly'])} Per {'day' if n == 1 else 'week'}")
 
 
 def kit_facts(b: D.Bundle, n: int, which: str) -> list:
     prod = PRODUCT[b.hire[0]]
-    kit_sig = f"Kit code {b.id}"
+    kit_sig = sigk(b)
     cons = D.bundle_rates(b)["consumables"]
     out = [fact("kit rate", route(kit_rate(b, n))), fact("kit consumables", route(C(kit_sig, f"Plus {M(cons)} for the consumables in the kit")))]
     if which in ("saving", "own"):
         out.append(fact("product rate", route(C(sigp(prod.id), f"{M(prod.daily if n == 1 else prod.weekly)} Per {'day' if n == 1 else 'week'}"))))
     if which == "saving":
         lead = ACCESSORY[b.hire_acc[0]]
-        out.append(fact("lead hire price", route(C(f"Product code {lead.id}", f"{M(lead.price)} Per day to hire")), route(C(sigp(prod.id), f"hire {M(lead.price)} / day"))))
+        out.append(fact("lead hire price", route(C(siga(lead.id), f"{M(lead.price)} Per day to hire")), route(C(sigp(prod.id), f"hire {M(lead.price)} / day"))))
     if which == "own":
         for i in b.buy:
             if "Safety pack" not in ACCESSORY[i].name:
@@ -189,13 +223,13 @@ def facts_for(c) -> tuple:
     if f == "compatibility":
         a = q["a"]
         if s == "product_to_accessory":
-            return (fact("accessory fit", route(*attr(a, P), *fits(a).routes[0]), route(C(sigp(P), "Works with"), C(sigp(P), ACCESSORY[a].name))),)
+            return (fact("accessory fit", *fit_routes(a, [P]), route(C(sigp(P), "Works with"), C(sigp(P), ACCESSORY[a].name))),)
         if s == "accessory_to_products":
             ps = [i for i in c.truth]
-            return (fact("which items an accessory fits", route(*fits(a).routes[0], *[cl for i in ps for cl in attr(a, i)]), route(C(f"Product code {a}", "Fits these hire items"), *[C(f"Product code {a}", PRODUCT[i].name) for i in ps])),)
+            return (fact("which items an accessory fits", *fit_routes(a, ps, fit_first=True), route(C(siga(a), "Fits these hire items"), *[C(siga(a), PRODUCT[i].name) for i in ps])),)
         if s == "fits_yesno":
-            return (fact("accessory fit", route(*fits(a).routes[0], *attr(a, P)), route(C(f"Product code {a}", "Fits these hire items"))),)
-        return (fact("fuel price", route(C(f"Product code {a}", M(ACCESSORY[a].price)))),)
+            return (fact("accessory fit", *fit_routes(a, [P], fit_first=True), route(C(siga(a), "Fits these hire items"))),)
+        return (fact("fuel price", route(C(siga(a), M(ACCESSORY[a].price))), route(C(siga(a), f"{M(ACCESSORY[a].price)} to buy"))),)
     if f == "planning":
         return planning_facts(c)
     return ()
@@ -249,15 +283,16 @@ def path_for(sig: str | None) -> str:
         return "/hire"
     if sig == TERMS:
         return "/hire-terms"
-    if sig.startswith("Kit code"):
+    if isinstance(sig, Ident):
+        if sig.code in PRODUCT:
+            return f"/hire/{PRODUCT[sig.code].slug}"
+        if sig.code in ACCESSORY:
+            return f"/accessories/{ACCESSORY[sig.code].slug}"
         return "/kits"
     if sig.startswith("Availability: "):
         p = next(x for x in D.PRODUCTS if x.name == sig[len("Availability: "):])
         return f"/hire/{p.slug}/availability"
-    code = sig.split()[-1]
-    if code in PRODUCT:
-        return f"/hire/{PRODUCT[code].slug}"
-    return f"/accessories/{ACCESSORY[code].slug}"
+    raise ValueError(f"no page for signature {sig!r}")
 
 
 def visit_from_facts(facts) -> tuple:

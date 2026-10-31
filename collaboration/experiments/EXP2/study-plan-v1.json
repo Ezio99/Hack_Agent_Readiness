@@ -1,0 +1,2477 @@
+{
+  "schema": "exp2-study-plan-v1",
+  "seed": 0,
+  "tasks": [
+    {
+      "task_id": "ib-004e62ff61",
+      "family": "delivery_deposit",
+      "template": "two_deposits",
+      "difficulty": "medium",
+      "partition": "investigation",
+      "question": "If I hire the Electric demolition hammer 15 kg and the Petrol cut-off saw 350 mm at the same time, how much refundable deposit will be held in total? Give the amount in Australian dollars (for example $123.45).",
+      "start_path": "/",
+      "answer_kind": "money",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 3,
+      "limits": {
+        "max_model_requests": 15,
+        "max_steps": 15,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": []
+    },
+    {
+      "task_id": "ib-017a6bda99",
+      "family": "availability",
+      "template": "category_weekend",
+      "difficulty": "hard",
+      "partition": "investigation",
+      "question": "Which of the items in the \"Landscaping\" category can be hired for the whole weekend from Friday 13 November 2026 to Monday 16 November 2026? List the exact names of every matching item as shown on the site.",
+      "start_path": "/",
+      "answer_kind": "products",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "every matching item, one string each, using the exact names shown on the site"
+          }
+        },
+        "required": [
+          "answers"
+        ]
+      },
+      "pages_needed": 5,
+      "limits": {
+        "max_model_requests": 21,
+        "max_steps": 21,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "availability"
+      ]
+    },
+    {
+      "task_id": "ib-05b8c6126e",
+      "family": "kit_vs_items",
+      "template": "choice_own_gear",
+      "difficulty": "medium",
+      "partition": "investigation",
+      "question": "I already own safety gear and an extension lead, and I only want the Wet tile saw 250 mm and the consumables the Tile and paving cutting kit contains other than the safety pack. For hire for one day, is it cheaper to take the Tile and paving cutting kit or to hire the Wet tile saw 250 mm on its own and buy those consumables separately? Answer with exactly one of: 'kit', 'separately'.",
+      "start_path": "/",
+      "answer_kind": "choice",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 4,
+      "limits": {
+        "max_model_requests": 18,
+        "max_steps": 18,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "compatibility",
+        "cost"
+      ]
+    },
+    {
+      "task_id": "ib-09e445390c",
+      "family": "total_cost",
+      "template": "weekly_cap",
+      "difficulty": "medium",
+      "partition": "holdout",
+      "question": "What is the total hire charge for the Petrol chainsaw 45 cm for 4 consecutive days, collected and returned by me, with no damage waiver? (The refundable deposit is not a charge.) Give the amount in Australian dollars (for example $123.45).",
+      "start_path": "/",
+      "answer_kind": "money",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 3,
+      "limits": {
+        "max_model_requests": 15,
+        "max_steps": 15,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "cost"
+      ]
+    },
+    {
+      "task_id": "ib-1397f4571b",
+      "family": "discovery",
+      "template": "need",
+      "difficulty": "medium",
+      "partition": "investigation",
+      "question": "A customer wants to compact the sand bedding before laying pavers. Which single item in Ironbark's hire range is the best fit? Give the exact name of one item as shown on the site.",
+      "start_path": "/",
+      "answer_kind": "product",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 3,
+      "limits": {
+        "max_model_requests": 15,
+        "max_steps": 15,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "discoverability"
+      ]
+    },
+    {
+      "task_id": "ib-16d665647d",
+      "family": "availability",
+      "template": "category_weekend",
+      "difficulty": "medium",
+      "partition": "investigation",
+      "question": "Which of the items in the \"Access & height\" category can be hired for the whole weekend from Friday 6 November 2026 to Monday 9 November 2026? List the exact names of every matching item as shown on the site.",
+      "start_path": "/",
+      "answer_kind": "products",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "every matching item, one string each, using the exact names shown on the site"
+          }
+        },
+        "required": [
+          "answers"
+        ]
+      },
+      "pages_needed": 4,
+      "limits": {
+        "max_model_requests": 18,
+        "max_steps": 18,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "availability"
+      ]
+    },
+    {
+      "task_id": "ib-215227e292",
+      "family": "planning",
+      "template": "budget_set",
+      "difficulty": "hard",
+      "partition": "investigation",
+      "question": "Which items in the \"Landscaping\" category can be hired for 1 day starting Tuesday 17 November 2026 (free on every day of that period) with a hire charge of no more than $35 (ignore waiver, delivery and the deposit)? List the exact names of every matching item as shown on the site.",
+      "start_path": "/",
+      "answer_kind": "products",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "every matching item, one string each, using the exact names shown on the site"
+          }
+        },
+        "required": [
+          "answers"
+        ]
+      },
+      "pages_needed": 5,
+      "limits": {
+        "max_model_requests": 21,
+        "max_steps": 21,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "availability",
+        "cost"
+      ]
+    },
+    {
+      "task_id": "ib-22a62928c8",
+      "family": "lookup",
+      "template": "min_hire",
+      "difficulty": "easy",
+      "partition": "investigation",
+      "question": "What is the minimum number of days the Aluminium mobile scaffold tower 4 m can be hired for? Answer with a whole number.",
+      "start_path": "/",
+      "answer_kind": "integer",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 1,
+      "limits": {
+        "max_model_requests": 10,
+        "max_steps": 10,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": []
+    },
+    {
+      "task_id": "ib-2820c4d163",
+      "family": "planning",
+      "template": "plan_total",
+      "difficulty": "hard",
+      "partition": "investigation",
+      "question": "I need an item that runs on 240 V mains power and weighs under 20 kg, free every day from Friday 13 November 2026 to Sunday 15 November 2026 (3 days). I will pick the qualifying item with the lowest daily rate. If I collect it myself and take no damage waiver, what do I pay for the hire? (Delivery, if the item requires it, is also charged and included; the deposit is not.) Give the amount in Australian dollars (for example $123.45).",
+      "start_path": "/",
+      "answer_kind": "money",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 7,
+      "limits": {
+        "max_model_requests": 27,
+        "max_steps": 27,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "availability",
+        "cost"
+      ]
+    },
+    {
+      "task_id": "ib-2c5d90af26",
+      "family": "kit_vs_items",
+      "template": "saving",
+      "difficulty": "medium",
+      "partition": "holdout",
+      "question": "I own nothing. How much money do I save, for one week (seven days), by taking the Tile and paving cutting kit instead of hiring the Wet tile saw 250 mm alone, hiring an extension lead for the same period and buying the same consumables separately? Give the amount in Australian dollars (for example $123.45).",
+      "start_path": "/",
+      "answer_kind": "money",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 4,
+      "limits": {
+        "max_model_requests": 18,
+        "max_steps": 18,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "compatibility",
+        "cost"
+      ]
+    },
+    {
+      "task_id": "ib-2f75ebc4d9",
+      "family": "availability",
+      "template": "day",
+      "difficulty": "easy",
+      "partition": "investigation",
+      "question": "Can the Diamond core drill 152 mm (wet) be hired on Thursday 3 December 2026? Answer Yes or No.",
+      "start_path": "/",
+      "answer_kind": "yesno",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 2,
+      "limits": {
+        "max_model_requests": 12,
+        "max_steps": 12,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "availability"
+      ]
+    },
+    {
+      "task_id": "ib-32a853ebf4",
+      "family": "kit_vs_items",
+      "template": "kit_total",
+      "difficulty": "easy",
+      "partition": "holdout",
+      "question": "What is the total cost of the Masonry drilling kit, for one week (seven days), including the consumables that come with it? (Ignore the damage waiver, delivery and the deposit.) Give the amount in Australian dollars (for example $123.45).",
+      "start_path": "/",
+      "answer_kind": "money",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 2,
+      "limits": {
+        "max_model_requests": 12,
+        "max_steps": 12,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "cost"
+      ]
+    },
+    {
+      "task_id": "ib-39484fe9c0",
+      "family": "total_cost",
+      "template": "two_items",
+      "difficulty": "medium",
+      "partition": "investigation",
+      "question": "I will collect and return both the Petrol lawn scarifier 40 cm and the Reversible plate compactor 90 kg myself and hire them together for one weekend (collected on Friday afternoon, returned on Monday morning). I take no damage waiver. What is the total charge for the two items? (Not the deposits.) Give the amount in Australian dollars (for example $123.45).",
+      "start_path": "/",
+      "answer_kind": "money",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 4,
+      "limits": {
+        "max_model_requests": 18,
+        "max_steps": 18,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "cost"
+      ]
+    },
+    {
+      "task_id": "ib-39fdb8562a",
+      "family": "lookup",
+      "template": "deposit",
+      "difficulty": "easy",
+      "partition": "investigation",
+      "question": "What is the refundable deposit for the SDS-Plus rotary hammer 26 mm? Give the amount in Australian dollars (for example $123.45).",
+      "start_path": "/",
+      "answer_kind": "money",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 1,
+      "limits": {
+        "max_model_requests": 10,
+        "max_steps": 10,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": []
+    },
+    {
+      "task_id": "ib-3e2800fdb0",
+      "family": "planning",
+      "template": "cheapest_feasible",
+      "difficulty": "hard",
+      "partition": "holdout",
+      "question": "I need an item that can cut at least 60 mm deep. I want to hire it every day from Tuesday 10 November 2026 to Thursday 12 November 2026 (3 days). Among the items that qualify and are free on all of those days, which has the lowest daily rate? Give the exact name of one item as shown on the site.",
+      "start_path": "/",
+      "answer_kind": "product",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 5,
+      "limits": {
+        "max_model_requests": 21,
+        "max_steps": 21,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "availability"
+      ]
+    },
+    {
+      "task_id": "ib-4f88a60000",
+      "family": "discovery",
+      "template": "need",
+      "difficulty": "medium",
+      "partition": "investigation",
+      "question": "A customer wants to break up an old concrete path. Which single item in Ironbark's hire range is the best fit? Give the exact name of one item as shown on the site.",
+      "start_path": "/",
+      "answer_kind": "product",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 3,
+      "limits": {
+        "max_model_requests": 15,
+        "max_steps": 15,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "discoverability"
+      ]
+    },
+    {
+      "task_id": "ib-6bc18bb3aa",
+      "family": "total_cost",
+      "template": "weekly_cap",
+      "difficulty": "medium",
+      "partition": "investigation",
+      "question": "What is the total hire charge for the Electric demolition hammer 15 kg for 4 consecutive days, collected and returned by me, with no damage waiver? (The refundable deposit is not a charge.) Give the amount in Australian dollars (for example $123.45).",
+      "start_path": "/",
+      "answer_kind": "money",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 3,
+      "limits": {
+        "max_model_requests": 15,
+        "max_steps": 15,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "cost"
+      ]
+    },
+    {
+      "task_id": "ib-6cd1332c1b",
+      "family": "total_cost",
+      "template": "two_items",
+      "difficulty": "medium",
+      "partition": "investigation",
+      "question": "I will collect and return both the Wet tile saw 250 mm and the Electric concrete mixer 140 L myself and hire them together for two days. I take the optional damage waiver on both. What is the total charge for the two items? (Not the deposits.) Give the amount in Australian dollars (for example $123.45).",
+      "start_path": "/",
+      "answer_kind": "money",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 4,
+      "limits": {
+        "max_model_requests": 18,
+        "max_steps": 18,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "cost"
+      ]
+    },
+    {
+      "task_id": "ib-729f03a2cf",
+      "family": "kit_vs_items",
+      "template": "choice_own_gear",
+      "difficulty": "medium",
+      "partition": "investigation",
+      "question": "I already own safety gear and an extension lead, and I only want the Electric demolition hammer 15 kg and the consumables the Concrete demolition kit contains other than the safety pack. For hire for one week (seven days), is it cheaper to take the Concrete demolition kit or to hire the Electric demolition hammer 15 kg on its own and buy those consumables separately? Answer with exactly one of: 'kit', 'separately'.",
+      "start_path": "/",
+      "answer_kind": "choice",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 4,
+      "limits": {
+        "max_model_requests": 18,
+        "max_steps": 18,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "compatibility",
+        "cost"
+      ]
+    },
+    {
+      "task_id": "ib-7ac16db8c4",
+      "family": "availability",
+      "template": "named_list",
+      "difficulty": "hard",
+      "partition": "holdout",
+      "question": "Which of these items can be hired every day from Saturday 14 November 2026 to Monday 16 November 2026: Fibreglass extension ladder 7.3 m, Electric scissor lift 6 m, Diamond core drill 152 mm (wet), Petrol lawn scarifier 40 cm? List the exact names of every matching item as shown on the site.",
+      "start_path": "/",
+      "answer_kind": "products",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "every matching item, one string each, using the exact names shown on the site"
+          }
+        },
+        "required": [
+          "answers"
+        ]
+      },
+      "pages_needed": 5,
+      "limits": {
+        "max_model_requests": 21,
+        "max_steps": 21,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "availability"
+      ]
+    },
+    {
+      "task_id": "ib-7c29256e2e",
+      "family": "delivery_deposit",
+      "template": "category_delivery",
+      "difficulty": "medium",
+      "partition": "holdout",
+      "question": "Which items in the \"Access & height\" category can only be hired with delivery and collection (collecting them yourself is not possible)? List the exact names of every matching item as shown on the site.",
+      "start_path": "/",
+      "answer_kind": "products",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "every matching item, one string each, using the exact names shown on the site"
+          }
+        },
+        "required": [
+          "answers"
+        ]
+      },
+      "pages_needed": 4,
+      "limits": {
+        "max_model_requests": 18,
+        "max_steps": 18,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "cost"
+      ]
+    },
+    {
+      "task_id": "ib-7d6069f75d",
+      "family": "delivery_deposit",
+      "template": "delivery_fee",
+      "difficulty": "medium",
+      "partition": "investigation",
+      "question": "How much does delivery and collection of the Electric concrete mixer 140 L cost? (One fee covers both delivery and collection.) Give the amount in Australian dollars (for example $123.45).",
+      "start_path": "/",
+      "answer_kind": "money",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 3,
+      "limits": {
+        "max_model_requests": 15,
+        "max_steps": 15,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "cost"
+      ]
+    },
+    {
+      "task_id": "ib-7fb5b5c689",
+      "family": "availability",
+      "template": "next_free",
+      "difficulty": "easy",
+      "partition": "investigation",
+      "question": "The Fibreglass extension ladder 7.3 m is fully booked on Wednesday 11 November 2026. What is the first date after that on which it is available to hire again? Answer with a single calendar date (for example Fri 13 Nov 2026).",
+      "start_path": "/",
+      "answer_kind": "date",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 2,
+      "limits": {
+        "max_model_requests": 12,
+        "max_steps": 12,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "availability"
+      ]
+    },
+    {
+      "task_id": "ib-96c7541223",
+      "family": "availability",
+      "template": "units_free",
+      "difficulty": "easy",
+      "partition": "investigation",
+      "question": "How many units of the Cordless hedge trimmer 60 cm are free to hire on Friday 20 November 2026? Answer with a whole number.",
+      "start_path": "/",
+      "answer_kind": "integer",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 2,
+      "limits": {
+        "max_model_requests": 12,
+        "max_steps": 12,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "availability"
+      ]
+    },
+    {
+      "task_id": "ib-a4cc89f03c",
+      "family": "availability",
+      "template": "named_list",
+      "difficulty": "hard",
+      "partition": "holdout",
+      "question": "Which of these items can be hired every day from Tuesday 10 November 2026 to Thursday 12 November 2026: Electric scissor lift 6 m, Cordless drill driver kit 18 V, Reversible plate compactor 90 kg, Wood chipper 100 mm? List the exact names of every matching item as shown on the site.",
+      "start_path": "/",
+      "answer_kind": "products",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "every matching item, one string each, using the exact names shown on the site"
+          }
+        },
+        "required": [
+          "answers"
+        ]
+      },
+      "pages_needed": 5,
+      "limits": {
+        "max_model_requests": 21,
+        "max_steps": 21,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "availability"
+      ]
+    },
+    {
+      "task_id": "ib-a843fdbfbb",
+      "family": "planning",
+      "template": "budget_set",
+      "difficulty": "medium",
+      "partition": "investigation",
+      "question": "Which items in the \"Access & height\" category can be hired for 1 day starting Tuesday 17 November 2026 (free on every day of that period) with a hire charge of no more than $32 (ignore waiver, delivery and the deposit)? List the exact names of every matching item as shown on the site.",
+      "start_path": "/",
+      "answer_kind": "products",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "every matching item, one string each, using the exact names shown on the site"
+          }
+        },
+        "required": [
+          "answers"
+        ]
+      },
+      "pages_needed": 4,
+      "limits": {
+        "max_model_requests": 18,
+        "max_steps": 18,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "availability",
+        "cost"
+      ]
+    },
+    {
+      "task_id": "ib-b2b9b5fd04",
+      "family": "kit_vs_items",
+      "template": "saving",
+      "difficulty": "medium",
+      "partition": "investigation",
+      "question": "I own nothing. How much money do I save, for one day, by taking the Concrete demolition kit instead of hiring the Electric demolition hammer 15 kg alone, hiring an extension lead for the same period and buying the same consumables separately? Give the amount in Australian dollars (for example $123.45).",
+      "start_path": "/",
+      "answer_kind": "money",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 4,
+      "limits": {
+        "max_model_requests": 18,
+        "max_steps": 18,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "compatibility",
+        "cost"
+      ]
+    },
+    {
+      "task_id": "ib-b6d09d9417",
+      "family": "compatibility",
+      "template": "fits_yesno",
+      "difficulty": "medium",
+      "partition": "holdout",
+      "question": "Can the accessory \"30 mm hex chisel set (3 piece)\" be used with the SDS-Plus rotary hammer 26 mm? Answer Yes or No.",
+      "start_path": "/",
+      "answer_kind": "yesno",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 3,
+      "limits": {
+        "max_model_requests": 15,
+        "max_steps": 15,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "compatibility"
+      ]
+    },
+    {
+      "task_id": "ib-c3ae9d0bef",
+      "family": "total_cost",
+      "template": "single",
+      "difficulty": "medium",
+      "partition": "investigation",
+      "question": "What is the total I pay to hire the Aluminium mobile scaffold tower 4 m for one week (seven days)? It must be delivered and collected. I do not take the damage waiver. Include everything charged for the hire, but not the refundable deposit. Give the amount in Australian dollars (for example $123.45).",
+      "start_path": "/",
+      "answer_kind": "money",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 3,
+      "limits": {
+        "max_model_requests": 15,
+        "max_steps": 15,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "cost"
+      ]
+    },
+    {
+      "task_id": "ib-d60a326ffd",
+      "family": "planning",
+      "template": "two_jobs_total",
+      "difficulty": "hard",
+      "partition": "holdout",
+      "question": "For a home renovation I need to mix a few barrow-loads of concrete on site and to break up an old concrete path. I will hire the single best-fitting item for each job, collect both myself, and keep them for one weekend (collected on Friday afternoon, returned on Monday morning). I take the damage waiver on both. What is the total hire charge? (Not the deposits.) Give the amount in Australian dollars (for example $123.45).",
+      "start_path": "/",
+      "answer_kind": "money",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 7,
+      "limits": {
+        "max_model_requests": 27,
+        "max_steps": 27,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "discoverability",
+        "cost"
+      ]
+    },
+    {
+      "task_id": "ib-d725473b3b",
+      "family": "compatibility",
+      "template": "fuel_price",
+      "difficulty": "easy",
+      "partition": "investigation",
+      "question": "What does the pre-mixed fuel that Ironbark sells for 2-stroke tools cost? Give the amount in Australian dollars (for example $123.45).",
+      "start_path": "/",
+      "answer_kind": "money",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 2,
+      "limits": {
+        "max_model_requests": 12,
+        "max_steps": 12,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "compatibility"
+      ]
+    },
+    {
+      "task_id": "ib-d9260f2d9a",
+      "family": "compatibility",
+      "template": "product_to_accessory",
+      "difficulty": "medium",
+      "partition": "investigation",
+      "question": "Which accessory on Ironbark's site is made for the Electric demolition hammer 15 kg's 30 mm hex chuck? Give the exact name of one accessory as shown on the site.",
+      "start_path": "/",
+      "answer_kind": "accessory",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 3,
+      "limits": {
+        "max_model_requests": 15,
+        "max_steps": 15,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "compatibility"
+      ]
+    },
+    {
+      "task_id": "ib-daf2013275",
+      "family": "lookup",
+      "template": "weight",
+      "difficulty": "easy",
+      "partition": "investigation",
+      "question": "How heavy is the Reversible plate compactor 90 kg, in kilograms? Give just the number with its unit.",
+      "start_path": "/",
+      "answer_kind": "number",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 1,
+      "limits": {
+        "max_model_requests": 10,
+        "max_steps": 10,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": []
+    },
+    {
+      "task_id": "ib-dd728d64cf",
+      "family": "lookup",
+      "template": "spec",
+      "difficulty": "easy",
+      "partition": "holdout",
+      "question": "According to its specification, what is the max cutting depth of the Wet tile saw 250 mm? Give just the number with its unit.",
+      "start_path": "/",
+      "answer_kind": "number",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 1,
+      "limits": {
+        "max_model_requests": 10,
+        "max_steps": 10,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": []
+    },
+    {
+      "task_id": "ib-e13bcf0dc7",
+      "family": "total_cost",
+      "template": "single",
+      "difficulty": "medium",
+      "partition": "holdout",
+      "question": "What is the total I pay to hire the Petrol chainsaw 45 cm for two days? I want it delivered and collected. I do not take the damage waiver. Include everything charged for the hire, but not the refundable deposit. Give the amount in Australian dollars (for example $123.45).",
+      "start_path": "/",
+      "answer_kind": "money",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 3,
+      "limits": {
+        "max_model_requests": 15,
+        "max_steps": 15,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "cost"
+      ]
+    },
+    {
+      "task_id": "ib-e3d8f94923",
+      "family": "discovery",
+      "template": "synonym",
+      "difficulty": "medium",
+      "partition": "investigation",
+      "question": "A customer asks Ironbark whether they hire out a \"screw gun\". Which item in the hire range is that? Give the exact name of one item as shown on the site.",
+      "start_path": "/",
+      "answer_kind": "product",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 3,
+      "limits": {
+        "max_model_requests": 15,
+        "max_steps": 15,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "discoverability"
+      ]
+    },
+    {
+      "task_id": "ib-e4c2dbaaee",
+      "family": "discovery",
+      "template": "synonym",
+      "difficulty": "medium",
+      "partition": "holdout",
+      "question": "A customer asks Ironbark whether they hire out a \"stump removal machine\". Which item in the hire range is that? Give the exact name of one item as shown on the site.",
+      "start_path": "/",
+      "answer_kind": "product",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 3,
+      "limits": {
+        "max_model_requests": 15,
+        "max_steps": 15,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "discoverability"
+      ]
+    },
+    {
+      "task_id": "ib-e6e59d50c2",
+      "family": "discovery",
+      "template": "need",
+      "difficulty": "medium",
+      "partition": "investigation",
+      "question": "A customer wants to cut a 150 mm hole through a concrete wall for a pipe. Which single item in Ironbark's hire range is the best fit? Give the exact name of one item as shown on the site.",
+      "start_path": "/",
+      "answer_kind": "product",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 3,
+      "limits": {
+        "max_model_requests": 15,
+        "max_steps": 15,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "discoverability"
+      ]
+    },
+    {
+      "task_id": "ib-eef90c55a9",
+      "family": "discovery",
+      "template": "synonym",
+      "difficulty": "medium",
+      "partition": "holdout",
+      "question": "A customer asks Ironbark whether they hire out a \"dethatcher\". Which item in the hire range is that? Give the exact name of one item as shown on the site.",
+      "start_path": "/",
+      "answer_kind": "product",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "the answer, stated briefly"
+          }
+        },
+        "required": [
+          "answer"
+        ]
+      },
+      "pages_needed": 3,
+      "limits": {
+        "max_model_requests": 15,
+        "max_steps": 15,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "discoverability"
+      ]
+    },
+    {
+      "task_id": "ib-f6510f42c3",
+      "family": "compatibility",
+      "template": "accessory_to_products",
+      "difficulty": "medium",
+      "partition": "investigation",
+      "question": "Which hire items can the accessory \"SDS-Plus masonry bit set (5 piece)\" be used with? List the exact names of every matching item as shown on the site.",
+      "start_path": "/",
+      "answer_kind": "products",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "answers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "every matching item, one string each, using the exact names shown on the site"
+          }
+        },
+        "required": [
+          "answers"
+        ]
+      },
+      "pages_needed": 4,
+      "limits": {
+        "max_model_requests": 18,
+        "max_steps": 18,
+        "timeout_seconds": 600
+      },
+      "sensitive_to": [
+        "compatibility"
+      ]
+    }
+  ],
+  "trial_order": [
+    {
+      "task_id": "ib-d9260f2d9a",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-39484fe9c0",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-e3d8f94923",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-004e62ff61",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-729f03a2cf",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-d60a326ffd",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-22a62928c8",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-7ac16db8c4",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-39fdb8562a",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-05b8c6126e",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-017a6bda99",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-e4c2dbaaee",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-7c29256e2e",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-6bc18bb3aa",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-215227e292",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-d725473b3b",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-f6510f42c3",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-c3ae9d0bef",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-b2b9b5fd04",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-3e2800fdb0",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-7d6069f75d",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-a4cc89f03c",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-dd728d64cf",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-1397f4571b",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-4f88a60000",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-b6d09d9417",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-2c5d90af26",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-a843fdbfbb",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-daf2013275",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-09e445390c",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-16d665647d",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-2820c4d163",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-96c7541223",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-e6e59d50c2",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-6cd1332c1b",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-32a853ebf4",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-eef90c55a9",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-7fb5b5c689",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-e13bcf0dc7",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-2f75ebc4d9",
+      "repeat": 1
+    },
+    {
+      "task_id": "ib-d60a326ffd",
+      "repeat": 2
+    },
+    {
+      "task_id": "ib-017a6bda99",
+      "repeat": 2
+    },
+    {
+      "task_id": "ib-729f03a2cf",
+      "repeat": 2
+    },
+    {
+      "task_id": "ib-39484fe9c0",
+      "repeat": 2
+    },
+    {
+      "task_id": "ib-b6d09d9417",
+      "repeat": 2
+    },
+    {
+      "task_id": "ib-09e445390c",
+      "repeat": 2
+    },
+    {
+      "task_id": "ib-7d6069f75d",
+      "repeat": 2
+    },
+    {
+      "task_id": "ib-eef90c55a9",
+      "repeat": 2
+    }
+  ],
+  "trial_order_sha256": "b27c1be0696ac7ce76839f47e3272fdd0edca9f863bce540656c904144ebaaee",
+  "phases": {
+    "baseline_pilot": {
+      "trials": [
+        {
+          "task_id": "ib-d9260f2d9a",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-39484fe9c0",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-e3d8f94923",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-004e62ff61",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-729f03a2cf",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-d60a326ffd",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-22a62928c8",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-7ac16db8c4",
+          "repeat": 1
+        }
+      ],
+      "cost": {
+        "trials": 8,
+        "p50_usd": 1.44,
+        "p90_trial_usd": 0.65,
+        "cap_usd": 1.9
+      }
+    },
+    "baseline_main": {
+      "trials": [
+        {
+          "task_id": "ib-39fdb8562a",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-05b8c6126e",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-017a6bda99",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-e4c2dbaaee",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-7c29256e2e",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-6bc18bb3aa",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-215227e292",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-d725473b3b",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-f6510f42c3",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-c3ae9d0bef",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-b2b9b5fd04",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-3e2800fdb0",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-7d6069f75d",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-a4cc89f03c",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-dd728d64cf",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-1397f4571b",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-4f88a60000",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-b6d09d9417",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-2c5d90af26",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-a843fdbfbb",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-daf2013275",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-09e445390c",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-16d665647d",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-2820c4d163",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-96c7541223",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-e6e59d50c2",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-6cd1332c1b",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-32a853ebf4",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-eef90c55a9",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-7fb5b5c689",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-e13bcf0dc7",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-2f75ebc4d9",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-d60a326ffd",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-017a6bda99",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-729f03a2cf",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-39484fe9c0",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-b6d09d9417",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-09e445390c",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-7d6069f75d",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-eef90c55a9",
+          "repeat": 2
+        }
+      ],
+      "cost": {
+        "trials": 40,
+        "p50_usd": 6.74,
+        "p90_trial_usd": 0.65,
+        "cap_usd": 8.8
+      }
+    }
+  },
+  "counts": {
+    "tasks": 40,
+    "trials": 48,
+    "investigation": 27,
+    "holdout": 13,
+    "by_family": {
+      "lookup": 4,
+      "discovery": 6,
+      "availability": 7,
+      "kit_vs_items": 5,
+      "total_cost": 6,
+      "delivery_deposit": 3,
+      "compatibility": 4,
+      "planning": 5
+    },
+    "by_difficulty": {
+      "easy": 9,
+      "medium": 24,
+      "hard": 7
+    },
+    "by_kind": {
+      "number": 2,
+      "money": 15,
+      "integer": 2,
+      "product": 7,
+      "products": 8,
+      "yesno": 2,
+      "date": 1,
+      "choice": 2,
+      "accessory": 1
+    },
+    "sensitive_to": {
+      "discoverability": 7,
+      "availability": 11,
+      "cost": 17,
+      "compatibility": 8
+    },
+    "negative_control_tasks": 5
+  },
+  "variant_tests": {
+    "discoverability": {
+      "variant": "discoverability",
+      "affected": [
+        "ib-e6e59d50c2",
+        "ib-1397f4571b",
+        "ib-e3d8f94923",
+        "ib-e4c2dbaaee",
+        "ib-d60a326ffd",
+        "ib-eef90c55a9"
+      ],
+      "affected_by_partition": {
+        "investigation": 3,
+        "holdout": 3
+      },
+      "negative_controls": [
+        "ib-a843fdbfbb",
+        "ib-6cd1332c1b",
+        "ib-2f75ebc4d9"
+      ],
+      "repeats": {
+        "affected_per_arm": 2,
+        "negative_per_arm": 1
+      },
+      "trials": [
+        {
+          "task_id": "ib-e6e59d50c2",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-e6e59d50c2",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-e6e59d50c2",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-e6e59d50c2",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-1397f4571b",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-1397f4571b",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-1397f4571b",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-1397f4571b",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-e3d8f94923",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-e3d8f94923",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-e3d8f94923",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-e3d8f94923",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-e4c2dbaaee",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-e4c2dbaaee",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-e4c2dbaaee",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-e4c2dbaaee",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-d60a326ffd",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-d60a326ffd",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-d60a326ffd",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-d60a326ffd",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-eef90c55a9",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-eef90c55a9",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-eef90c55a9",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-eef90c55a9",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-a843fdbfbb",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-a843fdbfbb",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-6cd1332c1b",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-6cd1332c1b",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-2f75ebc4d9",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-2f75ebc4d9",
+          "arm": "variant",
+          "repeat": 1
+        }
+      ],
+      "trial_count": 30,
+      "cost": {
+        "trials": 30,
+        "p50_usd": 5.24,
+        "p90_trial_usd": 0.65,
+        "cap_usd": 6.85
+      },
+      "meets_rule": true,
+      "rule": "exp2-compare-v1"
+    },
+    "availability": {
+      "variant": "availability",
+      "affected": [
+        "ib-017a6bda99",
+        "ib-2820c4d163",
+        "ib-16d665647d",
+        "ib-3e2800fdb0",
+        "ib-7ac16db8c4",
+        "ib-a4cc89f03c"
+      ],
+      "affected_by_partition": {
+        "investigation": 3,
+        "holdout": 3
+      },
+      "negative_controls": [
+        "ib-6cd1332c1b",
+        "ib-eef90c55a9",
+        "ib-f6510f42c3"
+      ],
+      "repeats": {
+        "affected_per_arm": 2,
+        "negative_per_arm": 1
+      },
+      "trials": [
+        {
+          "task_id": "ib-017a6bda99",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-017a6bda99",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-017a6bda99",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-017a6bda99",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-2820c4d163",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-2820c4d163",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-2820c4d163",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-2820c4d163",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-16d665647d",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-16d665647d",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-16d665647d",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-16d665647d",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-3e2800fdb0",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-3e2800fdb0",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-3e2800fdb0",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-3e2800fdb0",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-7ac16db8c4",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-7ac16db8c4",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-7ac16db8c4",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-7ac16db8c4",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-a4cc89f03c",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-a4cc89f03c",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-a4cc89f03c",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-a4cc89f03c",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-6cd1332c1b",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-6cd1332c1b",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-eef90c55a9",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-eef90c55a9",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-f6510f42c3",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-f6510f42c3",
+          "arm": "control",
+          "repeat": 1
+        }
+      ],
+      "trial_count": 30,
+      "cost": {
+        "trials": 30,
+        "p50_usd": 6.58,
+        "p90_trial_usd": 0.65,
+        "cap_usd": 8.6
+      },
+      "meets_rule": true,
+      "rule": "exp2-compare-v1"
+    },
+    "cost": {
+      "variant": "cost",
+      "affected": [
+        "ib-7d6069f75d",
+        "ib-6bc18bb3aa",
+        "ib-05b8c6126e",
+        "ib-7c29256e2e",
+        "ib-d60a326ffd",
+        "ib-32a853ebf4"
+      ],
+      "affected_by_partition": {
+        "investigation": 3,
+        "holdout": 3
+      },
+      "negative_controls": [
+        "ib-eef90c55a9",
+        "ib-2f75ebc4d9",
+        "ib-f6510f42c3"
+      ],
+      "repeats": {
+        "affected_per_arm": 2,
+        "negative_per_arm": 1
+      },
+      "trials": [
+        {
+          "task_id": "ib-7d6069f75d",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-7d6069f75d",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-7d6069f75d",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-7d6069f75d",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-6bc18bb3aa",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-6bc18bb3aa",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-6bc18bb3aa",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-6bc18bb3aa",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-05b8c6126e",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-05b8c6126e",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-05b8c6126e",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-05b8c6126e",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-7c29256e2e",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-7c29256e2e",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-7c29256e2e",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-7c29256e2e",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-d60a326ffd",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-d60a326ffd",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-d60a326ffd",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-d60a326ffd",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-32a853ebf4",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-32a853ebf4",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-32a853ebf4",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-32a853ebf4",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-eef90c55a9",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-eef90c55a9",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-2f75ebc4d9",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-2f75ebc4d9",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-f6510f42c3",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-f6510f42c3",
+          "arm": "variant",
+          "repeat": 1
+        }
+      ],
+      "trial_count": 30,
+      "cost": {
+        "trials": 30,
+        "p50_usd": 5.31,
+        "p90_trial_usd": 0.65,
+        "cap_usd": 6.95
+      },
+      "meets_rule": true,
+      "rule": "exp2-compare-v1"
+    },
+    "compatibility": {
+      "variant": "compatibility",
+      "affected": [
+        "ib-d9260f2d9a",
+        "ib-05b8c6126e",
+        "ib-d725473b3b",
+        "ib-729f03a2cf",
+        "ib-b6d09d9417",
+        "ib-2c5d90af26"
+      ],
+      "affected_by_partition": {
+        "investigation": 4,
+        "holdout": 2
+      },
+      "negative_controls": [
+        "ib-a843fdbfbb",
+        "ib-6cd1332c1b",
+        "ib-eef90c55a9"
+      ],
+      "repeats": {
+        "affected_per_arm": 2,
+        "negative_per_arm": 1
+      },
+      "trials": [
+        {
+          "task_id": "ib-d9260f2d9a",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-d9260f2d9a",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-d9260f2d9a",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-d9260f2d9a",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-05b8c6126e",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-05b8c6126e",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-05b8c6126e",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-05b8c6126e",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-d725473b3b",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-d725473b3b",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-d725473b3b",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-d725473b3b",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-729f03a2cf",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-729f03a2cf",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-729f03a2cf",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-729f03a2cf",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-b6d09d9417",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-b6d09d9417",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-b6d09d9417",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-b6d09d9417",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-2c5d90af26",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-2c5d90af26",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-2c5d90af26",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-2c5d90af26",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-a843fdbfbb",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-a843fdbfbb",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-6cd1332c1b",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-6cd1332c1b",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-eef90c55a9",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-eef90c55a9",
+          "arm": "control",
+          "repeat": 1
+        }
+      ],
+      "trial_count": 30,
+      "cost": {
+        "trials": 30,
+        "p50_usd": 5.03,
+        "p90_trial_usd": 0.43,
+        "cap_usd": 6.55
+      },
+      "meets_rule": true,
+      "rule": "exp2-compare-v1"
+    }
+  },
+  "allocation": {
+    "ceiling_usd": 20.0,
+    "reserve_usd": 2.5,
+    "allocatable_usd": 17.5,
+    "baseline_pilot_cap_usd": 1.9,
+    "baseline_main_cap_usd": 8.8,
+    "investigator_cap_usd": 0.5,
+    "variant_tests_cap_usd": 6.3,
+    "fits": true,
+    "one_variant_test_expected_usd": [
+      5.03,
+      6.58
+    ],
+    "fits_one_variant_test": true,
+    "note": "the variant-test amount is what remains if every earlier phase spends its full cap; money the baseline does not spend is added only by a new owner approval. At the pre-registered K = 2 per arm one variant test costs about its expected figure and the budget supports ONE; a second needs a new decision"
+  },
+  "warnings": [],
+  "cost_basis": "calculated at published prices; assumptions in exp2/costs.py; not a bill",
+  "plan_sha256": "4f7056bf273a2d9c37865a97e7dfd27593005f7780fe711d2f862a2b9d742f3d"
+}

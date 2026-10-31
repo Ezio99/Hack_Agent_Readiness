@@ -8,7 +8,7 @@ from playwright.async_api import async_playwright
 import json
 from pathlib import Path
 
-from agent_readiness.exp2 import evidence as E, flow, instances, pool as P, snapshot as S, study, tasks as T
+from agent_readiness.exp2 import evidence as E, flow, instances, modelview as MV, pool as P, snapshot as S, study, tasks as T
 from agent_readiness.investigate.sitemodel.server import Mirror
 from agent_readiness.investigate.trials.runner import run_trial
 from agent_readiness.scanner.serve import serve_app
@@ -43,7 +43,8 @@ def _instance(c: T.Candidate, snap, part="investigation"):
 
 
 def _pick(pool):
-    want = [("total_cost", "single"), ("availability", "category_weekend"), ("availability", "next_free"), ("compatibility", "fits_yesno"), ("kit_vs_items", "choice_own_gear"), ("discovery", "need")]
+    want = [("total_cost", "single"), ("availability", "category_weekend"), ("availability", "next_free"), ("compatibility", "fits_yesno"), ("kit_vs_items", "choice_own_gear"), ("discovery", "need"),
+            ("compatibility", "product_to_accessory"), ("compatibility", "accessory_to_products"), ("kit_vs_items", "saving"), ("delivery_deposit", "delivery_fee")]       # product_to_accessory is the family the first pilot's check never exercised
     return [next(c for c in pool.accepted if (c.family, c.sub) == w) for w in want]
 
 
@@ -66,17 +67,24 @@ def test_every_answer_kind_runs_through_the_unchanged_runner_and_is_graded_indep
     cands = _pick(pool)
     assert {c.kind for c in cands} >= {"money", "products", "date", "yesno", "choice", "product"}
     good = asyncio.run(_run_all(tmp_path, cands, "correct"))
+    below_fold = []
     for c, rec in zip(cands, good):
         ev = rec["evaluation"]
         assert rec["outcome"]["run_status"] == "completed" and ev["passed"], (c.kind, c.question, rec["outcome"], ev)
         paths = [e["path"] for e in rec["mirror"]["log"]]
         assert set(c.visit) <= set(paths) and rec["mirror"]["blocked"] == [] and rec["trial"]["mode"] == "mock"
-        assert _evidence(c, rec)["sufficient"], (c.question, _evidence(c, rec))      # needles written from the data match the text the model is really shown
+        ev = _evidence(c, rec)
+        if not ev["sufficient"]:
+            # The scripted agent never scrolls. That is acceptable ONLY when what it missed sits below the first screen of a page it did visit: the walk over every scroll position of those same pages
+            # (the committed model views) must then be sufficient, and the fact must really be absent from the first view. Anything else is a defect in the criteria.
+            views = MV.arm_views("control")
+            assert E.assess(c.facts, [{"path": p, "text": views[p]} for p in c.visit])["sufficient"], (c.question, ev)
+            assert any(MV.BREAK in views[p] for p in c.visit), (c.question, ev)
+            below_fold.append(c.question)
+    assert len(below_fold) <= 2, below_fold
     lazy = asyncio.run(_run_all(tmp_path, cands, "lazy"))
     assert lazy[0]["evaluation"]["passed"]
     for c, r in zip(cands, lazy):
-        if c.family == "discovery":
-            continue                                                                  # a featured item's summary is on the home page, so a discovery answer CAN be evidenced from the start page: the rule is about what was shown, not where
         assert not _evidence(c, r)["sufficient"], f"{c.family}/{c.sub}: answering after the start page only is not evidence-sufficient, even when correct"
     wrong = asyncio.run(_run_all(tmp_path, cands[:2], "wrong"))
     assert all(not r["evaluation"]["passed"] for r in wrong)
@@ -128,3 +136,15 @@ def test_a_correct_availability_answer_from_the_product_page_alone_is_not_suffic
     ctrl, avail = asyncio.run(run("control")), asyncio.run(run("availability"))
     assert not _evidence(c, ctrl)["sufficient"], "the control's product page says only whether the item is free today"
     assert _evidence(c, avail)["sufficient"], "the availability variant's 'Dates at a glance' panel is an alternative route"
+
+
+@pytest.mark.parametrize("arm", ["control", "discoverability", "availability", "cost", "compatibility", "discoverability+availability+cost+compatibility"])
+def test_committed_model_views_equal_what_the_production_serializer_shows_now(arm):
+    """The evidence criteria are verified against committed views; this proves those views are what Chromium + the agent's serializer produce today (element numbers differ per run and are ignored)."""
+    from agent_readiness.exp2 import modelview as MV
+    live = asyncio.run(MV.capture_arm(arm))
+    committed = MV.arm_views(arm)
+    assert set(live) == set(MV.changed_paths(arm))
+    for path, got in live.items():
+        now = MV.BREAK.join(got["views"])
+        assert MV.covers(committed[path], now) == [] and MV.covers(now, committed[path]) == [], f"{arm}:{path} differs from the committed model view"

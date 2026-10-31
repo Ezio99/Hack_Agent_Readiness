@@ -11,7 +11,7 @@ from . import answers as A, evidence
 from .costs import step_limit
 from .tasks import ANAME, PNAME, Candidate
 
-EVALUATOR_ID, EVALUATOR_VERSION, TEMPLATE_ID, VERSION = "exp2-ironbark", "1", "exp2-ironbark-v1", "1"
+EVALUATOR_ID, EVALUATOR_VERSION, TEMPLATE_ID, VERSION = "exp2-ironbark", "2", "exp2-ironbark-v1", "1"
 
 
 def private_record(c: Candidate) -> dict:

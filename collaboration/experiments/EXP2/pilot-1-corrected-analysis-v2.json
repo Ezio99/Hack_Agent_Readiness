@@ -1,0 +1,382 @@
+{
+  "schema": "exp2-reanalysis-v1",
+  "run_id": "exp2-pilot-1",
+  "rules": {
+    "original": [
+      "exp2-evidence-v1",
+      "exp2-names-v1"
+    ],
+    "corrected": [
+      "exp2-evidence-v2",
+      "exp2-names-v2"
+    ]
+  },
+  "integrity": {
+    "original_run_tree_before": {
+      "files": 409,
+      "sha256": "d05f0031d356f597acb1461ab39c8a5f336347d31e214ed22ba4f55092d24ab4"
+    },
+    "original_run_tree_after": {
+      "files": 409,
+      "sha256": "d05f0031d356f597acb1461ab39c8a5f336347d31e214ed22ba4f55092d24ab4"
+    },
+    "unchanged": true,
+    "original_plan_sha256": "529f7344371a8bd5ac10ab7eb96e7924e6859c12410b836a0865b25f02e73633",
+    "original_criteria_sha256": "55b39d7dd3e3801318fe30e6f7cc05fd84a0353db41b17a3d10a2e223041ed1b",
+    "corrected_criteria_sha256": "2f00257eed95a8fefe3da4b8744369eea5c2e3596e18dc8d758a02f6af82ffe5",
+    "revised_plan_commit_hash": "f7d7d71f7d0e853d49b3913397386bc57e88b9f7ee23973598b3a81e622e253a",
+    "model_views_sha256": "c9374a3265ebb3c6958c735a8ca0e04ba32aff9cae92553876eb6dd77d92fd99"
+  },
+  "summary": {
+    "original": {
+      "trials": 8,
+      "correct": 7,
+      "evidence_sufficient": 7,
+      "supported_passes": 6
+    },
+    "corrected": {
+      "trials": 8,
+      "correct": 8,
+      "evidence_sufficient": 8,
+      "supported_passes": 8
+    },
+    "changed_trials": [
+      "ib-d9260f2d9a-r1",
+      "ib-e3d8f94923-r1"
+    ],
+    "needs_review": {
+      "ib-d9260f2d9a-r1": [
+        "evidence sufficient only under the v2 matcher"
+      ],
+      "ib-e3d8f94923-r1": [
+        "correct only through unit-spacing normalisation (not the exact displayed name)"
+      ]
+    },
+    "mean_request_ratio": 1.71,
+    "cost_usd": 1.1415,
+    "statuses": {
+      "completed": 8
+    }
+  },
+  "trials": [
+    {
+      "trial": "ib-004e62ff61-r1",
+      "task_id": "ib-004e62ff61",
+      "family": "delivery_deposit",
+      "difficulty": "medium",
+      "partition": "investigation",
+      "status": "completed",
+      "original": {
+        "correct": true,
+        "evidence_sufficient": true,
+        "evidence_missing": [],
+        "supported_pass": true,
+        "rules": [
+          "exp2-evidence-v1",
+          "exp2-names-v1"
+        ]
+      },
+      "corrected": {
+        "correct": true,
+        "evidence_sufficient": true,
+        "evidence_missing": [],
+        "supported_pass": true,
+        "rules": [
+          "exp2-evidence-v2",
+          "exp2-names-v2"
+        ]
+      },
+      "changed": {
+        "correctness": false,
+        "evidence": false
+      },
+      "needs_review": [],
+      "model_requests": 6,
+      "request_limit": 15,
+      "page_views": 6,
+      "distinct_pages": 5,
+      "request_ratio": 1.2,
+      "cost_usd": 0.07692
+    },
+    {
+      "trial": "ib-22a62928c8-r1",
+      "task_id": "ib-22a62928c8",
+      "family": "lookup",
+      "difficulty": "easy",
+      "partition": "investigation",
+      "status": "completed",
+      "original": {
+        "correct": true,
+        "evidence_sufficient": true,
+        "evidence_missing": [],
+        "supported_pass": true,
+        "rules": [
+          "exp2-evidence-v1",
+          "exp2-names-v1"
+        ]
+      },
+      "corrected": {
+        "correct": true,
+        "evidence_sufficient": true,
+        "evidence_missing": [],
+        "supported_pass": true,
+        "rules": [
+          "exp2-evidence-v2",
+          "exp2-names-v2"
+        ]
+      },
+      "changed": {
+        "correctness": false,
+        "evidence": false
+      },
+      "needs_review": [],
+      "model_requests": 3,
+      "request_limit": 10,
+      "page_views": 3,
+      "distinct_pages": 3,
+      "request_ratio": 1.0,
+      "cost_usd": 0.044205
+    },
+    {
+      "trial": "ib-39484fe9c0-r1",
+      "task_id": "ib-39484fe9c0",
+      "family": "total_cost",
+      "difficulty": "medium",
+      "partition": "investigation",
+      "status": "completed",
+      "original": {
+        "correct": true,
+        "evidence_sufficient": true,
+        "evidence_missing": [],
+        "supported_pass": true,
+        "rules": [
+          "exp2-evidence-v1",
+          "exp2-names-v1"
+        ]
+      },
+      "corrected": {
+        "correct": true,
+        "evidence_sufficient": true,
+        "evidence_missing": [],
+        "supported_pass": true,
+        "rules": [
+          "exp2-evidence-v2",
+          "exp2-names-v2"
+        ]
+      },
+      "changed": {
+        "correctness": false,
+        "evidence": false
+      },
+      "needs_review": [],
+      "model_requests": 9,
+      "request_limit": 18,
+      "page_views": 9,
+      "distinct_pages": 5,
+      "request_ratio": 1.5,
+      "cost_usd": 0.123358
+    },
+    {
+      "trial": "ib-729f03a2cf-r1",
+      "task_id": "ib-729f03a2cf",
+      "family": "kit_vs_items",
+      "difficulty": "medium",
+      "partition": "investigation",
+      "status": "completed",
+      "original": {
+        "correct": true,
+        "evidence_sufficient": true,
+        "evidence_missing": [],
+        "supported_pass": true,
+        "rules": [
+          "exp2-evidence-v1",
+          "exp2-names-v1"
+        ]
+      },
+      "corrected": {
+        "correct": true,
+        "evidence_sufficient": true,
+        "evidence_missing": [],
+        "supported_pass": true,
+        "rules": [
+          "exp2-evidence-v2",
+          "exp2-names-v2"
+        ]
+      },
+      "changed": {
+        "correctness": false,
+        "evidence": false
+      },
+      "needs_review": [],
+      "model_requests": 15,
+      "request_limit": 18,
+      "page_views": 15,
+      "distinct_pages": 3,
+      "request_ratio": 2.5,
+      "cost_usd": 0.217187
+    },
+    {
+      "trial": "ib-7ac16db8c4-r1",
+      "task_id": "ib-7ac16db8c4",
+      "family": "availability",
+      "difficulty": "hard",
+      "partition": "holdout",
+      "status": "completed",
+      "original": {
+        "correct": true,
+        "evidence_sufficient": true,
+        "evidence_missing": [],
+        "supported_pass": true,
+        "rules": [
+          "exp2-evidence-v1",
+          "exp2-names-v1"
+        ]
+      },
+      "corrected": {
+        "correct": true,
+        "evidence_sufficient": true,
+        "evidence_missing": [],
+        "supported_pass": true,
+        "rules": [
+          "exp2-evidence-v2",
+          "exp2-names-v2"
+        ]
+      },
+      "changed": {
+        "correctness": false,
+        "evidence": false
+      },
+      "needs_review": [],
+      "model_requests": 20,
+      "request_limit": 21,
+      "page_views": 20,
+      "distinct_pages": 11,
+      "request_ratio": 2.86,
+      "cost_usd": 0.289859
+    },
+    {
+      "trial": "ib-d60a326ffd-r1",
+      "task_id": "ib-d60a326ffd",
+      "family": "planning",
+      "difficulty": "hard",
+      "partition": "holdout",
+      "status": "completed",
+      "original": {
+        "correct": true,
+        "evidence_sufficient": true,
+        "evidence_missing": [],
+        "supported_pass": true,
+        "rules": [
+          "exp2-evidence-v1",
+          "exp2-names-v1"
+        ]
+      },
+      "corrected": {
+        "correct": true,
+        "evidence_sufficient": true,
+        "evidence_missing": [],
+        "supported_pass": true,
+        "rules": [
+          "exp2-evidence-v2",
+          "exp2-names-v2"
+        ]
+      },
+      "changed": {
+        "correctness": false,
+        "evidence": false
+      },
+      "needs_review": [],
+      "model_requests": 11,
+      "request_limit": 27,
+      "page_views": 11,
+      "distinct_pages": 7,
+      "request_ratio": 1.22,
+      "cost_usd": 0.151216
+    },
+    {
+      "trial": "ib-d9260f2d9a-r1",
+      "task_id": "ib-d9260f2d9a",
+      "family": "compatibility",
+      "difficulty": "medium",
+      "partition": "investigation",
+      "status": "completed",
+      "original": {
+        "correct": true,
+        "evidence_sufficient": false,
+        "evidence_missing": [
+          "accessory fit"
+        ],
+        "supported_pass": false,
+        "rules": [
+          "exp2-evidence-v1",
+          "exp2-names-v1"
+        ]
+      },
+      "corrected": {
+        "correct": true,
+        "evidence_sufficient": true,
+        "evidence_missing": [],
+        "supported_pass": true,
+        "rules": [
+          "exp2-evidence-v2",
+          "exp2-names-v2"
+        ]
+      },
+      "changed": {
+        "correctness": false,
+        "evidence": true
+      },
+      "needs_review": [
+        "evidence sufficient only under the v2 matcher"
+      ],
+      "model_requests": 3,
+      "request_limit": 15,
+      "page_views": 3,
+      "distinct_pages": 3,
+      "request_ratio": 0.6,
+      "cost_usd": 0.037805
+    },
+    {
+      "trial": "ib-e3d8f94923-r1",
+      "task_id": "ib-e3d8f94923",
+      "family": "discovery",
+      "difficulty": "medium",
+      "partition": "investigation",
+      "status": "completed",
+      "original": {
+        "correct": false,
+        "evidence_sufficient": true,
+        "evidence_missing": [],
+        "supported_pass": false,
+        "rules": [
+          "exp2-evidence-v1",
+          "exp2-names-v1"
+        ]
+      },
+      "corrected": {
+        "correct": true,
+        "evidence_sufficient": true,
+        "evidence_missing": [],
+        "supported_pass": true,
+        "rules": [
+          "exp2-evidence-v2",
+          "exp2-names-v2"
+        ]
+      },
+      "changed": {
+        "correctness": true,
+        "evidence": false
+      },
+      "needs_review": [
+        "correct only through unit-spacing normalisation (not the exact displayed name)"
+      ],
+      "model_requests": 14,
+      "request_limit": 15,
+      "page_views": 14,
+      "distinct_pages": 6,
+      "request_ratio": 2.8,
+      "cost_usd": 0.200926
+    }
+  ],
+  "note": "Original outcomes were produced by the rules in force during the pilot and are kept as the experimental record. Corrected outcomes apply the amended rules to the same stored answers and observations; no trial was re-run. No truth is stored here."
+}

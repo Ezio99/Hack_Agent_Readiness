@@ -3,6 +3,7 @@
   independent   the truth recomputed from the rendered control pages equals the truth computed from the source data
   unambiguous   no ties, no `AMBIGUOUS` recomputation, sets are neither empty nor larger than 6, dates fall in the booking window, money is positive
   possible      every visit page and the start page exist in the crawled snapshot and are reachable from the home page within 4 clicks
+  not a giveaway   the facts are NOT all shown on the start page (every scroll position of the model view) on any arm: a task must need browsing
   displayable   for EVERY arm of the site (control and each candidate variant) at least one route per fact can be satisfied from the rendered pages, so the task is winnable by evidence in every arm
   no leak       the question does not contain the answer (names, amounts or dates), and carries no hidden catalogue identifiers beyond what pages show
   gradeable     the grader accepts the canonical answer, rejects at least two plausible wrong answers, and rejects hedges that offer the right and a wrong answer
@@ -19,7 +20,7 @@ from bs4 import BeautifulSoup
 
 from ..sites.ironbark import data as D
 from . import answers as A
-from .evidence import available_in
+from .evidence import available_in, sufficient_from
 from .facts import PageFacts
 from .tasks import PRODUCT, Candidate
 
@@ -116,6 +117,9 @@ def check(c: Candidate, pf: PageFacts, depth: dict[str, int], pages: dict[str, s
         missing = available_in(c.facts, texts)
         if missing:
             return f"evidence not displayable on the {arm} site: {missing[:3]}"
+    for arm, texts in (arms or {}).items():                                         # the project rule: no successful answer from the initial page alone, on any arm (the model view, every scroll position)
+        if c.start_path in texts and sufficient_from(c.facts, {c.start_path: texts[c.start_path]}):
+            return f"answerable from the start page alone on the {arm} site"
     q = c.question.lower()
     if k not in ("yesno", "choice") and "group" not in c.params:                    # a question that lists the candidates to choose from names its answers by design
         exp = c.expected_text

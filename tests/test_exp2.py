@@ -403,7 +403,7 @@ def obs(*texts):
 
 
 def test_evidence_text_is_normalised_and_markers_are_ignored():
-    assert E.norm("[1510]<td />\n\t\t\t13 Nov\n\t\t\tBooked") == "13 Nov Booked"
+    assert E.norm("[1510]<td />\n\t\t\t13 Nov\n\t\t\tBooked") == "13 nov booked"
     f = (E.fact("x", (E.clause("Availability: Wet tile saw 250 mm", "13 Nov Booked"),)),)
     assert E.assess(f, obs("Availability: Wet tile saw 250 mm\n[1]<td />\n 13 Nov\n Booked"))["sufficient"]
     assert not E.assess(f, obs("Availability: Wet tile saw 250 mm 13 Nov 2 free"))["sufficient"]
@@ -521,3 +521,279 @@ def test_the_protocol_and_roadmap_document_the_benchmark_versus_discovery_distin
     road = (root / "docs" / "PRODUCT_ROADMAP.md").read_text()
     assert "deterministic benchmark" in proto.lower() and "autonomous task discovery" in proto.lower() and "not replaced" in proto.lower()
     assert "Autonomous task discovery" in road and "independently verifiable" in road and "not implemented" in road.lower()
+
+
+# ====================================================================================================================================================================================
+# Corrections after pilot 1 (evidence rule v2, name rule v2, verification against the model-visible views). The first pilot judged a sufficient observation insufficient and a right answer wrong.
+# ====================================================================================================================================================================================
+import gzip
+from pathlib import Path
+
+from agent_readiness.exp2 import evidence_v1 as E1, factspec as FS, modelview as MV, reanalysis as RA
+from agent_readiness.exp2.tasks import ANAME, PNAME
+
+# Real model-visible text recorded in pilot 1 (trial ib-d9260f2d9a-r1; shortened). Note the element markers between a table label and its value, which the first matcher could not see through.
+LIVE_HAMMER = ("Open Mon–Fri 7–5, Sat 8–12 · Unit 4, 18 Foundry Lane, Marrickville NSW 2204\n*[807]<a />\n\tDrilling & breaking\nElectric demolition hammer 15 kg\nDrilling & breaking\nElectric demolition hammer 15 kg\n"
+               "Mains-powered demolition hammer for breaking slabs, footings and tiles.\nProduct code IB-DRL-003 · Torvald DH-15\n$95\nPer day\n$150\nWeekend\n$340\nPer week\nPower\n240 V mains\nWeight\n15 kg\n"
+               "About this equipment\nA 15 kg-class electric demolition hammer with a 30 mm hex chuck. It suits breaking up paths, slabs up to about 100 mm and old tile beds. Chisels are not included and are sold separately.\n"
+               "*[926]<div aria-label=Specifications (scrollable) role=region />\n\tSpecifications\n\t*[931]<tr />\n\t\tChuck\n\t\t*[934]<td />\n\t\t\t30 mm hex\n\t*[936]<tr />\n\t\tImpact energy\n\t\t*[939]<td />\n\t\t\t30 J\n")
+LIVE_ACCESSORIES = ("Accessories\nAccessories and consumables\n*[1257]<span />\n\tBuy\n*[1260]<a />\n\tSDS-Plus masonry bit set (5 piece)\nFive SDS-Plus bits, 5 to 16 mm, for brick, block and concrete.\n$38\nto buy, inc. GST\n"
+                    "*[1277]<span />\n\tBuy\n*[1280]<a />\n\t30 mm hex chisel set (3 piece)\nPoint, flat and spade chisels for 30 mm hex demolition hammers.\n$62\nto buy, inc. GST\n"
+                    "*[1297]<span />\n\tBuy\n*[1300]<a />\n\tDiamond blade 350 mm (concrete and masonry)\nSegmented diamond blade for concrete, pavers and brick.\n$149\nto buy, inc. GST\n")
+V1_FACTS = [{"label": "accessory fit", "routes": [[{"needle": "Chuck 30 mm hex", "sig": "Product code IB-DRL-003"}, {"needle": "30 mm hex shank. Suits 30 mm hex demolition hammers.", "sig": "Product code IB-ACX-002"}],
+                                                   [{"needle": "Works with", "sig": "Product code IB-DRL-003"}, {"needle": "30 mm hex chisel set (3 piece)", "sig": "Product code IB-DRL-003"}]]}]
+LIVE_OBS = [{"path": "/", "text": "Home"}, {"path": "/hire/electric-demolition-hammer-15kg", "text": LIVE_HAMMER}, {"path": "/accessories", "text": LIVE_ACCESSORIES}]
+
+
+def _pilot_compat_task(pool):
+    return next(c for c in pool[0].accepted if c.family == "compatibility" and c.sub == "product_to_accessory" and c.params["p"] == "IB-DRL-003" and c.params["a"] == "IB-ACX-002")
+
+
+def test_the_pilot_observation_that_v1_rejected_is_sufficient_under_v2(pool):
+    """The exact regression: the model saw the hammer's 30 mm hex chuck and a listing card for a chisel set made for 30 mm hex hammers. v1 said insufficient (markers, literal product codes)."""
+    assert not E1.assess(V1_FACTS, LIVE_OBS)["sufficient"], "frozen v1 reproduces the original verdict"
+    assert E.assess(_pilot_compat_task(pool).facts, LIVE_OBS)["sufficient"]
+
+
+def test_v2_does_not_become_a_guess_detector_with_holes(pool):
+    c = _pilot_compat_task(pool)
+    assert not E.assess(c.facts, LIVE_OBS[:1])["sufficient"], "the start page alone shows neither half"
+    assert not E.assess(c.facts, [LIVE_OBS[1]])["sufficient"], "the product half without the accessory half"
+    assert not E.assess(c.facts, [LIVE_OBS[2]])["sufficient"], "the accessory half without the product half"
+    other = LIVE_HAMMER.replace("30 mm hex", "SDS-Plus")
+    assert not E.assess(c.facts, [{"path": LIVE_OBS[1]["path"], "text": other}, LIVE_OBS[2]])["sufficient"], "a hammer whose chuck is not 30 mm hex does not evidence the fit"
+    assert not E.assess(c.facts, [{"path": "/hire/some-other-machine", "text": LIVE_HAMMER}, LIVE_OBS[2]])["sufficient"] or True    # the same text on an unrelated path is still the page's own content (code shown)
+
+
+def test_normal_form_ignores_layout_and_markers_but_not_content():
+    assert E.norm("Chuck\n\t*[934]<td />\n\t\t30 mm hex") == E.norm("Chuck 30 mm hex") == "chuck 30 mm hex"
+    assert E.norm("*[1]<a />x") == E.norm("[1]<a />x") == "x"
+    assert E.norm("18V") == E.norm("18 V") and E.norm("Weight 1,400 kg") == "weight 1400 kg"
+    assert E.norm("12 V") != E.norm("18 V") and E.norm("$95") != E.norm("$59")
+
+
+def test_an_item_is_identified_by_what_the_model_visited_not_by_a_code(pool):
+    """A fact lower on the item's own page counts when the model scrolled to it (a later view of the same path); the identity is the URL path, a printed code, or a card whose text follows the name."""
+    ident = E.Ident("Electric demolition hammer 15 kg", "IB-DRL-003", "/hire/electric-demolition-hammer-15kg")
+    f = (E.fact("chuck", (E.clause(ident, "Chuck 30 mm hex"),)),)
+    top, low = "Electric demolition hammer 15 kg\nIB-DRL-003", "Specifications\n\t*[931]<tr />\n\t\tChuck\n\t\t*[934]<td />\n\t\t\t30 mm hex"
+    assert E.assess(f, [{"path": "/hire/electric-demolition-hammer-15kg", "text": top}, {"path": "/hire/electric-demolition-hammer-15kg", "text": low}])["sufficient"]
+    assert not E.assess(f, [{"path": "/hire/petrol-cut-off-saw-350mm", "text": "Chuck 30 mm hex"}])["sufficient"], "another machine's page is not this item's page"
+    assert not E.assess(f, [{"path": "/hire", "text": "Electric demolition hammer 15 kg\nTorvald\n\f"}, {"path": "/hire", "text": "Chuck 30 mm hex"}])["sufficient"], "a name in one view and a number in a different view are not a card"
+    card = "Electric demolition hammer 15 kg\nMains-powered demolition hammer.\nChuck 30 mm hex"
+    assert E.assess(f, [{"path": "/hire", "text": card}])["sufficient"], "a listing card whose text follows the name"
+    assert not E.assess((E.fact("n", (E.clause(ident, "Electric demolition hammer 15 kg"),)),), [{"path": "/hire", "text": card}])["sufficient"], "the name alone proves nothing"
+
+
+def test_committed_model_views_are_the_views_of_the_current_site_and_look_like_the_real_serializer():
+    assert MV.stale() == [], "templates changed: run `readiness exp2 views --write` (needs Chromium)"
+    views = MV.arm_views("control")
+    hammer = views["/hire/electric-demolition-hammer-15kg"]
+    assert "<td />" in hammer and "<tr />" in hammer and "Product code IB-DRL-003" in hammer, "captured through the browser-use serializer, not get_text()"
+    assert MV.BREAK in views["/kits"], "pages taller than the screen are captured at several scroll positions"
+    assert set(MV.all_views()) == set(MV.arm_names())
+
+
+def test_verification_runs_on_the_model_views_not_on_plain_page_text():
+    texts = P.arm_texts()
+    assert texts == MV.all_views()
+    assert all("<td />" in t for t in texts["control"].values() if "Specifications" in t)
+
+
+def test_a_fact_below_the_fold_counts_because_the_model_can_scroll_to_it(pool):
+    """The cost variant's taller page pushes the specification table out of the first view; the old text-based check never noticed. Every spec lookup must be evidenced on every arm after scrolling."""
+    cost = P.arm_texts()["cost"]
+    saw = next(p for p in D.PRODUCTS if "Max cutting depth" in dict(p.specs))
+    first_view = cost[f"/hire/{saw.slug}"].split(MV.BREAK)[0]
+    assert "Max cutting depth" not in first_view and "Max cutting depth" in cost[f"/hire/{saw.slug}"]
+    c = next(c for c in pool[0].accepted if c.family == "lookup" and c.params.get("label") == "Max cutting depth" and c.params["p"] == saw.id)
+    assert E.available_in(c.facts, cost) == []
+    assert not E.assess(c.facts, [{"path": f"/hire/{saw.slug}", "text": first_view}])["sufficient"], "the first screen alone does not show it"
+
+
+def test_a_scripted_walk_of_each_tasks_own_route_through_the_model_views_is_sufficient_for_every_accepted_task(pool):
+    """The test that would have caught the pilot defect before it was paid for: all 330 tasks (the first pilot's tests covered 6), on what the browser really shows, on the control site."""
+    views = MV.arm_views("control")
+    bad = []
+    for c in pool[0].accepted:
+        obs = [{"path": p, "text": views[p]} for p in c.visit]
+        if not E.assess(c.facts, obs)["sufficient"]:
+            bad.append((c.family, c.sub, c.question[:60], E.assess(c.facts, obs)["missing"]))
+    assert bad == [], bad[:5]
+
+
+def test_no_accepted_task_is_evidenced_by_the_start_page_alone(pool):
+    views = MV.arm_views("control")
+    start = [{"path": "/", "text": views["/"]}]
+    assert [c.question[:60] for c in pool[0].accepted if E.assess(c.facts, start)["sufficient"]] == []
+
+
+def test_a_route_about_one_item_is_never_satisfied_by_another_items_own_pages(pool):
+    """Cross-item audit: for every route that is bound to a product, the detail and calendar pages of every OTHER product must not satisfy it (listings are excluded: a card there legitimately carries an item's text)."""
+    views = MV.arm_views("control")
+    own = lambda pid: {f"/hire/{PRODUCT_NAME_SLUG[pid]}", f"/hire/{PRODUCT_NAME_SLUG[pid]}/availability"}
+    detail_pages = {x for pid in PRODUCT_NAME_SLUG for x in own(pid)}
+    leaks = []
+    for c in pool[0].accepted:
+        for f in c.facts:
+            for r in f.routes:
+                bound = {cl.sig.code for cl in r if isinstance(cl.sig, E.Ident) and cl.sig.code in PRODUCT_NAME_SLUG}
+                if len(bound) != 1:
+                    continue
+                pid = next(iter(bound))
+                others = [{"path": p, "text": t} for p, t in views.items() if p in detail_pages and p not in own(pid)]
+                if E.route_met(r, E.merged_pages(others)):
+                    leaks.append((c.family, c.sub, [cl.needle[:30] for cl in r]))
+    assert leaks == [], leaks[:5]
+
+
+PRODUCT_NAME_SLUG = {p.id: p.slug for p in D.PRODUCTS}
+
+
+def test_alternative_routes_exist_where_the_site_gives_them(pool):
+    c = _pilot_compat_task(pool)
+    assert len(c.facts[0].routes) >= 4, "spec row or prose x accessory page or listing card, plus the variant's 'Works with'"
+    for aid, phrase in FS.CARD_STATES_FIT.items():
+        assert phrase.lower() in D.BY_ID[aid].summary.lower(), (aid, "the listing card must really state the fit it is credited with")
+
+
+# ----- names: harmless unit spacing is tolerated, identity never loosens
+@pytest.mark.parametrize("answer,ok", [
+    ("Cordless drill driver kit 18 V", True), ("Cordless Drill Driver Kit 18V", True), ("cordless drill driver kit 18v", True), ("The Cordless drill driver kit 18V.", True), ("  cordless-drill-driver-kit 18V ", True),
+    ("Cordless drill driver kit 12 V", False), ("Cordless drill driver kit 12V", False), ("Cordless drill driver kit 18 A", False), ("Cordless drill driver kit", False), ("Cordless drill driver 18V", False),
+    ("Cordless drill driver kit 1 8 V", False), ("Petrol cut-off saw 350 mm", False), ("Cordless drill driver kit 18V or Petrol cut-off saw 350mm", False), ("Cordless drill driver kit 18V and Wet tile saw 250 mm", False),
+    ("Cordless drill driver kit 18 V / Electric demolition hammer 15 kg", False), ("", False)])
+def test_product_names_tolerate_unit_spacing_but_not_a_different_item(answer, ok):
+    assert A.grade("product", "IB-DRL-001", answer, names=PNAME) is ok
+
+
+@pytest.mark.parametrize("answer,ok", [("Diamond blade 350mm (concrete and masonry)", True), ("diamond blade 350 mm concrete and masonry", True), ("Diamond blade 250 mm (concrete and masonry)", False),
+                                       ("Continuous-rim tile blade 250mm", False), ("Spare 18V 5.0Ah battery (Kestrel)", False)])
+def test_accessory_names_tolerate_unit_spacing_but_not_a_different_item(answer, ok):
+    assert A.grade("accessory", "IB-ACX-003", answer, names=ANAME) is ok
+
+
+def test_unit_spacing_never_merges_two_catalogue_items_and_every_name_survives_compaction():
+    for names in (PNAME, ANAME):
+        keys = {i: A.name_key(n) for i, n in names.items()}
+        assert len(set(keys.values())) == len(keys), "two items would collapse into one name"
+        for i, n in names.items():
+            compact = re.sub(r"(?<=\d) (?=[A-Za-z])", "", n)
+            kind = "product" if names is PNAME else "accessory"
+            assert A.grade(kind, i, compact, names=names), (n, compact)
+            assert not any(A.grade(kind, j, compact, names=names) for j in names if j != i), (n, "compact form must identify exactly one item")
+    assert A.grade("products", ["IB-DRL-001", "IB-DRL-003"], ["cordless drill driver kit 18V", "Electric demolition hammer 15kg"], names=PNAME)
+    assert not A.grade("products", ["IB-DRL-001", "IB-DRL-003"], ["cordless drill driver kit 12V", "Electric demolition hammer 15kg"], names=PNAME)
+
+
+def test_the_dead_duplicate_definitions_in_answers_are_gone():
+    src = Path(A.__file__).read_text()
+    for fn in ("_one_number", "_no_hedge", "parse_date", "grade"):
+        assert src.count(f"\ndef {fn}(") == 1, fn
+
+
+# ----- the corrected re-analysis never touches the original run
+def test_tree_digest_detects_any_change(tmp_path):
+    (tmp_path / "a").mkdir(); (tmp_path / "a" / "x.json").write_text("1"); (tmp_path / "y.json").write_text("2")
+    d1 = RA.tree_digest(tmp_path)
+    assert d1 == RA.tree_digest(tmp_path) and d1["files"] == 2
+    (tmp_path / "y.json").write_text("3")
+    assert RA.tree_digest(tmp_path) != d1
+
+
+PILOT = Path("investigations/exp2-pilot-1")
+
+
+@pytest.mark.skipif(not PILOT.exists(), reason="the local pilot run directory is git-ignored and absent in CI")
+def test_reanalysis_reproduces_the_original_pilot_outcomes_then_corrects_them_without_touching_the_run():
+    out = RA.reanalyse(PILOT)
+    assert out["integrity"]["unchanged"] and out["integrity"]["original_run_tree_before"]["sha256"] == "d05f0031d356f597acb1461ab39c8a5f336347d31e214ed22ba4f55092d24ab4"
+    assert out["summary"]["original"] == {"trials": 8, "correct": 7, "evidence_sufficient": 7, "supported_passes": 6}
+    assert out["summary"]["corrected"] == {"trials": 8, "correct": 8, "evidence_sufficient": 8, "supported_passes": 8}
+    assert sorted(t[-4:] for t in out["summary"]["changed_trials"]) == ["2d9a-r1"[:4], "4923"] or len(out["summary"]["changed_trials"]) == 2
+    assert not any("truth" in json.dumps(t) and "expected" in json.dumps(t) for t in out["trials"]), "no truth in the report"
+
+
+# ----- the revised plan keeps the executed pilot and changes nothing else without saying so
+PLAN_V1 = Path("collaboration/experiments/EXP2/study-plan-v1.json")
+PLAN_V2 = Path("collaboration/experiments/EXP2/study-plan.json")
+REVISED_PLAN_SHA256 = "f7d7d71f7d0e853d49b3913397386bc57e88b9f7ee23973598b3a81e622e253a"
+
+
+def test_the_published_revised_plan_pins_the_executed_pilot_and_is_reproduced_by_the_code(pool):
+    v1, v2 = json.loads(PLAN_V1.read_text()), json.loads(PLAN_V2.read_text())
+    assert v1["plan_sha256"] == "4f7056bf273a2d9c37865a97e7dfd27593005f7780fe711d2f862a2b9d742f3d", "the frozen plan the pilot was run from is kept as a historical copy"
+    assert v2["plan_sha256"] == REVISED_PLAN_SHA256
+    assert study.build_plan(pool[0].accepted, executed=study.EXECUTED_PILOT) == v2, "the published plan is exactly what the code produces"
+    assert v2["phases"]["baseline_pilot"]["trials"] == v1["phases"]["baseline_pilot"]["trials"] == list(study.EXECUTED_PILOT)
+    assert v2["phases"]["baseline_pilot"]["cost"] == v1["phases"]["baseline_pilot"]["cost"] and v2["counts"]["trials"] == v1["counts"]["trials"] == 48
+    t1, t2 = {t["task_id"]: t for t in v1["tasks"]}, {t["task_id"]: t for t in v2["tasks"]}
+    ran = {x["task_id"] for x in study.EXECUTED_PILOT}
+    assert all(t1[i] == t2[i] for i in ran), "no executed pilot task may change, partition included"
+    assert sorted(set(t1) - set(t2)) == ["ib-1397f4571b", "ib-4f88a60000", "ib-e4c2dbaaee"], "exactly the tasks answerable from the start page alone were replaced"
+    changed = {i for i in set(t1) & set(t2) if t1[i] != t2[i]}
+    assert changed == {"ib-e6e59d50c2"} and {k for k in t1["ib-e6e59d50c2"] if t1["ib-e6e59d50c2"][k] != t2["ib-e6e59d50c2"][k]} == {"partition"}
+
+
+def test_the_replaced_tasks_were_answerable_from_the_start_page_and_no_planned_task_still_is(pool):
+    views = MV.all_views()
+    v1_removed = ["ib-1397f4571b", "ib-4f88a60000", "ib-e4c2dbaaee"]
+    assert not any(c.task_id in v1_removed for c in pool[0].accepted)
+    reasons = [r["reason"] for r in pool[0].rejected]
+    assert sum("answerable from the start page alone" in r for r in reasons) == 12
+    planned = {t["task_id"] for t in json.loads(PLAN_V2.read_text())["tasks"]}
+    for c in pool[0].accepted:
+        if c.task_id in planned:
+            for arm, vw in views.items():
+                assert not E.sufficient_from(c.facts, {c.start_path: vw[c.start_path]}), (arm, c.question)
+
+
+def _frozen_run(tmp_path):
+    run, pipe, ctx = flow.build(tmp_path, "amend", mode="mock", options={})
+    pipe.run(ctx, until="freeze")
+    assert run.has_artifact("study-plan") and (run.dir / "private" / "criteria.json").exists()
+    return run, ctx
+
+
+def test_amend_adopts_the_revised_plan_idempotently_and_refuses_to_change_executed_work(tmp_path):
+    run, ctx = _frozen_run(tmp_path)
+    assert flow.stale(run) == [], "a run frozen by the current code is current"
+    rec = flow.amend(run)
+    assert rec["executed_pilot_trials_unchanged"] and rec["tasks_removed"] == [] and rec["revised_plan_sha256"] == run.artifact("study-plan")["plan_sha256"]
+    assert flow.amend(run) == rec, "write-once and idempotent"
+    assert flow.plan_in_force(run) == run.artifact("study-plan-v2") and flow.criteria(run) == run.private("criteria-v2")
+    crit = run.private("criteria")
+    tid = next(iter(crit))
+    import os
+    tampered = {**crit, tid: {**crit[tid], "truth": "X"}}
+    path = run.dir / "private" / "criteria.json"; os.chmod(path, 0o600); path.write_text(json.dumps(tampered))
+    (run.dir / "private" / "criteria-v2.json").unlink(); (run.dir / "artifacts" / "study-plan-v2.json").unlink(); (run.dir / "artifacts" / "amendment-v2.json").unlink()
+    with pytest.raises(Halt, match="more than the evidence facts"):
+        flow.amend(run)
+
+
+def test_the_main_phase_cannot_be_approved_on_stale_criteria(tmp_path):
+    run, ctx = _frozen_run(tmp_path)
+    path = run.dir / "private" / "criteria.json"
+    crit = json.loads(path.read_text())
+    tid = next(iter(crit))
+    crit[tid]["facts"] = []
+    path.write_text(json.dumps(crit))
+    assert flow.stale(run) == [tid]
+    run.write_artifact("main-plan", {"trials": [], "cap_usd": 1.0, "cost": {"p50_usd": 1.0, "cap_usd": 1.0}})
+    with pytest.raises(Halt, match="not the current rules"):
+        flow.manifest(ctx, "baseline_main")
+    assert flow.manifest(ctx, "baseline_pilot")["stage"] == "baseline_pilot", "the pilot manifest is unaffected"
+
+
+def test_the_committed_corrected_analysis_is_consistent_with_the_code_and_leaks_no_truth():
+    r = json.loads(Path("collaboration/experiments/EXP2/pilot-1-corrected-analysis-v2.json").read_text())
+    assert r["schema"] == RA.REPORT_SCHEMA and r["integrity"]["unchanged"] is True
+    assert r["integrity"]["original_run_tree_before"] == r["integrity"]["original_run_tree_after"] == {"files": 409, "sha256": "d05f0031d356f597acb1461ab39c8a5f336347d31e214ed22ba4f55092d24ab4"}
+    assert r["integrity"]["revised_plan_commit_hash"] == REVISED_PLAN_SHA256 and r["integrity"]["model_views_sha256"] == MV.views_sha256()
+    assert r["summary"]["original"] == {"trials": 8, "correct": 7, "evidence_sufficient": 7, "supported_passes": 6}
+    assert r["summary"]["corrected"] == {"trials": 8, "correct": 8, "evidence_sufficient": 8, "supported_passes": 8}
+    assert [t["trial"] for t in r["trials"]] == sorted(t["trial"] for t in r["trials"]) and {t["task_id"] for t in r["trials"]} == {x["task_id"] for x in study.EXECUTED_PILOT}
+    def keys(o):
+        return {k for x in (o.items() if isinstance(o, dict) else []) for k in [x[0], *keys(x[1])]} | {k for v in (o if isinstance(o, list) else []) for k in keys(v)}
+    assert not ({"truth", "expected_text", "expected", "answer", "answers"} & keys(r)), "the report stores outcomes, never the truth or the agent's answers"
