@@ -23,6 +23,12 @@ class ScannerConfig:
     live_budget_usd: float = 0.0                                 # global ceiling of RESERVED estimated cost for live scans; 0 = live disabled
     live_api_key_env: str = "META_MODEL_API_KEY"
 
+    live_root_dir: Path | None = None                             # live-evaluation run directories; default <data_dir>/live (Git-ignored), never under investigations/
+
+    @property
+    def live_root(self) -> Path:
+        return self.live_root_dir or self.data_dir / "live"
+
     @property
     def db_path(self) -> Path:
         return self.data_dir / "scanner.sqlite3"
@@ -51,6 +57,6 @@ def load_config(env=None) -> ScannerConfig:
             path.write_text(secrets.token_urlsafe(32))
             path.chmod(0o600)
         secret = path.read_text().strip()
-    return ScannerConfig(data_dir=data_dir, secret=secret, admin_token=env.get("SCANNER_ADMIN_TOKEN", ""),
+    return ScannerConfig(live_root_dir=Path(env["LIVE_ROOT"]) if env.get("LIVE_ROOT") else None, data_dir=data_dir, secret=secret, admin_token=env.get("SCANNER_ADMIN_TOKEN", ""),
                          cors_origins=tuple(o for o in env.get("SCANNER_CORS_ORIGINS", "").split(",") if o.strip()),
                          live_enabled=env.get("SCANNER_LIVE_ENABLED") == "1", live_budget_usd=float(env.get("SCANNER_LIVE_BUDGET_USD", "0") or 0))

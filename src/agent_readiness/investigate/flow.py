@@ -72,7 +72,7 @@ def taskgen_manifest(ctx: Context) -> dict:
 def build(root: Path, run_id: str, site: str, *, mode: str, options: dict | None = None) -> tuple[InvestigationRun, Pipeline, Context]:
     opts = dict(options or {})
     d = Path(root) / run_id
-    run = InvestigationRun(d) if (d / "run.json").exists() else InvestigationRun.create(root, run_id, target=site, mode=mode, stages=STAGES, config={k: v for k, v in opts.items() if k != "model_config"})
+    run = InvestigationRun(d) if (d / "run.json").exists() else InvestigationRun.create(root, run_id, target=site, mode=mode, stages=STAGES, config={k: v for k, v in opts.items() if k not in ("model_config", "snapshot", "investigator_llm")})
     if run.mode != mode:
         raise Halt(f"investigation {run_id} was created in {run.state['mode']} mode; it cannot be resumed as {mode}")
     cfg = opts.get("model_config") or ModelConfig()
@@ -82,7 +82,7 @@ def build(root: Path, run_id: str, site: str, *, mode: str, options: dict | None
     if live and "investigator_llm" not in opts:
         opts["investigator_llm"] = LazyMeta(run, cfg, opts.get("allow_model_calls", False), opts.get("investigate_cap_usd", investigator.RUN_CAP_USD), ceiling, name="investigate",
                                             max_requests=2 * (opts.get("max_calls", investigator.DEFAULT_MAX_CALLS) + 1), transcript="investigator-llm-transcript")
-    snap = zoo.snapshot(site)
+    snap = opts.get("snapshot") or zoo.snapshot(site)             # a registered demo target outside the zoo (live product) supplies its own snapshot
     stages = [Stage("inspect", lambda c: run_inspect(c, snap)),
               Stage("taskgen", taskgen_stage, spends=live, manifest=taskgen_manifest if live else None),
               Stage("freeze", freeze_stage),

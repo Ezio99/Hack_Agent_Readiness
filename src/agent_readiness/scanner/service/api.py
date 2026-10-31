@@ -87,7 +87,7 @@ class BodyLimit:
         return await self.app(scope, limited, send)
 
 
-def create_scanner_app(config: ScannerConfig, runner=execute_scan, store: Store | None = None, manager: ScanManager | None = None, targets: TargetRegistry | None = None) -> FastAPI:
+def create_scanner_app(config: ScannerConfig, runner=execute_scan, store: Store | None = None, manager: ScanManager | None = None, targets: TargetRegistry | None = None, live_jobs=None) -> FastAPI:
     registry.load_all()
     store = store or Store(config)
     store.recover_interrupted()
@@ -286,9 +286,14 @@ def create_scanner_app(config: ScannerConfig, runner=execute_scan, store: Store 
             raise HTTPException(403, "Forbidden.")
         if body.enabled:
             config.kill_switch_path.write_text("on")
-            cancelled = manager.cancel_all()
+            cancelled = manager.cancel_all() + live_jobs.cancel_all()
             return {"kill_switch": True, "cancelled_running": cancelled}
         config.kill_switch_path.unlink(missing_ok=True)
         return {"kill_switch": False}
 
+    from ...live.api import add_live_routes
+    from ...live.jobs import JobManager
+    live_jobs = live_jobs or JobManager(config.live_root, killed=manager.killed)
+    app.state.live_jobs = live_jobs
+    add_live_routes(app, live_jobs, current_session)
     return app
