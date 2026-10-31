@@ -95,10 +95,13 @@ def execute_live(root: Path, job_id: str, job: dict) -> None:
         return
     budget = g["budget_usd"]
     cfg = ModelConfig(model=g["model"], base_url=g["endpoint"])
-    opts = {"snapshot": snap, "n_tasks": job.get("n_tasks", 4), "goals": {"focus": sanitize_goal(job["goal"])}, "focus": sanitize_goal(job["goal"]), "rule_topup": False, "goal_binding": True, "goal_lexicon": RENTAL, "model_config": cfg, "allow_model_calls": True,
+    opts = {"snapshot": snap, "n_tasks": job.get("n_tasks", 4), "goals": {"focus": sanitize_goal(job["goal"])}, "focus": sanitize_goal(job["goal"]), "rule_topup": False, "goal_binding": True, "goal_lexicon": RENTAL, "context": job.get("context"), "model_config": cfg, "allow_model_calls": True,
             "total_cap_usd": budget, "repeats": 1}
     run, pipe, ctx = flow.build(root, job_id, target.id, mode="live", options=opts)
-    run.write_artifact("live-grant", g)                                        # the authorization, kept with the run it covers
+    run.write_artifact("live-grant", g)
+    if job.get("context"):                                                         # the exact context, kept with the run; its hash is in the grant and in every approved manifest
+        from .jobs import CONTEXT_LABEL
+        run.write_artifact("client-context", {"text": job["context"], "sha256": g["context_sha256"], "provenance": CONTEXT_LABEL})                                        # the authorization, kept with the run it covers
 
     def finish(state: str, **fields) -> None:
         if smoke:

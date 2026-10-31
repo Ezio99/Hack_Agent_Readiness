@@ -15,7 +15,7 @@ class ScannerConfig:
     session_ttl_seconds: int = 1800
     default_scan_quota: int = 5
     cors_origins: tuple[str, ...] = ()                           # exact origins only; empty = no cross-origin access
-    max_body_bytes: int = 4096
+    max_body_bytes: int = 8192                                   # room for a 2000-character Website Context
     rate_limit_per_minute: int = 60                              # per client address, all endpoints
     code_attempts_per_10_min: int = 10                           # failed redemptions per client address before lockout
     allow_mock_behaviors: bool = True                            # lets a developer pick a labelled mock scenario in the UI

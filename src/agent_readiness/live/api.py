@@ -21,6 +21,7 @@ class NewJob(BaseModel):
     model_config = ConfigDict(extra="forbid")                      # no url, no prompt, no key, no command
     target_id: str = Field(max_length=60)
     goal: str = Field(max_length=400)
+    context: str | None = Field(default=None, max_length=2400)                   # optional Website Context (a client briefing; cleaned and bounded to 2000 characters by the manager)
     mode: Literal["mock", "live"] = "mock"
     confirm_budget_usd: float | None = Field(default=None, ge=0, le=100)   # live only: the user's explicit confirmation of the maximum spend; must equal the server's cap
 
@@ -40,7 +41,7 @@ def add_live_routes(app: FastAPI, jobs: JobManager, current_session) -> None:
 
     @app.post("/api/live/jobs", status_code=202)
     async def live_start(body: NewJob, session: dict = Depends(current_session)):
-        return await run(jobs.create, session["id"], body.target_id, body.goal, body.mode, body.confirm_budget_usd)
+        return await run(jobs.create, session["id"], body.target_id, body.goal, body.mode, body.confirm_budget_usd, body.context)
 
     @app.get("/api/live/jobs")
     async def live_list(session: dict = Depends(current_session)):

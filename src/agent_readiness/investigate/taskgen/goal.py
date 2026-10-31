@@ -63,8 +63,14 @@ ANGLES = ("tasks that retrieve a labelled fact about one of the goal's entities 
           "tasks that compare or filter the goal's entities on an attribute the goal needs (item_set and extremum tasks)")
 
 
-def bound_text(focus: str) -> str:
-    return (f"\n\nEVALUATION GOAL (binding): {focus}\n"
+CONTEXT_RULE = ("CLIENT CONTEXT (a briefing written by the site owner; UNVERIFIED and NOT evidence about the website): use it ONLY to understand the business, its customers' workflows and priorities, and to choose "
+                "what matters. Never treat any statement in it as a fact about the pages, never copy figures or claims from it into a question or criterion, and never rely on it for an answer: every task must "
+                "be answerable from the website itself.")
+
+
+def bound_text(focus: str, context: str | None = None) -> str:
+    ctx = f"\n\n{CONTEXT_RULE}\n<client_context>\n{context}\n</client_context>" if context else ""
+    return (ctx + f"\n\nEVALUATION GOAL (binding): {focus}\n"
             "Step 1, in `goal_analysis`: decompose the goal. `entities`: the things on THIS website it is about. `attributes`: the facts about them it needs. `comparisons`: what must be compared or ranked. "
             "`information_gaps`: what has to be found on the site to answer it.\n"
             "Step 2, in `tasks`: propose only tasks that directly advance answering the goal: each must retrieve a fact the goal needs about one of its entities, or reach the page that holds it, or compare "
@@ -194,5 +200,11 @@ def coverage(ga: dict, selected: list[dict]) -> dict:
     if ga["attribute_labels"] and not any(c.startswith("attribute:") for c in covered):
         missing.append("attribute (any of: " + ", ".join(ga["attribute_labels"]) + ")")
     ents = sorted({e for v in selected for e in v["entities_touched"]})
-    return {"needed_aspects": needed, "covered": sorted(covered), "missing_supported": missing, "unsupported_aspects": [d["aspect"] for d in ga["limitation_details"] if d["aspect"] in ga["asked_aspects"]],
-            "entities_total": len(ga["entity_items"]), "entities_covered": ents, "passes": bool(selected) and not missing}
+    unsupported = [d["aspect"] for d in ga["limitation_details"] if d["aspect"] in ga["asked_aspects"]]
+    unverified = [d["aspect"] for d in ga["limitation_details"] if d["kind"] == "verifier"]
+    passes = bool(selected) and not missing
+    why = ([f"aspect not expressible on the site: {a}" for a in unsupported] + [f"not verifiable as asked: {a}" for a in unverified] +
+           ([f"entities not covered: {len(ga['entity_items']) - len(ents)} of {len(ga['entity_items'])}"] if len(ents) < len(ga["entity_items"]) else []) + [f"aspect left uncovered: {m}" for m in missing])
+    status = "insufficient" if not passes else ("partial" if why else "complete")
+    return {"status": status, "partial_because": why if passes else [], "needed_aspects": needed, "covered": sorted(covered), "missing_supported": missing, "unsupported_aspects": unsupported, "unverified_aspects": unverified,
+            "entities_total": len(ga["entity_items"]), "entities_covered": ents, "passes": passes}

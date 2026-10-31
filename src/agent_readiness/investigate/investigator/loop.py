@@ -50,10 +50,13 @@ class Step(BaseModel):
     hypotheses: Optional[list[HypothesisOut]]
 
 
-def first_user_message(ws: Workspace, focus: str | None = None) -> str:
+def first_user_message(ws: Workspace, focus: str | None = None, context: str | None = None) -> str:
     tasks = [{"task_id": t["task_id"], "question": t["question"], "kind": t["kind"]} for t in ws.inv_tasks.values()]
     text = (f"Site: {len(ws.profile['pages'])} pages captured. Agent tasks you can investigate ({len(tasks)}):\n{json.dumps(tasks)}\n"
             f"There are {len(ws.att)} recorded trials; some trials may be void (provider/infrastructure) and say nothing about the website." + (f"\nOwner's priorities: {focus}" if focus else "") + "\nBegin.")
+    if context:
+        from ..taskgen.goal import CONTEXT_RULE
+        text += f"\n\n{CONTEXT_RULE}\n<client_context>\n{context}\n</client_context>\nYour hypotheses must cite evidence ids from the tools; the client context is never evidence."
     assert_blind(text)
     return text
 
@@ -125,12 +128,12 @@ def terminal_status(res: dict) -> str:
     return "incomplete_no_finish"                                   # the tool budget ran out (or no finish action)
 
 
-def investigate(ws: Workspace, llm: LLMClient, *, max_calls: int = 12, focus: str | None = None) -> dict:
+def investigate(ws: Workspace, llm: LLMClient, *, max_calls: int = 12, focus: str | None = None, context: str | None = None) -> dict:
     """Run the loop. NOTHING raised after the first paid call may discard the work already paid for: provider/gate/blindness failures end the investigation as `incomplete` with the reason,
     and per-hypothesis problems (duplicates, store rule violations) become recorded rejections. Request, token and cost accounting comes from a meter on the client, not from parsed steps."""
     store = ws.run.evidence
     meter = _Metered(llm)
-    msgs = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": first_user_message(ws, focus)}]
+    msgs = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": first_user_message(ws, focus, context)}]
     state = {"log": [], "rejected": [], "rows": [], "novel": [], "finished": False, "incomplete": None, "error": None}
     try:
         _run(ws, meter, store, msgs, state, max_calls)

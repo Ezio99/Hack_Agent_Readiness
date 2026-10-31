@@ -29,6 +29,7 @@ MOCK_NOTICE = ("MOCK EVALUATION: pages were visited by a scripted browser agent,
                "verified by the deterministic checker. No language model was called and nothing was spent. The goal is recorded but does not steer mock task generation.")
 
 
+CONTEXT_LABEL = "CLIENT-SUPPLIED CONTEXT: a briefing written by the site owner. Unverified. It guided what to look at; it is not evidence about the website and no finding rests on it."
 LIVE_NOTICE = ("LIVE EVALUATION: the language model was called for task generation, browsing and investigation. Cost is calculated from reported tokens at published prices (not a bill) and is hard-capped "
                "by the approved budget. Findings are labelled by how they were checked: verified by the deterministic checker, supported hypothesis, or unvalidated proposal.")
 LIVE_TARGETS = ("ironbark",)                        # M1: live evaluations are restricted to the registered Ironbark demo site
@@ -82,6 +83,17 @@ class LiveSettings:
 def under_test_with_real_endpoint(endpoint: str) -> bool:
     """A test process (pytest) must never start a live job against a non-loopback endpoint: with a real key in the environment that would be a real, billed request. Subprocess workers inherit the marker."""
     return bool(os.environ.get("PYTEST_CURRENT_TEST")) and urlsplit(endpoint).hostname not in ("127.0.0.1", "localhost", "::1")
+
+
+def clean_context(context: str | None) -> str | None:
+    """The optional Website Context: printable text, whitespace-normalised per line, bounded. It is a client briefing, never evidence."""
+    from .targets import CONTEXT_MAX
+    if not context or not context.strip():
+        return None
+    text = "\n".join(" ".join(ln.split()) for ln in "".join(ch for ch in context if ch.isprintable() or ch == "\n").splitlines()).strip()
+    if len(text) > CONTEXT_MAX:
+        raise JobError(422, f"The website context must be at most {CONTEXT_MAX} characters.")
+    return text or None
 
 
 class JobError(Exception):
@@ -162,8 +174,9 @@ class JobManager:
         except Exception:
             return float(job["grant"]["budget_usd"])                          # unknown: assume the worst
 
-    def create(self, owner: str, target_id: str, goal: str, mode: str = "mock", confirm_budget_usd: float | None = None) -> dict:
+    def create(self, owner: str, target_id: str, goal: str, mode: str = "mock", confirm_budget_usd: float | None = None, context: str | None = None) -> dict:
         goal = " ".join(goal.split())
+        context = clean_context(context)
         if target_id not in TARGETS:
             raise JobError(422, "Unknown target: only registered demo websites can be evaluated.")
         if not GOAL_MIN <= len(goal) <= GOAL_MAX:
@@ -189,14 +202,14 @@ class JobManager:
             if sum(1 for j in self.jobs(owner)) >= MAX_JOBS_PER_SESSION:
                 raise JobError(429, "Evaluation limit for this session reached.")
             job_id = "live-" + secrets.token_hex(5)
-            job = {"id": job_id, "owner": owner, "target_id": target_id, "goal": goal, "mode": mode, "state": "queued", "created_at": time.time(), "n_tasks": 4,
+            job = {"id": job_id, "owner": owner, "target_id": target_id, "goal": goal, "mode": mode, "state": "queued", "created_at": time.time(), "n_tasks": 4, "context": context,
                    "timeout_seconds": (600 if self.live.smoke else self.live.timeout_seconds) if mode == "live" else self.timeout}
             if mode == "live" and self.live.smoke:
                 job["until"] = "taskgen"                          # operator smoke test: stop after task generation and freeze, before any browser trial, investigator or recommendation
             if mode == "live":                                    # the user's confirmation becomes ONE grant bound to this job, owner, target, goal, budget, model and stages
                 job["grant"] = G.make_grant(job_id=job_id, owner=owner, target_id=target_id, goal=goal, budget_usd=self.live.job_cap, model=self.live.model, endpoint=self.live.base_url,
                                             snapshot_sha256=TARGETS[target_id].snapshot().sha256, stages=G.SMOKE_STAGES if self.live.smoke else G.LIVE_STAGES,
-                                            limits=G.default_limits(smoke=self.live.smoke))
+                                            limits=G.default_limits(smoke=self.live.smoke), context=context)
             worker.job_path(self.root, job_id).write_text(json.dumps(job, indent=2))
             self._spawn(job_id)                                  # the worker records its own pid and state
         timer = threading.Timer(job["timeout_seconds"], self._expire, args=(job_id,))
@@ -255,8 +268,22 @@ class JobManager:
         g = job.get("grant")
         return {**{k: job.get(k) for k in ("id", "target_id", "goal", "mode", "state", "error", "created_at", "started_at", "finished_at", "timeout_seconds")}, "mock": job["mode"] == "mock",
                 "notice": MOCK_NOTICE if job["mode"] == "mock" else (DEV_NOTICE if self._dev(job) else LIVE_NOTICE), "dev_provider": self._dev(job), "stop": job.get("stop"), "until": job.get("until"),
-                "smoke": self._smoke(job),
-                "grant": {"budget_usd": g["budget_usd"], "stages": g["stages"], "model": g["model"], "confirmed_at": g["confirmed_at"], "grant_sha256": g["grant_sha256"][:16]} if g else None, **self._progress(job)}
+                "smoke": self._smoke(job), "coverage": self._coverage(job),
+                "grant": {"budget_usd": g["budget_usd"], "stages": g["stages"], "model": g["model"], "confirmed_at": g["confirmed_at"], "grant_sha256": g["grant_sha256"][:16]} if g else None,
+                "client_context": ({"text": job["context"], "sha256": g["context_sha256"] if g else None, "label": CONTEXT_LABEL} if job.get("context") else None), **self._progress(job)}
+
+    def _coverage(self, job: dict):
+        """Goal coverage as verified by the independent check, from the run's task-generation report: complete, PARTIAL (with every unsupported or unverified aspect named) or insufficient."""
+        p = self.root / job["id"] / "artifacts" / "taskgen-report.json"
+        if not p.exists():
+            return None
+        gb = json.loads(p.read_text()).get("goal_binding")
+        if not gb:
+            return None
+        cv = gb["coverage"]
+        return {"status": cv["status"], "partial_because": cv["partial_because"], "unsupported_aspects": cv["unsupported_aspects"], "unverified_aspects": cv["unverified_aspects"], "missing_supported": cv["missing_supported"],
+                "limitations": gb["analysis"]["limitations"], "limitation_details": gb["analysis"]["limitation_details"], "entities_covered": len(cv["entities_covered"]), "entities_total": cv["entities_total"],
+                "relevant_tasks": gb["relevant_tasks"], "selected": gb["selected"]}
 
     def _smoke(self, job: dict):
         p = self.root / job["id"] / "artifacts" / "smoke-report.json"
@@ -330,6 +357,7 @@ class JobManager:
         exporter.check_clean(data)
         data["notices"] = [MOCK_NOTICE if job["mode"] == "mock" else (DEV_NOTICE if self._dev(job) else LIVE_NOTICE), *data.get("notices", [])]
         data["goal"] = job["goal"]
+        data["client_context"] = {"text": job["context"], "sha256": job["grant"]["context_sha256"] if job.get("grant") else None, "label": CONTEXT_LABEL} if job.get("context") else None
         return data
 
 

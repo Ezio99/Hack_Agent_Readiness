@@ -48,7 +48,7 @@ def build_report(run, job: dict, *, cap_usd: float, state: str) -> dict:
     if gb:
         asm = gb["assessments"]
         rel = {"method": gb["verifier"], "relevant_tasks": gb["relevant_tasks"], "gate_accepted_tasks": gb["gate_accepted_tasks"], "needed": gb["needed"], "goal_analysis_site_grounded": gb["analysis"],
-               "model_goal_analysis": gb["model_goal_analysis"], "limitations": gb["analysis"]["limitations"], "limitation_details": gb["analysis"].get("limitation_details", []), "coverage": gb["coverage"], "per_task": [{k: a[k] for k in ("question", "aspects_matched", "entity_match", "goal_relevant", "why", "model_goal_link")} for a in asm],
+               "model_goal_analysis": gb["model_goal_analysis"], "limitations": gb["analysis"]["limitations"], "limitation_details": gb["analysis"].get("limitation_details", []), "coverage": gb["coverage"], "coverage_status": gb["coverage"]["status"], "per_task": [{k: a[k] for k in ("question", "aspects_matched", "entity_match", "goal_relevant", "why", "model_goal_link")} for a in asm],
                "tasks_sharing_a_goal_term": gb["relevant_tasks"], "of": gb["gate_accepted_tasks"]}
     else:
         rel = relevance(goal, [a["question"] for a in accepted])

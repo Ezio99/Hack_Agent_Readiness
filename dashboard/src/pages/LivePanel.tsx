@@ -22,6 +22,7 @@ export function LivePanel({ onOpen }: { onOpen: (report: unknown, label: string)
   const [mode, setMode] = useState<"mock" | "live">("mock");
   const [confirming, setConfirming] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [context, setContext] = useState("");
   const [history, setHistory] = useState<LiveSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -58,7 +59,7 @@ export function LivePanel({ onOpen }: { onOpen: (report: unknown, label: string)
   const start = async () => {
     setError(null); setBusy(true);
     try {
-      const j = mode === "live" && live ? await startJob(target, goal, { confirm_budget_usd: live.cap_usd }) : await startJob(target, goal);
+      const j = mode === "live" && live ? await startJob(target, goal, { confirm_budget_usd: live.cap_usd }, context) : await startJob(target, goal, undefined, context);
       setConfirming(false); setAgreed(false); setJob(j); follow(j.id);
     } catch (e) { fail(e); }
     setBusy(false);
@@ -86,6 +87,10 @@ export function LivePanel({ onOpen }: { onOpen: (report: unknown, label: string)
       {error && <p role="alert" className="scan-error">{error}</p>}
       <div className="liveform">
         <label>Website <select aria-label="Website to evaluate" value={target} onChange={(e) => setTarget(e.target.value)} disabled={active}>{targets.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}</select></label>
+        <label>Website context <span className="muted">(optional · a briefing about the business, its customers and priorities)</span>
+          <textarea aria-label="Website context" value={context} maxLength={2000} rows={4} placeholder="e.g. who the customers are, what they compare, what the business cares about" onChange={(e) => setContext(e.target.value)} disabled={active} /></label>
+        <p className="muted ctxnote">Client-supplied and <strong>unverified</strong>: it guides task generation and the investigator, but it is never treated as evidence about the website, and no finding rests on it. It is saved with the run and is part of what you approve.
+          {targets.find((t) => t.id === target)?.sample_context && <> <button type="button" className="linklike" disabled={active} onClick={() => setContext(targets.find((t) => t.id === target)!.sample_context!)}>Use the sample briefing</button></>}{context && <> <button type="button" className="linklike" disabled={active} onClick={() => setContext("")}>Clear</button></>}</p>
         {live && <fieldset className="modes" disabled={active}><legend>Execution</legend>
           <label><input type="radio" name="mode" checked={mode === "mock"} onChange={() => { setMode("mock"); setConfirming(false); }} /> Mock (free, scripted stand-ins)</label>{" "}
           <label><input type="radio" name="mode" checked={mode === "live"} onChange={() => setMode("live")} disabled={!liveOk} /> Live (real model, maximum US${live.cap_usd.toFixed(2)}){!liveOk ? " — Ironbark only" : ""}</label>
@@ -104,6 +109,7 @@ export function LivePanel({ onOpen }: { onOpen: (report: unknown, label: string)
           <p><strong>Maximum spend: US${live.cap_usd.toFixed(2)}.</strong> The server enforces this cap itself: every request is reserved against it before it is sent, and the evaluation stops safely if any stage would exceed it. Cost is calculated from reported tokens at published prices; it is not a bill.</p>
           {live.dev_provider && <p className="muted">This server uses the DEV PROVIDER (a loopback stand-in): no real model is called and nothing real is spent.</p>}
           <p>Goal: <q>{goal.trim()}</q></p>
+          {context.trim() && <p className="muted">Website context included ({context.trim().length} characters): client-supplied, unverified; changing it later means a new approval.</p>}
           <label><input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} /> I authorize up to US${live.cap_usd.toFixed(2)} for this one evaluation.</label>
           <p><button type="button" className="primary" disabled={!agreed || busy} onClick={() => void start()}>Confirm and start live evaluation</button> <button type="button" onClick={() => { setConfirming(false); setAgreed(false); }}>Back</button></p>
         </div>
@@ -118,6 +124,11 @@ export function LivePanel({ onOpen }: { onOpen: (report: unknown, label: string)
             <ul>{job.smoke.accepted_tasks.map((q, i) => <li key={i}>{q.question} <span className="muted">[{q.criterion_kind}, {q.source}]</span></li>)}</ul>
             {(job.smoke.relevance_to_goal.limitations ?? []).length > 0 && <p role="note"><strong>Goal coverage limits:</strong> {(job.smoke.relevance_to_goal.limitations ?? []).join("; ")}.</p>}
             <p className="muted">Provider compatibility: {job.smoke.provider_compatibility.map((c) => `batch ${c.batch} ${c.status}${c.usage_has_prompt_and_completion_tokens === false ? " (no usage)" : ""}`).join(" · ")}. Rejections: {Object.entries(job.smoke.independent_verification.rejection_reasons).map(([k, v]) => `${k} ×${v}`).join("; ") || "none"}.</p></details>}
+          {job.client_context && <details><summary>Website context used (client-supplied, unverified)</summary><p className="ctxbox" role="note"><strong>{job.client_context.label}</strong><br />{job.client_context.text}</p><p className="muted">SHA-256 {job.client_context.sha256?.slice(0, 16) ?? "n/a"} · saved with the run and bound into the approval.</p></details>}
+          {job.coverage && <div className={`coverage cov-${job.coverage.status}`} role="note"><strong>Goal coverage: {job.coverage.status.toUpperCase()}</strong>{job.coverage.status === "complete" ? <> — every aspect and entity of the goal is covered by verified tasks.</> : <> — {job.coverage.selected} verified task(s) selected ({job.coverage.entities_covered} of {job.coverage.entities_total} entities).</>}
+            {job.coverage.partial_because.length > 0 && <ul>{job.coverage.partial_because.map((x, i) => <li key={i}>{x}</li>)}</ul>}
+            {job.coverage.limitation_details.length > 0 && <ul>{job.coverage.limitation_details.map((d, i) => <li key={i}><em>{d.kind} limitation</em> · {d.aspect}: {d.detail}</li>)}</ul>}
+            {job.coverage.missing_supported.length > 0 && <p>Supportable but not covered: {job.coverage.missing_supported.join(", ")}.</p>}</div>}
           {job.grant && <p className="muted">Approved by you: up to US${job.grant.budget_usd.toFixed(2)} on stages {job.grant.stages.join(", ")} (grant {job.grant.grant_sha256}). Each paid stage's manifest approval is recorded in the run's audit trail.</p>}
           {job.notice && <p className="muted" role="note">{job.notice}</p>}
           {job.state === "awaiting_approval" && job.stop && <Callout title="Waiting for an approval this evaluation is not permitted to grant" tone="warn"><p>{job.stop.reason}</p><p className="muted">Nothing further was spent. The run is preserved; only a person with access to the run can approve this stage ({job.stop.kind}).</p></Callout>}

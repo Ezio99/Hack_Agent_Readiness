@@ -3,6 +3,7 @@ supplies expected answers. Output goes through the gate; rejected tasks come bac
 from __future__ import annotations
 
 import json
+import re
 from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict
@@ -72,30 +73,43 @@ RULES = """Rules:
 - The question must name what it asks about (the specific item or page, every threshold value, and the field), must not contain the answer, and must have one correct answer. No yes/no questions."""
 
 
-def site_summary(profile: dict, max_pages: int = 40) -> dict:
+DATE_LABEL = re.compile(r"^\d{1,2} [a-z]{3}$")
+
+
+def site_summary(profile: dict, max_pages: int = 40, compact: bool = False) -> dict:
+    """`compact` (goal-bound requests only; every other request is byte-identical to before): the same facts without the repetition that costs input tokens: sort/filter views that re-list the same items,
+    per-day calendar labels, long value samples and a long page list."""
     pages = profile["pages"]
+    seen_sets: set = set()
     tmpl = {p: t for t, ps in profile["templates"].items() for p in ps}
     listings = []
     for l in profile["listings"]:
         recs = pages[l["listing"]]["item_groups"]
         g = max(recs, key=lambda g: len(g["items"]))
+        if compact:
+            key = frozenset(i["href"] for i in g["items"])
+            if "/sort/" in l["listing"] or key in seen_sets:
+                continue
+            seen_sets.add(key)
         sample = {}
-        for label in l["fields"]:
+        for label in (list(l["fields"])[:16] if compact else l["fields"]):
+            if compact and DATE_LABEL.match(label):
+                continue
             vals = []
-            for i in g["items"][:6]:
+            for i in g["items"][:3 if compact else 6]:
                 v = [f["value"] for f in pages.get(i["href"], {"facts": []})["facts"] if f["label"] == label]
                 if v:
                     vals.append(v[0])
             sample[label] = vals
-        listings.append({"listing": l["listing"], "heading": (pages[l["listing"]]["headings"] or [{"text": ""}])[0]["text"], "items": [{"name": i["name"], "path": i["href"]} for i in g["items"][:MAX_ITEMS_SHOWN]], "items_total": len(g["items"]), "fields_on_item_pages": sample})
-    shown = sorted(pages, key=lambda p: (profile["depth"].get(p, 9), p))[:max_pages]
+        listings.append({"listing": l["listing"], "heading": (pages[l["listing"]]["headings"] or [{"text": ""}])[0]["text"], "items": [{"name": i["name"], "path": i["href"]} for i in g["items"][:16 if compact else MAX_ITEMS_SHOWN]], "items_total": len(g["items"]), "fields_on_item_pages": sample})
+    shown = sorted(pages, key=lambda p: (profile["depth"].get(p, 9), p))[:24 if compact else max_pages]
     other = [{"path": p, "facts": {f["label"]: f["value"] for f in pages[p]["facts"][:4]}} for p in shown if pages[p]["facts"] and p not in {i["path"] for l in listings for i in l["items"]}]
     return {"pages": [{"path": p, "title": pages[p]["title"], "clicks_from_entry": profile["depth"].get(p), "links_to": [l["href"] for l in pages[p]["links"] + pages[p]["nav_links"] if l["href"] in pages][:8]} for p in shown],
-            "listings": listings, "facts_on_other_pages": other[:12]}
+            "listings": listings, "facts_on_other_pages": other[:6 if compact else 12]}
 
 
-def build_prompt(profile: dict, n: int, focus: str | None = None, feedback: list[str] | None = None, angle: str | None = None) -> str:
-    text = f"Website summary (JSON):\n{json.dumps(site_summary(profile), ensure_ascii=False)}\n\n{RULES}\n\nPropose {n} tasks."
+def build_prompt(profile: dict, n: int, focus: str | None = None, feedback: list[str] | None = None, angle: str | None = None, compact: bool = False) -> str:
+    text = f"Website summary (JSON):\n{json.dumps(site_summary(profile, compact=compact), ensure_ascii=False)}\n\n{RULES}\n\nPropose {n} tasks."
     if angle:
         text += f"\nEmphasis of this batch: {angle}. Other kinds are still allowed; do not repeat tasks that another batch would obviously propose."
     if focus:
@@ -106,20 +120,20 @@ def build_prompt(profile: dict, n: int, focus: str | None = None, feedback: list
     return text
 
 
-def build_request(profile: dict, n: int, focus: str | None = None, feedback: list[str] | None = None, angle: str | None = None, bound: bool = False) -> LLMRequest:
+def build_request(profile: dict, n: int, focus: str | None = None, feedback: list[str] | None = None, angle: str | None = None, bound: bool = False, context: str | None = None) -> LLMRequest:
     if bound and focus:                                           # the goal is a BINDING objective: decomposed first, every task linked to it (taskgen/goal.py)
         from . import goal as G
-        text = build_prompt(profile, n, None, feedback, angle) + G.bound_text(focus)
+        text = build_prompt(profile, n, None, feedback, angle, compact=True) + G.bound_text(focus, context)
         return LLMRequest(messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": text}], purpose=G.PURPOSE, max_tokens=MAX_TOKENS, response_schema=G.GoalTaskProposals.model_json_schema())
     return LLMRequest(messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": build_prompt(profile, n, focus, feedback, angle)}], purpose="taskgen", max_tokens=MAX_TOKENS,
                       response_schema=TaskProposals.model_json_schema())
 
 
-def batch_requests(profile: dict, focus: str | None = None, bound: bool = False) -> list[LLMRequest]:
+def batch_requests(profile: dict, focus: str | None = None, bound: bool = False, context: str | None = None) -> list[LLMRequest]:
     """The exact requests the L1a taskgen stage sends (deterministic: no batch depends on another's output), in order. The approval manifest hashes these same requests."""
     if bound and focus:
         from . import goal as G
-        return [build_request(profile, BATCH_SIZE, focus, None, angle, True) for angle in G.ANGLES[:BATCHES]]
+        return [build_request(profile, BATCH_SIZE, focus, None, angle, True, context) for angle in G.ANGLES[:BATCHES]]
     return [build_request(profile, BATCH_SIZE, focus, None, angle) for angle in BATCH_ANGLES[:BATCHES]]
 
 

@@ -23,9 +23,9 @@ def manifest(ctx: Context) -> dict:
     cfg = ctx.options.get("model_config") or ModelConfig()
     ws = Workspace(ctx.run)
     n = ctx.options.get("max_calls", DEFAULT_MAX_CALLS)
-    return {**({"forked_from": forked} if forked else {}), "stage": "investigate", "provider": cfg.provider, "model": cfg.model, "endpoint": cfg.base_url.rstrip("/") + "/chat/completions", "max_tool_calls": n, "max_requests": 2 * (n + 1),
+    return {**({"forked_from": forked} if forked else {}), "stage": "investigate", **({"client_context_sha256": canonical_hash(ctx.options["context"])} if ctx.options.get("context") else {}), "provider": cfg.provider, "model": cfg.model, "endpoint": cfg.base_url.rstrip("/") + "/chat/completions", "max_tool_calls": n, "max_requests": 2 * (n + 1),
             "retries_per_request": 1, "run_cap_usd": ctx.options.get("investigate_cap_usd", RUN_CAP_USD), "per_request_cap_usd": alloc.PER_REQUEST_CAP_USD, "reasoning_effort": DEFAULT_REASONING_EFFORT, "max_completion_tokens": STEP_MAX_TOKENS, "input_overhead_tokens_reserved": INPUT_OVERHEAD_TOKENS,
-            "first_request_reservation_usd": reservation_bound_usd(LLMRequest(messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": first_user_message(ws, ctx.options.get("focus"))}], purpose="investigate", max_tokens=STEP_MAX_TOKENS, response_schema=Step.model_json_schema())),
+            "first_request_reservation_usd": reservation_bound_usd(LLMRequest(messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": first_user_message(ws, ctx.options.get("focus"), ctx.options.get("context"))}], purpose="investigate", max_tokens=STEP_MAX_TOKENS, response_schema=Step.model_json_schema())),
             "allocation": alloc.allocation(ctx.options.get("total_cap_usd", 3.0)), "reservation_note": "input grows with the conversation; every request is re-reserved and refused if it would exceed the per-request or run cap", "prompt_sha256": canonical_hash([SYSTEM, first_user_message(ws, ctx.options.get("focus"))]),
             "attribution_sha256": canonical_hash(ctx.run.artifact("attribution")), "tasks_manifest_sha256": canonical_hash(ctx.run.artifact("tasks-manifest")), "cost_basis": "calculated upper bounds at published prices; not a bill"}
 
@@ -69,7 +69,7 @@ def investigate_stage(ctx: Context) -> dict:
     from ..fork import verify_fork
     verify_fork(run)                                           # a fork whose imported evidence or spending history changed never sends a request
     ws = Workspace(run)
-    res = investigate(ws, llm, max_calls=ctx.options.get("max_calls", DEFAULT_MAX_CALLS), focus=ctx.options.get("focus"))
+    res = investigate(ws, llm, max_calls=ctx.options.get("max_calls", DEFAULT_MAX_CALLS), focus=ctx.options.get("focus"), context=ctx.options.get("context"))
     transcript = res.pop("transcript")
     run.write_private("investigator-transcript", transcript)
     res["accounting"] = ledger_accounting(run, res)

@@ -20,7 +20,7 @@ from typing import Any
 from ..suite.core import canonical_hash
 
 LIVE_STAGES = ("taskgen", "baseline_trials", "investigate")          # the ONLY stages a user grant can approve (the paid stages of one evaluation, no fix, no retest)
-GRANT_FIELDS = ("job_id", "owner", "run_id", "target_id", "goal", "budget_usd", "stages", "model", "endpoint", "snapshot_sha256", "limits")
+GRANT_FIELDS = ("job_id", "owner", "run_id", "target_id", "goal", "budget_usd", "stages", "model", "endpoint", "snapshot_sha256", "limits", "context_sha256")
 CAP_KEYS = ("run_cap_usd", "stage_cap_usd", "worst_case_stage_usd", "ledger_ceiling_usd")
 
 
@@ -42,10 +42,15 @@ def default_limits(n_tasks: int = 4, smoke: bool = False) -> dict:
     return {"stage_caps_usd": caps, "max_tasks": n_tasks, "repeats": 1, "per_request_cap_usd": alloc.PER_REQUEST_CAP_USD, "max_retries_per_request": 0 if smoke else 1}
 
 
-def make_grant(*, job_id: str, owner: str, target_id: str, goal: str, budget_usd: float, model: str, endpoint: str, snapshot_sha256: str, stages=LIVE_STAGES, limits: dict | None = None) -> dict:
+def make_grant(*, job_id: str, owner: str, target_id: str, goal: str, budget_usd: float, model: str, endpoint: str, snapshot_sha256: str, stages=LIVE_STAGES, limits: dict | None = None, context: str | None = None) -> dict:
     g = {"job_id": job_id, "owner": owner, "run_id": job_id, "target_id": target_id, "goal": goal, "budget_usd": round(float(budget_usd), 6), "stages": list(stages), "model": model,
-         "endpoint": endpoint, "snapshot_sha256": snapshot_sha256, "limits": limits or default_limits()}
+         "endpoint": endpoint, "snapshot_sha256": snapshot_sha256, "limits": limits or default_limits(), "context_sha256": context_digest(context)}
     return {**g, "confirmed_at": time.time(), "grant_sha256": digest(g)}
+
+
+def context_digest(context: str | None) -> str:
+    """The client context is part of the approved scope: the grant carries its SHA-256 (empty string = no context), so a different context is a different grant."""
+    return canonical_hash(context) if context else ""
 
 
 def digest(fields: dict) -> str:
@@ -105,6 +110,8 @@ class Approver:
             raise GrantRefused("the taskgen manifest asks for more tasks or retries than the user approved", "scope")
         if stage == "investigate" and manifest.get("retries_per_request", 0) > lim["max_retries_per_request"]:
             raise GrantRefused("the investigate manifest asks for more retries than the user approved", "scope")
+        if manifest.get("client_context_sha256", "") != g["context_sha256"] and stage in ("taskgen", "investigate"):
+            raise GrantRefused("the manifest's client context is not the context the user approved", "scope")
         caps = _caps(manifest)
         if not caps or any(c > g["budget_usd"] + 1e-9 for c in caps):
             raise GrantRefused(f"a cap in the {stage} manifest (US${max(caps or [0]):.2f}) exceeds the approved budget (US${g['budget_usd']:.2f})", "budget")

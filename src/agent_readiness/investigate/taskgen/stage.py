@@ -147,7 +147,7 @@ def taskgen_stage(ctx: Context) -> dict:
     _run_gate(owner, profile, accepted, rejected)
     target = opts.get("n_tasks", DEFAULT_N)
     if ctx.llm is not None:
-        for i, req in enumerate(propose_mod.batch_requests(profile, focus, bound)):
+        for i, req in enumerate(propose_mod.batch_requests(profile, focus, bound, opts.get("context"))):
             rec, stop = _batch_result(run, i, req, ctx.llm, profile)      # Halt / gate refusal / anything unexpected propagates: critical, stops the stage; earlier batches are already persisted
             calls.append({"batch": i, "status": rec["status"], **rec["meta"]})
             batch = [Draft(**d) for d in rec["drafts"]]
