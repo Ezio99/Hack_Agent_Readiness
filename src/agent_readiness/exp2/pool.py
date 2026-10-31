@@ -22,9 +22,26 @@ def control_pages() -> dict[str, str]:
     return dict(_control_pages())
 
 
+def arm_texts() -> dict[str, dict[str, str]]:
+    """Page TEXT of every arm of the site: control, each single candidate variant and the combined build."""
+    return {name: dict(texts) for name, texts in _arm_texts()}
+
+
+@lru_cache(maxsize=None)
+def _arm_texts() -> tuple:
+    from bs4 import BeautifulSoup
+    out = []
+    for v in (*V.all_single(), V.parse("discoverability+availability+cost+compatibility")):
+        pages = {p: BeautifulSoup(b.decode(), "html.parser").get_text(" ") for p, b in build_site(v).items() if is_page(p)}
+        out.append((v.name, tuple(pages.items())))
+    return tuple(out)
+
+
+@lru_cache(maxsize=1)
 def build_pool() -> tuple[Report, list[T.Candidate]]:
+    """Generate and verify (cached: deterministic, and the result is treated as read-only)."""
     cands = T.generate()
-    return verify(cands, control_pages()), cands
+    return verify(cands, control_pages(), arm_texts()), cands
 
 
 def facts_invariance(variant: V.Variant | str) -> list[str]:

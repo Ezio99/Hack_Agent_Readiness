@@ -5,7 +5,10 @@ import asyncio
 import pytest
 from playwright.async_api import async_playwright
 
-from agent_readiness.exp2 import flow, instances, pool as P, snapshot as S, study, tasks as T
+import json
+from pathlib import Path
+
+from agent_readiness.exp2 import evidence as E, flow, instances, pool as P, snapshot as S, study, tasks as T
 from agent_readiness.investigate.sitemodel.server import Mirror
 from agent_readiness.investigate.trials.runner import run_trial
 from agent_readiness.scanner.serve import serve_app
@@ -36,12 +39,18 @@ async def test_mirror_serves_the_snapshot_with_working_css_and_images(variant, p
 
 
 def _instance(c: T.Candidate, snap, part="investigation"):
-    return instances.instance(study.public_task(c, part), instances.private_record(c), snap.sha256[:12])
+    return instances.instance(study.public_task(c, part), instances.private_record(c), snap.sha256[:12], mock=True)
 
 
 def _pick(pool):
     want = [("total_cost", "single"), ("availability", "category_weekend"), ("availability", "next_free"), ("compatibility", "fits_yesno"), ("kit_vs_items", "choice_own_gear"), ("discovery", "need")]
     return [next(c for c in pool.accepted if (c.family, c.sub) == w) for w in want]
+
+
+def _evidence(c, rec):
+    """Evidence sufficiency from what the trial stored the model as having seen (observations.json)."""
+    obs = json.loads((Path(rec["artifact_path"]) / "observations.json").read_text())
+    return E.assess(c.facts, obs)
 
 
 async def _run_all(tmp_path, cands, behavior):
@@ -59,11 +68,16 @@ def test_every_answer_kind_runs_through_the_unchanged_runner_and_is_graded_indep
     good = asyncio.run(_run_all(tmp_path, cands, "correct"))
     for c, rec in zip(cands, good):
         ev = rec["evaluation"]
-        assert rec["outcome"]["run_status"] == "completed" and ev["passed"] and ev["evidence_backed"], (c.kind, c.question, rec["outcome"], ev)
+        assert rec["outcome"]["run_status"] == "completed" and ev["passed"], (c.kind, c.question, rec["outcome"], ev)
         paths = [e["path"] for e in rec["mirror"]["log"]]
-        assert set(c.evidence) <= set(paths) and rec["mirror"]["blocked"] == [] and rec["trial"]["mode"] == "mock"
-    lazy = asyncio.run(_run_all(tmp_path, cands[:1], "lazy"))
-    assert lazy[0]["evaluation"]["passed"] and not lazy[0]["evaluation"]["evidence_backed"], "a correct answer without visiting the evidence pages is not evidence-backed"
+        assert set(c.visit) <= set(paths) and rec["mirror"]["blocked"] == [] and rec["trial"]["mode"] == "mock"
+        assert _evidence(c, rec)["sufficient"], (c.question, _evidence(c, rec))      # needles written from the data match the text the model is really shown
+    lazy = asyncio.run(_run_all(tmp_path, cands, "lazy"))
+    assert lazy[0]["evaluation"]["passed"]
+    for c, r in zip(cands, lazy):
+        if c.family == "discovery":
+            continue                                                                  # a featured item's summary is on the home page, so a discovery answer CAN be evidenced from the start page: the rule is about what was shown, not where
+        assert not _evidence(c, r)["sufficient"], f"{c.family}/{c.sub}: answering after the start page only is not evidence-sufficient, even when correct"
     wrong = asyncio.run(_run_all(tmp_path, cands[:2], "wrong"))
     assert all(not r["evaluation"]["passed"] for r in wrong)
 
@@ -79,3 +93,38 @@ def test_the_driver_runs_the_pilot_in_mock_mode_then_waits_at_the_owner_checkpoi
     assert run.ledger(20.0).entries() == [], "mock mode never reserves or spends"
     run.approve("pilot_review", r.manifest_sha256, "test")
     assert pipe.run(ctx, until="pilot_review").status == "done" and run.has_artifact("main-plan")
+
+
+def test_evidence_is_page_agnostic_and_arm_consistent_through_the_real_model_view(tmp_path):
+    """Same scripted visit (the product page only) on two arms: the cost variant's product page carries the total, so the answer is evidenced; on the control the same view lacks the terms. The rule is identical."""
+    pool, _ = P.build_pool()
+    c = next(c for c in pool.accepted if c.family == "total_cost" and c.sub == "single" and c.params["waiver"] and len(c.facts[0].routes) == 2)      # a task whose total the cost variant displays
+    product = f"/hire/{T.PRODUCT[c.params['p']].slug}"
+
+    async def run(variant):
+        snap = S.snapshot(variant)
+        cand = type(c)(**{**c.__dict__, "visit": (product,)})
+        return await run_trial(_instance(cand, snap), snap, provider="mock", output=tmp_path / variant)
+    ctrl, cost = asyncio.run(run("control")), asyncio.run(run("cost"))
+    assert ctrl["evaluation"]["passed"] and cost["evaluation"]["passed"], "correctness is graded the same way in both arms"
+    assert not _evidence(c, ctrl)["sufficient"] and _evidence(c, ctrl)["missing"] == ["cost inputs"]
+    assert _evidence(c, cost)["sufficient"], "the cost variant's product page alone shows the total (an alternative route)"
+    assert ctrl["metrics"]["page_views"] == cost["metrics"]["page_views"], "efficiency is reported separately from evidence and correctness"
+    terms = type(c)(**{**c.__dict__, "visit": (product, "/hire-terms")})
+    snap = S.snapshot("control")
+    both = asyncio.run(run_trial(_instance(terms, snap), snap, provider="mock", output=tmp_path / "control2"))
+    assert _evidence(c, both)["sufficient"], "on the control, product page + terms page is the other route"
+
+
+def test_a_correct_availability_answer_from_the_product_page_alone_is_not_sufficient_on_the_control(tmp_path):
+    pool, _ = P.build_pool()
+    c = next(c for c in pool.accepted if c.family == "availability" and c.sub == "day")
+    product = f"/hire/{T.PRODUCT[c.params['p']].slug}"
+
+    async def run(variant):
+        snap = S.snapshot(variant)
+        cand = type(c)(**{**c.__dict__, "visit": (product,)})
+        return await run_trial(_instance(cand, snap), snap, provider="mock", output=tmp_path / variant)
+    ctrl, avail = asyncio.run(run("control")), asyncio.run(run("availability"))
+    assert not _evidence(c, ctrl)["sufficient"], "the control's product page says only whether the item is free today"
+    assert _evidence(c, avail)["sufficient"], "the availability variant's 'Dates at a glance' panel is an alternative route"

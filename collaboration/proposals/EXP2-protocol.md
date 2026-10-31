@@ -19,6 +19,7 @@ Run: `readiness exp2 assess [--variant V]` and the browser tests in `tests/test_
 | **Generator bug found by the independent recomputation path:** a late-binding closure made every product-to-accessory task recompute for the wrong product | fixed; the verifier rejects any such disagreement |
 | Variants | tested to change *access* only: every price, rule, specification and calendar cell read from a variant's pages equals the control's |
 | Existing LLM task generation (`taskgen`) | **not used**: its four criterion kinds (page fact, reach page, item set, extremum) cannot express dated availability, totals or compatibility. Replaced for Ironbark by deterministic generation with typed answers; the existing runner and `TaskInstance` grading interface are reused |
+| **Evidence rule redesigned** (this revision): the first rule required particular pages and, with the scripted agent, was both too strict (required the product page where the calendar holds the answer) and too loose (accepted a correct guess) | replaced by fact-based, page-agnostic sufficiency (section 3) |
 | Not integrated in this PR | the investigator stage on an Ironbark run (protocol below), and the variant-test driver (rules and analysis are implemented and tested; the driver is a follow-up) |
 
 ## 3. Website-aware task generation and verification
@@ -35,13 +36,28 @@ Code: `src/agent_readiness/exp2/{tasks,verify,facts,answers}.py`. No model write
 | compatibility | which accessory fits a machine, which items an accessory fits, yes/no fits, fuel price |
 | planning | cheapest item meeting spec constraints that is also free on every day of a range (and its total), two-job renovation totals, budget sets |
 
-**Independent verification** (every candidate, `verify.py`): (1) the truth computed from the source data must equal the truth **recomputed from the rendered control pages** (parsed text, never `data.py`); (2) no ties, no empty or oversized sets, dates inside the booking window; (3) every evidence page exists and is reachable within 4 clicks; (4) the question does not contain the answer or an internal catalogue code, and does not name pages ("the Kits page"); (5) the grader accepts the canonical answer, rejects wrong answers and rejects a hedge that offers the right and a wrong answer; (6) no duplicate fingerprint, question or (family, template, truth, evidence) combination.
-**Result:** 388 generated, **326 accepted, 62 rejected** — 54 as trivial repeats, 7 empty answer sets, 1 as ambiguous (two Landscaping items tie on the highest deposit). Answer kinds: money, number, integer, date, yes/no, choice, product, product set, accessory. Grading is exact on a normalised form; hedges, ranges and several values are never an answer.
-**What the agent receives:** the question text (with a fixed answer-format sentence) and a one-field answer schema; nothing else. Truth, expected text and evidence pages live only in the run's private criteria (never in the public plan, never shown to the investigator). A test scans the plan for leaks.
-**Evidence rule:** a pass is "evidence-backed" only if the agent visited the product (and for kit tasks kit) pages that hold the facts. Evidence pages are identical for every variant, so a variant cannot gain or lose a pass by changing which page shows the number.
+**Independent verification** (every candidate, `verify.py`): (1) the truth computed from the source data must equal the truth **recomputed from the rendered control pages** (parsed text, never `data.py`); (2) no ties, no empty or oversized sets, dates inside the booking window; (3) every evidence page exists and is reachable within 4 clicks; (4) the question does not contain the answer or an internal catalogue code, and does not name pages ("the Kits page"); (5) the grader accepts the canonical answer, rejects wrong answers and rejects a hedge that offers the right and a wrong answer; (6) every fact has a route satisfiable on **every arm** of the site; (7) no duplicate fingerprint, question or (family, template, truth, visit-set) combination.
+**Result:** 388 generated, **330 accepted, 58 rejected** — 50 as trivial repeats, 7 empty answer sets, 1 as ambiguous (two Landscaping items tie on the highest deposit). Answer kinds: money, number, integer, date, yes/no, choice, product, product set, accessory. Grading is exact on a normalised form; hedges, ranges and several values are never an answer.
+**What the agent receives:** the question text (with a fixed answer-format sentence) and a one-field answer schema; nothing else. Truth, expected text and the evidence facts live only in the run's private criteria (never in the public plan, never shown to the investigator). A test scans the plan for leaks.
+
+### Three separate measurements per trial (revised evidence rule)
+| measurement | question it answers | how it is computed | never affected by |
+|---|---|---|---|
+| **correctness** | is the answer right? | the typed grader against the independently derived truth | evidence, effort |
+| **evidence sufficiency** | was the model *shown* what the answer depends on? | `exp2/evidence.py`, over the observations the trial stored (what the model saw) | which page, how many steps, correctness |
+| **browsing efficiency** | how much effort did it take? | model requests, page views, distinct pages, and requests ÷ (pages the task needs + 2) | correctness, evidence |
+
+The **primary outcome** is the *supported pass*: correct **and** evidence sufficient (a correct answer the model could not have derived from what it was shown does not count, which guards against lucky guesses on yes/no and choice tasks). Raw correctness, sufficiency among correct answers, and the efficiency numbers are reported alongside it, never folded into it.
+**No particular page is required.** Each task lists the *facts* its answer depends on; each fact lists every *route* by which the site can show it (the calendar, the product page, a listing card, the terms page, or a panel a candidate variant adds). A fact is satisfied by ANY of its routes; a route needs all its clauses; a clause is a decisive string (a rate, a rule, a dated cell) seen on a page that also shows a signature identifying the right item. Whitespace and the model-visible element markers are normalised. Examples: a total-cost task is evidenced on the control by the product page *plus* the terms page, and on the cost variant by the product page alone (it shows the total); a dated-availability task by the calendar page *or* by the "Dates at a glance" panel of the availability variant, but **not** by the control's product page alone (which only says whether the item is free *today*).
+**Consistent across arms:** the rule and the fact lists are identical for every arm. A variant that displays a fact somewhere new only supplies another route. Verification proves, for **every arm** (control, each variant, the combined build), that every fact has at least one route satisfiable from the rendered pages, so no task is winnable by evidence in one arm and not in another; tampering with a needle makes the pool reject the task. The pre-registered comparison additionally audits evidence symmetry: if the share of *correct answers without sufficient evidence* differs between the arms by more than 15 points, no improvement is claimed.
+**Scripted (mock) agents** still need a route to walk; they take it from a `visit` hint that is used **only in mock mode**. Live trials carry no page requirement at all.
+
+### Deterministic benchmark generation versus autonomous task discovery
+The Ironbark generator is a **deterministic benchmark task generator**: it derives tasks from a site whose source-of-truth data we own, so each answer can be verified independently by recomputation from the rendered pages. That is its job — to give the experiments **independent ground truth**. It is **not the product architecture** and it is **not replaced** by the future work below.
+**Future requirement (roadmap, not in this PR):** Agent Readiness must eventually use an LLM to **autonomously explore an unfamiliar website, understand its business workflows and generate realistic, independently verifiable customer tasks**. The benchmark is how we will *measure* that agent: run it on Ironbark without access to the source data, and compare its tasks with the verified families (coverage, invented-but-valid tasks, tasks that fail verification). On an unfamiliar site every discovered task still needs an independent verification path; a task cannot be graded by the agent that proposed it. See [docs/PRODUCT_ROADMAP.md](../../docs/PRODUCT_ROADMAP.md#autonomous-task-discovery-future-architecture-requirement--not-implemented).
 
 ## 4. Proposed baseline study
-Control site only. 40 tasks, 54 trials, fixed order (`plan_sha256 115dce98…`, in `study-plan.json`). Difficulty is a *design estimate* from the number of pages a task needs on the control site (easy ≤ 2, medium 3–4, hard ≥ 5); the baseline will measure real difficulty.
+Control site only. 40 tasks, **48 trials**, fixed order (`plan_sha256 4f7056bf…`, in `study-plan.json`). Difficulty is a *design estimate* from the number of pages a task needs on the control site (easy ≤ 2, medium 3–4, hard ≥ 5); the baseline will measure real difficulty.
 
 | family | tasks | easy / med / hard | investigation / holdout | answer kinds | sensitive to variant |
 |---|---|---|---|---|---|
@@ -56,8 +72,8 @@ Control site only. 40 tasks, 54 trials, fixed order (`plan_sha256 115dce98…`, 
 | **total** | **40** | 9 / 24 / 7 | **27 / 13** | | discoverability 7, availability 11, cost 17, compatibility 8 |
 
 * **Partition:** stratified by family; roughly a third are **holdout**. Holdout tasks are never shown to the investigator, never used to decide which variant to test, and only confirm or withdraw a later comparison.
-* **Repeats:** every task once (k = 1); **14 tasks twice** (both partitions, every family), to estimate run-to-run variation, which EXP-B lacked.
-* **Order:** repeat 1 of every task, interleaved by family, then the 14 repeats. The first 8 trials (the pilot) cover 8 different families.
+* **Repeats:** every task once (k = 1); **8 tasks twice** (4 investigation + 4 holdout, 7 families) for an early run-to-run estimate. (Reduced from 14: the variant test's own contemporaneous control runs every affected task twice and is the main noise estimate; see section 6.)
+* **Order:** repeat 1 of every task, interleaved by family, then the 8 repeats. The first 8 trials (the pilot) cover 8 different families.
 * **Negative controls for every variant:** every task not sensitive to it (at least 23 of 40 for each) plus the 5 insensitive ones overall.
 * **Per-task limits:** 10–27 model requests, 10–27 steps, 600 s, scaled to the pages a task needs.
 
@@ -68,12 +84,14 @@ All figures are **calculated at published prices (US$1.25 / 4.25 per million inp
 |---|---|---|---|---|
 | 0. offline work, mock runs, tests | — | US$0 | — | none (this PR) |
 | 1. baseline pilot (first 8 trials) | 8 | 1.44 | **1.90** | owner approves the exact manifest hash |
-| checkpoint: pilot review | — | 0 | — | owner approves measured rate and the (possibly trimmed) main plan |
-| 2. baseline main | 46 (fewer if trimmed) | 7.59 | **9.90** | owner approves the exact manifest hash |
-| 3. investigator (investigation partition only) | ~8 requests | ~0.04–0.3 (EXP-B's investigator cost US$0.037 on a tiny site) | **0.80** | owner approves; *driver not in this PR* |
-| 4. controlled variant tests | after baseline | whatever remains | **4.90 minimum** (up to ~7.7 if the baseline spends only its expected US$9.0) | owner approves each variant's manifest |
+| checkpoint: pilot review | — | 0 | — | owner approves the measured rate and the (possibly trimmed) main plan |
+| 2. baseline main | 40 (fewer if trimmed) | 6.74 | **8.80** | owner approves the exact manifest hash |
+| 3. investigator (investigation partition only) | ~8 requests | ~0.04–0.3 (EXP-B's investigator cost US$0.037 on a tiny site) | **0.50** | owner approves; *driver not in this PR* |
+| 4. **one** controlled variant test | 30 | **5.03–6.58** depending on the variant (cap = that × 1.3, never above what remains) | what remains: **6.30** if every earlier phase spends its cap, ≈ 9 if the baseline spends only its expected US$8.2 | owner approves the exact manifest; *driver not in this PR* |
 | reserve | — | — | **2.50**, never allocated | only by a new owner decision |
 | **ceiling** | | | **20.00** | Experiment 2's own ledger refuses beyond it |
+
+**Material changes in this revision (US$20 ceiling and US$2.50 reserve unchanged; pilot unchanged at 8 trials):** (1) the baseline's second repeats fall from 14 to 8 (54 → 48 trials; main phase 46 → 40 trials, cap 9.90 → 8.80); (2) the investigator cap falls from 0.80 to 0.50; (3) a controlled variant test now costs **US$5.0–6.6 (30 trials), not the US$3–4 previously quoted**, because the pre-registered rule needs K ≥ 2 per cell in **both** arms; (4) the budget therefore supports **one** variant test, not "one to two" — a second would need roughly another US$5–6.5 and a new owner decision (for example from the reserve).
 
 * **Durable accounting:** a separate run directory and ledger (`investigations/<run>/spend/ledger.jsonl`, ceiling 20.0), fsync'd, append-only; the existing reserve-before-send gate reserves a conservative upper bound **before** every request and replaces it with the calculated actual only when the provider reports usage; interrupted, timed-out or usage-less requests stay counted in full, also across restarts. EXP-B's ledger and the programme ledger are never opened.
 * **Limits:** per request US$0.05, per trial US$0.75, per phase as above (over a phase cap the gate refuses and the phase stops — no top-up), retries 0, ≤ 30 requests per trial.
@@ -91,18 +109,22 @@ Which variant deserves a controlled test is decided by rule **`exp2-eligibility-
 | cost | 17 | arithmetic or rule errors, or many pages read for totals |
 | compatibility | 8 | wrong or slow accessory and kit answers |
 
-**If eligible**, the controlled test is pre-registered as **`exp2-compare-v1`** (the rules and their SHA-256 are printed by `readiness exp2 rules` and written into every manifest): variant arm vs a **contemporaneous** control arm on the same tasks (the EXP-B lesson: compare against a fresh control, not only an earlier baseline), at least **6 affected tasks** (both partitions), K ≥ 2 per cell; improvement requires a paired sign-flip p ≤ 0.10 with an evidence-backed-pass gain ≥ +0.15 or a ≥ 25 % cut in requests without lost passes; **drift check** (the contemporaneous control must stay within 25 % of the baseline's requests or no improvement is claimed); **negative controls** (≥ 3 tasks the variant does not address must not move > 25 % or lose passes, else *uninterpretable*); **holdout guard** (an improvement is withdrawn if the held-out tasks get worse). Allowed claim: an association measured under control on this site, these tasks, this agent and model. Not allowed: "proved", general improvement, or a claim about other sites.
-**Cost of one variant test:** about 18 trials (6 affected tasks × variant K = 2 + control K = 1 + the shared baseline repeats) ≈ **US$3.0**; 24 trials (control K = 2) ≈ US$4.0. The remaining budget therefore supports roughly **one to two** variants; the order is by baseline evidence, not by our expectations.
+**If eligible**, the controlled test is pre-registered as **`exp2-compare-v1`** (printed by `readiness exp2 rules`, hashed into every manifest) and **sized in code** by `study.variant_test_plan` so that the rule, the plan and the budget cannot disagree:
+* **6 affected tasks** (3 investigation + 3 holdout where available), **K = 2 trials per task in EACH arm** (variant and a **contemporaneous control**, run in the same session with the arms alternating which goes first), plus **3 negative-control tasks, K = 1 per arm**.
+* Trial count: 6 × 2 × 2 + 3 × 1 × 2 = **30 trials**; expected cost **US$5.03 (compatibility), 5.24 (discoverability), 5.31 (cost), 6.58 (availability)**; see `collaboration/experiments/EXP2/study-plan.json` → `variant_tests`.
+* The comparison **excludes and lists** any affected task with fewer than 2 non-void trials in an arm (and any negative control with fewer than 1), so a cheaper design cannot slip in under the same rule.
+* Verdict rules: paired sign-flip p ≤ 0.10 with a supported-pass gain ≥ +0.15, or a ≥ 25 % cut in requests without lost passes; **drift** (the contemporaneous control must stay within 25 % of the baseline's requests); **negative controls** (≥ 3 pairs; > 1/3 moving beyond 25 % or losing passes → *uninterpretable*); **evidence symmetry** (see section 3); **holdout guard**. Allowed claim: an association measured under control on this site, these tasks, this agent and model; not "proved", not a general improvement.
+* The baseline's repeated tasks and the contemporaneous control together give the noise estimate EXP-B lacked.
 
 ## 7. Investigator phase (design only here)
 After the baseline the existing investigator would see **investigation-partition** trials only (never holdout), propose labelled hypotheses, and any promoted finding is verified deterministically as in EXP-B. Its recommended change must map to a variant (or a new one, which would need its own approval). Not implemented in this PR: the investigator stage currently reads the EXP-B criteria format, so an Ironbark adapter is the next piece of work.
 
 ## 8. Approval requests (nothing proceeds without them)
-1. **Review and approve this protocol and the plan** (`plan_sha256 115dce98…`) or ask for changes to quotas, repeats or the pilot size.
-2. **Phase 1 (pilot) manifest approval** before any paid call: ≤ 8 trials, hard cap US$1.90, `--allow-model-calls`.
-3. **Pilot review** approval, then **Phase 2 (main baseline)** manifest approval, hard cap ≤ US$9.90.
-4. Decision on **who/what implements the investigator adapter and variant-test driver** (next PR) before phase 3 and 4.
-5. Confirm the **US$2.50 reserve** and the **US$20 ceiling** as Experiment 2's own, separate from the programme ledger (which this PR does not touch).
+1. **Review this revision** (plan hash `4f7056bf…`, evidence rule, K = 2 per arm, budget table).
+2. **Phase 1 (pilot) — a fresh exact-manifest approval is required** (the manifest changed). Up to 8 trials, hard cap US$1.90, `--allow-model-calls`. The current pilot manifest SHA-256 is printed by `readiness exp2 run <id> --mode live` and quoted in the PR.
+3. After the pilot, approve the **pilot review**, then **Phase 2 (main baseline)** (cap ≤ US$8.80).
+4. Decide who/what builds the **investigator adapter and the variant-test driver** (next PR) before phases 3 and 4.
+5. Confirm the **US$2.50 reserve** and the **US$20 ceiling** as Experiment 2's own, separate from the programme ledger (not touched here), and accept that **one** variant test is budgeted.
 
 ## 9. Limitations
 Single site, single agent profile and model (`suite-v2-compat1`, `muse-spark-1.3`); sequential trials (time drift mitigated by contemporaneous controls, not eliminated); a "today" fixed at 2 Nov 2026 so dates are reproducible; trial counts are small and cost-limited, so results will be descriptive with wide uncertainty; difficulty labels are design estimates; the site is fictional and illustrated rather than photographed; the planning cost rate is an assumption until the pilot measures it.

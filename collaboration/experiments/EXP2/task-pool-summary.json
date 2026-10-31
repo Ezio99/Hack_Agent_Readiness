@@ -1,9 +1,9 @@
 {
   "generated": 388,
-  "accepted": 326,
-  "rejected": 62,
+  "accepted": 330,
+  "rejected": 58,
   "rejections_by_reason": {
-    "same template, truth and evidence as an accepted task": 54,
+    "same template, truth and visit set as an accepted task": 50,
     "set size 0 outside 1..6": 7,
     "ambiguous on the pages": 1
   },
@@ -15,7 +15,7 @@
     "total_cost": 72,
     "delivery_deposit": 27,
     "compatibility": 19,
-    "planning": 30
+    "planning": 34
   },
   "by_template": {
     "lookup/deposit": 16,
@@ -47,12 +47,12 @@
     "planning/cheapest_feasible": 6,
     "planning/plan_total": 6,
     "planning/two_jobs_total": 12,
-    "planning/budget_set": 6
+    "planning/budget_set": 10
   },
   "by_difficulty": {
     "easy": 118,
-    "medium": 163,
-    "hard": 45
+    "medium": 165,
+    "hard": 47
   },
   "by_kind": {
     "money": 140,
@@ -61,14 +61,14 @@
     "integer": 12,
     "product": 35,
     "date": 28,
-    "products": 40,
+    "products": 44,
     "choice": 4,
     "accessory": 4
   },
   "sensitive_to": {
     "discoverability": 37,
-    "availability": 101,
-    "cost": 130,
+    "availability": 105,
+    "cost": 134,
     "compatibility": 29
   },
   "negative_controls": 63,
@@ -77,84 +77,84 @@
       "task_id": "ib-7a073f3356",
       "family": "availability",
       "sub": "day",
-      "reason": "same template, truth and evidence as an accepted task",
+      "reason": "same template, truth and visit set as an accepted task",
       "question": "Can the Cordless drill driver kit 18 V be hired on Tuesday 10 November 2026?"
     },
     {
       "task_id": "ib-7c2a1f022b",
       "family": "availability",
       "sub": "day",
-      "reason": "same template, truth and evidence as an accepted task",
+      "reason": "same template, truth and visit set as an accepted task",
       "question": "Can the SDS-Plus rotary hammer 26 mm be hired on Friday 20 November 2026?"
     },
     {
       "task_id": "ib-a24aa5af85",
       "family": "availability",
       "sub": "day",
-      "reason": "same template, truth and evidence as an accepted task",
+      "reason": "same template, truth and visit set as an accepted task",
       "question": "Can the Electric demolition hammer 15 kg be hired on Thursday 3 December 2026?"
     },
     {
       "task_id": "ib-6f742e474a",
       "family": "availability",
       "sub": "day",
-      "reason": "same template, truth and evidence as an accepted task",
+      "reason": "same template, truth and visit set as an accepted task",
       "question": "Can the Diamond core drill 152 mm (wet) be hired on Tuesday 17 November 2026?"
     },
     {
       "task_id": "ib-4a6a92f8d7",
       "family": "availability",
       "sub": "day",
-      "reason": "same template, truth and evidence as an accepted task",
+      "reason": "same template, truth and visit set as an accepted task",
       "question": "Can the Wet tile saw 250 mm be hired on Saturday 14 November 2026?"
     },
     {
       "task_id": "ib-6b1ca1348e",
       "family": "availability",
       "sub": "day",
-      "reason": "same template, truth and evidence as an accepted task",
+      "reason": "same template, truth and visit set as an accepted task",
       "question": "Can the Petrol cut-off saw 350 mm be hired on Tuesday 17 November 2026?"
     },
     {
       "task_id": "ib-9791df471c",
       "family": "availability",
       "sub": "day",
-      "reason": "same template, truth and evidence as an accepted task",
+      "reason": "same template, truth and visit set as an accepted task",
       "question": "Can the Cordless hedge trimmer 60 cm be hired on Thursday 3 December 2026?"
     },
     {
       "task_id": "ib-5b123f314b",
       "family": "availability",
       "sub": "day",
-      "reason": "same template, truth and evidence as an accepted task",
+      "reason": "same template, truth and visit set as an accepted task",
       "question": "Can the Petrol lawn scarifier 40 cm be hired on Tuesday 10 November 2026?"
     },
     {
       "task_id": "ib-92045eecf0",
       "family": "availability",
       "sub": "day",
-      "reason": "same template, truth and evidence as an accepted task",
+      "reason": "same template, truth and visit set as an accepted task",
       "question": "Can the Stump grinder 13 hp be hired on Friday 6 November 2026?"
     },
     {
       "task_id": "ib-0d23aa6eff",
       "family": "availability",
       "sub": "day",
-      "reason": "same template, truth and evidence as an accepted task",
+      "reason": "same template, truth and visit set as an accepted task",
       "question": "Can the Wood chipper 100 mm be hired on Tuesday 17 November 2026?"
     },
     {
       "task_id": "ib-248c4dd1ec",
       "family": "availability",
       "sub": "day",
-      "reason": "same template, truth and evidence as an accepted task",
+      "reason": "same template, truth and visit set as an accepted task",
       "question": "Can the Fibreglass extension ladder 7.3 m be hired on Tuesday 17 November 2026?"
     },
     {
       "task_id": "ib-da4425bc31",
       "family": "availability",
       "sub": "day",
-      "reason": "same template, truth and evidence as an accepted task",
+      "reason": "same template, truth and visit set as an accepted task",
       "question": "Can the Reversible plate compactor 90 kg be hired on Saturday 14 November 2026?"
     }
   ]

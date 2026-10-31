@@ -21,6 +21,7 @@ from . import costs
 from .instances import instance, private_record
 from .pool import build_pool, facts_invariance, summary
 from .snapshot import assess, snapshot
+from .analysis import RULES_SHA256
 from .study import PILOT_TRIALS, QUOTAS, REPEAT_TASKS, build_plan
 from ..sites.ironbark import variants as V
 
@@ -104,14 +105,14 @@ def manifest(ctx: Context, phase: str) -> dict:
             "trials": [f"{t['task_id']}-r{t['repeat']}" for t in trials], "trial_count": len(trials), "trial_order_sha256": canonical_hash(trials), "model": cfg.model, "endpoint": cfg.base_url,
             "agent_profile": "suite-v2-compat1", "phase_cap_usd": _phase_cap(ctx, phase), "expected_phase_cost_usd": cost["p50_usd"], "per_trial_cap_usd": costs.PER_TRIAL_CAP_USD,
             "per_request_cap_usd": costs.PER_REQUEST_CAP_USD, "max_requests_per_trial": costs.MAX_STEPS, "retries": 0, "ledger": "this experiment's own ledger (investigations/<run>/spend), never EXP-B's",
-            "ledger_ceiling_usd": costs.CEILING_USD, "reserve_usd": costs.RESERVE_USD, "allocation": plan["allocation"], "stopping_conditions": STOPPING_CONDITIONS,
+            "ledger_ceiling_usd": costs.CEILING_USD, "reserve_usd": costs.RESERVE_USD, "allocation": plan["allocation"], "stopping_conditions": STOPPING_CONDITIONS, "evidence_rule": EVIDENCE_RULE, "rules_sha256": RULES_SHA256,
             "cost_basis": "calculated at published prices; planning assumptions in exp2/costs.py; not a bill", **extra}
 
 
 def _steps(ctx: Context, trials: list[dict], cap: float) -> list[dict]:
     plan, priv, snap = _load(ctx)
     tasks = {t["task_id"]: t for t in plan["tasks"]}
-    insts = {tid: instance(tasks[tid], priv[tid], snap.sha256[:12]) for tid in tasks}
+    insts = {tid: instance(tasks[tid], priv[tid], snap.sha256[:12], mock=ctx.run.mode == "mock") for tid in tasks}
     scope = frozenset(f"baseline-{t['task_id']}-r{t['repeat']}" for t in trials)
     return [{"label": "baseline", "prefix": "baseline", "snap": snap, "inst": insts[t["task_id"]], "task": {"task_id": t["task_id"], "partition": tasks[t["task_id"]]["partition"]}, "repeat": t["repeat"],
              "scopes": [(scope, cap, "stage")]} for t in trials]
@@ -122,6 +123,23 @@ def _run_phase(ctx: Context, phase: str) -> dict:
     gm = {"ledger_ceiling_usd": costs.CEILING_USD, "run_cap_usd": costs.PER_TRIAL_CAP_USD, "per_request_cap_usd": costs.PER_REQUEST_CAP_USD, "max_requests_per_trial": costs.MAX_STEPS}
     out = run_plan(ctx, _steps(ctx, _phase_trials(ctx, phase), m["phase_cap_usd"]), manifest_=gm)
     return {"trials": out["trials"], "void": out["void"], "manifest_sha256": canonical_hash(m)}
+
+
+EVIDENCE_RULE = ("evidence sufficiency is assessed from what the model was SHOWN (exp2/evidence.py): the facts an answer depends on must appear on some page, by any route; no particular page is required, "
+                 "the rule is identical in every arm, and it is reported separately from correctness and from browsing efficiency")
+
+
+def annotate(run: InvestigationRun) -> dict[str, dict]:
+    """Evidence-sufficiency assessment per recorded trial, from the private task facts and the observations the trial stored."""
+    import json
+    from . import evidence as E
+    priv = run.private("criteria")
+    out = {}
+    for rec in trial_records(run):
+        f = run.dir / rec["trial_dir"] / "observations.json"
+        obs = json.loads(f.read_text()) if f.exists() else None
+        out[rec["trial_id"]] = E.assess(E.from_json(priv[rec["task_id"]]["facts"]), obs) if obs is not None else {"sufficient": False, "missing": ["observations unavailable"], "facts": 0, "pages_seen": 0}
+    return out
 
 
 def trial_records(run: InvestigationRun) -> list[dict]:
@@ -170,7 +188,7 @@ def review_stage(ctx: Context) -> dict:
 def report_stage(ctx: Context) -> dict:
     from .analysis import baseline_summary
     plan = ctx.run.artifact("study-plan")
-    out = baseline_summary(trial_records(ctx.run), plan)
+    out = baseline_summary(trial_records(ctx.run), plan, annotate(ctx.run))
     ctx.run.write_artifact("baseline-report", out)
     return {"trials": out["trials"], "void": out["void"]}
 

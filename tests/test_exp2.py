@@ -133,7 +133,7 @@ def test_every_accepted_truth_equals_the_independently_recomputed_one(pool, cont
 
 def test_the_verifier_rejects_real_problems_with_reasons(pool):
     reasons = {r["reason"].split(":")[0] for r in pool[0].rejected}
-    assert {"set size 0 outside 1..6", "ambiguous on the pages", "same template, truth and evidence as an accepted task"} <= reasons
+    assert {"set size 0 outside 1..6", "ambiguous on the pages", "same template, truth and visit set as an accepted task"} <= reasons
     assert any("tie" in r["reason"] for r in pool[0].rejected), "the tied highest deposit (two items at $500) must be rejected as ambiguous"
 
 
@@ -142,7 +142,7 @@ def _first(pool, family, sub):
 
 
 def _check(c, control_pages):
-    return Vf.check(c, PageFacts(control_pages), Vf.link_depths(control_pages), control_pages)
+    return Vf.check(c, PageFacts(control_pages), Vf.link_depths(control_pages), control_pages, P.arm_texts())
 
 
 def test_verifier_catches_a_wrong_truth_a_leak_a_missing_page_and_a_weak_grader(pool, control_pages):
@@ -152,7 +152,7 @@ def test_verifier_catches_a_wrong_truth_a_leak_a_missing_page_and_a_weak_grader(
     assert "disagree" in _check(wrong, control_pages)
     leak = copy.copy(base); leak.question = base.question + f" (Hint: it is ${base.truth:,.2f}.)"
     assert "contains the answer" in _check(leak, control_pages)
-    gone = copy.copy(base); gone.evidence = ("/hire/does-not-exist",)
+    gone = copy.copy(base); gone.visit = ("/hire/does-not-exist",)
     assert "does not exist" in _check(gone, control_pages)
     code = copy.copy(base); code.question = base.question + " Product IB-DRL-003."
     assert "internal catalogue code" in _check(code, control_pages)
@@ -198,6 +198,7 @@ def test_the_plan_is_deterministic_balanced_and_stratified(plan, pool):
     assert c["by_family"] == study.QUOTAS and c["tasks"] == sum(study.QUOTAS.values()) and c["trials"] == c["tasks"] + study.REPEAT_TASKS
     assert set(c["by_difficulty"]) == {"easy", "medium", "hard"} and c["investigation"] + c["holdout"] == c["tasks"]
     assert not plan["warnings"] and all(n >= study.MIN_AFFECTED for n in c["sensitive_to"].values()) and c["negative_control_tasks"] >= 4
+    assert c["trials"] == c["tasks"] + study.REPEAT_TASKS == 48
     fams = {}
     for t in plan["tasks"]:
         fams.setdefault(t["family"], []).append(t["partition"])
@@ -227,9 +228,10 @@ def test_no_quota_selection_repeats_one_template_too_often(plan, pool):
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------------- budget and cost model
 def test_the_allocation_fits_under_the_experiment_ceiling_and_never_touches_the_reserve(plan):
     a = plan["allocation"]
-    assert a["ceiling_usd"] == 20.0 and a["reserve_usd"] == 2.5 and a["fits"]
+    assert a["ceiling_usd"] == 20.0 and a["reserve_usd"] == 2.5 and a["fits"] and a["investigator_cap_usd"] == 0.5
     assert a["baseline_pilot_cap_usd"] + a["baseline_main_cap_usd"] + a["investigator_cap_usd"] + a["variant_tests_cap_usd"] == pytest.approx(a["allocatable_usd"], abs=0.011)
-    assert a["variant_tests_cap_usd"] >= 3.0, "enough is left for at least one controlled variant test"
+    assert a["fits_one_variant_test"] and a["variant_tests_cap_usd"] >= a["one_variant_test_expected_usd"][0], "at least one pre-registered variant test fits even if the baseline spends its caps"
+    assert a["variant_tests_cap_usd"] < 2 * a["one_variant_test_expected_usd"][0], "...but two do not: the protocol must not promise them"
 
 
 def test_cost_model_is_monotone_capped_and_trimmable():
@@ -390,3 +392,132 @@ def test_cli_rules_plan_and_assess(capsys, monkeypatch):
     with pytest.raises(SystemExit) as e:
         main()
     assert e.value.code == 0
+
+
+# ------------------------------------------------------------------------------------------------------------------------------------------ evidence sufficiency (separate from correctness and efficiency)
+from agent_readiness.exp2 import evidence as E
+
+
+def obs(*texts):
+    return [{"path": f"/p{i}", "text": t} for i, t in enumerate(texts)]
+
+
+def test_evidence_text_is_normalised_and_markers_are_ignored():
+    assert E.norm("[1510]<td />\n\t\t\t13 Nov\n\t\t\tBooked") == "13 Nov Booked"
+    f = (E.fact("x", (E.clause("Availability: Wet tile saw 250 mm", "13 Nov Booked"),)),)
+    assert E.assess(f, obs("Availability: Wet tile saw 250 mm\n[1]<td />\n 13 Nov\n Booked"))["sufficient"]
+    assert not E.assess(f, obs("Availability: Wet tile saw 250 mm 13 Nov 2 free"))["sufficient"]
+    assert not E.assess(f, obs("Availability: Petrol cut-off saw 350 mm 13 Nov Booked"))["sufficient"], "the signature ties a fact to the right item's page"
+    assert not E.assess((), obs("anything"))["sufficient"] and not E.assess(f, None)["sufficient"]
+
+
+def test_a_fact_is_satisfied_by_any_route_and_a_route_needs_all_its_clauses():
+    A, B = E.clause(None, "alpha"), E.clause(None, "beta")
+    f = (E.fact("f", (A, B), (E.clause(None, "gamma"),)),)
+    assert E.assess(f, obs("alpha", "beta"))["sufficient"] and E.assess(f, obs("gamma"))["sufficient"]
+    assert not E.assess(f, obs("alpha"))["sufficient"] and E.assess(f, obs("alpha"))["missing"] == ["f"]
+    assert E.assess((E.fact("one", (A,)), E.fact("two", (B,))), obs("alpha"))["missing"] == ["two"], "facts are ANDed"
+
+
+def test_every_accepted_task_can_be_evidenced_on_every_arm_and_no_task_requires_a_particular_page(pool):
+    arms = P.arm_texts()
+    assert set(arms) == {"control", "discoverability", "availability", "cost", "compatibility", "discoverability+availability+cost+compatibility"}
+    for c in pool[0].accepted:
+        assert c.facts, c.question
+        for arm, texts in arms.items():
+            assert E.available_in(c.facts, texts) == [], (arm, c.question)
+    assert all("visited_path" not in repr(c.facts) for c in pool[0].accepted)
+
+
+def test_route_choice_is_not_a_requirement_the_same_task_is_evidenced_by_different_pages_in_different_arms(pool):
+    """Total-cost tasks: the control must show rate and rules (product and terms pages); the cost variant also shows the total on the product page. Either suffices; the rule is identical."""
+    c = next(c for c in pool[0].accepted if c.family == "total_cost" and c.sub == "single" and c.params["waiver"] and c.params["per"] in ("1d", "2d", "3d", "weekend", "7d") and c.params["p"] not in ("IB-LND-003",))
+    cost_pages = P.arm_texts()["cost"]
+    prod = next(t for p, t in cost_pages.items() if f"Product code {c.params['p']}" in t and "Your hire cost" in t)
+    only_product_page = [{"path": "/x", "text": prod}]
+    assert E.assess(c.facts, only_product_page)["sufficient"], "the cost variant's product page alone carries the total"
+    control_prod = next(t for p, t in P.arm_texts()["control"].items() if f"Product code {c.params['p']}" in t and "Your hire cost" not in t and "Per day" in t)
+    assert not E.assess(c.facts, [{"path": "/x", "text": control_prod}])["sufficient"], "the same view on the control site lacks the waiver rule"
+    terms = next(t for t in P.arm_texts()["control"].values() if "Hire terms and pricing" in t and "Damage waiver" in t)
+    assert E.assess(c.facts, [{"path": "/x", "text": control_prod}, {"path": "/y", "text": terms}])["sufficient"], "control product page + terms page also suffices"
+
+
+def test_availability_can_be_evidenced_by_the_calendar_or_by_the_dates_at_a_glance_panel(pool):
+    c = next(c for c in pool[0].accepted if c.family == "availability" and c.sub == "day")
+    pid = c.params["p"]
+    cal = next(t for t in P.arm_texts()["control"].values() if f"Availability: " in t and "Fleet size" in t and PRODUCT_NAME[pid] in t)
+    glance = next(t for t in P.arm_texts()["availability"].values() if f"Product code {pid}" in t and "Dates at a glance" in t)
+    assert E.assess(c.facts, [{"path": "/cal", "text": cal}])["sufficient"] and E.assess(c.facts, [{"path": "/prod", "text": glance}])["sufficient"]
+    ctrl_prod = next(t for t in P.arm_texts()["control"].values() if f"Product code {pid}" in t and "Per day" in t)
+    assert not E.assess(c.facts, [{"path": "/prod", "text": ctrl_prod}])["sufficient"], "the control's product page alone does NOT show dated availability"
+
+
+PRODUCT_NAME = {p.id: p.name for p in D.PRODUCTS}
+
+
+def test_trial_rows_keep_correctness_evidence_and_efficiency_apart(plan):
+    t = plan["tasks"][0]
+    rec = lambda passed, req: {"task_id": t["task_id"], "repeat": 1, "outcome": {"run_status": "completed"}, "evaluation": {"passed": passed, "evidence_backed": True},
+                               "metrics": {"model_requests": req, "page_views": req, "calculated_cost_usd": 0.1}, "journey": [{"path": "/"}, {"path": "/hire"}, {"path": "/hire"}]}
+    suff, insuff = {"sufficient": True, "missing": []}, {"sufficient": False, "missing": ["a fact"]}
+    a = analysis.row(rec(True, 6), t, suff)
+    assert (a["passed"], a["evidence_backed"], a["supported"]) == (True, True, True) and a["distinct_pages"] == 2 and a["request_ratio"] == round(6 / (t["pages_needed"] + 2), 3)
+    b = analysis.row(rec(True, 6), t, insuff)
+    assert (b["passed"], b["evidence_backed"], b["supported"]) == (True, False, False), "a correct answer without sufficient evidence is correct but not supported"
+    c = analysis.row(rec(False, 6), t, suff)
+    assert (c["passed"], c["evidence_backed"], c["supported"]) == (False, True, False)
+    assert analysis.row(rec(True, 12), t, suff)["passed"] == a["passed"], "efficiency never changes correctness or sufficiency"
+    s = analysis.baseline_summary([rec(True, 4) | {"trial_id": "x-r1"}, rec(True, 8) | {"trial_id": "y-r1"}], plan, {"x-r1": suff, "y-r1": insuff})
+    ov = s["overall"]
+    assert ov["correct_rate"] == 1.0 and ov["evidence_sufficiency_rate_among_correct"] == 0.5 and ov["supported_pass_rate"] == 0.5 and ov["mean_requests"] == 6.0 and "mean_request_ratio" in ov
+
+
+# --------------------------------------------------------------------------------------------------------------------------- K per cell: protocol, rule, plan and budget agree
+def test_the_variant_test_plan_implements_k2_per_arm_and_the_budget_uses_it(plan):
+    assert analysis.COMPARE["min_repeats_affected"] == study.K_AFFECTED == 2 and analysis.COMPARE["min_repeats_negative"] == study.K_NEG == 1
+    for v, vt in plan["variant_tests"].items():
+        assert vt["repeats"] == {"affected_per_arm": 2, "negative_per_arm": 1} and vt["meets_rule"]
+        n_aff, n_neg = len(vt["affected"]), len(vt["negative_controls"])
+        assert n_aff == study.N_AFFECTED and n_neg == study.N_NEG and vt["affected_by_partition"].get("holdout", 0) >= 2
+        assert vt["trial_count"] == len(vt["trials"]) == n_aff * 2 * 2 + n_neg * 1 * 2, "affected: K=2 in each of two arms; negative controls: K=1 in each"
+        from collections import Counter
+        per = Counter((t["task_id"], t["arm"]) for t in vt["trials"])
+        assert all(per[(t, a)] == 2 for t in vt["affected"] for a in ("control", "variant")) and all(per[(t, a)] == 1 for t in vt["negative_controls"] for a in ("control", "variant"))
+        assert not set(vt["affected"]) & set(vt["negative_controls"]) and all(v not in next(x for x in plan["tasks"] if x["task_id"] == t)["sensitive_to"] for t in vt["negative_controls"])
+        assert vt["cost"]["trials"] == vt["trial_count"] and 4.5 <= vt["cost"]["p50_usd"] <= 7.5
+    assert plan["allocation"]["one_variant_test_expected_usd"] == [min(v["cost"]["p50_usd"] for v in plan["variant_tests"].values()), max(v["cost"]["p50_usd"] for v in plan["variant_tests"].values())]
+
+
+def test_the_comparison_rejects_cells_with_fewer_than_k_repeats_and_lists_them(plan):
+    ids = sensitive(plan, "cost")
+    ctrl = rows([(i, r, False, 12) for i in ids for r in (1, 2)], plan)
+    thin = rows([(i, 1, True, 6) for i in ids], plan)                                 # K = 1 for the variant arm everywhere
+    out = analysis.compare_variant("cost", ctrl, thin, ctrl, plan)
+    assert out["primary"]["pairs"] == 0 and len(out["excluded_for_repeats"]) == len(ids) and out["verdict"] in ("inconclusive", "uninterpretable")
+    ok = rows([(i, r, True, 6) for i in ids for r in (1, 2)], plan)
+    negs = [t["task_id"] for t in plan["tasks"] if "cost" not in t["sensitive_to"]][:4]
+    both = lambda base: base + rows([(i, 1, True, 6) for i in negs], plan)
+    out2 = analysis.compare_variant("cost", both(rows([(i, r, False, 12) for i in ids for r in (1, 2)], plan)), both(ok), both(rows([(i, r, False, 12) for i in ids for r in (1, 2)], plan)), plan)
+    assert out2["excluded_for_repeats"] == [] and out2["primary"]["pairs"] == len(ids) and out2["verdict"] == "improvement"
+
+
+def test_an_improvement_is_withdrawn_when_the_arms_differ_in_how_often_correct_answers_lack_evidence(plan):
+    ids = sensitive(plan, "cost")
+    negs = [t["task_id"] for t in plan["tasks"] if "cost" not in t["sensitive_to"]][:4]
+    base = lambda: rows([(i, r, False, 12) for i in ids for r in (1, 2)] + [(i, 1, True, 6) for i in negs], plan)
+    var = rows([(i, r, True, 6) for i in ids for r in (1, 2)] + [(i, 1, True, 6) for i in negs], plan)
+    ctrl = rows([(i, r, True, 12) for i in ids for r in (1, 2)] + [(i, 1, True, 6) for i in negs], plan)
+    for r in ctrl:                                                                    # control answers are correct but only 1 in 3 had sufficient evidence
+        r["evidence_backed"] = hash(r["task_id"]) % 3 == 0
+    out = analysis.compare_variant("cost", ctrl, var, ctrl, plan)
+    assert out["evidence_audit"]["control_unsupported_share"] > 0.5 and out["verdict"] != "improvement"
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------------- deterministic benchmark vs autonomous discovery
+def test_the_protocol_and_roadmap_document_the_benchmark_versus_discovery_distinction():
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    proto = (root / "collaboration" / "proposals" / "EXP2-protocol.md").read_text()
+    road = (root / "docs" / "PRODUCT_ROADMAP.md").read_text()
+    assert "deterministic benchmark" in proto.lower() and "autonomous task discovery" in proto.lower() and "not replaced" in proto.lower()
+    assert "Autonomous task discovery" in road and "independently verifiable" in road and "not implemented" in road.lower()

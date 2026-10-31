@@ -2,10 +2,11 @@
 
   independent   the truth recomputed from the rendered control pages equals the truth computed from the source data
   unambiguous   no ties, no `AMBIGUOUS` recomputation, sets are neither empty nor larger than 6, dates fall in the booking window, money is positive
-  possible      every evidence page and the start page exist in the crawled snapshot and are reachable from the home page within 4 clicks
+  possible      every visit page and the start page exist in the crawled snapshot and are reachable from the home page within 4 clicks
+  displayable   for EVERY arm of the site (control and each candidate variant) at least one route per fact can be satisfied from the rendered pages, so the task is winnable by evidence in every arm
   no leak       the question does not contain the answer (names, amounts or dates), and carries no hidden catalogue identifiers beyond what pages show
   gradeable     the grader accepts the canonical answer, rejects at least two plausible wrong answers, and rejects hedges that offer the right and a wrong answer
-  not a repeat  no repeated fingerprint, no repeated question text, and no second task with the same family, template, truth and evidence set
+  not a repeat  no repeated fingerprint, no repeated question text, and no second task with the same family, template, truth and visit set
 """
 from __future__ import annotations
 
@@ -18,6 +19,7 @@ from bs4 import BeautifulSoup
 
 from ..sites.ironbark import data as D
 from . import answers as A
+from .evidence import available_in
 from .facts import PageFacts
 from .tasks import PRODUCT, Candidate
 
@@ -79,7 +81,7 @@ def hedge(c: Candidate):
     return f"{right} or {wrong}"
 
 
-def check(c: Candidate, pf: PageFacts, depth: dict[str, int], pages: dict[str, str]) -> str | None:
+def check(c: Candidate, pf: PageFacts, depth: dict[str, int], pages: dict[str, str], arms: dict[str, dict[str, str]] | None = None) -> str | None:
     k = c.kind
     if k not in A.KINDS or c.family == "" or not c.question.strip():
         return "malformed candidate"
@@ -103,11 +105,17 @@ def check(c: Candidate, pf: PageFacts, depth: dict[str, int], pages: dict[str, s
         return "truth not among the options"
     if c.pages_needed > MAX_PAGES_NEEDED:
         return f"needs {c.pages_needed} pages (limit {MAX_PAGES_NEEDED})"
-    for p in (c.start_path, *c.evidence):
+    for p in (c.start_path, *c.visit):
         if p not in pages:
             return f"page does not exist: {p}"
         if depth.get(p, 99) > 4:
             return f"page not reachable within 4 clicks: {p}"
+    if not c.facts:
+        return "no evidence facts defined"
+    for arm, texts in (arms or {}).items():
+        missing = available_in(c.facts, texts)
+        if missing:
+            return f"evidence not displayable on the {arm} site: {missing[:3]}"
     q = c.question.lower()
     if k not in ("yesno", "choice") and "group" not in c.params:                    # a question that lists the candidates to choose from names its answers by design
         exp = c.expected_text
@@ -130,22 +138,22 @@ def check(c: Candidate, pf: PageFacts, depth: dict[str, int], pages: dict[str, s
     return None
 
 
-def verify(candidates: list[Candidate], pages: dict[str, str]) -> Report:
-    """`pages` = the rendered CONTROL site (path -> html)."""
+def verify(candidates: list[Candidate], pages: dict[str, str], arms: dict[str, dict[str, str]] | None = None) -> Report:
+    """`pages` = the rendered CONTROL site (path -> html). `arms` = page TEXT of every arm of the site (control and each candidate variant)."""
     pf, depth = PageFacts(pages), link_depths(pages)
     accepted, rejected = [], []
     seen_fp, seen_q, seen_truth = set(), set(), set()
     for c in candidates:
-        reason = check(c, pf, depth, pages)
+        reason = check(c, pf, depth, pages, arms)
         if reason is None:
             qn = re.sub(r"\W+", " ", c.full_question.lower()).strip()
-            tkey = (c.family, c.sub, repr(norm_truth(c.kind, c.truth)), tuple(sorted(c.evidence)))
+            tkey = (c.family, c.sub, repr(norm_truth(c.kind, c.truth)), tuple(sorted(c.visit)))
             if c.fingerprint in seen_fp:
                 reason = "duplicate fingerprint"
             elif qn in seen_q:
                 reason = "duplicate question text"
             elif tkey in seen_truth:
-                reason = "same template, truth and evidence as an accepted task"
+                reason = "same template, truth and visit set as an accepted task"
         if reason:
             rejected.append({"task_id": c.task_id, "family": c.family, "sub": c.sub, "reason": reason, "question": c.question[:140]})
             continue

@@ -42,12 +42,13 @@ class Candidate:
     truth: object
     pages_needed: int
     sensitive_to: tuple
-    evidence: tuple                                   # page paths a pass must have visited (identical for every variant)
+    visit: tuple                                      # pages a SCRIPTED (mock) agent visits; real agents are never required to visit any particular page
     params: dict
     recompute: Callable[[PageFacts], object] | None = field(default=None, repr=False, compare=False)
     options: tuple = ()
     start_path: str = "/"
     near_key: str = ""
+    facts: tuple = ()                                 # what the answer depends on and every route that can show it (evidence.py); identical for every arm
 
     @property
     def fingerprint(self) -> str:
@@ -81,8 +82,8 @@ def pp(pid: str) -> str:
     return f"/hire/{PRODUCT[pid].slug}"
 
 
-def make(family, sub, question, kind, truth, pages, sens, evidence, params, recompute, options=(), near_key=None) -> Candidate:
-    return Candidate(family, sub, question, kind, truth, pages, tuple(sens), tuple(evidence), params, recompute, tuple(options), near_key=near_key or f"{family}/{sub}")
+def make(family, sub, question, kind, truth, pages, sens, visit, params, recompute, options=(), near_key=None) -> Candidate:
+    return Candidate(family, sub, question, kind, truth, pages, tuple(sens), tuple(visit), params, recompute, tuple(options), near_key=near_key or f"{family}/{sub}")
 
 
 def _hash_order(items, salt):
@@ -436,4 +437,9 @@ GENERATORS = {"lookup": gen_lookup, "discovery": gen_discovery, "availability": 
 
 def generate() -> list[Candidate]:
     """Every candidate from every family, in a fixed order (deterministic; nothing here draws on a clock or an unseeded RNG)."""
-    return [c for fam in FAMILIES for c in GENERATORS[fam]()]
+    from .factspec import facts_for, visit_from_facts
+    out = [c for fam in FAMILIES for c in GENERATORS[fam]()]
+    for c in out:
+        c.facts = facts_for(c)
+        c.visit = visit_from_facts(c.facts)                      # scripted-agent route only (mock mode); never a requirement on a real agent
+    return out

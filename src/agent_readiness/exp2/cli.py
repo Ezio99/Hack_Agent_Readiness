@@ -51,7 +51,8 @@ def main(args) -> None:
         if args.out:
             args.out.write_text(text + "\n"); print(f"wrote {args.out}  plan_sha256={plan['plan_sha256']}")
         else:
-            print(json.dumps({k: plan[k] for k in ("counts", "allocation", "warnings", "plan_sha256")} | {"phases": {k: v["cost"] for k, v in plan["phases"].items()}}, indent=2))
+            print(json.dumps({k: plan[k] for k in ("counts", "allocation", "warnings", "plan_sha256")} | {"phases": {k: v["cost"] for k, v in plan["phases"].items()}}
+                             | {"variant_tests": {v: {"trials": x["trial_count"], "repeats": x["repeats"], "expected_usd": x["cost"]["p50_usd"], "cap_usd": x["cost"]["cap_usd"]} for v, x in plan["variant_tests"].items()}}, indent=2))
     elif cmd == "rules":
         print(json.dumps({"eligibility": analysis.ELIGIBILITY, "compare": analysis.COMPARE, "rules_sha256": analysis.RULES_SHA256}, indent=2))
     elif cmd == "status":

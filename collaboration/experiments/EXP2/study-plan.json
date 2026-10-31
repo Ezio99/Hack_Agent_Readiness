@@ -1427,10 +1427,6 @@
       "repeat": 1
     },
     {
-      "task_id": "ib-d725473b3b",
-      "repeat": 2
-    },
-    {
       "task_id": "ib-d60a326ffd",
       "repeat": 2
     },
@@ -1444,22 +1440,6 @@
     },
     {
       "task_id": "ib-39484fe9c0",
-      "repeat": 2
-    },
-    {
-      "task_id": "ib-dd728d64cf",
-      "repeat": 2
-    },
-    {
-      "task_id": "ib-a4cc89f03c",
-      "repeat": 2
-    },
-    {
-      "task_id": "ib-22a62928c8",
-      "repeat": 2
-    },
-    {
-      "task_id": "ib-2c5d90af26",
       "repeat": 2
     },
     {
@@ -1477,13 +1457,9 @@
     {
       "task_id": "ib-eef90c55a9",
       "repeat": 2
-    },
-    {
-      "task_id": "ib-4f88a60000",
-      "repeat": 2
     }
   ],
-  "trial_order_sha256": "abca736f5293d5f6bb6e4cb4c87119d33a5d6fcc81e9d9ac502e319aca48c3e7",
+  "trial_order_sha256": "b27c1be0696ac7ce76839f47e3272fdd0edca9f863bce540656c904144ebaaee",
   "phases": {
     "baseline_pilot": {
       "trials": [
@@ -1658,10 +1634,6 @@
           "repeat": 1
         },
         {
-          "task_id": "ib-d725473b3b",
-          "repeat": 2
-        },
-        {
           "task_id": "ib-d60a326ffd",
           "repeat": 2
         },
@@ -1675,22 +1647,6 @@
         },
         {
           "task_id": "ib-39484fe9c0",
-          "repeat": 2
-        },
-        {
-          "task_id": "ib-dd728d64cf",
-          "repeat": 2
-        },
-        {
-          "task_id": "ib-a4cc89f03c",
-          "repeat": 2
-        },
-        {
-          "task_id": "ib-22a62928c8",
-          "repeat": 2
-        },
-        {
-          "task_id": "ib-2c5d90af26",
           "repeat": 2
         },
         {
@@ -1708,23 +1664,19 @@
         {
           "task_id": "ib-eef90c55a9",
           "repeat": 2
-        },
-        {
-          "task_id": "ib-4f88a60000",
-          "repeat": 2
         }
       ],
       "cost": {
-        "trials": 46,
-        "p50_usd": 7.59,
+        "trials": 40,
+        "p50_usd": 6.74,
         "p90_trial_usd": 0.65,
-        "cap_usd": 9.9
+        "cap_usd": 8.8
       }
     }
   },
   "counts": {
     "tasks": 40,
-    "trials": 54,
+    "trials": 48,
     "investigation": 27,
     "holdout": 13,
     "by_family": {
@@ -1761,18 +1713,765 @@
     },
     "negative_control_tasks": 5
   },
+  "variant_tests": {
+    "discoverability": {
+      "variant": "discoverability",
+      "affected": [
+        "ib-e6e59d50c2",
+        "ib-1397f4571b",
+        "ib-e3d8f94923",
+        "ib-e4c2dbaaee",
+        "ib-d60a326ffd",
+        "ib-eef90c55a9"
+      ],
+      "affected_by_partition": {
+        "investigation": 3,
+        "holdout": 3
+      },
+      "negative_controls": [
+        "ib-a843fdbfbb",
+        "ib-6cd1332c1b",
+        "ib-2f75ebc4d9"
+      ],
+      "repeats": {
+        "affected_per_arm": 2,
+        "negative_per_arm": 1
+      },
+      "trials": [
+        {
+          "task_id": "ib-e6e59d50c2",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-e6e59d50c2",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-e6e59d50c2",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-e6e59d50c2",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-1397f4571b",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-1397f4571b",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-1397f4571b",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-1397f4571b",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-e3d8f94923",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-e3d8f94923",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-e3d8f94923",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-e3d8f94923",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-e4c2dbaaee",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-e4c2dbaaee",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-e4c2dbaaee",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-e4c2dbaaee",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-d60a326ffd",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-d60a326ffd",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-d60a326ffd",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-d60a326ffd",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-eef90c55a9",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-eef90c55a9",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-eef90c55a9",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-eef90c55a9",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-a843fdbfbb",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-a843fdbfbb",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-6cd1332c1b",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-6cd1332c1b",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-2f75ebc4d9",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-2f75ebc4d9",
+          "arm": "variant",
+          "repeat": 1
+        }
+      ],
+      "trial_count": 30,
+      "cost": {
+        "trials": 30,
+        "p50_usd": 5.24,
+        "p90_trial_usd": 0.65,
+        "cap_usd": 6.85
+      },
+      "meets_rule": true,
+      "rule": "exp2-compare-v1"
+    },
+    "availability": {
+      "variant": "availability",
+      "affected": [
+        "ib-017a6bda99",
+        "ib-2820c4d163",
+        "ib-16d665647d",
+        "ib-3e2800fdb0",
+        "ib-7ac16db8c4",
+        "ib-a4cc89f03c"
+      ],
+      "affected_by_partition": {
+        "investigation": 3,
+        "holdout": 3
+      },
+      "negative_controls": [
+        "ib-6cd1332c1b",
+        "ib-eef90c55a9",
+        "ib-f6510f42c3"
+      ],
+      "repeats": {
+        "affected_per_arm": 2,
+        "negative_per_arm": 1
+      },
+      "trials": [
+        {
+          "task_id": "ib-017a6bda99",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-017a6bda99",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-017a6bda99",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-017a6bda99",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-2820c4d163",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-2820c4d163",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-2820c4d163",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-2820c4d163",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-16d665647d",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-16d665647d",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-16d665647d",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-16d665647d",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-3e2800fdb0",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-3e2800fdb0",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-3e2800fdb0",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-3e2800fdb0",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-7ac16db8c4",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-7ac16db8c4",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-7ac16db8c4",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-7ac16db8c4",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-a4cc89f03c",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-a4cc89f03c",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-a4cc89f03c",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-a4cc89f03c",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-6cd1332c1b",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-6cd1332c1b",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-eef90c55a9",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-eef90c55a9",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-f6510f42c3",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-f6510f42c3",
+          "arm": "control",
+          "repeat": 1
+        }
+      ],
+      "trial_count": 30,
+      "cost": {
+        "trials": 30,
+        "p50_usd": 6.58,
+        "p90_trial_usd": 0.65,
+        "cap_usd": 8.6
+      },
+      "meets_rule": true,
+      "rule": "exp2-compare-v1"
+    },
+    "cost": {
+      "variant": "cost",
+      "affected": [
+        "ib-7d6069f75d",
+        "ib-6bc18bb3aa",
+        "ib-05b8c6126e",
+        "ib-7c29256e2e",
+        "ib-d60a326ffd",
+        "ib-32a853ebf4"
+      ],
+      "affected_by_partition": {
+        "investigation": 3,
+        "holdout": 3
+      },
+      "negative_controls": [
+        "ib-eef90c55a9",
+        "ib-2f75ebc4d9",
+        "ib-f6510f42c3"
+      ],
+      "repeats": {
+        "affected_per_arm": 2,
+        "negative_per_arm": 1
+      },
+      "trials": [
+        {
+          "task_id": "ib-7d6069f75d",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-7d6069f75d",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-7d6069f75d",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-7d6069f75d",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-6bc18bb3aa",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-6bc18bb3aa",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-6bc18bb3aa",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-6bc18bb3aa",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-05b8c6126e",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-05b8c6126e",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-05b8c6126e",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-05b8c6126e",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-7c29256e2e",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-7c29256e2e",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-7c29256e2e",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-7c29256e2e",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-d60a326ffd",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-d60a326ffd",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-d60a326ffd",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-d60a326ffd",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-32a853ebf4",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-32a853ebf4",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-32a853ebf4",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-32a853ebf4",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-eef90c55a9",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-eef90c55a9",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-2f75ebc4d9",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-2f75ebc4d9",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-f6510f42c3",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-f6510f42c3",
+          "arm": "variant",
+          "repeat": 1
+        }
+      ],
+      "trial_count": 30,
+      "cost": {
+        "trials": 30,
+        "p50_usd": 5.31,
+        "p90_trial_usd": 0.65,
+        "cap_usd": 6.95
+      },
+      "meets_rule": true,
+      "rule": "exp2-compare-v1"
+    },
+    "compatibility": {
+      "variant": "compatibility",
+      "affected": [
+        "ib-d9260f2d9a",
+        "ib-05b8c6126e",
+        "ib-d725473b3b",
+        "ib-729f03a2cf",
+        "ib-b6d09d9417",
+        "ib-2c5d90af26"
+      ],
+      "affected_by_partition": {
+        "investigation": 4,
+        "holdout": 2
+      },
+      "negative_controls": [
+        "ib-a843fdbfbb",
+        "ib-6cd1332c1b",
+        "ib-eef90c55a9"
+      ],
+      "repeats": {
+        "affected_per_arm": 2,
+        "negative_per_arm": 1
+      },
+      "trials": [
+        {
+          "task_id": "ib-d9260f2d9a",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-d9260f2d9a",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-d9260f2d9a",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-d9260f2d9a",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-05b8c6126e",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-05b8c6126e",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-05b8c6126e",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-05b8c6126e",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-d725473b3b",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-d725473b3b",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-d725473b3b",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-d725473b3b",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-729f03a2cf",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-729f03a2cf",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-729f03a2cf",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-729f03a2cf",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-b6d09d9417",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-b6d09d9417",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-b6d09d9417",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-b6d09d9417",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-2c5d90af26",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-2c5d90af26",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-2c5d90af26",
+          "arm": "variant",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-2c5d90af26",
+          "arm": "control",
+          "repeat": 2
+        },
+        {
+          "task_id": "ib-a843fdbfbb",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-a843fdbfbb",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-6cd1332c1b",
+          "arm": "control",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-6cd1332c1b",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-eef90c55a9",
+          "arm": "variant",
+          "repeat": 1
+        },
+        {
+          "task_id": "ib-eef90c55a9",
+          "arm": "control",
+          "repeat": 1
+        }
+      ],
+      "trial_count": 30,
+      "cost": {
+        "trials": 30,
+        "p50_usd": 5.03,
+        "p90_trial_usd": 0.43,
+        "cap_usd": 6.55
+      },
+      "meets_rule": true,
+      "rule": "exp2-compare-v1"
+    }
+  },
   "allocation": {
     "ceiling_usd": 20.0,
     "reserve_usd": 2.5,
     "allocatable_usd": 17.5,
     "baseline_pilot_cap_usd": 1.9,
-    "baseline_main_cap_usd": 9.9,
-    "investigator_cap_usd": 0.8,
-    "variant_tests_cap_usd": 4.9,
+    "baseline_main_cap_usd": 8.8,
+    "investigator_cap_usd": 0.5,
+    "variant_tests_cap_usd": 6.3,
     "fits": true,
-    "note": "the variant-test cap is what remains if every earlier phase spends its full cap; unspent money rolls into it only by a new owner approval"
+    "one_variant_test_expected_usd": [
+      5.03,
+      6.58
+    ],
+    "fits_one_variant_test": true,
+    "note": "the variant-test amount is what remains if every earlier phase spends its full cap; money the baseline does not spend is added only by a new owner approval. At the pre-registered K = 2 per arm one variant test costs about its expected figure and the budget supports ONE; a second needs a new decision"
   },
   "warnings": [],
   "cost_basis": "calculated at published prices; assumptions in exp2/costs.py; not a bill",
-  "plan_sha256": "115dce981f8b213dab3e867fc97c49cc48721620e780146307e92ce7955b64f6"
+  "plan_sha256": "4f7056bf273a2d9c37865a97e7dfd27593005f7780fe711d2f862a2b9d742f3d"
 }

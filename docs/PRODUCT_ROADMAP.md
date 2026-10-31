@@ -64,6 +64,19 @@ Examples are design targets, not guaranteed feasible fixtures. Before implementa
 
 **Task 011 is not cancelled**, but its previously authored narrow scanner scope is sequenced after Task 010 and must be reconciled with these contracts before implementation. No broad implementation, paid inference, paid hosting, merge, or public deployment is automatically authorized by this roadmap.
 
+## Autonomous task discovery (future architecture requirement — not implemented)
+
+**Requirement.** Agent Readiness must eventually use an LLM to **autonomously explore an unfamiliar website, understand its business workflows, and generate realistic, independently verifiable customer tasks** for it. A site owner cannot be expected to write a task list, and a fixed catalogue of task templates does not generalise across businesses.
+
+**What exists today is a benchmark, not the product architecture.** The Experiment-2 generator for the fictional Ironbark Hire Co. site (`src/agent_readiness/exp2/`) is a *deterministic benchmark task generator*: it derives eight task families from a site whose source-of-truth data we own, and every answer is verified by recomputing it from the rendered pages. It exists to give the experiments **independent ground truth** — the one thing a discovery agent cannot give itself. It is **not replaced** by the autonomous agent and stays as the reference oracle.
+
+**How the two relate (design intent).**
+1. The deterministic Ironbark pool is the *calibration set*: run the discovery agent on Ironbark without access to `data.py` and measure which of our verified task families it rediscovers, which it invents that we did not, and which of its tasks fail verification (wrong, ambiguous, leaking, ungradeable). Its quality is measured against known truth before it is trusted on an unfamiliar site.
+2. For an unfamiliar site there is no source-of-truth file, so every discovered task still needs an **independent verification path**: recomputation from the rendered pages by a separate mechanism (as `verify.py` does), a second model plus deterministic checks, or a human spot-check; unverifiable tasks are rejected, never graded by the agent that proposed them.
+3. The same rules apply as for the benchmark: no answer or privileged data reaches the agent under test, ambiguity and leaks are rejected, duplicates are removed, the evidence and efficiency measurements stay separate from correctness, and holdout tasks are kept from any investigator.
+
+**Out of scope until the experiment infrastructure and the pilot are finished.** No design for this is frozen; it needs its own approved plan, budget and tests. This entry records the requirement so that the deterministic generator is not mistaken for the end state.
+
 ## Acceptance standard
 
 A developer unfamiliar with the experiments can select a realistic task, see a real or explicitly labeled mock run, inspect independent correctness and the agent's actual journey, understand a grounded issue, and compare an actionable change. Product claims must remain narrower than evidence.

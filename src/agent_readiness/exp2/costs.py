@@ -54,12 +54,13 @@ def phase_cost(pages: list[int], *, per_request=(USD_PER_REQUEST_P50, USD_PER_RE
     return PhaseCost(len(pages), round(p50, 2), round(worst, 2), round_up_5c(p50 * margin))
 
 
-def allocation(pilot: PhaseCost, main: PhaseCost, *, investigator_usd: float = 0.80, ceiling: float = CEILING_USD, reserve: float = RESERVE_USD) -> dict:
+def allocation(pilot: PhaseCost, main: PhaseCost, *, investigator_usd: float = 0.50, ceiling: float = CEILING_USD, reserve: float = RESERVE_USD, variant_min_cost: float | None = None, variant_max_cost: float | None = None) -> dict:
     """Hard allocation of the US$20 ceiling. Variant tests receive whatever is left after the baseline phases, the investigator and the reserve; they are sized from this, never beyond it."""
     allocatable = round(ceiling - reserve, 2)
     used = round(pilot.cap_usd + main.cap_usd + investigator_usd, 2)
     return {"ceiling_usd": ceiling, "reserve_usd": reserve, "allocatable_usd": allocatable, "baseline_pilot_cap_usd": pilot.cap_usd, "baseline_main_cap_usd": main.cap_usd, "investigator_cap_usd": investigator_usd,
-            "variant_tests_cap_usd": round(allocatable - used, 2), "fits": used <= allocatable, "note": "the variant-test cap is what remains if every earlier phase spends its full cap; unspent money rolls into it only by a new owner approval"}
+            "variant_tests_cap_usd": round(allocatable - used, 2), "fits": used <= allocatable,
+            "one_variant_test_expected_usd": [variant_min_cost, variant_max_cost], "fits_one_variant_test": variant_min_cost is not None and round(allocatable - used, 2) + 1e-9 >= variant_min_cost, "note": "the variant-test amount is what remains if every earlier phase spends its full cap; money the baseline does not spend is added only by a new owner approval. At the pre-registered K = 2 per arm one variant test costs about its expected figure and the budget supports ONE; a second needs a new decision"}
 
 
 def trim_to_cap(pages_in_order: list[int], cap: float, per_request=(USD_PER_REQUEST_P50, USD_PER_REQUEST_P90), margin: float = CAP_MARGIN) -> int:
