@@ -1,0 +1,17 @@
+{
+  "model_tasks": false,
+  "tasks": [
+    {"question": "Which hire machines have a refundable deposit below $200?", "start_path": "/",
+     "criterion": {"kind": "item_set", "listing": "/hire", "conditions": [{"label": "refundable deposit", "op": "lt", "value": "$200"}]},
+     "rationale": "owner-authored: a shopper shortlisting by deposit"},
+    {"question": "Which hire machines have a minimum hire of 2 days?", "start_path": "/",
+     "criterion": {"kind": "item_set", "listing": "/hire", "conditions": [{"label": "minimum hire", "op": "eq", "value": "2 days"}]},
+     "rationale": "owner-authored: a shopper checking the shortest hire period"},
+    {"question": "Which hire machines list delivery and collection as 'Required for this item'?", "start_path": "/",
+     "criterion": {"kind": "item_set", "listing": "/hire", "conditions": [{"label": "delivery and collection", "op": "eq", "value": "Required for this item"}]},
+     "rationale": "owner-authored: a shopper without a trailer"},
+    {"question": "Which hire machine has the highest refundable deposit?", "start_path": "/",
+     "criterion": {"kind": "extremum", "listing": "/hire", "label": "refundable deposit", "direction": "max"},
+     "rationale": "owner-authored: a shopper comparing the cash tied up"}
+  ]
+}

@@ -56,3 +56,38 @@ describe("goal and coverage in the rendered report", () => {
     expect(h).toContain("No verified findings"); expect(h).toContain("No proposals");
   });
 });
+
+describe("verified / observed / inconclusive classes", () => {
+  const withEvidence = () => {
+    const d = live(); d.goal_coverage = cov();
+    d.findings = [{ id: "fnd-1", hypothesis_id: "hyp-1", statement: "Field X is only on item pages.", attribution: "website", structural_proof: false, provenance: { mode: "live", source: "code:promote" }, observation_ids: ["obs-1"], unresolved_observation_ids: [],
+      support: [{ ref: "trial:t1", resolved: true }, { ref: "trial:t2", resolved: true }] }];
+    d.hypotheses = [
+      { id: "hyp-1", tier: "verifiable", statement: "Field X is only on item pages.", claim_kind: "info_absent_on_template", prediction: null, status: "supported", observation_ids: ["obs-1"], promoted: true, verification: { verifier: "deterministic:info_absent_on_template", result: "supported", evidence: ["page:/hire", "trial:t1", "trial:t2"] }, provenance: { mode: "live", source: "llm" } },
+      { id: "hyp-2", tier: "verifiable", statement: "Field Y is only on item pages.", claim_kind: "info_absent_on_template", prediction: null, status: "supported", observation_ids: [], promoted: false, verification: { verifier: "deterministic:info_absent_on_template", result: "supported", evidence: ["trial:t1"] }, provenance: { mode: "live", source: "llm" } },
+      { id: "hyp-3", tier: "novel", statement: "Agents prefer sorted lists.", claim_kind: null, prediction: "if sorted, fewer steps", status: "unverified", observation_ids: [], promoted: false, verification: null, provenance: { mode: "live", source: "llm" } }] as any;
+    d.proposals = [{ id: "prp-1", basis: "verified_finding", source_id: "fnd-1", label: "x", status: "proposed", validation: "unvalidated", expected_effect: "", risks: [], auto_applicable: true, approved: false, change: { ops: [] }, provenance: { mode: "live", source: "rule:template" } }] as any;
+    d.tasks[0].source = "owner";
+    return d;
+  };
+  it("places a promoted finding under VERIFIED, a supported-but-unpromoted claim under OBSERVED and open-ended ideas under INCONCLUSIVE, each with evidence references", () => {
+    const h = html(withEvidence());
+    expect(h).toContain("What this evaluation can and cannot claim");
+    const v = h.slice(h.indexOf("oc oc-verified"), h.indexOf("oc oc-observed")), o = h.slice(h.indexOf("oc oc-observed"), h.indexOf("oc oc-inconclusive")), i = h.slice(h.indexOf("oc oc-inconclusive"), h.indexOf("Proposed changes:"));
+    expect(v).toContain("Field X is only on item pages."); expect(v).toContain("trial:t1"); expect(v).toContain("2 independent supporting task(s)"); expect(v).toContain("graded against answers computed by code");
+    expect(o).toContain("Field Y is only on item pages."); expect(o).toContain("below the promotion rule"); expect(o).not.toContain("Field X");
+    expect(i).toContain("Agents prefer sorted lists."); expect(i).toContain("UNVERIFIED, never a finding"); expect(i).not.toContain("Field Y is only");
+  });
+  it("labels every proposal UNVALIDATED and owner-authored tasks as such, and shows nothing for exports without a goal", () => {
+    const h = html(withEvidence());
+    expect(h).toContain("all UNVALIDATED"); expect(h).toContain("until the frozen tasks are retested"); expect(h).toContain("owner-authored");
+    const none = withEvidence(); delete none.goal; expect(html(none)).not.toContain("What this evaluation can and cannot claim");
+  });
+  it("is honest when nothing was found: empty classes say None, and void or agent-attributed trials are INCONCLUSIVE", () => {
+    const empty = live(); empty.goal_coverage = cov(); empty.tasks = []; empty.hypotheses = []; empty.findings = []; empty.proposals = [];
+    expect((html(empty).match(/None\./g) ?? []).length).toBeGreaterThanOrEqual(3);
+    const d = live(); d.goal_coverage = cov(); d.tasks[1].baseline = [{ ...d.tasks[1].baseline[0], void: true, passed: null }]; d.tasks[0].baseline = [{ ...d.tasks[0].baseline[0], passed: false, attribution: "agent", why: "path existed" }];
+    const h = html(d);
+    expect(h).toContain("void"); expect(h).toContain("attributed to “agent”");
+  });
+});

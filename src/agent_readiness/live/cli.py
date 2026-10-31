@@ -22,18 +22,20 @@ def register(sub) -> None:
     s = ls.add_parser("smoke", help="Task-generation-only smoke test: at most 3 requests, US$0.15, stops before browser trials")
     s.add_argument("--goal", required=True)
     s.add_argument("--context-file", type=Path, default=None, help="optional Website Context (a client briefing; max 2000 characters; unverified, never evidence)")
+    s.add_argument("--tasks-file", type=Path, default=None, help="optional operator-authored tasks (JSON; labelled OWNER-AUTHORED; bound into the grant); `model_tasks: false` makes task generation request nothing")
     s.add_argument("--plan", action="store_true", help="print the exact manifest and limits; no key, no network, no spend")
     s.add_argument("--confirm-spend", type=float, default=None, help="must equal the smoke cap (0.15): your explicit confirmation of the maximum spend")
     s.add_argument("--wait", type=int, default=600, help="seconds to wait for the job")
     f = ls.add_parser("run", help="ONE full live investigation of Ironbark (task generation, browser trials, investigator, recommendations) under a single user grant; hard cap US$2.00")
     f.add_argument("--goal", required=True)
     f.add_argument("--context-file", type=Path, default=None)
+    f.add_argument("--tasks-file", type=Path, default=None, help="optional operator-authored tasks (JSON; labelled OWNER-AUTHORED; bound into the grant); `model_tasks: false` makes task generation request nothing")
     f.add_argument("--plan", action="store_true", help="offline: print the task-generation manifest hash and the grant scope; no key, no network")
     f.add_argument("--confirm-spend", type=float, default=None, help="must equal the job cap (2.00)")
     f.add_argument("--wait", type=int, default=1800)
 
 
-def plan(goal: str, context: str | None = None, smoke: bool = False) -> dict:
+def plan(goal: str, context: str | None = None, smoke: bool = False, owner_tasks: dict | None = None) -> dict:
     """The approval manifest of the task-generation stage EXACTLY as the worker will present it: same options (`worker.live_options`), same model/endpoint (the server configuration) and the same ledger
     ceiling (the smoke cap for a smoke job, else the job cap), so the printed hash is the hash of the real run."""
     from ..agent import ModelConfig
@@ -46,7 +48,7 @@ def plan(goal: str, context: str | None = None, smoke: bool = False) -> dict:
     budget = G.SMOKE_CAP_USD if smoke else settings.cap_usd
     target = TARGETS["ironbark"]
     with tempfile.TemporaryDirectory() as tmp:
-        opts = worker.live_options(target.snapshot(), goal, context, budget=budget, cfg=ModelConfig(model=settings.model, base_url=settings.base_url))
+        opts = worker.live_options(target.snapshot(), goal, context, budget=budget, cfg=ModelConfig(model=settings.model, base_url=settings.base_url), owner_tasks=owner_tasks)
         run, pipe, ctx = flow.build(Path(tmp), "plan", "ironbark", mode="live", options=opts)
         res = pipe.run(ctx, until="inspect")
         if res.status != "done":
@@ -55,7 +57,7 @@ def plan(goal: str, context: str | None = None, smoke: bool = False) -> dict:
         out = {"manifest_sha256": run.manifest_sha256(m), "stage": m["stage"], "model": m["model"], "endpoint": m["endpoint"], "max_provider_requests": m["max_requests"], "batches": m["batches"],
                "retries_per_request": m["retries_per_request"], "run_cap_usd": m["run_cap_usd"], "per_request_cap_usd": m["per_request_cap_usd"], "per_request_reservation_usd": m["per_request_reservation_usd"],
                "worst_case_stage_usd": m["worst_case_stage_usd"], "grant_budget_usd": budget, "ledger_ceiling_usd": m["allocation"]["ledger_ceiling_usd"], "snapshot_sha256": m["snapshot_sha256"], "goal": worker.sanitize_goal(goal),
-               "client_context_sha256": m.get("client_context_sha256"), "rule_topup": False}
+               "client_context_sha256": m.get("client_context_sha256"), "owner_tasks_sha256": m.get("owner_tasks_sha256"), "rule_topup": False}
         if smoke:
             return {**out, "stops_after": "taskgen and freeze; no browser trial, investigator or recommendation"}
         lim = G.default_limits()
@@ -69,10 +71,16 @@ def _context(args) -> str | None:
     return clean_context(args.context_file.read_text()) if getattr(args, "context_file", None) else None
 
 
+def _owner_tasks(args):
+    from .jobs import clean_owner_tasks
+    import json as _json
+    return clean_owner_tasks(_json.loads(args.tasks_file.read_text())) if getattr(args, "tasks_file", None) else None
+
+
 def main(args) -> int:
     smoke = args.live_command == "smoke"
     if args.plan:
-        out = plan(args.goal, _context(args), smoke)
+        out = plan(args.goal, _context(args), smoke, _owner_tasks(args))
         print(json.dumps(out, indent=2))
         return 0
     from ..scanner.service.config import load_config
@@ -90,7 +98,7 @@ def main(args) -> int:
         return 2
     m = JobManager(cfg.live_root, live=settings, killed=lambda: cfg.kill_switch_path.exists())
     try:
-        job = m.create("operator-cli", "ironbark", args.goal, "live", args.confirm_spend, _context(args))
+        job = m.create("operator-cli", "ironbark", args.goal, "live", args.confirm_spend, _context(args), _owner_tasks(args))
     except JobError as exc:
         print(f"refused: {exc.message}", file=sys.stderr)
         return 2

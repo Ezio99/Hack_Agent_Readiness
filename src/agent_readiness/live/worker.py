@@ -67,12 +67,15 @@ def execute(root: Path, job_id: str) -> None:
         update(root, job_id, state="failed", error=f"pipeline stopped: {res.status}" + (f" at {res.stage}" if res.stage else "") + (f": {res.error}" if res.error else ""), finished_at=time.time())
 
 
-def live_options(snapshot, goal: str, context: str | None, *, budget: float, cfg, n_tasks: int = 4) -> dict:
+def live_options(snapshot, goal: str, context: str | None, *, budget: float, cfg, n_tasks: int = 4, owner_tasks: dict | None = None) -> dict:
     """The ONE definition of the options a live run is built with. The worker uses it for the real run and `readiness live run/smoke --plan` uses it to compute the approval manifest, so the printed hash is the
     hash the run presents (the budget is the ledger ceiling and is part of the manifest's allocation)."""
     from .lexicon import RENTAL
+    from ..suite.core import canonical_hash
     g = sanitize_goal(goal)
-    return {"snapshot": snapshot, "n_tasks": n_tasks, "goals": {"focus": g}, "focus": g, "rule_topup": False, "goal_binding": True, "first_page_policy": "tag", "goal_lexicon": RENTAL, "context": context, "model_config": cfg, "allow_model_calls": True,
+    goals = {"focus": g, **({"tasks": owner_tasks["tasks"]} if owner_tasks else {})}
+    extra = ({"owner_tasks_sha256": canonical_hash(owner_tasks), **({} if owner_tasks["model_tasks"] else {"owner_tasks_only": True})} if owner_tasks else {})
+    return {**extra, "snapshot": snapshot, "n_tasks": n_tasks, "goals": goals, "focus": g, "rule_topup": False, "goal_binding": True, "first_page_policy": "tag", "goal_lexicon": RENTAL, "context": context, "model_config": cfg, "allow_model_calls": True,
             "total_cap_usd": budget, "repeats": 1}
 
 
@@ -103,9 +106,12 @@ def execute_live(root: Path, job_id: str, job: dict) -> None:
         return
     budget = g["budget_usd"]
     cfg = ModelConfig(model=g["model"], base_url=g["endpoint"])
-    opts = live_options(snap, job["goal"], job.get("context"), budget=budget, cfg=cfg, n_tasks=job.get("n_tasks", 4))
+    opts = live_options(snap, job["goal"], job.get("context"), budget=budget, cfg=cfg, n_tasks=job.get("n_tasks", 4), owner_tasks=job.get("owner_tasks"))
     run, pipe, ctx = flow.build(root, job_id, target.id, mode="live", options=opts)
     run.write_artifact("live-grant", g)
+    if job.get("owner_tasks"):                                                     # the exact operator-authored tasks, kept with the run; their hash is in the grant and in the approved manifest
+        from .jobs import OWNER_TASKS_LABEL
+        run.write_artifact("owner-tasks", {"tasks": job["owner_tasks"]["tasks"], "model_tasks": job["owner_tasks"]["model_tasks"], "sha256": g["tasks_sha256"], "provenance": OWNER_TASKS_LABEL})
     if job.get("context"):                                                         # the exact context, kept with the run; its hash is in the grant and in every approved manifest
         from .jobs import CONTEXT_LABEL
         run.write_artifact("client-context", {"text": job["context"], "sha256": g["context_sha256"], "provenance": CONTEXT_LABEL})                                        # the authorization, kept with the run it covers

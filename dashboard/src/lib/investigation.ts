@@ -93,3 +93,27 @@ export function roles(x: Exploratory): { task_id: string; role: Role }[] {
   return [...(p.affected ?? []).map((task_id) => ({ task_id, role: "Affected" as const })), ...(p.same_shape_controls ?? []).map((task_id) => ({ task_id, role: "Same-shape control" as const })),
     ...(p.detail_controls ?? []).map((task_id) => ({ task_id, role: "Detail-page control" as const }))];
 }
+
+
+/** The three honesty classes of a report, computed from the export alone (so older exports degrade gracefully).
+ *  VERIFIED: a promoted finding (deterministic checker + independent task support or a structural proof), and trial results graded against answers computed by code from the captured site.
+ *  OBSERVED: recorded facts that no checker promoted: a claim the checker supported without enough independent support, and measured effort/outcomes of trials.
+ *  INCONCLUSIVE: ideas nothing verified (open-ended hypotheses, unverifiable or refuted claims), void trials and failures not attributable to the website. */
+export interface ClassItem { text: string; refs: string[]; note?: string }
+export interface OutcomeClasses { verified: ClassItem[]; observed: ClassItem[]; inconclusive: ClassItem[]; proposals: { label: string; basis: string; validation: string }[]; sources: { owner: number; model: number } }
+
+export function classifyOutcome(d: InvestigationExport): OutcomeClasses {
+  const trialRefs = (h: Hypothesis) => (h.verification?.evidence ?? []).filter((e) => e.startsWith("trial:"));
+  const verified: ClassItem[] = d.findings.map((f) => ({ text: f.statement, refs: [f.id, ...f.support.map((s) => s.ref), ...f.observation_ids], note: `attributed to the ${f.attribution}; ${f.structural_proof ? "structural proof" : `${f.support.length} independent supporting task(s)`}` }));
+  const rows = d.tasks.flatMap((t) => t.baseline.filter((r) => !r.void).map((r) => ({ t, r })));
+  const passed = rows.filter((x) => x.r.passed).length;
+  if (rows.length) verified.push({ text: `${passed} of ${rows.length} selected task(s) passed, graded against answers computed by code from the captured copy of the site`, refs: rows.map((x) => x.r.trial_id), note: "a graded outcome of those tasks only; not a statement about the whole goal" });
+  const observed: ClassItem[] = d.hypotheses.filter((h) => h.tier === "verifiable" && h.status === "supported" && !h.promoted).map((h) => ({ text: h.statement, refs: [h.id, ...trialRefs(h)], note: `the checker supported it, but only ${trialRefs(h).length} task(s) show a cost, below the promotion rule; not a finding` }));
+  for (const x of rows) if (x.r.model_requests != null) observed.push({ text: `${x.t.question} — ${x.r.model_requests} model request(s), ${x.r.page_views ?? "?"} page view(s), ${x.r.passed ? "passed" : "failed"}${x.r.attribution && x.r.attribution !== "success" ? ` (${x.r.attribution})` : ""}`, refs: [x.r.trial_id], note: "observed effort; not a cause" });
+  const inconclusive: ClassItem[] = d.hypotheses.filter((h) => !(h.tier === "verifiable" && h.status === "supported"))
+    .map((h) => ({ text: h.statement, refs: [h.id, ...h.observation_ids], note: h.tier === "novel" ? "open-ended idea: UNVERIFIED, never a finding" : `checker result: ${h.verification?.result ?? h.status}` }));
+  const voidN = d.tasks.flatMap((t) => t.baseline.filter((r) => r.void)).length;
+  if (voidN) inconclusive.push({ text: `${voidN} trial(s) were void (provider, budget or infrastructure) and say nothing about the website`, refs: [] });
+  for (const x of rows) if (x.r.passed === false && x.r.attribution && x.r.attribution !== "website" && x.r.attribution !== "success") inconclusive.push({ text: `${x.t.question} — failed, attributed to “${x.r.attribution}”, not to the website`, refs: [x.r.trial_id], note: x.r.why });
+  return { verified, observed, inconclusive, proposals: d.proposals.map((p) => ({ label: p.label, basis: p.basis, validation: p.validation })), sources: { owner: d.tasks.filter((t) => t.source === "owner").length, model: d.tasks.filter((t) => t.source === "model").length } };
+}

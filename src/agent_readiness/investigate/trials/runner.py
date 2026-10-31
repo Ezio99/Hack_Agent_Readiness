@@ -23,7 +23,7 @@ from ..sitemodel.snapshot import Snapshot
 from ..taskgen import freeze as freezer
 
 MODES = ("mock", "live")
-MOCK_BEHAVIORS = ("correct", "lazy", "wrong", "stuck", "provider_error")
+MOCK_BEHAVIORS = ("correct", "lazy", "wrong", "stuck", "provider_error", "thorough")
 PROFILE_ID = "suite-v2-compat1"
 
 
@@ -39,12 +39,14 @@ def _answer_payload(instance: core.TaskInstance, correct: bool):
     return {"answer": truth if correct else "(not sure)"}
 
 
-def mock_handler(instance: core.TaskInstance, base_url: str, behavior: str, evidence_paths: list[str]):
-    """Scripted agent: visit the start page and the evidence pages in order, then answer (correct | wrong), answer after the start page only (lazy), or never finish (stuck)."""
+def mock_handler(instance: core.TaskInstance, base_url: str, behavior: str, evidence_paths: list[str], extra_paths: list[str] | None = None):
+    """Scripted agent: visit the start page and the evidence pages in order, then answer (correct | wrong), answer after the start page only (lazy), never finish (stuck), or (thorough) open up to ten more pages the first evidence page links to and then answer correctly."""
     if behavior not in MOCK_BEHAVIORS:
         raise ValueError(f"unknown mock behavior {behavior!r}")
     nav = lambda p: [{"navigate": {"url": base_url + p, "new_tab": False}}]
     route = [instance.spec.start_path] + [p for p in evidence_paths if p != instance.spec.start_path]
+    if behavior == "thorough":                                           # an inefficient but honest scripted agent: it also opens other pages the evidence page links to before answering correctly (offline rehearsal only)
+        route += [p for p in (extra_paths or []) if p not in route]
     state = {"n": 0}
 
     def handler(request):
@@ -58,8 +60,24 @@ def mock_handler(instance: core.TaskInstance, base_url: str, behavior: str, evid
             return _reply(n, nav(route[n - 1]))
         if behavior == "stuck" and not last:
             return _reply(n, [{"wait": {"seconds": 1}}])
-        return _reply(n, [{"done": {"data": _answer_payload(instance, behavior in ("correct", "lazy")), "success": True}}])
+        return _reply(n, [{"done": {"data": _answer_payload(instance, behavior in ("correct", "lazy", "thorough")), "success": True}}])
     return handler
+
+
+def _linked_from_evidence(snapshot: Snapshot, instance: core.TaskInstance, max_steps: int) -> list[str]:
+    """Captured same-origin pages linked from the first evidence page (used only by the mock `thorough` behaviour), bounded so the scripted agent still finishes inside the step limit."""
+    from bs4 import BeautifulSoup
+    from ..inspect.pagemodel import internal_path
+    ev = [r.value for r in instance.evidence if r.kind == "visited_path"]
+    page = snapshot.get(ev[0]) if ev else None
+    if page is None or not page.is_html:
+        return []
+    out = []
+    for a in BeautifulSoup(page.text(), "html.parser").find_all("a", href=True):
+        p = internal_path(a["href"], ev[0])
+        if p and p in snapshot.resources and snapshot.resources[p].is_html and p not in out and "/category/" not in p and "/sort/" not in p:
+            out.append(p)
+    return out[:max(0, min(10, max_steps - 4))]
 
 
 async def run_trial(instance: core.TaskInstance, snapshot: Snapshot, *, provider: str = "mock", mock_behavior: str = "correct", output: Path, model_config: ModelConfig | None = None,
@@ -85,7 +103,7 @@ async def run_trial(instance: core.TaskInstance, snapshot: Snapshot, *, provider
         async with serve_app(mirror) as base_url:
             llm = create_model(config, effective, api_key=(api_key if provider == "live" else "mock-not-a-key"))
             if provider == "mock":
-                attach_mock(llm, mock_handler(instance, base_url, mock_behavior, [r.value for r in instance.evidence if r.kind == "visited_path"]))
+                attach_mock(llm, mock_handler(instance, base_url, mock_behavior, [r.value for r in instance.evidence if r.kind == "visited_path"], _linked_from_evidence(snapshot, instance, spec.limits.max_steps)))
             recorder.expectations = {"schema_sha256": hashes["full"], "done_only_schema_sha256": hashes["done_only"], "task_prompt": spec.objective,
                                      "max_estimated_cost_usd": PER_REQUEST_COST_CEILING_USD, "max_cumulative_estimated_cost_usd": round(PER_REQUEST_COST_CEILING_USD * spec.limits.max_model_requests, 4),
                                      "max_steps": spec.limits.max_steps, "parameters": {"max_completion_tokens": effective["max_completion_tokens"], "reasoning_effort": effective["reasoning_effort"], "model": config.model}}
