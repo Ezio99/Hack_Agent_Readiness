@@ -40,13 +40,14 @@ def _wrap(content: str, usage: dict, model: str = "dev-provider") -> dict:
 
 
 class DevProvider:
-    def __init__(self, root: Path, usage_scale: float = 1.0):
-        self.root, self.scale = Path(root), usage_scale
+    def __init__(self, root: Path, usage_scale: float = 1.0, scale_roles: tuple = ("taskgen", "agent", "investigator")):
+        self.root, self.scale, self.scale_roles = Path(root), usage_scale, tuple(scale_roles)
         self.calls = {"taskgen": 0, "agent": 0, "investigator": 0}
         self._handlers: dict[tuple, object] = {}
         self._inv: dict[str, object] = {}
         self.keys_seen: set[str | None] = set()
         self.taskgen_prompts: list[str] = []
+        self.investigator_prompts: list[str] = []
 
     def run(self) -> InvestigationRun:
         runs = sorted((p.parent for p in self.root.glob("live-*/run.json")), key=lambda d: d.stat().st_mtime)
@@ -54,8 +55,9 @@ class DevProvider:
             raise RuntimeError("no live run directory yet")
         return InvestigationRun(runs[-1])
 
-    def usage(self, prompt_chars: int, completion_chars: int) -> dict:
-        p, c = int(max(1, prompt_chars // 4) * self.scale), int(max(1, completion_chars // 4) * self.scale)
+    def usage(self, prompt_chars: int, completion_chars: int, role: str = "taskgen") -> dict:
+        k = self.scale if role in self.scale_roles else 1.0
+        p, c = int(max(1, prompt_chars // 4) * k), int(max(1, completion_chars // 4) * k)
         return {"prompt_tokens": p, "completion_tokens": c, "total_tokens": p + c}
 
     def handle(self, body: dict) -> dict:
@@ -75,7 +77,7 @@ class DevProvider:
         pick = [drafts[(i * 3 + k) % len(drafts)] for k in range(4)] if drafts else []
         tasks = [{"question": d.question, "start_path": d.start_path, "criterion": {"kind": d.criterion["kind"], **{k: None for k in CRITERION_KEYS}, **d.criterion}, "rationale": f"DEV PROVIDER fixture: {d.rationale}"[:300]} for d in pick]
         content = json.dumps({"tasks": tasks})
-        return _wrap(content, self.usage(_chars(text), len(content)))
+        return _wrap(content, self.usage(_chars(text), len(content), "taskgen"))
 
     def _agent(self, run, body, text) -> dict:
         self.calls["agent"] += 1
@@ -89,14 +91,15 @@ class DevProvider:
         r = self._handlers[key](type("R", (), {"content": json.dumps(body).encode()})())
         data = r.json()
         content = data["choices"][0]["message"]["content"]
-        return _wrap(content, self.usage(_chars(text), len(content)))
+        return _wrap(content, self.usage(_chars(text), len(content), "agent"))
 
     def _investigator(self, run, body, text) -> dict:
         self.calls["investigator"] += 1
+        self.investigator_prompts.append(text)
         client = self._inv.setdefault(run.state["id"], mock_investigator.make(run))
         req = type("Q", (), {"messages": body["messages"]})()
         content = client._responses(req)
-        return _wrap(content, self.usage(_chars(text), len(content)))
+        return _wrap(content, self.usage(_chars(text), len(content), "investigator"))
 
 
 def make_app(provider: DevProvider):
@@ -118,9 +121,10 @@ def main(argv=None) -> None:
     ap.add_argument("--root", type=Path, required=True)
     ap.add_argument("--port", type=int, default=8199)
     ap.add_argument("--usage-scale", type=float, default=1.0, help="multiply reported token usage (to exercise the budget stop)")
+    ap.add_argument("--scale-roles", default="taskgen,agent,investigator", help="which roles --usage-scale applies to")
     a = ap.parse_args(argv)
     import uvicorn
-    uvicorn.run(make_app(DevProvider(a.root, a.usage_scale)), host="127.0.0.1", port=a.port, log_level="warning")
+    uvicorn.run(make_app(DevProvider(a.root, a.usage_scale, tuple(a.scale_roles.split(",")))), host="127.0.0.1", port=a.port, log_level="warning")
 
 
 if __name__ == "__main__":

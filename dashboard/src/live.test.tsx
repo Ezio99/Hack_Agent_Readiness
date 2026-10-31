@@ -26,3 +26,17 @@ describe("live evaluation panel (M0)", () => {
     vi.unstubAllGlobals(); setToken(null);
   });
 });
+
+import fixture from "./fixtures/investigation-synthetic.json";
+import { Proposals } from "./pages/Investigation";
+
+describe("recommendation provenance", () => {
+  it("every proposal, whatever its basis, is shown as unvalidated with no measured effect", () => {
+    const d = fixture as any;
+    expect(d.proposals.length).toBeGreaterThan(0);
+    const html = renderToStaticMarkup(<Proposals d={d} />);
+    expect((html.match(/UNVALIDATED PROPOSAL/g) ?? []).length).toBe(d.proposals.length);
+    expect(html).toContain("Hypothesised effect (not measured)");
+    expect(html).not.toContain("Expected:");
+  });
+});

@@ -40,7 +40,7 @@ def sanitize_goal(goal: str) -> str:
 
 
 def stop_kind(error: str) -> str:
-    return "budget" if any(w in error.lower() for w in ("budget", "spend gate", "ceiling", " cap")) else "error"
+    return "budget" if any(w in error.lower() for w in ("budget", "spend gate", "ceiling", " cap", "estimated_cost_limit", "bound violation", "cost limit")) else "error"
 
 
 def execute(root: Path, job_id: str) -> None:
@@ -82,7 +82,7 @@ def execute_live(root: Path, job_id: str, job: dict) -> None:
         return
     budget = g["budget_usd"]
     cfg = ModelConfig(model=g["model"], base_url=g["endpoint"])
-    opts = {"snapshot": snap, "n_tasks": job.get("n_tasks", 4), "goals": {"focus": sanitize_goal(job["goal"])}, "rule_topup": False, "model_config": cfg, "allow_model_calls": True,
+    opts = {"snapshot": snap, "n_tasks": job.get("n_tasks", 4), "goals": {"focus": sanitize_goal(job["goal"])}, "focus": sanitize_goal(job["goal"]), "rule_topup": False, "model_config": cfg, "allow_model_calls": True,
             "total_cap_usd": budget, "repeats": 1}
     run, pipe, ctx = flow.build(root, job_id, target.id, mode="live", options=opts)
     run.write_artifact("live-grant", g)                                        # the authorization, kept with the run it covers

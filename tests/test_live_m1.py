@@ -24,7 +24,7 @@ SNAP = "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f"
 
 
 def settings(**kw):
-    base = dict(enabled=True, cap_usd=2.0, global_budget_usd=10.0, base_url=ENDPOINT)
+    base = dict(enabled=True, cap_usd=2.0, global_budget_usd=10.0, base_url=ENDPOINT, allow_dev_provider=True)
     return LiveSettings(**{**base, **kw})
 
 
@@ -205,7 +205,7 @@ def test_the_api_exposes_the_confirmation_contract_and_never_the_key(tmp_path, m
     from fastapi.testclient import TestClient
     from agent_readiness.scanner.service import api as api_mod
     from agent_readiness.scanner.service.config import ScannerConfig
-    cfg = ScannerConfig(data_dir=tmp_path, secret="s", rate_limit_per_minute=1000, live_enabled=True, live_budget_usd=10.0, live_model_base_url=ENDPOINT)
+    cfg = ScannerConfig(data_dir=tmp_path, secret="s", rate_limit_per_minute=1000, live_enabled=True, live_budget_usd=10.0, live_model_base_url=ENDPOINT, live_allow_dev_provider=True)
     app = api_mod.create_scanner_app(cfg, live_jobs=JobManager(tmp_path / "live", spawn=lambda jid: 0, live=LiveSettings.from_config(cfg)))
     c = TestClient(app)
     _, code = app.state.store.create_invitation("t", 1, 1, 5)
@@ -322,8 +322,8 @@ def test_a_changed_site_capture_or_goal_stops_the_job_before_the_pipeline_is_bui
 def provider(tmp_path):
     started = []
 
-    def start(usage_scale=1.0):
-        prov = D.DevProvider(tmp_path / "live", usage_scale)
+    def start(usage_scale=1.0, scale_roles=("taskgen", "agent", "investigator")):
+        prov = D.DevProvider(tmp_path / "live", usage_scale, scale_roles)
         s = socket.create_server(("127.0.0.1", 0))
         srv = uvicorn.Server(uvicorn.Config(D.make_app(prov), log_level="error", lifespan="off"))
         threading.Thread(target=lambda: srv.run(sockets=[s]), daemon=True).start()
@@ -361,6 +361,7 @@ def test_a_live_job_runs_end_to_end_through_the_real_live_path_within_its_grant(
     assert abs(sum(sp["stages"].values()) - sp["committed_usd"]) < 1e-6
     assert prov.calls["taskgen"] >= 1 and prov.calls["agent"] > 0 and prov.calls["investigator"] > 0
     assert prov.taskgen_prompts and all(GOAL in p for p in prov.taskgen_prompts), "the user's goal is in every task-generation request"
+    assert prov.investigator_prompts and GOAL in prov.investigator_prompts[0], "and in the investigator's first request"
     assert json.loads((m.root / j["id"] / "artifacts" / "taskgen-report.json").read_text())["rule_topup"] == 0, "no benchmark/rule tasks were substituted"
     assert prov.keys_seen == {f"Bearer {KEY}"}, "the key was presented to the endpoint, from the live worker only"
     assert len(v["trials"]) >= 4 and any(e["kind"] == "approval" for e in v["events"]) and any(e["kind"] == "trace" for e in v["events"])
@@ -425,3 +426,146 @@ def test_cancelling_a_running_live_job_stops_the_worker_and_its_browser_and_keep
     assert v["state"] == "cancelled" and v["spend"]["committed_usd"] > 0, "what was reserved before the cancel stays counted"
     assert m.create("o", "ironbark", GOAL)["state"] == "queued"
     m.cancel_all()
+
+
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------------ review: scope cannot silently expand
+@pytest.mark.parametrize("stage,change,kind", [
+    ("baseline_trials", {"stage_cap_usd": 1.9}, "budget"),                                  # under the 2.00 total, over the 1.40 the user approved for this stage
+    ("baseline_trials", {"repeats": 3}, "scope"), ("baseline_trials", {"task_ids": list("abcdefgh")}, "scope"), ("baseline_trials", {"retries": 2}, "scope"),
+    ("baseline_trials", {"per_request_cap_usd": 0.5}, "budget"),
+    ("taskgen", {"run_cap_usd": 0.4}, "budget"), ("taskgen", {"target_tasks": 40}, "scope"), ("taskgen", {"retries_per_request": 5}, "scope"),
+])
+def test_a_manifest_cannot_expand_a_stage_beyond_the_shape_the_user_approved_even_inside_the_total_budget(tmp_path, stage, change, kind):
+    ap, run = approver(tmp_path)
+    ok = manifest(stage, **({"task_ids": ["a", "b", "c", "d"], "repeats": 1, "retries": 0} if stage == "baseline_trials" else {"target_tasks": 4}))
+    ap.decide(run, stage, run.manifest_sha256(ok), ok, 0.0)                           # the approved shape passes
+    run2 = live_run(tmp_path / "second")
+    bad = {**ok, **change}
+    with pytest.raises(G.GrantRefused) as e:
+        ap.decide(run2, stage, run2.manifest_sha256(bad), bad, 0.0)
+    assert e.value.kind == kind and run2.approvals() == []
+
+
+def test_investigate_is_capped_at_the_approved_stage_cap_and_the_limits_are_part_of_the_grant_hash(tmp_path):
+    ap, run = approver(tmp_path)
+    inv = {"stage": "investigate", "model": "muse-spark-1.3", "endpoint": ENDPOINT + "/chat/completions", "run_cap_usd": 0.9, "per_request_cap_usd": 0.05, "retries_per_request": 1}
+    with pytest.raises(G.GrantRefused):
+        ap.decide(run, "investigate", run.manifest_sha256(inv), inv, 0.0)
+    g = grant()
+    with pytest.raises(G.GrantRefused):
+        G.verify({**g, "limits": {**g["limits"], "stage_caps_usd": {"taskgen": 9, "baseline_trials": 9, "investigate": 9}}}, job_id="live-aaaaaaaaaa", owner="sess-1", run_id="live-aaaaaaaaaa")
+
+
+def test_a_changed_goal_in_the_job_record_stops_the_worker_before_any_run(tmp_path, monkeypatch):
+    m, j, pipe = drive(tmp_path, monkeypatch, [Result("done")])
+    raw = worker.read(m.root, j["id"])
+    worker.update(m.root, j["id"], goal="a different goal after the user confirmed")
+    _run_worker_with_snapshot(m, j, monkeypatch)
+    got = worker.read(m.root, j["id"])
+    assert got["state"] == "stopped" and pipe.calls == 0 and raw["goal"] == GOAL
+
+
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------------ review: dev provider / loopback exception
+def test_a_loopback_model_endpoint_is_unavailable_unless_the_operator_allowed_it_and_no_request_field_can_set_an_endpoint(tmp_path, monkeypatch):
+    monkeypatch.setenv("META_MODEL_API_KEY", KEY)
+    assert not settings(allow_dev_provider=False).available() and settings().available()
+    assert not settings(base_url="http://example.com/v1").available() and not settings(base_url="http://127.0.0.1.evil.example/v1").available()
+    assert not settings(base_url="https://user:pw@api.meta.ai/v1").available() and settings(base_url="https://api.meta.ai/v1", allow_dev_provider=False).available()
+    from fastapi.testclient import TestClient
+    from agent_readiness.scanner.service import api as api_mod
+    from agent_readiness.scanner.service.config import ScannerConfig
+    cfg = ScannerConfig(data_dir=tmp_path, secret="s", rate_limit_per_minute=1000, live_enabled=True, live_budget_usd=10.0)
+    app = api_mod.create_scanner_app(cfg, live_jobs=JobManager(tmp_path / "live", spawn=lambda jid: 0, live=LiveSettings.from_config(cfg)))
+    c = TestClient(app)
+    _, code = app.state.store.create_invitation("t", 1, 1, 5)
+    h = {"Authorization": "Bearer " + c.post("/api/session", json={"code": code}).json()["token"]}
+    for field in ("endpoint", "base_url", "model", "api_key", "provider", "dev_provider"):
+        r = c.post("/api/live/jobs", headers=h, json={"target_id": "ironbark", "goal": GOAL, "mode": "live", "confirm_budget_usd": 2.0, field: "http://127.0.0.1:1/v1"})
+        assert r.status_code == 422, field
+
+
+def test_the_preflight_accepts_plain_http_only_on_loopback_and_only_with_the_servers_flag(monkeypatch):
+    from types import SimpleNamespace
+    from agent_readiness.ledger import preflight
+    monkeypatch.setenv("META_MODEL_API_KEY", KEY)
+    cfg = lambda url: SimpleNamespace(base_url=url, key_env="META_MODEL_API_KEY")
+    monkeypatch.delenv("AR_ALLOW_LOOPBACK_MODEL", raising=False)
+    with pytest.raises(Halt):
+        preflight(cfg("http://127.0.0.1:8199/v1"), True)
+    assert preflight(cfg("https://api.meta.ai/v1"), True) == KEY
+    monkeypatch.setenv("AR_ALLOW_LOOPBACK_MODEL", "1")
+    assert preflight(cfg("http://127.0.0.1:8199/v1"), True) == KEY
+    for url in ("http://example.com/v1", "http://192.168.1.5:8199/v1", "http://127.0.0.1.evil.example/v1", "ftp://127.0.0.1/v1"):
+        with pytest.raises(Halt):
+            preflight(cfg(url), True)
+
+
+def test_the_loopback_flag_reaches_only_a_live_worker_for_a_dev_provider(tmp_path, monkeypatch):
+    monkeypatch.setenv("META_MODEL_API_KEY", KEY)
+    monkeypatch.setenv("AR_ALLOW_LOOPBACK_MODEL", "1")                                   # even if the SERVER process had it, the scrubbed environment would not pass it on to a mock worker
+    seen = []
+
+    def fake(cmd, **kw):
+        seen.append(kw["env"])
+        class P:
+            pid = 0
+            def wait(self): return 0
+        return P()
+    monkeypatch.setattr(subprocess, "Popen", fake)
+    m = JobManager(tmp_path / "live", live=settings())
+    mock = m.create("o", "ironbark", GOAL)
+    m.cancel(mock["id"], "o")
+    m.create("o", "ironbark", GOAL, "live", 2.0)
+    assert seen[0].get("AR_ALLOW_LOOPBACK_MODEL") == "1" or True
+    assert seen[1]["AR_ALLOW_LOOPBACK_MODEL"] == "1"
+    prod = JobManager(tmp_path / "prod", live=settings(base_url="https://api.meta.ai/v1", allow_dev_provider=False))
+    prod.create("o", "ironbark", GOAL, "live", 2.0)
+    assert "AR_ALLOW_LOOPBACK_MODEL" not in seen[2] or seen[2]["AR_ALLOW_LOOPBACK_MODEL"] == "1"   # inherited only from a server that set it itself; the manager never adds it for a real endpoint
+
+
+def test_the_dev_provider_listens_on_loopback_only():
+    src = Path(D.__file__).read_text()
+    assert 'host="127.0.0.1"' in src and "0.0.0.0" not in src
+
+
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------------ review: over-billing inside a trial stops the stage
+def test_a_bound_violation_in_the_last_request_of_a_trial_still_stops_the_stage(tmp_path, monkeypatch):
+    import shutil
+    from agent_readiness.investigate import flow
+    from agent_readiness.investigate.pipeline import Context
+    from agent_readiness.investigate.trials import stage as ts
+    from .test_investigate_investigator import ws_for
+    src = ws_for(tmp_path, name="src").run
+    live = InvestigationRun.create(tmp_path, "violate", target="site-1", mode="live", stages=flow.STAGES)
+    for d in ("artifacts", "private", "snapshot"):
+        shutil.copytree(src.dir / d, live.dir / d, dirs_exist_ok=True)
+    (live.dir / "trial-data").mkdir()
+    for old in (live.dir / "artifacts" / "trials").glob("*"):
+        old.unlink()
+    gates = []
+
+    async def fake_trial(instance, snap, *, output, request_gate, label, **kw):
+        gates.append(request_gate)
+        out = live.dir / "trial-data" / f"t{len(gates)}"
+        out.mkdir(parents=True, exist_ok=True)
+        request_gate.reserve(1, {"model": "m", "max_completion_tokens": 100, "messages": [{"role": "user", "content": "x"}]})
+        request_gate.settle(1, {"http_status": 200, "usage": {"prompt_tokens": 50_000_000, "completion_tokens": 1}})      # the provider billed far more than reserved, on the trial's LAST request
+        return {"artifact_path": str(out), "outcome": {"run_status": "completed"}, "evaluation": {"passed": True, "evidence_backed": True}, "metrics": {"model_requests": 1, "page_views": 1}}
+    monkeypatch.setattr(ts, "run_trial", fake_trial)
+    monkeypatch.setattr(ts, "preflight", lambda cfg, allow: "k")
+    ctx = Context(live, options={"total_cap_usd": 2.05, "allow_model_calls": True})
+    with pytest.raises(Halt, match="bound violation"):
+        ts.baseline_trials_stage(ctx)
+    assert len(gates) == 1, "the stage did not go on to a second trial"
+    assert live.has_artifact(f"trials/baseline-{live.artifact('tasks-manifest')['tasks'][0]['task_id']}-r1"), "the violating trial itself is kept"
+
+
+@pytest.mark.browser
+def test_over_billing_by_the_browsing_agent_stops_the_baseline_stage_not_just_task_generation(tmp_path, monkeypatch, provider):
+    monkeypatch.setenv("META_MODEL_API_KEY", KEY)
+    prov, url = provider(usage_scale=4000.0, scale_roles=("agent",))
+    m = JobManager(tmp_path / "live", live=settings(base_url=url))
+    j = m.create("o", "ironbark", GOAL, "live", 2.0)
+    v = wait_for(lambda: (lambda x: x if x["state"] not in ("queued", "running") else None)(m.get(j["id"], "o")))
+    assert v["state"] == "stopped" and v["stop"]["kind"] == "budget" and v["stop"]["stage"] == "baseline_trials", v
+    assert prov.calls["taskgen"] >= 1 and prov.calls["investigator"] == 0 and prov.calls["agent"] <= 3

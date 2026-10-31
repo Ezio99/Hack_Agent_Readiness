@@ -95,6 +95,8 @@ def run_plan(ctx: Context, steps: list[dict], *, manifest_: dict, verify=None) -
         (void if is_void else done).append(tid)
         if live and is_void:
             raise Halt(f"trial {prefix}-{tid} ended with {rec['outcome']['run_status']}; stopping the stage (void trial, not a website result)")
+        if live and gate is not None and gate.violation:                                         # a settled cost above its reservation closes THIS trial's gate; it must also stop the stage (the next trial gets a fresh gate)
+            raise Halt(f"spend gate bound violation in trial {prefix}-{tid}: {gate.violation}; stopping the stage (the trial is kept)")
     return {"trials": len(done), "void": len(void), "executed": executed}
 
 

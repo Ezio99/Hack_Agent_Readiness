@@ -20,7 +20,7 @@ from typing import Any
 from ..suite.core import canonical_hash
 
 LIVE_STAGES = ("taskgen", "baseline_trials", "investigate")          # the ONLY stages a user grant can approve (the paid stages of one evaluation, no fix, no retest)
-GRANT_FIELDS = ("job_id", "owner", "run_id", "target_id", "goal", "budget_usd", "stages", "model", "endpoint", "snapshot_sha256")
+GRANT_FIELDS = ("job_id", "owner", "run_id", "target_id", "goal", "budget_usd", "stages", "model", "endpoint", "snapshot_sha256", "limits")
 CAP_KEYS = ("run_cap_usd", "stage_cap_usd", "worst_case_stage_usd", "ledger_ceiling_usd")
 
 
@@ -30,9 +30,17 @@ class GrantRefused(Exception):
         self.reason, self.kind = reason, kind                       # kind: scope | budget | integrity
 
 
-def make_grant(*, job_id: str, owner: str, target_id: str, goal: str, budget_usd: float, model: str, endpoint: str, snapshot_sha256: str, stages=LIVE_STAGES) -> dict:
+def default_limits(n_tasks: int = 4) -> dict:
+    """The SHAPE of the run the user approved, not just its total: per-stage caps (the existing allocation), the task count, one repeat, the per-request cap. A manifest that asks for more is refused
+    even when the total would still fit the budget."""
+    from ..investigate import allocation as alloc
+    return {"stage_caps_usd": {"taskgen": alloc.TASKGEN_CAP_USD, "baseline_trials": alloc.BASELINE_CAP_USD, "investigate": alloc.INVESTIGATE_CAP_USD}, "max_tasks": n_tasks, "repeats": 1,
+            "per_request_cap_usd": alloc.PER_REQUEST_CAP_USD, "max_retries_per_request": 1}
+
+
+def make_grant(*, job_id: str, owner: str, target_id: str, goal: str, budget_usd: float, model: str, endpoint: str, snapshot_sha256: str, stages=LIVE_STAGES, limits: dict | None = None) -> dict:
     g = {"job_id": job_id, "owner": owner, "run_id": job_id, "target_id": target_id, "goal": goal, "budget_usd": round(float(budget_usd), 6), "stages": list(stages), "model": model,
-         "endpoint": endpoint, "snapshot_sha256": snapshot_sha256}
+         "endpoint": endpoint, "snapshot_sha256": snapshot_sha256, "limits": limits or default_limits()}
     return {**g, "confirmed_at": time.time(), "grant_sha256": digest(g)}
 
 
@@ -80,6 +88,19 @@ class Approver:
             raise GrantRefused("the manifest names a different model or endpoint than the one approved", "scope")
         if manifest.get("snapshot_sha256") not in (None, g["snapshot_sha256"]):
             raise GrantRefused("the manifest is for a different website capture than the one approved", "scope")
+        lim = g["limits"]
+        stage_limit = lim["stage_caps_usd"].get(stage)
+        own = manifest.get("stage_cap_usd") if stage == "baseline_trials" else manifest.get("run_cap_usd")          # the cap the spend gate actually enforces for that stage
+        if stage_limit is None or not isinstance(own, (int, float)) or float(own) > stage_limit + 1e-9:
+            raise GrantRefused(f"the {stage} manifest's stage cap (US${own}) exceeds what the user approved for it (US${stage_limit})", "budget")
+        if isinstance(manifest.get("per_request_cap_usd"), (int, float)) and manifest["per_request_cap_usd"] > lim["per_request_cap_usd"] + 1e-9:
+            raise GrantRefused("the manifest raises the per-request cap above the approved one", "budget")
+        if stage == "baseline_trials" and (manifest.get("repeats", 1) > lim["repeats"] or len(manifest.get("task_ids", [])) > lim["max_tasks"] or manifest.get("retries", 0) != 0):
+            raise GrantRefused("the baseline manifest runs more tasks, repeats or retries than the user approved", "scope")
+        if stage == "taskgen" and (manifest.get("target_tasks", lim["max_tasks"]) > lim["max_tasks"] or manifest.get("retries_per_request", 0) > lim["max_retries_per_request"]):
+            raise GrantRefused("the taskgen manifest asks for more tasks or retries than the user approved", "scope")
+        if stage == "investigate" and manifest.get("retries_per_request", 0) > lim["max_retries_per_request"]:
+            raise GrantRefused("the investigate manifest asks for more retries than the user approved", "scope")
         caps = _caps(manifest)
         if not caps or any(c > g["budget_usd"] + 1e-9 for c in caps):
             raise GrantRefused(f"a cap in the {stage} manifest (US${max(caps or [0]):.2f}) exceeds the approved budget (US${g['budget_usd']:.2f})", "budget")

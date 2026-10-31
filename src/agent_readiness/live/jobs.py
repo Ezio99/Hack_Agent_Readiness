@@ -47,10 +47,11 @@ class LiveSettings:
     model: str = "muse-spark-1.3"
     key_env: str = "META_MODEL_API_KEY"
     timeout_seconds: int = 1800
+    allow_dev_provider: bool = False
 
     @classmethod
     def from_config(cls, c) -> "LiveSettings":
-        return cls(enabled=c.live_enabled, cap_usd=c.live_job_cap_usd, global_budget_usd=c.live_budget_usd, base_url=c.live_model_base_url, key_env=c.live_api_key_env, timeout_seconds=c.live_job_timeout_seconds)
+        return cls(enabled=c.live_enabled, cap_usd=c.live_job_cap_usd, global_budget_usd=c.live_budget_usd, base_url=c.live_model_base_url, key_env=c.live_api_key_env, timeout_seconds=c.live_job_timeout_seconds, allow_dev_provider=c.live_allow_dev_provider)
 
     def key(self) -> str | None:
         return os.environ.get(self.key_env) or None
@@ -62,7 +63,7 @@ class LiveSettings:
     @property
     def endpoint_ok(self) -> bool:
         u = urlsplit(self.base_url)
-        return bool(u.hostname) and not (u.username or u.password or u.query or u.fragment) and (u.scheme == "https" or (u.scheme == "http" and u.hostname in ("127.0.0.1", "localhost", "::1")))
+        return bool(u.hostname) and not (u.username or u.password or u.query or u.fragment) and (u.scheme == "https" or (u.scheme == "http" and u.hostname in ("127.0.0.1", "localhost", "::1") and self.allow_dev_provider))
 
     def available(self) -> bool:
         return self.enabled and self.global_budget_usd > 0 and self.cap_usd > 0 and bool(self.key()) and self.endpoint_ok
@@ -87,6 +88,8 @@ class JobManager:
         env = {k: v for k, v in os.environ.items() if not SECRET_ENV.search(k)}                 # no worker inherits a credential
         if worker.read(self.root, job_id)["mode"] == "live" and self.live.key():
             env[self.live.key_env] = self.live.key()                                            # ONLY an approved live job's worker receives the model key (environment, never argv, never a file)
+            if self.live.dev_provider and self.live.allow_dev_provider:
+                env["AR_ALLOW_LOOPBACK_MODEL"] = "1"                                            # the preflight accepts a loopback http endpoint only in this worker, only when the operator allowed the dev provider
         log = open(self.root / f"{job_id}.log", "ab")
         p = subprocess.Popen([sys.executable, "-m", "agent_readiness.live.worker", str(self.root), job_id], stdout=log, stderr=log, env=env, start_new_session=True)
         threading.Thread(target=lambda: (p.wait(), log.close()), daemon=True).start()          # reap the child: a finished worker must not linger as a zombie

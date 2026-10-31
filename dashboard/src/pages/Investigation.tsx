@@ -277,9 +277,9 @@ export function Proposals({ d, onSeeChange }: { d: InvestigationExport; onSeeCha
     <ul className="findings">
       {d.proposals.map((p) => (
         <li key={p.id} className={`finding ${p.basis === "verified_finding" ? "conf-observed" : "conf-hypothesis"}`}>
-          <span className={`pill ${p.basis === "verified_finding" ? "pill-pass" : "pill-warn"}`}>{p.label}</span>{p.owner_selected ? <> <span className="mode mode-unmeasured">chosen by the site owner · exploratory</span></> : null} <span className="muted">status: {p.status}{p.approved ? " · owner-approved" : ""} · validation: {p.validation}</span>
+          <span className="pill pill-warn" title="No measured effect: a proposal is a hypothesis about a change until the frozen tasks are retested">UNVALIDATED PROPOSAL · no measured effect</span> <span className={`pill ${p.basis === "verified_finding" ? "pill-pass" : "pill-warn"}`}>{p.label}</span>{p.owner_selected ? <> <span className="mode mode-unmeasured">chosen by the site owner · exploratory</span></> : null} <span className="muted">status: {p.status}{p.approved ? " · owner-approved" : ""} · validation: {p.validation}</span>
           <p>{"manual" in p.change ? p.change.manual : `Patch operations: ${p.change.ops.join(", ")}`}</p>
-          <p className="muted">Expected: {p.expected_effect}{p.risks.length ? ` · Risks: ${p.risks.join("; ")}` : ""}</p>
+          <p className="muted">Hypothesised effect (not measured): {p.expected_effect}{p.risks.length ? ` · Risks: ${p.risks.join("; ")}` : ""}</p>
           {onSeeChange && d.storefront?.state === "ok" && d.storefront.variants.some((v) => v.proposal_id === p.id) ? <p><button type="button" className="primary" onClick={() => onSeeChange(p.id)}>See the exact website change →</button></p> : null}
         </li>))}
     </ul>
