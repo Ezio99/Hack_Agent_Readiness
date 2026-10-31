@@ -56,10 +56,10 @@ def taskgen_manifest(ctx: Context) -> dict:
     from .llm import request_sha256
     cfg = ctx.options.get("model_config") or ModelConfig()
     profile = ctx.run.artifact("site-profile")
-    reqs = propose.batch_requests(profile, load_goals(ctx.options.get("goals"))[0])
+    reqs = propose.batch_requests(profile, load_goals(ctx.options.get("goals"))[0], bool(ctx.options.get("goal_binding")), ctx.options.get("context"))
     bounds = [reservation_bound_usd(r) for r in reqs]
     return {"stage": "taskgen", "provider": cfg.provider, "model": cfg.model, "endpoint": cfg.base_url.rstrip("/") + "/chat/completions", "batches": len(reqs), "proposals_per_batch": propose.BATCH_SIZE,
-            "max_requests": len(reqs), "retries_per_request": 0, "feedback_round": False, "target_tasks": ctx.options.get("n_tasks", 8),
+            "max_requests": len(reqs), "retries_per_request": 0, "feedback_round": False, "target_tasks": ctx.options.get("n_tasks", 8), **({"goal_binding": True} if ctx.options.get("goal_binding") else {}), **({"client_context_sha256": canonical_hash(ctx.options["context"])} if ctx.options.get("context") else {}),
             "batch_prompt_sha256": [canonical_hash(r.messages) for r in reqs], "batch_request_sha256": [request_sha256(r) for r in reqs], "snapshot_sha256": profile["snapshot_sha256"],
             "run_cap_usd": TASKGEN_RUN_CAP_USD, "per_request_cap_usd": alloc.PER_REQUEST_CAP_USD, "reasoning_effort": DEFAULT_REASONING_EFFORT, "max_completion_tokens": propose.MAX_TOKENS,
             "input_overhead_tokens_reserved": INPUT_OVERHEAD_TOKENS, "per_request_reservation_usd": bounds, "worst_case_stage_usd": round(sum(bounds), 6),

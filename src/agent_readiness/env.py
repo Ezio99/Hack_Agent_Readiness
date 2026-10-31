@@ -14,6 +14,8 @@ def load_repo_env(path: Path | None = None) -> bool:
 
     Only this explicit path is read (no upward search). Values are never printed.
     """
+    if path is None and os.environ.get("PYTEST_CURRENT_TEST"):
+        return False                                           # a test never reads the operator's real .env implicitly (it holds the live model key); pass a path to test this function
     path = Path(path) if path is not None else REPO_ROOT / ".env"
     if not path.is_file():
         return False

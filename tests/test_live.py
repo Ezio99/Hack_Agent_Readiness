@@ -34,10 +34,10 @@ def test_a_job_is_validated_owned_and_one_at_a_time(tmp_path):
         assert e.value.status == 422
     with pytest.raises(JobError) as e:
         m.create("a", "ironbark", GOAL, mode="live")
-    assert e.value.status == 409 and "not enabled" in e.value.message
+    assert e.value.status == 409 and "not enabled" in e.value.message, "live is refused unless the server enables it, has a key and a budget"
     j = m.create("a", "ironbark", GOAL)
     assert j["state"] == "queued" and j["mock"] and "No language model was called" in j["notice"] and spawned == [j["id"]]
-    assert j["spend"] == {"committed_usd": 0.0, "hard_cap_usd": 0.0, "basis": "mock: no model call, nothing spent"} and j["stages"][0]["status"] == "pending"
+    assert j["spend"] == {"committed_usd": 0.0, "hard_cap_usd": 0.0, "basis": "mock: no model call, nothing spent", "stages": {}} and j["stages"][0]["status"] == "pending"
     with pytest.raises(JobError) as e:
         m.create("b", "ironbark", GOAL)
     assert e.value.status == 409, "a second job while one is queued/running is refused"
@@ -96,12 +96,13 @@ def test_the_worker_never_receives_a_credential(tmp_path, monkeypatch):
     assert "META_MODEL_API_KEY" not in seen and "SOME_SECRET_TOKEN" not in seen and "PATH" in seen
 
 
-def test_a_live_job_is_refused_by_the_worker_even_if_one_were_queued(tmp_path):
+def test_a_live_job_without_a_valid_grant_is_stopped_by_the_worker_before_anything_runs(tmp_path):
     m, _ = manager(tmp_path)
     j = m.create("a", "ironbark", GOAL)
-    worker.update(m.root, j["id"], mode="live")
+    worker.update(m.root, j["id"], mode="live")                   # a mock job tampered into a live one has no grant
     worker.execute(m.root, j["id"])
-    assert worker.read(m.root, j["id"])["state"] == "failed" and "not enabled" in worker.read(m.root, j["id"])["error"]
+    got = worker.read(m.root, j["id"])
+    assert got["state"] == "stopped" and "grant" in got["error"] and not (m.root / j["id"]).exists(), "no run directory, no model, no browser"
 
 
 @pytest.fixture

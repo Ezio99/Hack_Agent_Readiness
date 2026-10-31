@@ -77,8 +77,9 @@ def preflight(config, allow_model_calls: bool) -> str:
         raise Halt("refusing: live calls need --allow-model-calls")
     if (PRICE_INPUT_PER_M, PRICE_OUTPUT_PER_M) != VERIFIED_PRICES:
         raise Halt("price constants differ from the verified published prices; re-verify before spending")
-    if urlsplit(config.base_url).scheme != "https":
-        raise Halt("endpoint must be https")
+    endpoint = urlsplit(config.base_url)
+    if endpoint.scheme != "https" and not (endpoint.scheme == "http" and endpoint.hostname in ("127.0.0.1", "localhost", "::1") and os.environ.get("AR_ALLOW_LOOPBACK_MODEL") == "1"):
+        raise Halt("endpoint must be https (plain http to a loopback address needs AR_ALLOW_LOOPBACK_MODEL=1, set only by the server for the zero-spend dev provider)")
     from .env import load_repo_env
     load_repo_env()
     key = os.environ.get(config.key_env, "")

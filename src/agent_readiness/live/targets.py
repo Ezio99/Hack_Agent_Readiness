@@ -7,6 +7,13 @@ from typing import Callable
 from ..investigate.sitemodel.snapshot import Snapshot
 
 
+CONTEXT_MAX = 2000
+SAMPLE_CONTEXT = {"ironbark": ("Ironbark Hire Co. is a family-run equipment-hire business in Marrickville, Sydney. Customers are mostly tradies and weekend DIY renovators who need a machine for a day, a weekend or a "
+                               "week, and who usually compare two or three similar machines on daily or weekend rate, whether the machine is free on the dates they need, and the refundable deposit. Cutting tools "
+                               "(tile saws, cut-off saws, chainsaws) are popular for paving and landscaping jobs. Priorities: shoppers should be able to see the hire rate and availability without phoning us, "
+                               "and the booking calendar should be easy to find from the product page.")}
+
+
 @dataclass(frozen=True)
 class DemoTarget:
     id: str
@@ -34,4 +41,4 @@ TARGETS: dict[str, DemoTarget] = {t.id: t for t in (
 
 
 def listing() -> list[dict]:
-    return [{"id": t.id, "label": t.label, "description": t.description} for t in TARGETS.values()]
+    return [{"id": t.id, "label": t.label, "description": t.description, **({"sample_context": SAMPLE_CONTEXT[t.id]} if t.id in SAMPLE_CONTEXT else {})} for t in TARGETS.values()]

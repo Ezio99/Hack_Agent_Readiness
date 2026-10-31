@@ -106,6 +106,10 @@ def internal_path(href: str | None, base_path: str) -> str | None:
     return (u.path or "/") + (f"?{u.query}" if u.query else "")
 
 
+AMOUNT = re.compile(r"^[$€£]\s?\d[\d,]*(\.\d{1,2})?$")
+DATE = re.compile(r"^\d{1,2} [A-Z][a-z]{2}$")
+
+
 def _facts(root: Tag) -> list[dict]:
     """Label/value pairs from definition lists, two-column table rows, and 'Label: value' text — in that order of reliability."""
     out = []
@@ -122,6 +126,22 @@ def _facts(root: Tag) -> list[dict]:
         cells = tr.find_all(["th", "td"], recursive=False)
         if len(cells) == 2 and cells[0].name == "th":
             add(visible_text(cells[0]), visible_text(cells[1]), tr, "table")
+    # Caption-with-amount pairs ("$110" above "Per day") and calendar cells ("14 Nov" beside "Booked"): the page SHOWS these to a browser agent as text, but they are neither dl nor table-row pairs. Only
+    # the exact visible text of two sibling elements is recorded (label = the caption/date, value = the amount/status); nothing is computed, inferred or normalised beyond case of the label.
+    for el in root.find_all(["div", "td", "li"]):
+        kids = [c for c in el.children if isinstance(c, Tag)]
+        if len(kids) != 2 or any(c.find(True) for c in kids) or _hidden(el):
+            continue
+        first, second = visible_text(kids[0]), visible_text(kids[1])
+        if AMOUNT.match(first) and 1 <= len(second.split()) <= 3 and not AMOUNT.match(second):
+            add(second, first, el, "amount-caption")
+        elif DATE.match(first) and 1 <= len(second.split()) <= 3 and not DATE.match(second):
+            add(first, second, el, "calendar-cell")
+    for strong in root.find_all(["strong", "b"]):                      # a dated status line under a heading: "Today, Mon 2 Nov: <status>." -> label "<heading> today", value "<status>"
+        m = re.match(r"^(Today|Tomorrow), [A-Za-z]{3} \d{1,2} [A-Za-z]{3}: (.{3,40})\.$", visible_text(strong))
+        h = strong.find_previous(["h2", "h3"])
+        if m and h is not None:
+            add(f"{visible_text(h)} {m.group(1)}", m.group(2), strong, "dated-status")
     for el in root.find_all(["p", "li", "div", "span"]):
         if el.find(["p", "li", "div", "dl", "table"]):
             continue

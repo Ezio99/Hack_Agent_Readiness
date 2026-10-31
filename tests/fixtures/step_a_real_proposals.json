@@ -1,0 +1,141 @@
+{
+ "note": "The 12 task proposals muse-spark-1.3 returned in the Step A smoke test (job live-96a6c3ab04, 2026-10-31) for the goal 'Can a shopper compare the hire price and availability of the two cheapest cutting tools?', in batch order, before goal binding existed. Questions and criterion specs only: no answers, no usage, no key.",
+ "batches": [
+  [
+   {
+    "question": "What is the refundable deposit for the Wet tile saw 250 mm?",
+    "start_path": "/",
+    "criterion": {
+     "kind": "page_fact",
+     "label": "refundable deposit",
+     "page": "/hire/wet-tile-saw-250mm"
+    },
+    "rationale": "(real model rationale omitted)"
+   },
+   {
+    "question": "What engine is listed for the Petrol chainsaw 45 cm?",
+    "start_path": "/",
+    "criterion": {
+     "kind": "page_fact",
+     "label": "engine",
+     "page": "/hire/petrol-chainsaw-45cm"
+    },
+    "rationale": "(real model rationale omitted)"
+   },
+   {
+    "question": "What are the collection and return times for weekend hire under the hire terms?",
+    "start_path": "/",
+    "criterion": {
+     "kind": "page_fact",
+     "label": "weekend hire",
+     "page": "/hire-terms"
+    },
+    "rationale": "(real model rationale omitted)"
+   },
+   {
+    "question": "Find the hire page for the Petrol cut-off saw 350 mm starting from the home page.",
+    "start_path": "/",
+    "criterion": {
+     "kind": "reach_page",
+     "target": "Petrol cut-off saw 350 mm | Ironbark Hire Co."
+    },
+    "rationale": "(real model rationale omitted)"
+   }
+  ],
+  [
+   {
+    "question": "How do I get to the live availability page for the Electric demolition hammer 15 kg hire?",
+    "start_path": "/",
+    "criterion": {
+     "kind": "reach_page",
+     "target": "/hire/electric-demolition-hammer-15kg/availability"
+    },
+    "rationale": "(real model rationale omitted)"
+   },
+   {
+    "question": "Find the accessory page for the Continuous-rim tile blade 250 mm to check what tile saw it fits.",
+    "start_path": "/",
+    "criterion": {
+     "kind": "reach_page",
+     "target": "/accessories/continuous-rim-tile-blade-250mm"
+    },
+    "rationale": "(real model rationale omitted)"
+   },
+   {
+    "question": "What is the bore size listed for the Diamond blade 350 mm (concrete and masonry) accessory?",
+    "start_path": "/",
+    "criterion": {
+     "kind": "page_fact",
+     "label": "bore",
+     "page": "/accessories/diamond-blade-350mm"
+    },
+    "rationale": "(real model rationale omitted)"
+   },
+   {
+    "question": "What maximum hole diameter is listed on the Diamond core drill 152 mm (wet) hire page?",
+    "start_path": "/",
+    "criterion": {
+     "kind": "page_fact",
+     "label": "max hole diameter",
+     "page": "/hire/diamond-core-drill-152mm"
+    },
+    "rationale": "(real model rationale omitted)"
+   }
+  ],
+  [
+   {
+    "question": "Among all hire equipment listed under Hire equipment, which item has the lowest weight stated on its own page?",
+    "start_path": "/",
+    "criterion": {
+     "direction": "min",
+     "kind": "extremum",
+     "label": "weight",
+     "listing": "/hire"
+    },
+    "rationale": "(real model rationale omitted)"
+   },
+   {
+    "question": "From the featured hire list on the homepage, which items list Petrol (4-stroke) as their power on their own pages?",
+    "start_path": "/",
+    "criterion": {
+     "conditions": [
+      {
+       "label": "power",
+       "op": "eq",
+       "value": "Petrol (4-stroke)"
+      }
+     ],
+     "kind": "item_set",
+     "listing": "/"
+    },
+    "rationale": "(real model rationale omitted)"
+   },
+   {
+    "question": "Among the Accessories and consumables, which items have a diameter of 250 mm stated on their own pages?",
+    "start_path": "/",
+    "criterion": {
+     "conditions": [
+      {
+       "label": "diameter",
+       "op": "eq",
+       "value": "250 mm"
+      }
+     ],
+     "kind": "item_set",
+     "listing": "/accessories"
+    },
+    "rationale": "(real model rationale omitted)"
+   },
+   {
+    "question": "What are the Saturday opening hours stated on the Contact and booking page?",
+    "start_path": "/",
+    "criterion": {
+     "kind": "page_fact",
+     "label": "saturday",
+     "page": "/contact"
+    },
+    "rationale": "(real model rationale omitted)"
+   }
+  ]
+ ]
+}

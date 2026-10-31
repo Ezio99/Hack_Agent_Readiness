@@ -7,11 +7,11 @@ from __future__ import annotations
 
 import re
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from ...suite.core import canonical_hash
 from ..zoo.sealed import BlindnessError, assert_blind
-from .criteria import Compiled, Criterion, CriterionError, compile_criterion, norm_answer
+from .criteria import Compiled, Criterion, CriterionError, compile_criterion, norm_answer, resolve_target
 
 MAX_HOPS = 4
 MIN_QUESTION_CHARS = 20
@@ -75,8 +75,10 @@ def _signature(criterion: dict, start: str) -> str:
 
 
 def evaluate(draft: Draft, profile: dict, accepted: list[Accepted]) -> Accepted | Rejected:
+    proposed = draft                                                       # outcomes always carry the draft AS PROPOSED (accounting keys on it); `draft` below may be the title-resolved working copy
+
     def no(reason):
-        return Rejected(draft, reason)
+        return Rejected(proposed, reason)
     q = draft.question.strip()
     if len(q) < MIN_QUESTION_CHARS or len(q) > 400:
         return no("question length is outside 20-400 characters")
@@ -84,6 +86,11 @@ def evaluate(draft: Draft, profile: dict, accepted: list[Accepted]) -> Accepted 
         assert_blind(q)
     except BlindnessError:
         return no("question text would reveal a protected diagnosis")
+    if draft.criterion.get("kind") == "reach_page" and isinstance(draft.criterion.get("target"), str):          # a title is resolved to its captured path first, so every later check and the stored criterion use the path
+        try:
+            draft = replace(draft, criterion={**draft.criterion, "target": resolve_target(profile, draft.criterion["target"])})
+        except CriterionError as exc:
+            return no(f"criterion does not compile: {exc}")
     try:
         crit = compile_criterion(draft.criterion, profile)
         again = compile_criterion(draft.criterion, profile)
@@ -136,4 +143,4 @@ def evaluate(draft: Draft, profile: dict, accepted: list[Accepted]) -> Accepted 
         ta, tb = _tokens(a.draft.question), _tokens(q)
         if ta and tb and len(ta & tb) / len(ta | tb) >= DUP_JACCARD and a.compiled.truth == crit.truth:
             return no("near-duplicate wording of an accepted task with the same answer")
-    return Accepted(draft, crit, draft.criterion, sig, {p: dist[p] for p in crit.evidence_paths})
+    return Accepted(proposed, crit, draft.criterion, sig, {p: dist[p] for p in crit.evidence_paths})

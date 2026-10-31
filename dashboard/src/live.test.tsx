@@ -26,3 +26,30 @@ describe("live evaluation panel (M0)", () => {
     vi.unstubAllGlobals(); setToken(null);
   });
 });
+
+import fixture from "./fixtures/investigation-synthetic.json";
+import { Proposals } from "./pages/Investigation";
+
+describe("recommendation provenance", () => {
+  it("every proposal, whatever its basis, is shown as unvalidated with no measured effect", () => {
+    const d = fixture as any;
+    expect(d.proposals.length).toBeGreaterThan(0);
+    const html = renderToStaticMarkup(<Proposals d={d} />);
+    expect((html.match(/UNVALIDATED PROPOSAL/g) ?? []).length).toBe(d.proposals.length);
+    expect(html).toContain("Hypothesised effect (not measured)");
+    expect(html).not.toContain("Expected:");
+  });
+});
+
+describe("website context in the start request", () => {
+  it("is sent only when non-empty, trimmed, and never changes the mode or the budget fields", async () => {
+    const f = vi.fn(async () => new Response(JSON.stringify({ id: "live-1" }), { status: 202 }));
+    vi.stubGlobal("fetch", f);
+    await startJob("ironbark", "Compare prices", undefined, "  We hire to tradies.  ");
+    await startJob("ironbark", "Compare prices", { confirm_budget_usd: 2 }, "   ");
+    const body = (i: number) => JSON.parse((f.mock.calls[i] as unknown as [string, RequestInit])[1].body as string);
+    expect(body(0)).toEqual({ target_id: "ironbark", goal: "Compare prices", mode: "mock", context: "We hire to tradies." });
+    expect(body(1)).toEqual({ target_id: "ironbark", goal: "Compare prices", mode: "live", confirm_budget_usd: 2 });
+    vi.unstubAllGlobals();
+  });
+});

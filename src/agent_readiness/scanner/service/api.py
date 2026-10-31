@@ -292,8 +292,8 @@ def create_scanner_app(config: ScannerConfig, runner=execute_scan, store: Store 
         return {"kill_switch": False}
 
     from ...live.api import add_live_routes
-    from ...live.jobs import JobManager
-    live_jobs = live_jobs or JobManager(config.live_root, killed=manager.killed)
+    from ...live.jobs import JobManager, LiveSettings
+    live_jobs = live_jobs or JobManager(config.live_root, killed=manager.killed, live=LiveSettings.from_config(config))
     app.state.live_jobs = live_jobs
     add_live_routes(app, live_jobs, current_session)
     return app
