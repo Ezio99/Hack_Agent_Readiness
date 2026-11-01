@@ -5,6 +5,7 @@ import {afterEach,beforeEach,expect,it,vi} from 'vitest';
 import {ReplayStudio} from './ReplayStudio';
 import {adaptReplay} from './evidence';
 import App from '../App';
+import {Tasks} from './Tasks';
 import {ArchivedResults,summarizeArchivedS1} from './ArchivedResults';
 import {Transformation,transformationReference} from './Transformation';
 import {createHash} from 'node:crypto';
@@ -31,7 +32,7 @@ it('steps, event selection, scrub and inspector refer to the same archived entry
 it('play, pause and restart use fixed presentation pacing and stop at the end',()=>{
  vi.useFakeTimers();mount();click('Play');act(()=>vi.advanceTimersByTime(2200));expect(position()).toBe('/storyboard/steps/1');click('Pause');act(()=>vi.advanceTimersByTime(5000));expect(position()).toBe('/storyboard/steps/1');click('Restart replay');click('Play');
  for(let i=0;i<recording.storyboard.steps.length-1;i++)act(()=>vi.advanceTimersByTime(2200));
- expect(position()).toBe(`/storyboard/steps/${recording.storyboard.steps.length-1}`);expect([...host.querySelectorAll('button')].some(b=>b.textContent==='Pause')).toBe(false);expect(host.textContent).toContain('not recorded timing');
+ expect(position()).toBe(`/storyboard/steps/${recording.storyboard.steps.length-1}`);expect([...host.querySelectorAll('button')].some(b=>b.textContent==='Pause')).toBe(false);expect(host.querySelector('.transport')?.textContent).toContain('Illustrative timing');
 });
 it('selecting a task with no archive stops playback and shows no borrowed events',()=>{
  vi.useFakeTimers();mount();click('Play');const select=host.querySelectorAll('select')[1];
@@ -95,3 +96,8 @@ it('aggregate adapter rejects missing/void/repeated/unsupported rows and ignores
 it('Scan describes the archived case and opens the existing journey',()=>{mount();click('Scan');const scan=host.querySelector('.studio-scan')!;expect(scan.textContent).toContain('not a live scan');expect(scan.textContent).toContain('Ironbark Hire Co.');expect(scan.textContent).toContain('4 recorded tasks');expect(scan.textContent).toContain('Meta Muse Spark 1.3');click('Explore agent journey →');expect(position()).toBe('/storyboard/steps/0');});
 
 it('repetitive scrolls have distinct selected entries without rewriting their archived text',()=>{mount();for(const i of [2,3,4]){act(()=>{(host.querySelectorAll('.studio-events button')[i] as HTMLButtonElement).click();});expect(host.querySelector('.replay-state')?.textContent).toContain(`Entry ${i+1} of 9`);expect(host.querySelector('.studio-action h3')?.textContent).toBe('Scrolled');expect(host.querySelector('.action-top')?.textContent).toContain(`Entry ${String(i+1).padStart(2,'0')}`);expect(host.querySelector('.studio-inspector')?.textContent).toContain('Scrolled');}act(()=>{(host.querySelectorAll('.studio-events button')[5] as HTMLButtonElement).click();});expect(host.querySelector('.tool-action')?.textContent).toContain('Missing scroll index');expect(host.querySelector('.scroll-evidence-note')).toBeNull();});
+
+it('Tasks preserves exact safe prompts, owner provenance, and replay/event continuity',()=>{mount();click('Next event');click('Tasks');expect(host.querySelector('.studio-tasks')?.textContent).toContain('These prompts were not model-generated');expect([...host.querySelectorAll('.task-list strong')].map(n=>n.textContent)).toEqual(recording.tasks.map(t=>t.question));click('Explore recorded journey →');expect(position()).toBe('/storyboard/steps/1');click('Tasks');act(()=>{(host.querySelectorAll('.task-list button')[1] as HTMLButtonElement).click();});expect(host.querySelector('.task-detail h2')?.textContent).toBe(recording.tasks[1].question);expect(host.querySelector('.task-detail')?.textContent).toContain('Replay unavailable');expect(host.querySelector('.task-detail button')).toBeNull();expect((host.querySelectorAll('select')[1] as HTMLSelectElement).value).toBe(recording.tasks[1].task_id);});
+it('Tasks does not infer imported generation provenance or expose extra payload fields',()=>{const report=adaptReplay(JSON.stringify(recording));act(()=>root.render(<Tasks report={report} task={report.tasks[0].id} selectTask={()=>{}} openJourney={()=>{}} reviewedS1={false}/>));expect(host.textContent).toContain('Generation, selection and freeze provenance are unavailable');expect(host.textContent).not.toContain('Owner-authored · Recorded');expect(host.querySelector('textarea')).toBeNull();});
+
+it('technical identifiers and exact pace are disclosed without obscuring selected event context',()=>{mount();expect(host.querySelector('.transport')?.textContent).toContain('Illustrative timing');expect(host.querySelector('.transport')?.textContent).not.toContain('2.2');expect(host.querySelector('.action-top')?.textContent).not.toContain('Archive event');const details=host.querySelector('.event-technical') as HTMLDetailsElement;expect(details.open).toBe(false);expect(details.textContent).toContain('Archive event: 9');expect(details.textContent).toContain('2.2 seconds');expect(details.textContent).toContain('/storyboard/steps/0');expect(host.querySelector('.replay-state')?.textContent).toContain('Entry 1 of 9');});

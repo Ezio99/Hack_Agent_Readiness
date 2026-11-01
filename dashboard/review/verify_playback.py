@@ -52,9 +52,12 @@ with sync_playwright() as pw:
   # Repetitive scroll identity and special fallback are independent of action text.
   for i in [2,3,4,5]:
    page.locator('.studio-events button').nth(i).click();synchronized(i)
-   if i<5:expect(page.locator('.scroll-evidence-note')).to_be_visible()
+   if i<5:
+    if not page.locator('.event-technical').evaluate('(n)=>n.open'):page.locator('.event-technical summary').click()
+    expect(page.locator('.scroll-evidence-note')).to_be_visible()
    else:expect(page.locator('.tool-action')).to_be_visible()
   page.locator('.studio-events button').nth(3).click();synchronized(3)
+  if page.locator('.event-technical').evaluate('(n)=>n.open'):page.locator('.event-technical summary').click()
   assert page.evaluate(f'document.documentElement.scrollWidth==={width}')
   if motion=='reduce':assert page.locator('.studio-action').evaluate("n=>getComputedStyle(n).animationName==='none'")
   page.screenshot(path=str(ROOT/'review'/f'playback-{width}.png'),full_page=True,animations='disabled')

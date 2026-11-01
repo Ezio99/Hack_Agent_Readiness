@@ -25,7 +25,7 @@ export function ArchivedResults({available,task,openReport}:{available:boolean;t
   const additional=result.modified.supported-result.original.supported;
   const fewerRequests=result.original.requests>0?Math.round(100*(result.original.requests-result.modified.requests)/result.original.requests):null;
   return <section className="archived-results" aria-label="Archived S1 results">
-    <div className="studio-title"><div><p className="studio-kicker">RECORDED OBSERVATIONS · IRONBARK S1</p><h1>See what changed.</h1></div><button onClick={openReport}>Classic dashboard details ↗</button></div>
+    <div className="studio-title"><div><p className="studio-kicker">RECORDED OBSERVATIONS · IRONBARK</p><h1>See what changed.</h1></div><button onClick={openReport}>Classic dashboard details ↗</button></div>
     <p className="results-scope">Original → Modified · Across all {result.original.total} tasks</p>
     <div className="results-comparison results-impact">
       <article><div className="results-impact-number">{additional>0?'+':''}{additional}</div><h2>additional {additional===1?'task':'tasks'} passed</h2><p>Evidence-supported passes</p><dl><div><dt>Original</dt><dd>{result.original.supported}/{result.original.total}</dd></div><span aria-hidden="true">→</span><div><dt>Modified</dt><dd>{result.modified.supported}/{result.modified.total}</dd></div></dl></article>
