@@ -10,7 +10,7 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
-from .propose import CriterionDraft
+from .propose import CriterionDraft, CriterionDraftTV
 
 STOP = set("the and for are how why who has had was were not you our its out any all but yet via per can could would should does will with that this have from what which when into your their there about across between each every than then them they also only some more most "
            "agent agents user users site website evaluate evaluation check whether find able shopper shoppers customer customers person people compare comparing comparison hire hiring "
@@ -55,6 +55,17 @@ class GoalTaskProposals(BaseModel):
     model_config = ConfigDict(extra="forbid")
     goal_analysis: GoalAnalysis
     tasks: list[GoalTaskDraft]
+
+
+class GoalTaskDraftTV(GoalTaskDraft):
+    """Same task with the opt-in `term_value` criterion kind (only used when a run enables it; the default schema above is unchanged)."""
+    criterion: CriterionDraftTV                                         # type: ignore[assignment]
+
+
+class GoalTaskProposalsTV(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    goal_analysis: GoalAnalysis
+    tasks: list[GoalTaskDraftTV]
 
 
 PURPOSE = "taskgen-goal"
@@ -149,7 +160,7 @@ def _labels_of(criterion: dict) -> list[str]:
     c = criterion
     if c["kind"] == "page_fact":
         return [c["label"]]
-    if c["kind"] == "extremum":
+    if c["kind"] in ("extremum", "term_value"):
         return [c["label"]]
     if c["kind"] == "item_set":
         return [x["label"] for x in c["conditions"]]

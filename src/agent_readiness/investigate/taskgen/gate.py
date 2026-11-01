@@ -143,6 +143,12 @@ def evaluate(draft: Draft, profile: dict, accepted: list[Accepted], *, first_pag
                 return no("the question does not state every condition's field and threshold (ambiguous)")
     if c["kind"] == "extremum" and not (_tokens(c["label"]) & _tokens(q)):
         return no("the question does not name the compared field (ambiguous)")
+    if c["kind"] == "term_value":                                           # the question must name the term (every token of it) and the field asked for
+        tt, lt = _tokens(c["term"]), _tokens(c["label"])
+        if not tt or not tt <= _tokens(q):
+            return no("the question does not name the term it asks about (ambiguous)")
+        if not lt or not (lt & _tokens(q)):
+            return no("the question does not name the field asked for (ambiguous)")
     if c["kind"] == "reach_page" and (_tokens(profile["pages"][c["target"]]["title"]) and _tokens(profile["pages"][c["target"]]["title"]) <= _tokens(q)):
         return no("the question contains the target page's title")
     sig = _signature(draft.criterion, draft.start_path)

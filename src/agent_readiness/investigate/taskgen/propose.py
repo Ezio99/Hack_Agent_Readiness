@@ -42,6 +42,21 @@ class CriterionDraft(BaseModel):
         return d
 
 
+class CriterionDraftTV(CriterionDraft):
+    """OPT-IN variant (a run that enables `term_values`): the same flat criterion plus the `term_value` kind and its `term`. The default schema above is untouched, so runs that do not enable it keep
+    byte-identical requests."""
+    kind: Literal["page_fact", "reach_page", "item_set", "extremum", "term_value"]                      # type: ignore[assignment]
+    term: Optional[str]
+
+    def to_dict(self) -> dict:
+        if self.kind != "term_value":
+            return super().to_dict()
+        d = {"kind": "term_value", "page": self.page, "term": self.term, "label": self.label}
+        if any(d[k] in (None, "") for k in ("page", "term", "label")):
+            raise ValueError("term_value criterion lacks ('page', 'term', 'label')")
+        return d
+
+
 class TaskDraftModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
     question: str
@@ -53,6 +68,15 @@ class TaskDraftModel(BaseModel):
 class TaskProposals(BaseModel):
     model_config = ConfigDict(extra="forbid")
     tasks: list[TaskDraftModel]
+
+
+class TaskDraftModelTV(TaskDraftModel):
+    criterion: CriterionDraftTV                                                                         # type: ignore[assignment]
+
+
+class TaskProposalsTV(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    tasks: list[TaskDraftModelTV]
 
 
 MAX_TOKENS = 6144          # completion cap per taskgen request; INCLUDES hidden reasoning (L0 attempt 3: 3 simple tasks used 3,015 tokens, ~93 % reasoning); listed in the taskgen manifest
@@ -73,10 +97,15 @@ RULES = """Rules:
 - The question must name what it asks about (the specific item or page, every threshold value, and the field), must not contain the answer, and must have one correct answer. No yes/no questions."""
 
 
+TERM_VALUE_RULE = ("\n- term_value{page,term,label} = ONE short value stated next to a named term or section on a page (for example the default of a named setting). Use ONLY the entries listed under `term_values` in the "
+                   "summary, copying page, term and label exactly; the question must name the term and the field; the answer is the short value itself, which you never state.")
+MAX_TERM_VALUES = 24      # bound on the term_value candidates shown in the summary
+
+
 DATE_LABEL = re.compile(r"^\d{1,2} [a-z]{3}$")
 
 
-def site_summary(profile: dict, max_pages: int = 40, compact: bool = False) -> dict:
+def site_summary(profile: dict, max_pages: int = 40, compact: bool = False, term_values: bool = False) -> dict:
     """`compact` (goal-bound requests only; every other request is byte-identical to before): the same facts without the repetition that costs input tokens: sort/filter views that re-list the same items,
     per-day calendar labels, long value samples and a long page list."""
     pages = profile["pages"]
@@ -104,12 +133,17 @@ def site_summary(profile: dict, max_pages: int = 40, compact: bool = False) -> d
         listings.append({"listing": l["listing"], "heading": (pages[l["listing"]]["headings"] or [{"text": ""}])[0]["text"], "items": [{"name": i["name"], "path": i["href"]} for i in g["items"][:16 if compact else MAX_ITEMS_SHOWN]], "items_total": len(g["items"]), "fields_on_item_pages": sample})
     shown = sorted(pages, key=lambda p: (profile["depth"].get(p, 9), p))[:24 if compact else max_pages]
     other = [{"path": p, "facts": {f["label"]: f["value"] for f in pages[p]["facts"][:4]}} for p in shown if pages[p]["facts"] and p not in {i["path"] for l in listings for i in l["items"]}]
-    return {"pages": [{"path": p, "title": pages[p]["title"], "clicks_from_entry": profile["depth"].get(p), "links_to": [l["href"] for l in pages[p]["links"] + pages[p]["nav_links"] if l["href"] in pages][:8]} for p in shown],
-            "listings": listings, "facts_on_other_pages": other[:6 if compact else 12]}
+    out = {"pages": [{"path": p, "title": pages[p]["title"], "clicks_from_entry": profile["depth"].get(p), "links_to": [l["href"] for l in pages[p]["links"] + pages[p]["nav_links"] if l["href"] in pages][:8]} for p in shown],
+           "listings": listings, "facts_on_other_pages": other[:6 if compact else 12]}
+    if term_values:                                                     # opt-in: bounded list of term/label pairs that already compile (values withheld)
+        from .termvalue import candidates as tv_candidates
+        out["term_values"] = tv_candidates(profile, MAX_TERM_VALUES)
+    return out
 
 
-def build_prompt(profile: dict, n: int, focus: str | None = None, feedback: list[str] | None = None, angle: str | None = None, compact: bool = False) -> str:
-    text = f"Website summary (JSON):\n{json.dumps(site_summary(profile, compact=compact), ensure_ascii=False)}\n\n{RULES}\n\nPropose {n} tasks."
+def build_prompt(profile: dict, n: int, focus: str | None = None, feedback: list[str] | None = None, angle: str | None = None, compact: bool = False, term_values: bool = False) -> str:
+    rules = RULES + TERM_VALUE_RULE if term_values else RULES
+    text = f"Website summary (JSON):\n{json.dumps(site_summary(profile, compact=compact, term_values=term_values), ensure_ascii=False)}\n\n{rules}\n\nPropose {n} tasks."
     if angle:
         text += f"\nEmphasis of this batch: {angle}. Other kinds are still allowed; do not repeat tasks that another batch would obviously propose."
     if focus:
@@ -120,21 +154,23 @@ def build_prompt(profile: dict, n: int, focus: str | None = None, feedback: list
     return text
 
 
-def build_request(profile: dict, n: int, focus: str | None = None, feedback: list[str] | None = None, angle: str | None = None, bound: bool = False, context: str | None = None) -> LLMRequest:
+def build_request(profile: dict, n: int, focus: str | None = None, feedback: list[str] | None = None, angle: str | None = None, bound: bool = False, context: str | None = None,
+                  term_values: bool = False) -> LLMRequest:
     if bound and focus:                                           # the goal is a BINDING objective: decomposed first, every task linked to it (taskgen/goal.py)
         from . import goal as G
-        text = build_prompt(profile, n, None, feedback, angle, compact=True) + G.bound_text(focus, context)
-        return LLMRequest(messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": text}], purpose=G.PURPOSE, max_tokens=MAX_TOKENS, response_schema=G.GoalTaskProposals.model_json_schema())
-    return LLMRequest(messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": build_prompt(profile, n, focus, feedback, angle)}], purpose="taskgen", max_tokens=MAX_TOKENS,
-                      response_schema=TaskProposals.model_json_schema())
+        text = build_prompt(profile, n, None, feedback, angle, compact=True, term_values=term_values) + G.bound_text(focus, context)
+        return LLMRequest(messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": text}], purpose=G.PURPOSE, max_tokens=MAX_TOKENS,
+                          response_schema=(G.GoalTaskProposalsTV if term_values else G.GoalTaskProposals).model_json_schema())
+    return LLMRequest(messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": build_prompt(profile, n, focus, feedback, angle, term_values=term_values)}], purpose="taskgen", max_tokens=MAX_TOKENS,
+                      response_schema=(TaskProposalsTV if term_values else TaskProposals).model_json_schema())
 
 
-def batch_requests(profile: dict, focus: str | None = None, bound: bool = False, context: str | None = None) -> list[LLMRequest]:
+def batch_requests(profile: dict, focus: str | None = None, bound: bool = False, context: str | None = None, term_values: bool = False) -> list[LLMRequest]:
     """The exact requests the L1a taskgen stage sends (deterministic: no batch depends on another's output), in order. The approval manifest hashes these same requests."""
     if bound and focus:
         from . import goal as G
-        return [build_request(profile, BATCH_SIZE, focus, None, angle, True, context) for angle in G.ANGLES[:BATCHES]]
-    return [build_request(profile, BATCH_SIZE, focus, None, angle) for angle in BATCH_ANGLES[:BATCHES]]
+        return [build_request(profile, BATCH_SIZE, focus, None, angle, True, context, term_values) for angle in G.ANGLES[:BATCHES]]
+    return [build_request(profile, BATCH_SIZE, focus, None, angle, term_values=term_values) for angle in BATCH_ANGLES[:BATCHES]]
 
 
 def propose(llm: LLMClient, profile: dict, *, n: int = 10, focus: str | None = None, feedback: list[str] | None = None, angle: str | None = None, retries: int = 1,
@@ -143,7 +179,12 @@ def propose(llm: LLMClient, profile: dict, *, n: int = 10, focus: str | None = N
     goal_mode = req.purpose == "taskgen-goal"
     if goal_mode:
         from . import goal as G
-    parsed, resp, attempts = complete_structured(llm, req, G.GoalTaskProposals if goal_mode else TaskProposals, retries=retries)
+    tv = "term_value" in json.dumps(req.response_schema or {})            # the request's own schema says whether the opt-in kind is allowed
+    if goal_mode:
+        model = G.GoalTaskProposalsTV if tv else G.GoalTaskProposals
+    else:
+        model = TaskProposalsTV if tv else TaskProposals
+    parsed, resp, attempts = complete_structured(llm, req, model, retries=retries)
     drafts = []
     for t in parsed.tasks:
         try:

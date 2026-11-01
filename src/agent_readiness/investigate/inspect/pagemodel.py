@@ -249,6 +249,67 @@ def _item_groups(main: Tag, base_path: str, soup: BeautifulSoup) -> list[dict]:
     return kept
 
 
+TERM_LABEL_VALUE = re.compile(r"^([A-Za-z][A-Za-z0-9 _/-]{1,28}):\s+(.+)$")
+CHROME_TAGS = ("nav", "aside", "header", "footer", "form")
+TERM_NOISE = re.compile(r"\s*(¶|\[source\]|\[edit\]|#)\s*$")
+
+
+def _term_label_values(elements) -> list[tuple[str, str]]:
+    out = []
+    for el in elements:
+        m = TERM_LABEL_VALUE.match(visible_text(el))
+        if m and len(m.group(1).split()) <= 3 and not re.search(r"\d", m.group(1)) and not m.group(2).rstrip().endswith(":"):
+            out.append((norm(m.group(1)).lower(), m.group(2)))
+    return out
+
+
+def _clean_term(text: str) -> str:
+    t = norm(text)
+    while TERM_NOISE.search(t):
+        t = TERM_NOISE.sub("", t)
+    return t
+
+
+def _term_values(main: Tag) -> list[dict]:
+    """Generic, additive: values stated next to a NAMED TERM, scoped to that term. A term is a definition term (`dt`), a heading, or a table row's first cell; its value is "Label: value" text in that
+    term's OWN content (not nested terms), or a table cell under a header-row column. Records every pair as found; whether a pair is a usable task (short, unambiguous, not guessable) is decided later by
+    the `term_value` criterion, never here."""
+    out: list[dict] = []
+    inside_chrome = lambda el: any(p.name in CHROME_TAGS for p in el.parents if isinstance(p, Tag))
+    for dt in main.find_all("dt"):
+        dd = dt.find_next_sibling("dd")
+        if dd is None or inside_chrome(dt):
+            continue
+        own = [e for e in dd.find_all(["p", "li"]) if e.find_parent("dd") is dd]
+        for lab, val in _term_label_values(own):
+            out.append({"term": _clean_term(_text_excluding(dt, _is_permalink)), "label": lab, "value": val, "how": "dl"})
+    for h in main.find_all(re.compile(r"^h[1-6]$")):
+        if inside_chrome(h):
+            continue
+        own = []
+        for sib in h.next_siblings:
+            if not isinstance(sib, Tag):
+                continue
+            if re.fullmatch(r"h[1-6]", sib.name):
+                break
+            if sib.name in ("p", "ul", "ol"):
+                own += [sib] if sib.name == "p" else sib.find_all("li", recursive=False)
+        for lab, val in _term_label_values(own):
+            out.append({"term": _clean_term(_text_excluding(h, _is_permalink)), "label": lab, "value": val, "how": "heading"})
+    for tb in main.find_all("table"):
+        if inside_chrome(tb):
+            continue
+        trs = tb.find_all("tr")
+        if len(trs) < 2 or not all(c.name == "th" for c in trs[0].find_all(["th", "td"], recursive=False)):
+            continue
+        rows = [[norm(visible_text(c)) for c in r.find_all(["th", "td"], recursive=False)] for r in trs]
+        for r in rows[1:]:
+            for j in range(1, min(len(r), len(rows[0]))):
+                if rows[0][j] and len(rows[0][j]) <= 28 and len(rows[0][j].split()) <= 3 and r[0] and r[j]:
+                    out.append({"term": _clean_term(r[0]), "label": rows[0][j].lower(), "value": r[j], "how": "table"})
+    return out
+
+
 def parse_page(path: str, html: str) -> dict:
     soup = BeautifulSoup(html, "html.parser")
     main = soup.find("main") or soup.find(attrs={"role": "main"}) or soup.body or soup
@@ -293,5 +354,5 @@ def parse_page(path: str, html: str) -> dict:
         "text": visible_text(main)[:4000], "text_len": len(visible_text(soup)), "links": links, "nav_links": nav_links, "controls": controls, "forms": forms,
         "images": [{"src": i.get("src"), "alt": i.get("alt") if i.has_attr("alt") else None} for i in soup.find_all("img")],
         "tables": [{"headers": [visible_text(h) for h in t.find_all("th")][:10], "rows": len(t.find_all("tr"))} for t in soup.find_all("table")],
-        "facts": _facts(main), "item_groups": _item_groups(main, path, soup), "structured_data": jsonld[:3],
+        "facts": _facts(main), "item_groups": _item_groups(main, path, soup), "structured_data": jsonld[:3], "term_values": _term_values(main),
     }

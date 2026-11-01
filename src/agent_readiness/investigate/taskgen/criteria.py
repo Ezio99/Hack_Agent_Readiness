@@ -7,6 +7,7 @@ snapshot's own pages. So a model (or owner) that proposes a wrong or unverifiabl
   reach_page  the title of a target page                                      (navigation)
   item_set    names of the repeated listing items whose linked pages satisfy conditions   (cross-page filtering)
   extremum    the listing item with the highest/lowest numeric value of a labelled fact   (cross-page comparison)
+  term_value  one short value stated next to a named term/section on a page            (documentation lookup; see taskgen/termvalue.py; OFF unless the run enables it)
 Grading is exact on normalised strings / sets, never fuzzy."""
 from __future__ import annotations
 
@@ -18,7 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..inspect.pagemodel import norm
 
-KINDS = ("page_fact", "reach_page", "item_set", "extremum")
+KINDS = ("page_fact", "reach_page", "item_set", "extremum", "term_value")
 
 
 class CriterionError(ValueError):
@@ -60,7 +61,15 @@ class Extremum(BaseModel):
     direction: Literal["max", "min"]
 
 
-Criterion = Annotated[Union[PageFact, ReachPage, ItemSet, Extremum], Field(discriminator="kind")]
+class TermValue(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    kind: Literal["term_value"] = "term_value"
+    page: str
+    term: str = Field(min_length=1, max_length=60)
+    label: str = Field(min_length=1, max_length=40)
+
+
+Criterion = Annotated[Union[PageFact, ReachPage, ItemSet, Extremum, TermValue], Field(discriminator="kind")]
 
 
 @dataclass
@@ -184,6 +193,9 @@ def compile_criterion(c: Criterion | dict, profile: dict) -> Compiled:
             raise CriterionError(f"fact {c.label!r} on {c.page} has several different values (ambiguous)")
         others = sorted({f["value"] for p in profile["pages"].values() for f in p["facts"] if f["label"] == norm(c.label).lower()} - {vals[0]})
         return Compiled("page_fact", "string", vals[0], [c.page], [(c.page, vals[0])], distractors=others)
+    if isinstance(c, TermValue):
+        from .termvalue import compile_term_value
+        return compile_term_value(profile, c.model_dump())
     if isinstance(c, ReachPage):
         page = _page(profile, resolve_target(profile, c.target))
         title = page["title"]
