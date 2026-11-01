@@ -1,5 +1,9 @@
 # Agent Readiness — status
 
+## Ironbark operator UI (2026-11-02)
+
+The local runner has a Midnight/Cyan review-and-confirm workflow with a one-use server-bound approval token. No paid call was made. [UI report](collaboration/reports/ironbark-operator-ui.md).
+
 ## Ironbark provenance fix (2026-11-02)
 
 Execution mode, evidence origin and effect measurement are now separate in reports and sanitized exports. Explicit fixture evidence cannot be measured; missing or incomplete provider/browser metadata remains unverified. Existing S1 artifacts and comparison rules are unchanged. Focused suite 124 passed; final provenance and fixture checks 6 passed, critical suite 214 passed, and dashboard build/distribution guard passed. See [provenance report](collaboration/reports/ironbark-provenance-fix.md). No paid run authorized.

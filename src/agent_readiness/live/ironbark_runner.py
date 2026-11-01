@@ -146,6 +146,31 @@ class Manager:
         self.lock = threading.RLock()
         self.process = None
         self.active = None
+        self.reviews = {}
+
+    def review(self, job_id):
+        with self.lock:
+            job = self.get(job_id)
+            caps_checked(job['caps'])
+            validate_manifest(job['manifest'], job['caps'])
+            if job['state'] != 'awaiting_approval' or canonical_hash(job['manifest']) != job['manifest_sha256']:
+                raise ValueError('This configuration is no longer available for approval')
+            ticket = secrets.token_urlsafe(32)
+            self.reviews.clear()
+            fingerprint = canonical_hash({k: job.get(k) for k in ('manifest', 'tasks', 'caps', 'timeout_seconds')})
+            self.reviews[job_id] = (ticket, job['manifest_sha256'], dict(job['caps']), fingerprint)
+            return ticket
+
+    def confirm(self, job_id, ticket):
+        with self.lock:
+            review = self.reviews.pop(job_id, None)
+            if not review or not isinstance(ticket, str) or not secrets.compare_digest(review[0], ticket):
+                raise ValueError('Review expired or already used; review the configuration again')
+            job = self.get(job_id)
+            fingerprint = canonical_hash({k: job.get(k) for k in ('manifest', 'tasks', 'caps', 'timeout_seconds')})
+            if job['manifest_sha256'] != review[1] or job['caps'] != review[2] or fingerprint != review[3]:
+                raise ValueError('Configuration changed; prepare a new review')
+            self.start(job_id, review[1], sum(review[2].values()))
 
     def get(self, job_id):
         if not job_id.startswith('paired-') or len(job_id) != 39 or any(c not in '0123456789abcdef' for c in job_id[7:]):
@@ -236,26 +261,7 @@ class Manager:
         return data
 
 
-PAGE = '''<!doctype html><html><head><meta charset="utf-8"><title>Ironbark Evaluation Runner</title>
-<style>body{font:16px system-ui;max-width:1050px;margin:2rem auto;padding:0 1rem;color:#152638}button,input{font:inherit;padding:.5rem}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f2f5f7;padding:1rem}section{margin:2rem 0}label{display:inline-block;margin-right:1rem}</style></head><body>
-<h1>Ironbark Evaluation Runner</h1><p>Local operator app. Preparation is free. Live execution sends requests to Meta and requires your explicit confirmation. Observed differences do not establish causation.</p>
-<section><h2>1. Prepare paired evaluation</h2><p>Set proposed caps in US dollars (maximum $1 per arm). This creates a separate run and prepares the frozen suite and snapshots.</p>
-<label>Original cap <input id="original" type="number" min="0.01" max="1" step="0.01"></label><label>Modified cap <input id="modified" type="number" min="0.01" max="1" step="0.01"></label><button id="prepare">Prepare review</button></section>
-<section><h2>2. Review configuration</h2><pre id="config">No run prepared.</pre><label>Paste exact manifest SHA-256 <input id="digest" size="64"></label><label>Confirm combined cap US$ <input id="amount" type="number" step="0.01"></label><button id="start">Approve and start paid evaluation</button></section>
-<section><h2>3. Execution and results</h2><label>Existing run ID <input id="resume" size="45"></label><button id="load">Load run</button> <button id="cancel">Cancel running evaluation</button> <button id="comparison">Show assessments</button> <button id="export">Download sanitized export</button><p id="message"></p><pre id="status"></pre><pre id="assessment"></pre><p>Individual completed outcomes and request counts are shown above. Incomplete or void executions are not passes. Full comparisons and methodology are in the sanitized export.</p></section>
-<script>
-const token='TOKEN'; let job=null;
-async function api(path, body){let r=await fetch(path,{method:body?'POST':'GET',headers:{'Content-Type':'application/json','X-Operator-Token':token},body:body?JSON.stringify(body):undefined});let x=await r.json();if(!r.ok)throw Error(x.error||'Request failed');return x}
-function msg(e){document.getElementById('message').textContent=String(e)}
-document.getElementById('prepare').onclick=async()=>{try{msg('Preparing; this can take a minute.');job=await api('/prepare',{placebo_arm:Number(document.getElementById('original').value),patched_arm:Number(document.getElementById('modified').value)});document.getElementById('config').textContent=JSON.stringify(job,null,2);msg('Review the complete manifest and tasks before approving.');}catch(e){msg(e)}};
-document.getElementById('start').onclick=async()=>{try{if(!job)throw Error('Prepare a run first');await api('/start',{id:job.id,hash:document.getElementById('digest').value,amount:Number(document.getElementById('amount').value)});msg('Evaluation started.');}catch(e){msg(e)}};
-document.getElementById('cancel').onclick=async()=>{try{await api('/cancel',{id:job.id});msg('Cancelled.');}catch(e){msg(e)}};
-document.getElementById('load').onclick=async()=>{try{job=await api('/status?id='+encodeURIComponent(document.getElementById('resume').value));document.getElementById('config').textContent=JSON.stringify(job,null,2);msg('Run loaded.')}catch(e){msg(e)}};
-document.getElementById('comparison').onclick=async()=>{try{let x=await api('/export?id='+encodeURIComponent(job.id));document.getElementById('assessment').textContent=JSON.stringify(x.evaluation||{state:'unavailable'},null,2)}catch(e){msg(e)}};
-document.getElementById('export').onclick=async()=>{try{let x=await api('/export?id='+encodeURIComponent(job.id));let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(x,null,2)],{type:'application/json'}));a.download=job.id+'-sanitized.json';a.click();URL.revokeObjectURL(a.href)}catch(e){msg(e)}};
-setInterval(async()=>{if(job){try{let x=await api('/status?id='+encodeURIComponent(job.id));document.getElementById('status').textContent=JSON.stringify({state:x.state,summary:x.summary,progress:x.progress,worker_result:x.worker_result},null,2)}catch(e){msg(e)}}},2000);
-</script></body></html>'''
-
+PAGE = (Path(__file__).parent.parent / 'templates' / 'ironbark_operator.html').read_text()
 
 def serve(port=8765):
     import fcntl
@@ -310,8 +316,9 @@ def serve(port=8765):
                     if manager.active:
                         raise ValueError('A job is already running')
                     result = prepare(manager.root, body)
+                    result['review_token'] = manager.review(result['id'])
                 elif self.command == 'POST' and p.path == '/start':
-                    manager.start(job_id, body.get('hash'), body.get('amount'))
+                    manager.confirm(job_id, body.get('review_token'))
                     result = {'ok': True}
                 elif self.command == 'POST' and p.path == '/cancel':
                     manager.cancel(job_id)

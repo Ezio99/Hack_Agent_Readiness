@@ -209,3 +209,51 @@ def test_operator_fresh_grading_no_network(tmp_path, monkeypatch, fail):
                 assert len(rows) == 1 and rows[0]['passed'] is False and rows[0]['model_requests'] == 1
         assert 'fixture incorrect' not in json.dumps(exported)
         r.exporter.check_clean(exported)
+
+
+def test_review_confirmation_is_single_use_and_bound_to_server_configuration(tmp_path, job, monkeypatch):
+    manager = r.Manager(tmp_path)
+    calls = []
+    monkeypatch.setattr(manager, 'start', lambda *args: calls.append(args))
+    ticket = manager.review(job['id'])
+    assert calls == []
+    with pytest.raises(ValueError):
+        manager.confirm(job['id'], 'wrong')
+    assert not calls
+    ticket = manager.review(job['id'])
+    manager.confirm(job['id'], ticket)
+    assert calls == [(job['id'], job['manifest_sha256'], .9)]
+    with pytest.raises(ValueError):
+        manager.confirm(job['id'], ticket)
+    ticket = manager.review(job['id'])
+    altered = dict(job, caps={'placebo_arm': .3, 'patched_arm': .5})
+    r.write(tmp_path / (job['id'] + '.json'), altered)
+    with pytest.raises(ValueError):
+        manager.confirm(job['id'], ticket)
+    assert len(calls) == 1
+    r.write(tmp_path / (job['id'] + '.json'), job)
+    ticket = manager.review(job['id'])
+    changed = {**job['manifest'], 'max_requests_per_trial': 999}
+    r.write(tmp_path / (job['id'] + '.json'), dict(job, manifest=changed, manifest_sha256=canonical_hash(changed)))
+    with pytest.raises(ValueError):
+        manager.confirm(job['id'], ticket)
+    assert len(calls) == 1
+    r.write(tmp_path / (job['id'] + '.json'), job)
+    ticket = manager.review(job['id'])
+    r.write(tmp_path / (job['id'] + '.json'), dict(job, tasks=[{'task_id': 'changed'}]))
+    with pytest.raises(ValueError):
+        manager.confirm(job['id'], ticket)
+    assert len(calls) == 1
+
+
+def test_review_rejects_changed_manifest_and_old_review(tmp_path, job, monkeypatch):
+    manager = r.Manager(tmp_path)
+    monkeypatch.setattr(manager, 'start', lambda *args: pytest.fail('must not start'))
+    old = manager.review(job['id'])
+    manager.review(job['id'])
+    with pytest.raises(ValueError):
+        manager.confirm(job['id'], old)
+    tampered = dict(job, manifest={**job['manifest'], 'max_requests_per_trial': 999})
+    r.write(tmp_path / (job['id'] + '.json'), tampered)
+    with pytest.raises(ValueError):
+        manager.review(job['id'])

@@ -1,0 +1,7 @@
+# Ironbark operator UI
+
+The separate local runner now has a responsive dark Midnight/Cyan configure → review → run → results interface. The review shows the pinned model, profile, snapshots, tasks, limits and incremental cap; the full manifest and hash remain under Advanced. Progress and results use existing durable trial records and the sanitized exporter. Existing run IDs can be loaded without starting a job.
+
+Preparation creates a one-use, server-held review token bound to the manifest hash, caps, task descriptions and timeout. Confirm consumes it and derives the hash and cap from the server-held review before invoking the existing start and manifest-bound spend gates. A replaced review, changed data, incorrect token or replay is refused. A process restart discards pending review tokens; prepare a fresh run to review again. No paid call was made.
+
+Validation: operator tests 13 passed; approval-specific tests 3 passed after the final binding changes; critical suite 214 passed, 17 deselected; dashboard TypeScript/build and distribution guard passed. Headless Chromium at desktop and 390px widths loaded without horizontal overflow or page errors. A separate isolated local browser session prepared the frozen suite, displayed four tasks and enabled confirmation while execution remained unstarted. An existing local operator process held the default port during the check; it was left untouched. No model call, merge or deployment.
