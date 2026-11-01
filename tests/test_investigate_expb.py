@@ -132,6 +132,7 @@ def test_fork_can_carry_a_completed_investigators_evidence_as_a_verified_prefix(
     src = carried_source(tmp_path)
     before = (src.dir / "evidence.jsonl").read_bytes()
     new = InvestigationRun(forkmod.fork(src.dir, tmp_path, "carry-fork", carry_investigation=True))
+    assert new.state["stages"]["inspect"]["status"] == "done", "carried: the snapshot, profile and observations are imported, not re-derived by a newer profiler"
     assert (src.dir / "evidence.jsonl").read_bytes() == before                                                                 # source only read
     assert [new.status(s) for s in ("investigate", "recommend", "taskgen", "report", "apply_fix")] == ["done", "done", "done", "pending", "pending"] and new.approvals() == []
     prov = forkmod.load_fork(new)

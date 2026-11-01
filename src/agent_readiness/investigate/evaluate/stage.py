@@ -97,7 +97,7 @@ def post_manifest(ctx: Context) -> dict | None:
                         "identical_to_baseline": {"snapshot_sha256": manifest_["snapshot_sha256"], "arm_config_sha256": canonical_hash(shared), "agent_profile": shared["agent_profile"], "model": shared["model"],
                                                   "endpoint": shared["endpoint"], "frozen_task_sha256": {t: canonical_hash(task_by_id[t]) for t in plan["placebo_tasks"]}},
                         "runtime_check": "after every placebo and patched trial the recorded model, profile, profile hash, schema hashes and limits must equal the baseline trial's (placebo: also the source snapshot); a mismatch stops the stage"},
-            "caps_usd": {**alloc.post_trials_caps(ceiling, (forked or {}).get("imported_spend_committed_usd")), "per_trial": base["run_cap_usd"]},
+            "caps_usd": {**alloc.post_trials_caps(ceiling, (forked or {}).get("imported_spend_committed_usd"), plan.get("caps_usd")), "per_trial": base["run_cap_usd"]},
             "cap_enforcement": "durable spend gate: every trial gate carries its arm cap AND the combined cap (reserved + settled, read from the ledger, so they hold across restarts); a refused trial is void and halts the stage"}
 
 

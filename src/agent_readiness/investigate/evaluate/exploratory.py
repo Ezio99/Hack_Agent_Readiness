@@ -36,6 +36,8 @@ def validate_plan(plan: dict, frozen_task_ids: list[str]) -> dict:
     if not isinstance(plan, dict) or any(k not in plan or not isinstance(plan[k], list) for k in need):
         raise ValueError(f"the post plan needs list fields {need}")
     out = {k: list(plan[k]) for k in need}
+    if "caps_usd" in plan:                                            # optional, hashed with the plan in the manifest; validated again where the caps are built
+        out["caps_usd"] = dict(plan["caps_usd"])
     every = out["placebo_tasks"] + out["detail_controls"]
     if len(set(every)) != len(every) or any(t not in frozen_task_ids for t in every):
         raise ValueError("plan tasks must be distinct frozen tasks")

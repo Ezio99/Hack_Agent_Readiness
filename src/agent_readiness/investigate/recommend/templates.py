@@ -58,19 +58,44 @@ def _bundle_pages(snapshot: Snapshot, ops: list[dict]) -> list[str]:
     from ..inspect.pagemodel import internal_path
     out = []
     for o in ops:
-        path = o["pages"][0]
-        page = snapshot.get(path)
-        if page is None or not page.is_html:
-            continue
-        items = BeautifulSoup(page.text(), "html.parser").select(o["css"])
-        multi = sum(len({q for a in el.find_all("a", href=True) if (q := internal_path(a["href"], path)) and q in snapshot.resources and snapshot.resources[q].is_html}) >= 2 for el in items)
-        if items and multi * 2 >= len(items):
-            out.append(path)
+        for path in o["pages"]:
+            page = snapshot.get(path)
+            if page is None or not page.is_html:
+                continue
+            items = BeautifulSoup(page.text(), "html.parser").select(o["css"])
+            multi = sum(len({q for a in el.find_all("a", href=True) if (q := internal_path(a["href"], path)) and q in snapshot.resources and snapshot.resources[q].is_html}) >= 2 for el in items)
+            if items and multi * 2 >= len(items) and path not in out:
+                out.append(path)
     return out
+
+
+def _multi_label_patch(labels: list[str], profile: dict) -> tuple[dict | None, str]:
+    """ONE patch that shows several labelled fields on the listing items that lack them (owner-selected, exploratory use). Pages with the same item selector share an op (the op count is bounded), so the
+    patch stays small; every label must have at least one target or nothing is offered."""
+    from ..sitemodel.patch import MAX_PAGES_PER_OP
+    wanted = [norm_answer(l) for l in labels]
+    if not wanted or len(set(wanted)) != len(wanted) or len(wanted) > 5:
+        return None, "labels must be 1-5 distinct field labels"
+    ops = []
+    for label in wanted:
+        key = next((k for l in profile["listings"] for k in l["fields"] if norm_answer(k) == label), None)
+        by_css: dict[str, list[str]] = {}
+        for path, css in _targets(profile, label):
+            if any(norm_answer(f["label"]) == label for f in profile["pages"][path]["facts"]):
+                continue                  # a page that states the field itself (an item page with a "related items" list) is never patched: a second line with the same label would make the page's own fact ambiguous
+            by_css.setdefault(css, []).append(path)
+        if not key or not by_css:
+            return None, f"no listing lacks the field {label!r}"
+        for css, pages in sorted(by_css.items()):
+            for i in range(0, len(pages), MAX_PAGES_PER_OP):
+                ops.append({"op": "copy_field_to_listing", "pages": pages[i:i + MAX_PAGES_PER_OP], "css": css, "source_label": key})
+    return {"description": f"show the {', '.join(repr(l) for l in wanted)} fields on each listing item", "ops": ops}, "copy each field from the item's page into the listing item"
 
 
 def patch_for(claim_kind: str, params: dict, profile: dict) -> tuple[dict | None, str]:
     """(patch dict, why-or-note). None when no safe automatic edit exists for this kind."""
+    if claim_kind == "info_absent_on_template" and params.get("labels"):
+        return _multi_label_patch(params["labels"], profile)
     if claim_kind == "info_absent_on_template":
         label = norm_answer(params.get("label") or "")
         key = next((k for l in profile["listings"] for k in l["fields"] if norm_answer(k) == label), None)
@@ -99,6 +124,10 @@ def patch_for(claim_kind: str, params: dict, profile: dict) -> tuple[dict | None
 def static_recheck(claim_kind: str, params: dict, before_profile: dict, new_snapshot: Snapshot, only_pages: list[str] | None = None) -> dict:
     """Does the patched snapshot stop exhibiting the pattern the finding verified? (Resolution is NOT an effect on agents; this only guards against proposing a patch that does nothing.)"""
     after = build_profile(new_snapshot)
+    if claim_kind == "info_absent_on_template" and params.get("labels"):
+        parts = [static_recheck(claim_kind, {"label": l}, before_profile, new_snapshot, only_pages) for l in params["labels"]]
+        failing = sorted({p for r in parts for p in r.get("failing", [])})
+        return {"passed": all(r["passed"] for r in parts), "failing": failing, "detail": "; ".join(f"{l}: {r['detail']}" for l, r in zip(params["labels"], parts))}
     if claim_kind == "info_absent_on_template":
         label = norm_answer(params.get("label") or "")
         targets = {p: css for p, css in _targets(before_profile, label) if only_pages is None or p in only_pages}
@@ -128,7 +157,7 @@ def build(claim_kind: str, params: dict, profile: dict, snapshot: Snapshot) -> t
     bundles: list[str] = []
     if claim_kind == "info_absent_on_template":
         bundles = _bundle_pages(snapshot, patch["ops"])
-        patch = {**patch, "ops": [o for o in patch["ops"] if o["pages"][0] not in bundles]}
+        patch = {**patch, "ops": [{**o, "pages": [q for q in o["pages"] if q not in bundles]} for o in patch["ops"] if any(q not in bundles for q in o["pages"])]}
         if not patch["ops"]:
             return None, {"offered": False, "reason": "every targeted listing holds bundles, whose applicability the item pages do not establish", "excluded_bundle_listings": bundles}
     dropped: list[str] = []
@@ -137,7 +166,7 @@ def build(claim_kind: str, params: dict, profile: dict, snapshot: Snapshot) -> t
             new, rep = apply_patch(snapshot, patch)
         except PatchError as exc:
             return None, {"offered": False, "reason": f"patch refused by the safety rules: {exc}", **({"dropped_listings": dropped} if dropped else {})}
-        pages = [o["pages"][0] for o in patch["ops"]] if claim_kind == "info_absent_on_template" else None
+        pages = [q for o in patch["ops"] for q in o["pages"]] if claim_kind == "info_absent_on_template" else None
         rc = static_recheck(claim_kind, params, profile, new, pages)
         if rc["passed"]:
             return Patch.model_validate(patch).model_dump(), {"offered": True, "note": note, "recheck": rc, "patch_sha256": rep["patch_sha256"], "result_snapshot_sha256": rep["new_sha256"], "pages_changed": rep["pages_changed"],
@@ -146,7 +175,7 @@ def build(claim_kind: str, params: dict, profile: dict, snapshot: Snapshot) -> t
         if not failing or dropped:
             return None, {"offered": False, "reason": f"static re-check failed: {rc['detail']}", "recheck": rc}
         dropped = failing
-        patch = {**patch, "ops": [o for o in patch["ops"] if o["pages"][0] not in failing]}
+        patch = {**patch, "ops": [{**o, "pages": [q for q in o["pages"] if q not in failing]} for o in patch["ops"] if any(q not in failing for q in o["pages"])]}
         if not patch["ops"]:
             return None, {"offered": False, "reason": "static re-check failed on every targeted listing", "recheck": rc}
     return None, {"offered": False, "reason": "static re-check failed"}

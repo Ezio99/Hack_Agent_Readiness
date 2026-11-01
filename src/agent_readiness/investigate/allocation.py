@@ -18,10 +18,21 @@ def allocation(ledger_ceiling_usd: float) -> dict:
             "ledger_ceiling_usd": ledger_ceiling_usd, "unallocated_usd": round(ledger_ceiling_usd - allocated, 6), "allocation_fits_ceiling": ledger_ceiling_usd + 1e-9 >= allocated}
 
 
-def post_trials_caps(ledger_ceiling_usd: float, imported_committed_usd: float | None = None) -> dict:
-    """The post_trials spending limits. `fits_ceiling` is only decidable when the spend already committed (a fork's imported history) is known."""
-    out = {"patched_arm": PATCHED_ARM_CAP_USD, "placebo_arm": PLACEBO_ARM_CAP_USD, "post_trials_combined": POST_TRIALS_CAP_USD, "per_request": PER_REQUEST_CAP_USD, "ledger_ceiling": ledger_ceiling_usd}
+MAX_ARM_CAP_USD = 1.00      # an owner plan may raise an arm cap (e.g. one placebo trial per affected task) but never above this
+
+
+def post_trials_caps(ledger_ceiling_usd: float, imported_committed_usd: float | None = None, overrides: dict | None = None) -> dict:
+    """The post_trials spending limits. `fits_ceiling` is only decidable when the spend already committed (a fork's imported history) is known. `overrides` (from an owner plan, hashed in the manifest) may set
+    `patched_arm` and `placebo_arm`; the combined cap is then their sum. Without overrides the numbers are exactly the constants above."""
+    patched, placebo, combined = PATCHED_ARM_CAP_USD, PLACEBO_ARM_CAP_USD, POST_TRIALS_CAP_USD
+    if overrides:
+        unknown = set(overrides) - {"patched_arm", "placebo_arm"}
+        if unknown or any(not isinstance(v, (int, float)) or not 0 < v <= MAX_ARM_CAP_USD for v in overrides.values()):
+            raise ValueError(f"plan caps_usd may set patched_arm and placebo_arm, each in (0, {MAX_ARM_CAP_USD}]")
+        patched, placebo = overrides.get("patched_arm", patched), overrides.get("placebo_arm", placebo)
+        combined = round(patched + placebo, 6)
+    out = {"patched_arm": patched, "placebo_arm": placebo, "post_trials_combined": combined, "per_request": PER_REQUEST_CAP_USD, "ledger_ceiling": ledger_ceiling_usd}
     if imported_committed_usd is not None:
-        out |= {"imported_committed_usd": imported_committed_usd, "headroom_after_combined_cap_usd": round(ledger_ceiling_usd - imported_committed_usd - POST_TRIALS_CAP_USD, 6),
-                "combined_cap_fits_ceiling": ledger_ceiling_usd + 1e-9 >= imported_committed_usd + POST_TRIALS_CAP_USD}
+        out |= {"imported_committed_usd": imported_committed_usd, "headroom_after_combined_cap_usd": round(ledger_ceiling_usd - imported_committed_usd - combined, 6),
+                "combined_cap_fits_ceiling": ledger_ceiling_usd + 1e-9 >= imported_committed_usd + combined}
     return out

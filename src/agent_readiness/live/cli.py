@@ -27,6 +27,12 @@ def register(sub) -> None:
     s.add_argument("--confirm-spend", type=float, default=None, help="must equal the smoke cap (0.15): your explicit confirmation of the maximum spend")
     s.add_argument("--wait", type=int, default=600, help="seconds to wait for the job")
     register_replay(ls)
+    ab = ls.add_parser("ab-experiment", help="Controlled Ironbark before/after (EXP-C): fork the finished live run, record the ONE owner-selected three-field listing proposal, and present the apply_fix then post_trials manifests. Free by default")
+    ab.add_argument("--id", required=True, help="id of the new fork run (a directory name under --root)")
+    ab.add_argument("--root", type=Path, default=Path("scanner-data/live"))
+    ab.add_argument("--source", type=Path, default=None, help="the finished live run to fork (default: the pre-registered source)")
+    ab.add_argument("--approve-hash", action="append", default=[], help="exact manifest hash to approve (repeatable: apply_fix, then post_trials)")
+    ab.add_argument("--allow-model-calls", action="store_true", help="REQUIRED for the post_trials hash: this is the only paid stage (real model, hard caps in its manifest)")
     f = ls.add_parser("run", help="ONE full live investigation of Ironbark (task generation, browser trials, investigator, recommendations) under a single user grant; hard cap US$2.00")
     f.add_argument("--goal", required=True)
     f.add_argument("--context-file", type=Path, default=None)
@@ -149,9 +155,23 @@ def _owner_tasks(args):
     return clean_owner_tasks(_json.loads(args.tasks_file.read_text())) if getattr(args, "tasks_file", None) else None
 
 
+def ab_experiment(args) -> int:
+    from ..agent import ModelConfig
+    from . import abtest
+    from .targets import TARGETS
+    out = abtest.drive(args.source or abtest.SOURCE, args.root, args.id, cfg=ModelConfig(), snapshot=TARGETS["ironbark"].snapshot(), approve=frozenset(args.approve_hash), allow_model_calls=args.allow_model_calls)
+    manifest = out.pop("manifest", None)
+    print(json.dumps(out, indent=2))
+    if manifest is not None:
+        print(f"manifest: {Path(out['fork']) / 'artifacts' / 'manifests'}/{out['stage']}-{out['manifest_sha256'][:16]}.json")
+    return 0 if out["status"] in ("awaiting_approval", "done") else 1
+
+
 def main(args) -> int:
     if args.live_command == "replay-investigator":
         return replay_investigator(args)
+    if args.live_command == "ab-experiment":
+        return ab_experiment(args)
     smoke = args.live_command == "smoke"
     if args.plan:
         out = plan(args.goal, _context(args), smoke, _owner_tasks(args))

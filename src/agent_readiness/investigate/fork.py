@@ -109,7 +109,7 @@ def fork(source_dir: Path, root: Path, new_id: str, *, carry_investigation: bool
             "not_imported": ["approvals", "investigator transcripts / private files", "reports", "evaluation"] + ([] if carried else ["evidence store", "investigator artifacts", "recommendations"]),
             "note": "paid taskgen and baseline trials were NOT re-run; their results and the full spending history were imported. Every paid stage of this fork needs a fresh exact-manifest approval."}
     (new.dir / "fork.json").write_text(json.dumps(prov, indent=2, sort_keys=True))
-    for stage in IMPORTED_STAGES + (("investigate", "recommend") if carry_investigation else ()):
+    for stage in IMPORTED_STAGES + (("inspect", "investigate", "recommend") if carry_investigation else ()):          # carried: snapshot, site profile and the observations in the evidence prefix are imported and hash-verified, so `inspect` is not re-derived (a newer profiler would otherwise contradict the carried profile)
         new.set_status(stage, "done", summary={"imported_from": st["id"], "imported_files_sha256": prov["imported_files_sha256"]})
     return new.dir
 
