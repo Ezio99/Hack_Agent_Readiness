@@ -42,19 +42,20 @@ export default function App() {
         <div className="wrap head">
           <div>
             <p className="brand">Agent Readiness <span className="tag">diagnostic dashboard</span></p>
-            <p className="sub">{page === "investigation" ? "Can AI agents use this website? Investigate, recommend, change the site, and measure the impact." : "What a Meta Muse Spark shopping agent did on a controlled storefront, why, and what a site owner could change."}</p>
+            <p className="sub">{page === "investigation" ? "Test website → Discover friction → Explore improvements → Measure impact." : "What a Meta Muse Spark shopping agent did on a controlled storefront, why, and what a site owner could change."}</p>
           </div>
-          <p className="badge" role="note">{page === "investigation" ? "Evidence mode labelled on every result" : "Recorded experiment data · Task 007 · not live inference"}</p>
+          <p className="badge" role="note">{page === "investigation" ? "Recorded Ironbark demo" : "Recorded experiment data · Task 007 · not live inference"}</p>
         </div>
         <nav className="wrap" aria-label="Sections">
           <ul className="tabs">
             <li><a href={`#/${MAIN.id}`} aria-current={page === MAIN.id ? "page" : undefined} onClick={(e) => { e.preventDefault(); go(MAIN.id); }}>{MAIN.label}</a></li>
-            <li className="tabs-label nav-secondary" aria-hidden="true"><span className="muted">Historical experiments:</span></li>
+            <li className="history-menu"><details><summary>Historical experiments</summary><ul>
             {HISTORICAL.map((p) => (
               <li key={p.id}>
                 <a href={`#/${p.id}`} aria-current={page === p.id ? "page" : undefined} onClick={(e) => { e.preventDefault(); go(p.id); }} className="nav-secondary-link">{p.label}</a>
               </li>
             ))}
+            </ul></details></li>
           </ul>
         </nav>
       </header>
@@ -67,7 +68,7 @@ export default function App() {
         {page === "investigation" && <InvestigationPage />}
       </main>
       <footer className="site"><div className="wrap">
-        <p>{page === "investigation" ? <>Investigation page: model, site and evidence mode are shown in the loaded report · calculated costs are estimates, not bills · no universal readiness score</> : <>Controlled synthetic storefront (20 products) · Meta Muse Spark <code>{provenance.model}</code> reference agent · executed from commit <code>{provenance.executionCommit}</code> · costs are calculated estimates, not bills · no universal readiness score, no claims about real websites.</>}</p>
+        <p>{page === "investigation" ? <>Agent Readiness · Recorded evaluation · Experiment details available in the report</> : <>Controlled synthetic storefront (20 products) · Meta Muse Spark <code>{provenance.model}</code> reference agent · executed from commit <code>{provenance.executionCommit}</code> · costs are calculated estimates, not bills · no universal readiness score, no claims about real websites.</>}</p>
       </div></footer>
     </>
   );

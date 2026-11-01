@@ -606,7 +606,7 @@ export function useActiveStep(ids: readonly string[]): string {
 
 const STEP_IDS = STEPS.map(([id]) => id);
 
-export function InvestigationView({ d }: { d: InvestigationExport }) {
+function ExperimentReport({ d, embedded = false }: { d: InvestigationExport; embedded?: boolean }) {
   const t = d.tasks.flatMap((x) => x.baseline), bt = tally(t);
   const inspect = d.stages.find((s) => s.name === "inspect")?.summary ?? {};
   const owner = d.proposals.some((p) => p.owner_selected);
@@ -616,7 +616,7 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
   return (
     <div className="investigation">
       {d.synthetic ? <p className="replay-banner" role="note">SYNTHETIC FIXTURE — hand-written test data, not produced by any model, agent or website.</p> : null}
-      <Hero d={d} />
+      {embedded ? <header><h2>Report context</h2><p>{d.run.target} · Run {d.run.id} · {provenanceOf(d).label}</p>{d.demo_case && <p>{d.demo_case.label} · {d.demo_case.recorded_on}<br />{d.demo_case.note}</p>}</header> : <Hero d={d} />}
       <DiagnosticSummary d={d} />
       <GoalBanner d={d} />
       <OwnerInsights d={d} />
@@ -679,6 +679,80 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
       </section>
     </div>
   );
+}
+
+const PRODUCT_STAGES = [["test", "Test website"], ["friction", "Discover friction"], ["improvements", "Explore improvements"], ["measure", "Measure impact"]] as const;
+
+function ProductOutcomes({ d }: { d: InvestigationExport }) {
+  const original = tally(d.tasks.flatMap(t => Object.values(t.placebo ?? {}).flat()));
+  const modified = tally(d.tasks.flatMap(t => Object.values(t.patched).flat()));
+  const total = (arm: "placebo" | "patched") => d.tasks.flatMap(t => Object.values(t[arm] ?? {}).flat()).filter(r => !r.void).reduce((n, r) => n + (r.model_requests ?? 0), 0);
+  const from = total("placebo"), to = total("patched");
+  return <div className="product-outcomes" aria-label="Contemporary S1 comparison">
+    <div><span>Original website</span><strong>{original.supported}/{original.usable}</strong><small>evidence-supported passes</small></div>
+    <div><span>Modified website</span><strong>{modified.supported}/{modified.usable}</strong><small>evidence-supported passes</small></div>
+    <div><span>Model requests</span><strong>{from} → {to}</strong><small>{from > to ? `${Math.round(100 * (1 - to / from))}% fewer` : "recorded requests"}</small></div>
+  </div>;
+}
+
+export function InvestigationView({ d }: { d: InvestigationExport }) {
+  // The approved public S1 case gets a focused presentation; all original report
+  // functionality and other imported reports remain available without data changes.
+  if (d.demo_case?.id !== "ironbark-s1") return <ExperimentReport d={d} />;
+  return <RecordedProduct d={d} />;
+}
+
+function RecordedProduct({ d }: { d: InvestigationExport }) {
+  const [active, setActive] = useState<string>("test");
+  const details = useRef<HTMLDetailsElement>(null);
+  const story = d.storyboard;
+  const ownerSelected = d.proposals.some(p => p.owner_selected);
+  const go = (id: string) => {
+    setActive(id); const el = document.getElementById(`product-${id}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "start" }); el?.focus({ preventScroll: true });
+  };
+  const showDetails = () => { if (details.current) { details.current.open = true; details.current.scrollIntoView({ behavior: "smooth" }); details.current.querySelector("summary")?.focus(); } };
+  const real = provenanceOf(d).kind === "live";
+  return <div className="product-report">
+    <header className="product-hero">
+      <p className="eyebrow">Agent Readiness · Developer diagnostics</p>
+      <h1>How well can AI agents use your website?</h1>
+      <p className="product-lead">Watch an agent try real tasks. Find friction. Test a change. See what happened.</p>
+      <p className="product-recording" role="status" aria-label="Report provenance">{real ? "Recorded demo · Ironbark S1 · Real-model evidence" : provenanceOf(d).label}</p>
+      <ProductOutcomes d={d} />
+      <p className="product-qualification">Small controlled experiment · Improvement not established.</p>
+    </header>
+    <nav className="product-nav" aria-label="Product workflow"><ol>{PRODUCT_STAGES.map(([id, label], i) => <li key={id}><button aria-label={label} onClick={() => go(id)} aria-current={active === id ? "step" : undefined}><span>{i + 1}</span>{label}</button></li>)}</ol></nav>
+    <section id="product-test" tabIndex={-1} className="product-section">
+      <p className="eyebrow">01 · Test website</p><h2>Four tasks. One reference agent.</h2>
+      <p>Ironbark equipment hire · Meta Muse Spark · Outcomes checked independently.</p>
+      <ul className="product-tasklist">{d.tasks.map(t => <li key={t.task_id}>{t.question}</li>)}</ul>
+    </section>
+    <section id="product-friction" tabIndex={-1} className="product-section">
+      <p className="eyebrow">02 · Discover friction</p><h2>See what the agent actually did</h2>
+      {story ? <div className="product-story" aria-label="Recorded agent actions">
+        <p><strong>{d.tasks.find(t => t.task_id === story.task_id)?.question}</strong> · Modified website</p>
+        <ol>{story.steps.map((step, i) => <li key={i} className={step.category === "browser tool" ? "story-recovery" : ""}><span className="story-number">{i + 1}</span><div><span className="story-kind">{step.category}</span><p>{step.text}</p><details><summary>Evidence reference</summary><small>Archived event {step.event} · {step.ok ? "No execution error" : "Execution error"}</small></details></div></li>)}</ol>
+        <p className="product-status">{story.evidence_supported ? "✓ Evidence-supported pass" : story.strict_pass ? "Strict pass · evidence not supported" : "Task did not pass"}</p>
+      </div> : <p>No recorded action summary is available.</p>}
+    </section>
+    <section id="product-improvements" tabIndex={-1} className="product-section">
+      <p className="eyebrow">03 · Explore improvements</p><div className="suggestion-card"><span className="product-status">Suggestion</span><h2>Suggested improvement to test</h2>
+        <p className="product-lead">Surface existing deposit, minimum-hire and delivery terms on listing cards.</p>
+        <p>{ownerSelected ? "Owner-selected · Not independently verified" : "See recorded proposal provenance in experiment details"}</p>
+        <button onClick={() => go("measure")}>See the recorded comparison →</button>
+      </div>
+    </section>
+    <section id="product-measure" tabIndex={-1} className="product-section">
+      <p className="eyebrow">04 · Measure impact</p><h2>Compare outcomes, task by task</h2>
+      <div className="table-wrap" role="region" aria-label="Contemporary task outcomes" tabIndex={0}><table><thead><tr><th scope="col">Task</th><th scope="col">Original</th><th scope="col">Modified</th></tr></thead><tbody>{d.tasks.map(t => <tr key={t.task_id}><th scope="row">{t.question}</th>{(["placebo", "patched"] as const).map(arm => <td key={arm}>{Object.values(t[arm] ?? {}).flat().map((r, i) => <span key={i}>{r.void ? "Void" : r.passed && r.evidence_backed ? "✓ Evidence-supported pass" : r.passed ? "Strict pass · evidence not supported" : "Not passed"}<small className="request-count">{r.model_requests ?? "—"} requests</small></span>)}</td>)}</tr>)}</tbody></table></div>
+      <button className="linklike" onClick={showDetails}>View verdicts and experiment details</button>
+    </section>
+    <details className="experiment-details" ref={details}><summary>Experiment details</summary>
+      <p>Recorded S1 sensitivity experiment · No evaluation is running. Four owner-authored tasks; owner-selected intervention. Website observations, agent/output limitations and browser-tool failures are separate evidence categories. A handled scroll index does not establish website friction.</p>
+      <ExperimentReport d={d} embedded />
+    </details>
+  </div>;
 }
 
 type Source = "ironbark-recorded" | "public-synthetic" | "expb-synthetic" | "verified-synthetic";
