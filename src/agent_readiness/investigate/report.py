@@ -21,6 +21,9 @@ DEV_ARTIFACT = "dev-provider"          # written once by `flow.build` when a liv
 def notices_for(run: InvestigationRun, modes) -> list[str]:
     """The mode notices of a report/export. A run that talked to the loopback stand-in carries the DEV PROVIDER notice FIRST, wherever the report is produced (job, CLI driver, replay)."""
     out = [NOTICES[m] for m in modes]
+    from .evaluate.scroll_successor import declared
+    if declared(run):
+        out.insert(0, "EXP-C-S1 SENSITIVITY: both new arms use suite-v2-compat2; the archived baseline uses compat1. Historical comparisons confound the site change with the scroll policy; never pool with EXP-C/R1. Frozen and exploratory rules remain unchanged, including their early-termination limitations.")
     return [DEV_NOTICE, *out] if run.has_artifact(DEV_ARTIFACT) else out
 
 

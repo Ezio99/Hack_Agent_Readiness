@@ -20,7 +20,7 @@ from ..trials.trace import load_observations
 from ...ledger import Halt
 from ..fork import provenance_summary
 from ..inspect.stage import load_snapshot
-from . import design, exploratory
+from . import design, exploratory, scroll_successor
 
 
 def _applied(ctx: Context) -> list[str]:
@@ -70,6 +70,9 @@ def post_manifest(ctx: Context) -> dict | None:
     if not ids:
         return None
     shared = trials.shared_arm_config(ctx)
+    successor = scroll_successor.declared(run)
+    if successor:
+        shared = {**shared, "agent_profile": scroll_successor.NEW}
     base = {k: v for k, v in trials.manifest(ctx, shared).items() if k not in ("stage_cap_usd", "stage_cap_note", "allocation")}      # the baseline stage cap does not apply to patched arms; their manifest is unchanged
     arms = []
     for pid in ids:
@@ -78,6 +81,10 @@ def post_manifest(ctx: Context) -> dict | None:
         arms.append({"proposal_id": pid, "patched_snapshot_sha256": snap.sha256, "task_ids": [t["task_id"] for t in ok], "excluded": excluded})
     m = {**base, "stage": "post_trials", "mock_behavior": shared["mock_behavior"], "arms": arms, "same_tasks_profile_model_and_limits_as_baseline": True,
          "evaluation_rule_sha256": canonical_hash(run.artifact("tasks-manifest").get("evaluation_rule"))}
+    if successor:
+        m.update(agent_profile=scroll_successor.NEW, profile_successor=successor,
+                 same_tasks_profile_model_and_limits_as_baseline=False,
+                 sensitivity_label="EXP-C-S1: scroll tolerance; historical baseline uses compat1")
     plan = _plan(ctx)
     if plan is None:
         return m
@@ -89,7 +96,7 @@ def post_manifest(ctx: Context) -> dict | None:
     forked = provenance_summary(run)
     ceiling = base["ledger_ceiling_usd"]
     task_by_id = {t["task_id"]: t for t in manifest_["tasks"]}
-    return {**({"forked_from": forked} if forked else {}), **m,
+    result = {**({"forked_from": forked} if forked else {}), **m,
             "exploratory": {"label": exploratory.RULES["label"], "proposal_id": pid, "proposal_label": run.evidence.proposals[pid].label, "plan": plan, "rules": exploratory.RULES, "rules_sha256": exploratory.RULES_SHA256,
                             "note": "owner-selected, NOT an investigator-verified finding; the frozen rule is computed and reported unchanged and is not replaced by these rules"},
             "execution_order": [s["name"] for s in steps], "execution_order_sha256": canonical_hash([s["name"] for s in steps]),
@@ -99,12 +106,20 @@ def post_manifest(ctx: Context) -> dict | None:
                         "runtime_check": "after every placebo and patched trial the recorded model, profile, profile hash, schema hashes and limits must equal the baseline trial's (placebo: also the source snapshot); a mismatch stops the stage"},
             "caps_usd": {**alloc.post_trials_caps(ceiling, (forked or {}).get("imported_spend_committed_usd"), plan.get("caps_usd")), "per_trial": base["run_cap_usd"]},
             "cap_enforcement": "durable spend gate: every trial gate carries its arm cap AND the combined cap (reserved + settled, read from the ledger, so they hold across restarts); a refused trial is void and halts the stage"}
+    if successor:
+        result["placebo"]["archived_baseline_reference"] = result["placebo"].pop("identical_to_baseline")
+        result["placebo"]["archived_baseline_reference"].update(agent_profile=scroll_successor.OLD,
+            arm_config_sha256=canonical_hash(trials.shared_arm_config(ctx)))
+        result["placebo"]["runtime_check"] = "same model, schemas, limits and placebo snapshot; effective profiles differ ONLY by the hashed declared scroll successor rule; both new arms use compat2"
+    return result
 
 
 def _check_control(run, st: dict, rec: dict) -> None:
     """The unmodified repeat (and the patched arm) must use the SAME model, profile, tool interface and limits as the baseline trial of that task; the placebo also the same source snapshot."""
     base = run.artifact(f"trials/baseline-{st['task']['task_id']}-r1")
     keys = ("model", "profile", "profile_hash", "schema_hashes", "mode") + (("snapshot_sha256",) if st["label"] == "placebo" else ())
+    if scroll_successor.check(run, base, rec):
+        keys = tuple(k for k in keys if k not in ("profile", "profile_hash"))
     diff = [k for k in keys if k in base.get("trial", {}) and rec.get("trial", {}).get(k) != base["trial"][k]]
     if (base.get("task") or {}).get("limits") != (rec.get("task") or {}).get("limits"):
         diff.append("limits")

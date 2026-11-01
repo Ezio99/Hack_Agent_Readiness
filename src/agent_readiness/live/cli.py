@@ -29,6 +29,7 @@ def register(sub) -> None:
     register_replay(ls)
     ab = ls.add_parser("ab-experiment", help="Controlled Ironbark before/after (EXP-C): fork the finished live run, record the ONE owner-selected three-field listing proposal, and present the apply_fix then post_trials manifests. Free by default")
     ab.add_argument("--id", required=True, help="id of the new fork run (a directory name under --root)")
+    ab.add_argument("--scroll-sensitivity", action="store_true", help="EXP-C-S1: both new arms use compat2 under the hashed scroll-only successor rule")
     ab.add_argument("--root", type=Path, default=Path("scanner-data/live"))
     ab.add_argument("--source", type=Path, default=None, help="the finished live run to fork (default: the pre-registered source)")
     ab.add_argument("--approve-hash", action="append", default=[], help="exact manifest hash to approve (repeatable: apply_fix, then post_trials)")
@@ -159,7 +160,7 @@ def ab_experiment(args) -> int:
     from ..agent import ModelConfig
     from . import abtest
     from .targets import TARGETS
-    out = abtest.drive(args.source or abtest.SOURCE, args.root, args.id, cfg=ModelConfig(), snapshot=TARGETS["ironbark"].snapshot(), approve=frozenset(args.approve_hash), allow_model_calls=args.allow_model_calls)
+    out = abtest.drive(args.source or abtest.SOURCE, args.root, args.id, cfg=ModelConfig(), snapshot=TARGETS["ironbark"].snapshot(), approve=frozenset(args.approve_hash), allow_model_calls=args.allow_model_calls, scroll_sensitivity=args.scroll_sensitivity)
     manifest = out.pop("manifest", None)
     print(json.dumps(out, indent=2))
     if manifest is not None:

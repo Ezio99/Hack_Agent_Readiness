@@ -2,6 +2,14 @@
 
 **Authoritative current state (2026-10-29, Task 015 stack and 015f merged; Task 016 next).** Verify against the repository, not this text. Full historical checkpoints are preserved verbatim in [docs/archive/STATUS-through-2026-10-29.md](docs/archive/STATUS-through-2026-10-29.md); architecture, execution paths, frozen artifacts and technical debt are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## Scroll tolerance and EXP-C-S1 (2026-11-01, offline preparation on PR #60)
+
+Owner-authorized scroll-only correction implemented as `suite-v2-compat2` (`page-fallback-v1`); compat1 preserved. Invalid nonzero indices absent from the current selector map execute ordinary page scrolls and produce explicit trace events. Both new S1 arms use compat2 under a hashed, narrowly checked successor exception; imported baseline remains compat1. No grading, prompt/schema, decision-rule or historical evidence changes. Report: [016n](collaboration/reports/016n-scroll-tolerance-and-exp-c-s1.md).
+
+Separate fork `scanner-data/live/live-ab-ironbark-s1` is awaiting **post_trials approval**, manifest **`99f493d1558db5d925069e5ae8ea66fc21e2927e1364a69ddb45ec9ae3a550f8`**. Eight proposed trials, additional combined calculated cap US$1.60 (US$0.80/arm), ledger ceiling US$2.50 including US$0.864825 imported history. Checks: 77 focused regression tests, 2 real-Chromium tests and 214 critical tests passed; final schema/report assertions also passed. Only the free apply_fix step was approved/executed under the implementation authorization. **No paid S1 call is authorized or executed.**
+
+EXP-C and R1 are completed historical runs: patched strict passes 2/4 and 1/4 respectively, placebo 0/4 each; both frozen verdicts inconclusive. Three terminal invalid-scroll failures confound request reductions, especially R1's exploratory `consistent_with_h1` verdict. They are not pooled with S1. All protected source/EXP-C/R1/replay files and original approval hashes were verified unchanged. The programme ledger remains unreconciled; its older total below is not current programme spending.
+
 ## Second target (2026-11-01, offline only)
 `flask-docs` (saved documentation snapshot) is registered with a neutral goal vocabulary and the `term_value` kind enabled for it only; Ironbark's lexicon, requests and hashes are unchanged. Exercised only with the dev provider. **No paid run is authorized.** See [docs/SECOND_TARGET.md](docs/SECOND_TARGET.md).
 

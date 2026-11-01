@@ -15,6 +15,7 @@ PROFILE_FILES = {"natural-shopping-v2": "natural-v2.json", "natural-shopping-v3"
                  "natural-shopping-v3-compat1": "natural-v3-compat1.json",
                  "suite-v1-compat1": "suite-v1-compat1.json", "suite-v2-compat1": "suite-v2-compat1.json"}      # Task 011: generic task-suite profile (answer schema supplied per task)
 DEFAULT_PROFILE_ID = "natural-shopping-v3"
+PROFILE_FILES["suite-v2-compat2"] = "suite-v2-compat2.json"
 # Documented Meta levels; "none" returns HTTP 400 on Muse Spark. "xhigh"/"max" are excluded by this project.
 REASONING_EFFORTS = ("minimal", "low", "medium", "high")
 
@@ -298,6 +299,38 @@ def apply_tool_result_visibility(tools) -> list[str]:
     return patched
 
 
+def apply_scroll_index_policy(tools, recorder: Recorder):
+    """Wrap execution only; the registered scroll schema and description stay intact.
+
+    Consult BrowserSession's CURRENT map on every call, never an observation or
+    a remembered map. Lookup errors propagate; only an absent index falls back.
+    """
+    action = tools.registry.registry.actions["scroll"]
+    original = action.function
+
+    async def wrapped(params, browser_session, **kwargs):
+        requested = params.index
+        if requested is None or requested == 0:
+            return await original(params=params, browser_session=browser_session, **kwargs)
+        selector_map = await browser_session.get_selector_map()
+        if requested in selector_map:
+            return await original(params=params, browser_session=browser_session, **kwargs)
+        executed = params.model_copy(update={"index": None})
+        try:
+            result = await original(params=executed, browser_session=browser_session, **kwargs)
+        except Exception as exc:
+            recorder.event("scroll_index_fallback", policy="page-fallback-v1", requested_index=requested,
+                           current_map_valid=False, executed_action={"scroll": executed.model_dump(mode="json")},
+                           result={"exception": type(exc).__name__, "error": str(exc)})
+            raise
+        recorder.event("scroll_index_fallback", policy="page-fallback-v1", requested_index=requested,
+                       current_map_valid=False, executed_action={"scroll": executed.model_dump(mode="json")},
+                       result=result.model_dump(mode="json"))
+        return result
+
+    action.function = wrapped
+
+
 def create_agent(task: PublicTask, url: str, llm, browser, recorder: Recorder, effective: dict, answer_model=Answer):
     prepare_browser_environment()
     from browser_use import Agent, Tools
@@ -310,6 +343,8 @@ def create_agent(task: PublicTask, url: str, llm, browser, recorder: Recorder, e
 
     if p.get("tool_result_visibility") == "read-state-v1":
         apply_tool_result_visibility(tools)
+    if p.get("scroll_index_policy") == "page-fallback-v1":
+        apply_scroll_index_policy(tools, recorder)
 
     version_recorded = False
 

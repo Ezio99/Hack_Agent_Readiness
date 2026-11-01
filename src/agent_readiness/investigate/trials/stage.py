@@ -80,7 +80,7 @@ def run_plan(ctx: Context, steps: list[dict], *, manifest_: dict, verify=None) -
                            scope_run_ids=scopes[0][0] if legacy else None, scope_cap=scopes[0][1] if legacy else None, extra_scopes=() if legacy else tuple(scopes)) if live else None
         out = Path(run.dir) / "trial-data" / f"{prefix}-{tid}"
         rec = asyncio.run(run_trial(st["inst"], st["snap"], provider="live" if live else "mock", mock_behavior=o.get("mock_behavior", "correct"), output=out, model_config=cfg, api_key=key,
-                                    request_gate=gate, label=st["label"]))
+                                    request_gate=gate, label=st["label"], profile_id=manifest_["agent_profile"]))
         trial_dir = str(Path(rec.pop("artifact_path")).relative_to(run.dir))
         record = {**rec, "task_id": t["task_id"], "partition": t["partition"], "repeat": rep, "trial_id": tid, "trial_dir": trial_dir, "arm": st["label"]}
         is_void = rec["outcome"]["run_status"] in VOID_STATUSES

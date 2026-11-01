@@ -4,6 +4,10 @@
 >
 > Read this before proposing changes, writing code, or making architectural decisions. This document provides orientation, not a complete specification. Always inspect the current repository and relevant task documents.
 
+## Latest branch handoff — 2026-11-01
+
+On `live-m1-llm-evaluation` / draft PR #60: see [STATUS.md](STATUS.md), [CODEX_HANDOFF](collaboration/CODEX_HANDOFF.md) (historical takeover context), and [Report 016n](collaboration/reports/016n-scroll-tolerance-and-exp-c-s1.md). Scroll tolerance and EXP-C-S1 are prepared offline for review; no paid S1 run, merge, push or deployment is authorized. Older Task 015/016 "next" statements below predate the live investigation pipeline.
+
 ## Current execution handoff — 2026-10-29 (Task 015 stack + 015f merged; Task 016 M1 implemented; plan approved)
 
 **Read first:** [collaboration/TASK016_HANDOFF.md](collaboration/TASK016_HANDOFF.md) (fresh-session handoff, start here), [STATUS.md](STATUS.md) (authoritative current state), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (layers, execution paths, frozen/pinned artifacts, audit classification, debt, what Task 016 can reuse), then the active task. Earlier handoff text is archived verbatim in [docs/archive/COLD_START-handoff-through-2026-10-29.md](docs/archive/COLD_START-handoff-through-2026-10-29.md).

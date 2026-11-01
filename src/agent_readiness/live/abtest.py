@@ -54,12 +54,19 @@ def build_plan(run: InvestigationRun) -> dict:
     return {"placebo_tasks": ids, "affected": ids, "same_shape_controls": [], "detail_controls": [], "caps_usd": dict(CAPS)}
 
 
-def drive(source: Path, root: Path, run_id: str, *, cfg, snapshot, approve: frozenset[str] = frozenset(), allow_model_calls: bool = False) -> dict:
+def drive(source: Path, root: Path, run_id: str, *, cfg, snapshot, approve: frozenset[str] = frozenset(), allow_model_calls: bool = False, scroll_sensitivity: bool = False) -> dict:
     """Run the pipeline of the fork until it needs an approval it does not have; return where it stopped. When a pending manifest's hash is in `approve` (and, for the spending stage,
     `allow_model_calls` is set), record that exact approval and continue. Anything else stops with a plain report; the free steps (fork, proposal, apply_fix) spend nothing."""
     from ..investigate import flow
     from ..ledger import Halt
     run = ensure_fork(source, root, run_id)
+    from ..investigate.evaluate import scroll_successor
+    if scroll_sensitivity:
+        if not run.has_artifact(scroll_successor.ARTIFACT) and run.status("post_trials") != "pending":
+            raise ValueError("scroll sensitivity requires a fresh fork, before post_trials preparation")
+        run.write_artifact(scroll_successor.ARTIFACT, scroll_successor.rule())
+    elif run.has_artifact(scroll_successor.ARTIFACT):
+        raise ValueError("this fork requires --scroll-sensitivity on every invocation")
     prop = ensure_proposal(run)
     plan = build_plan(run)
     imported = json.loads((run.dir / "fork.json").read_text())["source_ledger"]["committed_usd"]
