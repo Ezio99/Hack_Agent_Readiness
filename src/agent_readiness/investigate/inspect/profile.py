@@ -20,7 +20,7 @@ def template_of(path: str, siblings: dict[str, int]) -> str:
     return f"{parent}/{{}}" if siblings.get(parent or "/", 0) >= 3 and last else p
 
 
-# PROVISIONAL heuristics: tuned on Ironbark, one Sphinx documentation site and four generic zoo sites only; not generally validated. Changing them changes model-visible observations and prompts.
+# PROVISIONAL heuristics: tuned on Ironbark, one Sphinx documentation site and four generic test sites only; not generally validated. Changing them changes model-visible observations and prompts.
 CATALOGUE_SHARE, CATALOGUE_MIN_PAGES, UNCERTAIN_SHARE = 0.5, 2, 0.25
 
 
