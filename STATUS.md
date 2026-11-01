@@ -2,7 +2,7 @@
 
 ## Hosted Ironbark work in progress (2026-11-02)
 
-Dedicated branch `hosted-ironbark-evaluation`: external/ambiguous snapshot redirects are blocked and tested. The public hosted runner is not implemented; browser pre-request isolation and durable global budget/concurrency controls remain blockers. No paid call or deployment. See [work-in-progress report](collaboration/reports/hosted-ironbark-wip.md).
+Dedicated branch `hosted-ironbark-evaluation`: external/ambiguous snapshot redirects are blocked and tested; a standalone SQLite admission and budget reservation component is implemented and tested but not wired to any service. The public hosted runner is not implemented; browser pre-request isolation and durable global budget/concurrency controls remain blockers. No paid call or deployment. See [work-in-progress report](collaboration/reports/hosted-ironbark-wip.md).
 
 ## Ironbark operator UI (2026-11-02)
 
