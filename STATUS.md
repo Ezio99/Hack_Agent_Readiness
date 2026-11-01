@@ -1,5 +1,9 @@
 # Agent Readiness — status
 
+## Hosted fixed-target API fixture increment (2026-11-02)
+
+A disabled-by-default fixed-target API now connects durable admission to a test-only eight-task fixture executor and public-safe export. Six hosted API/admission tests passed; this is not deployed or wired to a real worker. Container isolation, restart reconciliation, per-task progress and Replay Studio integration remain outstanding. [Work-in-progress report](collaboration/reports/hosted-ironbark-wip.md). No paid call.
+
 ## Hosted Ironbark work in progress (2026-11-02)
 
 Dedicated branch `hosted-ironbark-evaluation`: external/ambiguous snapshot redirects are blocked and tested; a standalone SQLite admission and budget reservation component is implemented and tested but not wired to any service. The public hosted runner is not implemented; browser pre-request isolation and durable global budget/concurrency controls remain blockers. No paid call or deployment. See [work-in-progress report](collaboration/reports/hosted-ironbark-wip.md).

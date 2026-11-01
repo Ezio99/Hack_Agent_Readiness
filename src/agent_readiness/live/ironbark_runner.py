@@ -73,9 +73,12 @@ def validate_manifest(m, caps):
         raise ValueError('Paired manifest does not match the approved suite, snapshots, profile, limits or caps')
 
 
-def prepare(root, caps):
+def prepare(root, caps, *, job_id=None):
     caps_checked(caps)
-    job_id = 'paired-' + uuid.uuid4().hex
+    if job_id is None:
+        job_id = 'paired-' + uuid.uuid4().hex
+    if not isinstance(job_id, str) or len(job_id) != 39 or not job_id.startswith('paired-') or any(c not in '0123456789abcdef' for c in job_id[7:]):
+        raise ValueError('Invalid paired run id')
     # Reserve the new run using the fork's exclusive-create check; drive() also
     # supports resumption and must not silently reuse an existing run here.
     from ..investigate.fork import fork
