@@ -136,3 +136,16 @@ def test_full_paired_driver_with_recorded_trial_fixtures(tmp_path, monkeypatch):
     exported = r.Manager(tmp_path).export(job['id'])
     assert exported['evaluation']['state'] == 'evaluated'
     assert exported['trials']['placebo'] == exported['trials']['patched'] == 4
+
+
+def test_prepare_refuses_to_reuse_existing_run(tmp_path, monkeypatch):
+    class Fixed:
+        hex = 'a' * 32
+    monkeypatch.setattr(r.uuid, 'uuid4', lambda: Fixed())
+    existing = tmp_path / ('paired-' + 'a' * 32)
+    existing.mkdir()
+    (existing / 'run.json').write_text('existing')
+    monkeypatch.setattr(r, 'driver', lambda *a, **kw: pytest.fail('must not resume an existing run'))
+    with pytest.raises(FileExistsError):
+        r.prepare(tmp_path, {'placebo_arm': .8, 'patched_arm': .8})
+    assert (existing / 'run.json').read_text() == 'existing'

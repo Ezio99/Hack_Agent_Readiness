@@ -76,6 +76,10 @@ def validate_manifest(m, caps):
 def prepare(root, caps):
     caps_checked(caps)
     job_id = 'paired-' + uuid.uuid4().hex
+    # Reserve the new run using the fork's exclusive-create check; drive() also
+    # supports resumption and must not silently reuse an existing run here.
+    from ..investigate.fork import fork
+    fork(SOURCE, root, job_id, carry_investigation=True)
     out = driver(root, job_id, caps)
     if out.get('status') != 'awaiting_approval' or out.get('stage') != 'apply_fix':
         raise ValueError('Could not prepare the local snapshot')
