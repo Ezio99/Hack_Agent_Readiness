@@ -29,7 +29,16 @@ export interface GoalCoverage {
   entities: { path: string; name: string; covered: boolean }[]; entities_total: number; entities_covered: number; partial_because: string[]; limitations: { aspect: string; kind: string; detail: string }[];
   first_page_answerable_selected: number; note: string;
 }
+export interface InsightEffort { task_id: string; question: string; source: string; partition: string; trial_id: string; passed: boolean; requests: number; steps_used: number | null; step_limit: number; page_views: number; minimum_page_views: number;
+  extra_page_views: number; attribution: string; strict_grade: string; names_mentioned_in_answer: string; friction: boolean; fields_needed: string[]; needs_field_absent_from_cards: string[]; notes: string[] }
+export interface InsightProperty { field: string; listing: string; item_pages_with_field: number; listing_items: number; shown_on_listing_items: number; absent_from_cards: boolean; evidence: string }
+export interface InsightCause { text: string; fields: string[]; claim_kind: string | null; status: string; refs: string[]; source: string; label: string }
+export interface InsightSuggestion { text: string; fields: string[]; tasks: string[]; basis: string[]; expected_benefit: string; risks: string[]; label: string; source: string; patch: null }
+/** Derived, model-free owner view: measurements, hypotheses and unvalidated text suggestions. Never VERIFIED. Absent in older exports. */
+export interface Insights { schema: "owner-insights-v1"; summary: string; site_properties: InsightProperty[]; task_effort: InsightEffort[]; friction_tasks: string[]; possible_causes: InsightCause[]; suggestions: InsightSuggestion[]; strict_findings: number;
+  provenance: { run_id: string; mode: string; source_run: string | null; task_sources: Record<string, number>; investigator_model: string | null; investigation_status: string | null; frozen_tasks: number; note: string } }
 export interface InvestigationExport {
+  insights?: Insights | null;
   /** live evaluations only: the user's goal, the client briefing and how well the selected tasks serve the goal (absent in older exports and in non-live modes) */
   goal?: string | null; client_context?: { text: string; sha256: string | null; label: string } | null; goal_coverage?: GoalCoverage | null;
   schema: "investigation-dashboard-v1"; exported_at: string | null; synthetic?: boolean; audience?: "public-demo";

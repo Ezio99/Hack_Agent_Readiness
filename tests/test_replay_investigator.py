@@ -94,3 +94,4 @@ def test_an_approved_replay_runs_only_the_investigator_with_one_bounded_correcti
     assert [fork.status(s) for s in ("taskgen", "freeze", "baseline_trials")] == ["done"] * 3 and tree(src.dir) == before, "no task generation, no browser trial, the source run untouched"
     data = json.loads(out.read_text())
     assert data["goal"] == GOAL and data["notices"][0].startswith("INVESTIGATOR REPLAY") and "goal_coverage" in data
+    assert data["insights"] is not None and data["insights"]["provenance"]["source_run"] == "src-live" and data["insights"]["provenance"]["task_sources"], "the replay export carries insights with the fork provenance"

@@ -107,3 +107,33 @@ describe("goals without named items", () => {
     expect(h).toContain("Goal coverage: PARTIAL"); expect(h).toContain("1 of 3 of the goal&#x27;s items covered"); expect(h).not.toContain("Attribute-level coverage only");
   });
 });
+
+describe("owner insights", () => {
+  const withInsights = (over: Partial<NonNullable<InvestigationExport["insights"]>> = {}) => {
+    const d = live(); d.goal_coverage = cov({ entities_total: 0, entities: [], entities_covered: 0 });
+    d.insights = { schema: "owner-insights-v1", summary: "2 of 2 measured task(s) showed friction on a field that the listing cards do not show.",
+      site_properties: [{ field: "refundable deposit", listing: "/hire", item_pages_with_field: 16, listing_items: 16, shown_on_listing_items: 0, absent_from_cards: true, evidence: "site profile" }],
+      task_effort: [{ task_id: "t1", question: "Which hire machines have a deposit below $200?", source: "owner", partition: "investigation", trial_id: "t1-r1", passed: false, requests: 13, steps_used: 14, step_limit: 14, page_views: 13, minimum_page_views: 6, extra_page_views: 7,
+        attribution: "tool_interface", strict_grade: "strict name match: recall 0.0, precision 0.0", names_mentioned_in_answer: "1 of 4", friction: true, fields_needed: ["refundable deposit"], needs_field_absent_from_cards: ["refundable deposit"], notes: ["The answer text mentions 1 of the 4 expected names; the strict grade is not a measure of how much the agent understood."] }],
+      friction_tasks: ["t1"], possible_causes: [{ text: "Possible cause (rule-based, untested): the cards do not show the field.", fields: ["refundable deposit"], claim_kind: null, status: "derived by a fixed rule", refs: ["t1-r1"], source: "rule", label: "POSSIBLE CAUSE (hypothesis, not established)" },
+        { text: "Deposit is only visible after 1 hop.", fields: ["refundable deposit"], claim_kind: "info_only_after_k_hops", status: "could not be checked: needs integer `k` >= 2. Treated as an unverified idea, not as a finding.", refs: ["hyp-1"], source: "the investigator (model)", label: "POSSIBLE CAUSE (hypothesis, not established)" }],
+      suggestions: [{ text: "Consider showing refundable deposit on each listing card on /hire.", fields: ["refundable deposit"], tasks: ["t1"], basis: ["t1-r1"], expected_benefit: "HYPOTHESIS, not measured: fewer page views.", risks: ["Cards become busier"], label: "SUGGESTED IMPROVEMENT (UNVALIDATED)", source: "rule", patch: null }],
+      strict_findings: 0, provenance: { run_id: "live-x", mode: "live", source_run: null, task_sources: { owner: 1 }, investigator_model: "muse-spark-1.3", investigation_status: "completed", frozen_tasks: 1, note: "n" }, ...over };
+    return d;
+  };
+  const section = (h: string) => h.slice(h.indexOf('class="insights"'), h.indexOf('class="outcomeclasses"'));
+  it("shows measurements, hypotheses and an UNVALIDATED text suggestion above the strict results, with the owner-authored label, and never the word VERIFIED", () => {
+    const h = html(withInsights()), s = section(h);
+    expect(h.indexOf('class="insights"')).toBeLessThan(h.indexOf('class="outcomeclasses"'));
+    expect(s).toContain("What the measurements suggest"); expect(s).toContain("on none of the"); expect(s).toContain("not proof of a usability problem"); expect(s).toMatch(/minimum[^0-9]*6[^0-9]*\+[^0-9]*7/);
+    expect(s).toContain("strict name match: recall 0.0"); expect(s).toContain("not a measure of how much the agent understood");
+    expect(s).toContain("HYPOTHESES"); expect(s).toContain("could not be checked"); expect(s).toContain("UNVALIDATED"); expect(s).toContain("no change was generated or applied");
+    expect(s).toContain("owner-authored"); expect(s).toContain("not autonomous task generation"); expect(s).not.toContain("VERIFIED");
+  });
+  it("says so when nothing was suggested and renders nothing for exports without insights", () => {
+    const h = html(withInsights({ suggestions: [], possible_causes: [], summary: "No friction was observed on these 1 task(s). No friction-based suggestion is made." }));
+    expect(section(h)).toContain("None: no friction on a measured property was observed"); expect(section(h)).toContain("None proposed.");
+    const d = withInsights(); d.insights = null; expect(html(d)).not.toContain("What the measurements suggest");
+    const old = withInsights(); delete old.insights; expect(html(old)).not.toContain("What the measurements suggest");
+  });
+});

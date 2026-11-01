@@ -396,6 +396,33 @@ export function provenanceOf(d: InvestigationExport): { kind: "live" | "syntheti
   return { kind: "other", label: `${d.modes.map((m) => MODE_LABEL[m]).join(" + ") || MODE_LABEL[d.run.mode]} EVIDENCE · not a live experiment` };
 }
 
+/** Measurements, possible causes and suggestions for a website owner. Everything here is derived from recorded measurements; none of it is VERIFIED (that word is reserved for the strict path below). */
+export function OwnerInsights({ d }: { d: InvestigationExport }) {
+  const x = d.insights;
+  if (!x) return null;
+  const owner = x.provenance.task_sources.owner ?? 0;
+  return (
+    <section className="insights" aria-label="Measurements, possible causes and suggestions for the site owner">
+      <h2>What the measurements suggest</h2>
+      <p className="muted" role="note">Derived from the recorded measurements only (no model call). These are observations, hypotheses and untested suggestions, <strong>not verified findings</strong>; the strict verified results are further down.</p>
+      <p className="insight-summary"><strong>{x.summary}</strong></p>
+      <h3>Measured on the site <span className="pill pill-neutral">OBSERVED</span></h3>
+      {x.site_properties.length ? <ul>{x.site_properties.map((p) => <li key={p.field}><strong>{p.field}</strong> is on {p.item_pages_with_field} of {p.listing_items} item pages and {p.shown_on_listing_items === 0 ? "on none of the" : `on ${p.shown_on_listing_items} of the`} {p.listing_items} cards of <code>{p.listing}</code> (captured copy, measured by code).{p.absent_from_cards ? <span className="muted"> On its own this is a property of the page, not proof of a usability problem.</span> : null}</li>)}</ul> : <p className="muted">None.</p>}
+      <h3>Measured on the agent trials <span className="pill pill-neutral">OBSERVED</span></h3>
+      {x.task_effort.length ? <div className="table-wrap" role="region" aria-label="Measured effort per task" tabIndex={0}><table className="runs"><thead><tr><th scope="col">Task</th><th scope="col">Effort</th><th scope="col">Strict grade (name matching)</th><th scope="col">Answer text mentions</th></tr></thead><tbody>
+        {x.task_effort.map((e) => <tr key={e.task_id} className={e.friction ? "row-fail" : undefined}><th scope="row"><span>{e.question}</span>{e.source === "owner" ? <> <span className="pill pill-warn">owner-authored</span></> : null}{e.partition === "holdout" ? <> <span className="muted">(held out from the investigator)</span></> : null}</th>
+          <td>{e.requests} requests · {e.steps_used ?? "?"}/{e.step_limit} steps · {e.page_views} page views (minimum {e.minimum_page_views}, <strong>+{e.extra_page_views}</strong>) · {e.attribution}</td>
+          <td>{e.strict_grade}</td><td>{e.names_mentioned_in_answer} expected names{e.notes.map((n, i) => <div key={i} className="muted">{n}</div>)}</td></tr>)}</tbody></table></div> : <p className="muted">No usable trial.</p>}
+      <h3>Possible causes <span className="pill pill-warn">HYPOTHESES</span></h3>
+      {x.possible_causes.length ? <ul>{x.possible_causes.map((c, i) => <li key={i}>{c.text} <span className="muted">— {c.source === "rule" ? "rule-based" : `from ${c.source}`}; status: {c.status}.</span> {c.refs.slice(0, 5).map((r) => <code key={r}>{r}</code>)}</li>)}</ul> : <p className="muted">None proposed.</p>}
+      <h3>Suggested improvements <span className="pill pill-warn">UNVALIDATED</span></h3>
+      {x.suggestions.length ? <ul>{x.suggestions.map((s, i) => <li key={i}>{s.text}<div className="muted">{s.expected_benefit} Risks: {s.risks.join("; ")}. Source: {s.source}. Text only: no change was generated or applied. {s.basis.slice(0, 4).map((r) => <code key={r}>{r}</code>)}</div></li>)}</ul>
+        : <p className="muted">None: no friction on a measured property was observed, so nothing is suggested.</p>}
+      <p className="muted" role="note">Run <code>{x.provenance.run_id}</code>{x.provenance.source_run ? <> · investigator replay of <code>{x.provenance.source_run}</code> (tasks and trials imported unchanged)</> : null} · {Object.entries(x.provenance.task_sources).map(([k, v]) => `${v} ${k === "owner" ? "owner-authored" : k === "model" ? "model-generated" : k}`).join(", ")} task(s){owner ? <> — <strong>owner-authored tasks are not autonomous task generation</strong></> : null} · investigator: {x.provenance.investigator_model ?? "none"} ({x.provenance.investigation_status ?? "not run"}).</p>
+    </section>
+  );
+}
+
 const COVERAGE_TONE = { complete: "pass", partial: "warn", insufficient: "fail" } as const;
 export const FIRST_PAGE_TAG = "first_page_answerable";
 const plainAspect = (a: string) => a.replace(/^attribute:/, "");
@@ -516,6 +543,7 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
       {d.synthetic ? <p className="replay-banner" role="note">SYNTHETIC FIXTURE — hand-written test data, not produced by any model, agent or website.</p> : null}
       <Hero d={d} />
       <GoalBanner d={d} />
+      <OwnerInsights d={d} />
       <OutcomeSummary d={d} />
       {d.audience === "public-demo" ? <p className="muted" role="note">Public demo view: internal identifiers are replaced by aliases and per-trial narratives, stage hashes and file paths are removed. Outcomes, request counts, controls and both verdicts are unchanged.</p> : null}
       <div className="modes" role="note" aria-label="Evidence modes">

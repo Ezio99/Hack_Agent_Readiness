@@ -386,6 +386,8 @@ def augment_export(run, data: dict, goal: str, context: str | None, context_sha2
     """The live-product additions to a run export: the goal, the client briefing (labelled), the goal-coverage details and per-task tags. Used for a job's export and for an investigator-only replay run."""
     data["goal"] = goal
     data["client_context"] = {"text": context, "sha256": context_sha256, "label": CONTEXT_LABEL} if context else None
+    from ..investigate.insights import build_insights
+    data["insights"] = build_insights(run)                                         # derived, model-free, never VERIFIED; None when nothing was measured
     data["goal_coverage"] = goal_coverage(run)                                      # persisted in the run's own artifacts (taskgen-report), so a replay or an older run without it simply reports null
     tags = {t["task_id"]: t.get("tags") for t in (run.artifact("tasks-manifest")["tasks"] if run.has_artifact("tasks-manifest") else [])}
     for t in data.get("tasks", []):

@@ -218,5 +218,8 @@ def test_dev_provider_live_job_with_owner_tasks_only_makes_no_taskgen_request_la
     assert len(mans) == 1 and mans[0]["owner_tasks_sha256"] == g["tasks_sha256"] and mans[0]["max_requests"] == 0
     d = m.export(j["id"], "o")
     assert d["goal_coverage"]["owner_authored_selected"] == 4 and all(t["source"] == "owner" for t in d["tasks"])
+    ins = d["insights"]
+    assert ins["provenance"]["task_sources"] == {"owner": 4} and "owner-authored" in json.dumps(ins["provenance"]) or ins["provenance"]["task_sources"] == {"owner": 4}
+    assert ins["suggestions"] == [] and ins["summary"].startswith("No friction was observed"), "the minimal-route agent shows no friction, so no friction-based suggestion"
     assert d["findings"] == [], "the dev provider's agent takes the minimal route, so there is no friction to find: an honest empty result"
     assert [a["stage"] for a in run.approvals()] == ["taskgen", "baseline_trials", "investigate"]
