@@ -50,10 +50,59 @@
       "label": "Task 015 two-run live pilot (modified PASS, unmodified FAIL)",
       "usd": 0.214509,
       "source": "collaboration/experiments/task015/pilot/results/ledger.jsonl; Report 015c"
+    },
+    {
+      "id": "ironbark-source",
+      "label": "Ironbark source investigation; shared imported history counted ONCE",
+      "usd": 0.864825,
+      "source": "scanner-data/live/live-2d58a80e14/spend/ledger.jsonl",
+      "run_total_usd": 0.864825,
+      "imported_history_excluded_usd": 0,
+      "shared_source_run": "live-2d58a80e14",
+      "basis": "provider-reported tokens at published prices; calculated, not billed"
+    },
+    {
+      "id": "exp-c",
+      "label": "EXP-C additional paid stage only",
+      "usd": 1.13803,
+      "source": "scanner-data/live/live-ab-ironbark/spend/ledger.jsonl",
+      "run_total_usd": 2.002855,
+      "imported_history_excluded_usd": 0.864825,
+      "shared_source_run": "live-2d58a80e14",
+      "basis": "provider-reported tokens at published prices; calculated, not billed"
+    },
+    {
+      "id": "exp-c-r1",
+      "label": "EXP-C R1 additional paid stage only",
+      "usd": 1.070926,
+      "source": "scanner-data/live/live-ab-ironbark-r1/spend/ledger.jsonl",
+      "run_total_usd": 1.935751,
+      "imported_history_excluded_usd": 0.864825,
+      "shared_source_run": "live-2d58a80e14",
+      "basis": "provider-reported tokens at published prices; calculated, not billed"
+    },
+    {
+      "id": "exp-c-s1",
+      "label": "EXP-C-S1 sensitivity experiment; additional paid stage only",
+      "usd": 1.137487,
+      "source": "scanner-data/live/live-ab-ironbark-s1/spend/ledger.jsonl",
+      "run_total_usd": 2.002312,
+      "imported_history_excluded_usd": 0.864825,
+      "shared_source_run": "live-2d58a80e14",
+      "basis": "provider-reported tokens at published prices; calculated, not billed"
     }
   ],
   "recorded_runtime_stages": [
     "pilot"
   ],
-  "runtime_ledgers_note": "Spend after the pilot (stage ledgers under runs/task015/<stage>/ledger, private) is counted by the Task 015 driver on top of these entries; stages listed in recorded_runtime_stages are already included above and are not counted twice."
+  "runtime_ledgers_note": "Spend after the pilot (stage ledgers under runs/task015/<stage>/ledger, private) is counted by the Task 015 driver on top of these entries; stages listed in recorded_runtime_stages are already included above and are not counted twice.",
+  "reconciliation": {
+    "as_of": "2026-11-01",
+    "scope": "Append Ironbark source ONCE and EXP-C/R1/S1 increments; all prior entries preserved. Not a full programme reconciliation.",
+    "shared_import_note": "The three fork totals each contain US$0.864825. These imported copies are excluded from fork entries; the source is recorded once separately.",
+    "three_experiment_incremental_usd": 3.346443,
+    "source_plus_three_experiments_usd": 4.211268,
+    "complete": false,
+    "unreconciled": "Earlier L0/L1a/EXP-B, EXP-2, live taskgen smoke/exposure and investigator replay spending remain outside these entries; verify individually before a final whole-programme claim. Recorded total is a known-spend subtotal, not total billed or fully reconciled programme spend."
+  }
 }
