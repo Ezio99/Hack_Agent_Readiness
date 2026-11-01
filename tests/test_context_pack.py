@@ -23,7 +23,8 @@ FALSE_CTX = "Every cutting tool at Ironbark costs exactly $1 per day and is alwa
 def test_the_ironbark_sample_briefing_is_offered_bounded_and_clearly_a_briefing():
     ib = next(t for t in listing() if t["id"] == "ironbark")
     assert ib["sample_context"] == CTX and len(CTX) <= CONTEXT_MAX and "Marrickville" in CTX and "site4" not in CTX
-    assert all("sample_context" not in t for t in listing() if t["id"] != "ironbark")
+    assert all("sample_context" not in t for t in listing() if t["id"] not in ("ironbark", "flask-docs"))
+    assert all(len(t["sample_context"]) <= CONTEXT_MAX and "Marrickville" not in t["sample_context"] for t in listing() if t["id"] == "flask-docs")      # the documentation target (offered only where its snapshot exists) has its own briefing
 
 
 def test_context_is_cleaned_and_bounded_and_blank_means_none():
