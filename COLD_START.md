@@ -6,7 +6,7 @@
 
 ## Latest branch handoff — 2026-11-01
 
-On `live-m1-llm-evaluation` / draft PR #60: see [STATUS.md](STATUS.md), [CODEX_HANDOFF](collaboration/CODEX_HANDOFF.md) (historical takeover context), and [Report 016n](collaboration/reports/016n-scroll-tolerance-and-exp-c-s1.md). Scroll tolerance and EXP-C-S1 are prepared offline for review; no paid S1 run, merge, push or deployment is authorized. Older Task 015/016 "next" statements below predate the live investigation pipeline.
+On `live-m1-llm-evaluation` / draft PR #60: see [STATUS.md](STATUS.md), [CODEX_HANDOFF](collaboration/CODEX_HANDOFF.md) (historical takeover context), and [Report 016n](collaboration/reports/016n-scroll-tolerance-and-exp-c-s1.md). The single authorized EXP-C-S1 stage is complete; see [Report 016o](collaboration/reports/016o-exp-c-s1-results.md). No further paid run, merge, push or deployment is authorized. Older Task 015/016 "next" statements below predate the live investigation pipeline.
 
 ## Current execution handoff — 2026-10-29 (Task 015 stack + 015f merged; Task 016 M1 implemented; plan approved)
 

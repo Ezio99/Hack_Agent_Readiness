@@ -2,7 +2,11 @@
 
 **Authoritative current state (2026-10-29, Task 015 stack and 015f merged; Task 016 next).** Verify against the repository, not this text. Full historical checkpoints are preserved verbatim in [docs/archive/STATUS-through-2026-10-29.md](docs/archive/STATUS-through-2026-10-29.md); architecture, execution paths, frozen artifacts and technical debt are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-## Scroll tolerance and EXP-C-S1 (2026-11-01, offline preparation on PR #60)
+## EXP-C-S1 executed (2026-11-01; separate sensitivity evidence)
+
+The owner authorized exactly one post_trials stage at manifest `99f493d1558db5d925069e5ae8ea66fc21e2927e1364a69ddb45ec9ae3a550f8`. It completed all eight trials with zero retries and zero terminal tool failures. Strict/evidence-supported passes: patched **3/4**, placebo **2/4**; requests **29 / 50**; four logged invalid-index fallbacks, all successful. Additional calculated cost **US$1.137487**, total imported+new **US$2.002312**, within all approved caps; no outstanding reservations or reservation overshoots. Stored frozen verdict **inconclusive**; preregistered exploratory verdict **not_supported**. Tool-tolerance mechanism observed working; website improvement not established. No pooling with EXP-C/R1. Historical files unchanged. Separately archived at `scanner-data/live/live-ab-ironbark-s1`; [Report 016o](collaboration/reports/016o-exp-c-s1-results.md). **No further paid call authorized; stopped for review.**
+
+## Scroll tolerance and EXP-C-S1 preparation (historical checkpoint, superseded by execution above)
 
 Owner-authorized scroll-only correction implemented as `suite-v2-compat2` (`page-fallback-v1`); compat1 preserved. Invalid nonzero indices absent from the current selector map execute ordinary page scrolls and produce explicit trace events. Both new S1 arms use compat2 under a hashed, narrowly checked successor exception; imported baseline remains compat1. No grading, prompt/schema, decision-rule or historical evidence changes. Report: [016n](collaboration/reports/016n-scroll-tolerance-and-exp-c-s1.md).
 
