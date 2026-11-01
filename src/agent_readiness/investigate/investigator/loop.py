@@ -11,7 +11,7 @@ from ..llm import LLMClient, LLMRequest, StructuredOutputError, complete_structu
 from ..models import CLAIM_KINDS, Hypothesis, Provenance
 from ..zoo.sealed import assert_blind
 from .tools import TOOLS, ToolCall, Workspace
-from .verifiers import verify_and_promote
+from .verifiers import run_verifier, verify_and_promote
 
 SYSTEM = f"""You are an investigator of why browsing agents struggle, or do not struggle, on a website. Browsing agents were run on tasks on this site; you can read the evidence they left and the site itself.
 
@@ -20,9 +20,9 @@ Work step by step. Each turn you either call ONE tool to look at more evidence, 
 
 You may propose ANY hypothesis you can support, including ones nobody anticipated. Two kinds:
 - A checkable pattern: if (and only if) your hypothesis is an instance of one of these generic pattern types, you may set `claim_kind` so code can verify it automatically, and fill the parameters it needs:
-  info_absent_on_template (label), info_only_after_k_hops (k), control_unlabeled (scope optional), observation_missing_dom_content, repeated_navigation, step_overhead_vs_minimum (k), error_response_on_path, inconsistent_content_across_pages.
+  info_absent_on_template (label), info_only_after_k_hops (k; an integer of at least 2), control_unlabeled (scope optional), observation_missing_dom_content, repeated_navigation, step_overhead_vs_minimum (k), error_response_on_path, inconsistent_content_across_pages.
   THIS LIST IS NOT A CHECKLIST AND NOT A LIST OF WHAT TO LOOK FOR. It is only the set of claims code happens to be able to test; real causes are often something else entirely, and most sites show none of these. Do not force an observation into one of them.
-  Every parameter value you set must also be stated in the hypothesis text. `check_claim` lets you test a pattern before you submit it.
+  Every parameter value you set must also be stated in the hypothesis text. BEFORE you call `finish`, call `check_claim` for every claim you mean to submit with a `claim_kind`, with exactly the parameters you will submit, and submit it only if the result is `supported` or `refuted`. If `check_claim` says `unverifiable`, read its reason: fix the parameters, choose the kind that really describes what you saw, or report it as an open-ended hypothesis instead. After `finish`, a claim whose parameters the checker still cannot use is returned to you once with the checker's exact reason, and you may correct it once.
 - An open-ended hypothesis (equally welcome, and often more informative): leave `claim_kind` null and give a falsifiable `prediction` ("if X were different, Y would change"). These are recorded as UNVERIFIED ideas, which is fine.
 Cite the `evidence_id` values that support each hypothesis. If the evidence shows no website problem, say so: report no hypotheses. Failures can also come from the agent or the task rather than the website; do not blame the site without evidence.
 Reply ONLY with JSON matching the schema. Set unused fields to null. Use `hypotheses` only with the `finish` tool."""
@@ -38,6 +38,7 @@ class HypothesisOut(BaseModel):
     prediction: Optional[str]
     citations: list[str]
     proposed_change: Optional[str]
+    replaces: Optional[int]               # only in the one correction round: the claim_number (from the validation feedback) this claim corrects; otherwise null
 
 
 STEP_MAX_TOKENS = 4096     # completion cap per investigator step; INCLUDES hidden reasoning. L0 attempt 3: hypothesis output used 1,281-1,434 tokens (~70 % reasoning); 1,800 left no headroom
@@ -134,7 +135,7 @@ def investigate(ws: Workspace, llm: LLMClient, *, max_calls: int = 12, focus: st
     store = ws.run.evidence
     meter = _Metered(llm)
     msgs = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": first_user_message(ws, focus, context)}]
-    state = {"log": [], "rejected": [], "rows": [], "novel": [], "finished": False, "incomplete": None, "error": None}
+    state = {"log": [], "rejected": [], "rows": [], "novel": [], "audit": [], "finished": False, "incomplete": None, "error": None}
     try:
         _run(ws, meter, store, msgs, state, max_calls)
     except Exception as exc:                                                       # provider outage, spend-gate refusal, blindness halt, parsing crash ...
@@ -143,7 +144,7 @@ def investigate(ws: Workspace, llm: LLMClient, *, max_calls: int = 12, focus: st
     if not state["finished"] and state["incomplete"] is None:
         state["incomplete"] = "no finish action"
     res = {"finished": state["finished"], "incomplete": state["incomplete"], "tool_calls": len(state["log"]), "model_requests": meter.sent, "requests_confirmed": meter.confirmed, "requests_uncertain": meter.uncertain, "tool_log": state["log"],
-           "rejected_hypotheses": state["rejected"], "verification": state["rows"], "novel_changes": state["novel"], "pending_trial_requests": ws.pending_requests,
+           "rejected_hypotheses": state["rejected"], "verification": state["rows"], "claim_audit": state["audit"], "novel_changes": state["novel"], "pending_trial_requests": ws.pending_requests,
            "cost_usd": round(meter.cost, 6), "prompt_tokens": meter.pin, "completion_tokens": meter.pout, "reasoning_tokens": meter.reasoning, "finish_reasons": meter.finish,
            "provider_errors": meter.provider_errors, "refused_before_send": meter.refused, "error": state["error"], "transcript": msgs}
     res["status"] = terminal_status(res)
@@ -157,16 +158,45 @@ def _run(ws, llm, store, msgs, st, max_calls) -> None:
         try:
             step, resp, attempts = complete_structured(llm, LLMRequest(messages=msgs, purpose="investigate", max_tokens=STEP_MAX_TOKENS, response_schema=Step.model_json_schema()), Step, retries=1)
         except StructuredOutputError as exc:
+            if st.get("flagged") is not None:                                           # the correction reply was unusable: the flagged claims are kept exactly as submitted (unverifiable); nothing else is lost
+                _settle_corrections(ws, llm, store, None, st)
+                st["finished"] = True
+                return
             st["incomplete"] = f"unusable model output: {str(exc)[:120]}"
             return
         a = step.action
+        if a.tool != "finish" and i >= max_calls and st.get("flagged") is not None:
+            _settle_corrections(ws, llm, store, None, st)
+            st["finished"] = True
+            return
         if a.tool != "finish" and i >= max_calls:                                       # the tool budget is spent: no further tool is executed
             st["incomplete"] = "tool budget exhausted without a finish action"
             return
         msgs.append({"role": "assistant", "content": step.model_dump_json()})
-        if a.tool == "finish":
+        if st.get("flagged") is not None:                                               # the ONE correction round: only a `finish` that answers the validation feedback is accepted
+            _settle_corrections(ws, llm, store, step if a.tool == "finish" else None, st)
             st["finished"] = True
-            for d in step.hypotheses or []:
+            return
+        if a.tool == "finish":
+            claims = list(step.hypotheses or [])
+            problems = {n: p for n, d in enumerate(claims, 1) if (p := claim_problem(ws, d))}
+            if problems and i < max_calls:                                              # a correction round needs one more iteration inside the existing tool budget; otherwise the claims stay as submitted
+                for n, d in enumerate(claims, 1):
+                    if n not in problems:
+                        _take(ws, llm, store, d, st)
+                st["flagged"] = {n: claims[n - 1] for n in problems}
+                for n, p in problems.items():
+                    st["audit"].append({"claim_number": n, "original": _claim_record(claims[n - 1]), "feedback": p, "corrected": None, "outcome": "pending"})
+                fb = {"claim_validation": [{"claim_number": n, "claim_kind": claims[n - 1].claim_kind, "parameters": {k: v for k, v in (("label", claims[n - 1].label), ("scope", claims[n - 1].scope), ("k", claims[n - 1].k)) if v is not None},
+                                            "result": p["result"], "reason": p["reason"]} for n, p in problems.items()],
+                      "instruction": ("These claims could not be checked as submitted. For each, you may reply once with `finish` and a corrected claim that sets `replaces` to its claim_number (fix its parameters, pick the kind that really describes "
+                                      "what you saw, or turn it into an open-ended hypothesis with a falsifiable prediction). A claim you do not correct is kept as UNVERIFIABLE. Claims not listed were accepted. No other tool is run in this round.")}
+                content = json.dumps(fb, default=str)
+                assert_blind(content)
+                msgs.append({"role": "user", "content": content})
+                continue
+            st["finished"] = True
+            for d in claims:
                 _take(ws, llm, store, d, st)
             return
         result = ws.call(a)
@@ -175,6 +205,49 @@ def _run(ws, llm, store, msgs, st, max_calls) -> None:
         assert_blind(content)
         msgs.append({"role": "user", "content": content})
     st["incomplete"] = "tool budget exhausted without a finish action"
+
+
+def _claim_record(d: HypothesisOut) -> dict:
+    return {"statement": d.statement, "claim_kind": d.claim_kind, "parameters": {k: v for k, v in (("label", d.label), ("scope", d.scope), ("k", d.k)) if v is not None}, "prediction": d.prediction, "citations": list(d.citations)}
+
+
+def claim_problem(ws, d: HypothesisOut) -> dict | None:
+    """Validate a claim that DECLARES a claim_kind, with the same deterministic verifier `check_claim` uses (nothing is stored): None when the checker can use it (`supported` or `refuted`), else the checker's own
+    reason. Open-ended hypotheses (no claim_kind) are not checked here. Nothing is substituted or relaxed: the reason is returned to the model verbatim."""
+    if not d.claim_kind:
+        return None
+    if d.claim_kind not in CLAIM_KINDS:
+        return {"result": "invalid", "reason": f"unknown claim_kind {d.claim_kind!r}; the grammar's kinds are {', '.join(CLAIM_KINDS)}"}
+    r = run_verifier(ws, d.claim_kind, {k: v for k, v in (("label", d.label), ("scope", d.scope), ("k", d.k)) if v is not None}, d.statement)
+    return {"result": "unverifiable", "reason": r.detail} if r.result == "unverifiable" else None
+
+
+def _settle_corrections(ws, llm, store, step, st) -> None:
+    """Resolve the flagged claims after the single correction round. A correction is accepted only if it names the claim it replaces, is itself usable by the checker (or is an open-ended hypothesis), and replaces
+    each claim at most once; otherwise the ORIGINAL claim is kept and recorded as UNVERIFIABLE. Corrections that replace nothing are rejected (no new claims after seeing the checker's answers)."""
+    flagged, audit = st.pop("flagged"), {a["claim_number"]: a for a in st["audit"] if a["outcome"] == "pending"}
+    corrections: dict[int, HypothesisOut] = {}
+    for d in (step.hypotheses or []) if step is not None else []:
+        n = d.replaces
+        if n in flagged and n not in corrections:
+            corrections[n] = d
+        else:
+            st["rejected"].append({"statement": d.statement[:120], "reason": "not a correction of a flagged claim (`replaces` missing, unknown or already used)"})
+    for n, original in flagged.items():
+        c, a = corrections.get(n), audit[n]
+        if c is None:
+            a["outcome"] = "not_corrected: kept as unverifiable"
+            _take(ws, llm, store, original, st)
+            continue
+        a["corrected"] = _claim_record(c)
+        again = claim_problem(ws, c)
+        if again is None:
+            a["outcome"] = "corrected: " + ("checked by the verifier" if c.claim_kind else "restated as an open-ended hypothesis")
+            _take(ws, llm, store, c, st)
+        else:
+            a["outcome"] = "correction_still_invalid: original kept as unverifiable"
+            a["corrected_feedback"] = again
+            _take(ws, llm, store, original, st)
 
 
 def _take(ws, llm, store, d: HypothesisOut, st) -> None:

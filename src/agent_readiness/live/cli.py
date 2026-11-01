@@ -26,6 +26,7 @@ def register(sub) -> None:
     s.add_argument("--plan", action="store_true", help="print the exact manifest and limits; no key, no network, no spend")
     s.add_argument("--confirm-spend", type=float, default=None, help="must equal the smoke cap (0.15): your explicit confirmation of the maximum spend")
     s.add_argument("--wait", type=int, default=600, help="seconds to wait for the job")
+    register_replay(ls)
     f = ls.add_parser("run", help="ONE full live investigation of Ironbark (task generation, browser trials, investigator, recommendations) under a single user grant; hard cap US$2.00")
     f.add_argument("--goal", required=True)
     f.add_argument("--context-file", type=Path, default=None)
@@ -33,6 +34,77 @@ def register(sub) -> None:
     f.add_argument("--plan", action="store_true", help="offline: print the task-generation manifest hash and the grant scope; no key, no network")
     f.add_argument("--confirm-spend", type=float, default=None, help="must equal the job cap (2.00)")
     f.add_argument("--wait", type=int, default=1800)
+
+
+def register_replay(ls) -> None:
+    r = ls.add_parser("replay-investigator", help="Re-run ONLY the investigator (and the free stages after it) against the immutable frozen tasks and baseline trials of a finished live run: a fork, no task generation, no browser trial")
+    r.add_argument("source", type=Path, help="the finished live run directory, e.g. scanner-data/live/live-2d58a80e14 (only read)")
+    r.add_argument("--id", required=True, help="id of the new fork run")
+    r.add_argument("--root", type=Path, default=None, help="where the fork is created (default: the live root next to the source)")
+    r.add_argument("--max-calls", type=int, default=12)
+    r.add_argument("--approve-hash", default=None, help="the investigator manifest hash printed by the plan, to approve and RUN it (needs --allow-model-calls; paid)")
+    r.add_argument("--allow-model-calls", action="store_true")
+    r.add_argument("--export", type=Path, default=None, help="write the dashboard export of the finished fork here")
+
+
+def replay_investigator(args) -> int:
+    """Free plan by default: fork the source run, re-derive the free stages, print the investigator manifest and hash. With --approve-hash + --allow-model-calls: record the operator's approval of exactly that
+    manifest and run the investigator and everything after it. The ceiling is the imported spend plus the investigator stage cap, so the replay can add at most that stage cap."""
+    from ..agent import ModelConfig
+    from ..investigate import allocation as alloc, flow
+    from ..investigate.fork import fork
+    from ..investigate.run import InvestigationRun
+    from ..ledger import Halt
+    from .jobs import CONTEXT_LABEL, augment_export
+    from .targets import TARGETS
+    from . import worker
+    src = InvestigationRun(Path(args.source))
+    root = Path(args.root) if args.root else Path(args.source).parent
+    grant = src.artifact("live-grant")
+    context = src.artifact("client-context")["text"] if src.has_artifact("client-context") else None
+    target = TARGETS[src.state["target"]]
+    if target.snapshot().sha256 != grant["snapshot_sha256"]:
+        raise SystemExit("refusing: the registered site no longer matches the source run's captured snapshot")
+    new_dir = Path(root) / args.id
+    if not new_dir.exists():
+        fork(src.dir, root, args.id)
+    imported = json.loads((new_dir / "fork.json").read_text())["source_ledger"]["committed_usd"]
+    ceiling = round(int((imported + alloc.INVESTIGATE_CAP_USD) * 100) / 100 + 0.01, 2)                       # imported spend + the investigator stage cap, rounded up to the cent
+    opts = worker.live_options(target.snapshot(), grant["goal"], context, budget=ceiling, cfg=ModelConfig(model=grant["model"], base_url=grant["endpoint"]))
+    opts.update({"max_calls": args.max_calls, "allow_model_calls": bool(args.approve_hash and args.allow_model_calls)})
+    if opts["allow_model_calls"]:
+        from ..env import load_repo_env
+        load_repo_env()
+    try:
+        run, pipe, ctx = flow.build(root, args.id, src.state["target"], mode="live", options=opts)
+        res = pipe.run(ctx)
+        if res.status == "awaiting_approval" and res.stage == "investigate":
+            manifest = run.artifact(f"manifests/investigate-{res.manifest_sha256[:16]}")
+            if args.approve_hash:
+                if args.approve_hash != res.manifest_sha256:
+                    raise SystemExit(f"refusing: the manifest hash is {res.manifest_sha256}, not the one you approved")
+                if not args.allow_model_calls:
+                    raise SystemExit("refusing: --allow-model-calls is required to run the approved investigator")
+                run.approve("investigate", res.manifest_sha256, f"OPERATOR replay approval of exactly this investigator manifest for fork {args.id} of {src.state['id']} (no taskgen, no browser trial)")
+                res = pipe.run(ctx)
+            else:
+                print(json.dumps({"fork": str(run.dir), "source_run": src.state["id"], "stage": "investigate", "manifest_sha256": res.manifest_sha256, "model": manifest["model"], "endpoint": manifest["endpoint"],
+                                  "run_cap_usd": manifest["run_cap_usd"], "per_request_cap_usd": manifest["per_request_cap_usd"], "max_tool_calls": manifest.get("max_tool_calls"), "retries_per_request": manifest["retries_per_request"],
+                                  "imported_spend_usd": imported, "ledger_ceiling_usd": ceiling, "maximum_new_spend_usd": round(ceiling - imported, 6), "forked_from": manifest.get("forked_from", {}).get("source_run"),
+                                  "paid_stages_rerun": False, "goal": grant["goal"], "owner_tasks": "tasks come from the imported frozen task set", "context_label": CONTEXT_LABEL if context else None}, indent=2))
+                return 0
+    except Halt as exc:
+        raise SystemExit(f"refused: {exc}")
+    print(f"{run.state['id']}: {res.status}" + (f" at {res.stage}" if res.stage else "") + (f": {res.error}" if getattr(res, "error", None) else ""))
+    if res.status == "done" and args.export:
+        from ..investigate import export as exporter
+        data = exporter.export_run(run.dir)
+        exporter.check_clean(data)
+        augment_export(run, data, grant["goal"], context, grant["context_sha256"] or None)
+        data["notices"] = ["INVESTIGATOR REPLAY: the frozen tasks and baseline trials of the source run were imported unchanged (see fork provenance); only the investigator and later free stages were re-run.", *data.get("notices", [])]
+        args.export.write_text(json.dumps(data))
+        print(f"export written: {args.export}")
+    return 0 if res.status == "done" else 1
 
 
 def plan(goal: str, context: str | None = None, smoke: bool = False, owner_tasks: dict | None = None) -> dict:
@@ -78,6 +150,8 @@ def _owner_tasks(args):
 
 
 def main(args) -> int:
+    if args.live_command == "replay-investigator":
+        return replay_investigator(args)
     smoke = args.live_command == "smoke"
     if args.plan:
         out = plan(args.goal, _context(args), smoke, _owner_tasks(args))

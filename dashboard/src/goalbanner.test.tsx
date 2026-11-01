@@ -91,3 +91,19 @@ describe("verified / observed / inconclusive classes", () => {
     expect(h).toContain("void"); expect(h).toContain("attributed to “agent”");
   });
 });
+
+describe("goals without named items", () => {
+  it("never shows COMPLETE or '0 of 0 items' when only attribute coverage was assessed", () => {
+    const d = live(); d.goal = "Can an AI agent compare the refundable deposit, minimum hire period, and delivery requirements across the hire machines?";
+    d.goal_coverage = cov({ status: "complete", entities: [], entities_total: 0, entities_covered: 0, covered_aspects: ["attribute:refundable deposit", "attribute:minimum hire"], partial_because: [], limitations: [] });
+    const h = html(d);
+    expect(h).toContain("Attribute-level coverage only"); expect(h).toContain("not assessed"); expect(h).toContain("fields covered: refundable deposit, minimum hire");
+    expect(h).not.toContain("COMPLETE"); expect(h).not.toContain("0 of 0"); expect(h).not.toContain("attribute:refundable");
+    expect(h).toContain("attribute-level coverage only"); expect(h).toContain("catalogue-wide coverage was not assessed");
+  });
+  it("still shows the status and the item counts when the goal names items", () => {
+    const d = live(); d.goal_coverage = cov({ status: "partial" });
+    const h = html(d);
+    expect(h).toContain("Goal coverage: PARTIAL"); expect(h).toContain("1 of 3 of the goal&#x27;s items covered"); expect(h).not.toContain("Attribute-level coverage only");
+  });
+});

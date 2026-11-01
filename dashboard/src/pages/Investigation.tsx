@@ -398,6 +398,7 @@ export function provenanceOf(d: InvestigationExport): { kind: "live" | "syntheti
 
 const COVERAGE_TONE = { complete: "pass", partial: "warn", insufficient: "fail" } as const;
 export const FIRST_PAGE_TAG = "first_page_answerable";
+const plainAspect = (a: string) => a.replace(/^attribute:/, "");
 
 /** The evaluation goal and how well the SELECTED tasks serve it. Shown for live evaluations; an export that has a goal but no coverage details (older run) says so instead of implying completeness. */
 export function GoalBanner({ d }: { d: InvestigationExport }) {
@@ -409,7 +410,9 @@ export function GoalBanner({ d }: { d: InvestigationExport }) {
       <p className="eyebrow">Evaluation goal</p>
       <p className="goaltext">“{d.goal}”</p>
       {c ? <>
-        <p role="status"><Pill tone={COVERAGE_TONE[c.status]}>Goal coverage: {c.status.toUpperCase()}</Pill> {c.selected_tasks} verified {c.selected_tasks === 1 ? "task" : "tasks"} selected · {c.entities_covered} of {c.entities_total} of the goal's items covered · aspects covered: {c.covered_aspects.join(", ") || "none"}</p>
+        {c.entities_total === 0
+          ? <p role="status"><Pill tone="warn">Attribute-level coverage only</Pill> {c.selected_tasks} verified {c.selected_tasks === 1 ? "task" : "tasks"} selected · fields covered: {c.covered_aspects.map(plainAspect).join(", ") || "none"} · the goal names no specific items, so how much of the catalogue was compared was <strong>not assessed</strong></p>
+          : <p role="status"><Pill tone={COVERAGE_TONE[c.status]}>Goal coverage: {c.status.toUpperCase()}</Pill> {c.selected_tasks} verified {c.selected_tasks === 1 ? "task" : "tasks"} selected · {c.entities_covered} of {c.entities_total} of the goal's items covered · aspects covered: {c.covered_aspects.map(plainAspect).join(", ") || "none"}</p>}
         {c.entities.length > 0 ? <ul className="entities" aria-label="Goal items and whether a selected task covers them">{c.entities.map((e) => <li key={e.path}>{e.covered ? "✓" : "✗"} {e.name} <span className="muted">{e.covered ? "covered" : "not covered"}</span></li>)}</ul> : null}
         {[...c.limitations.map((l) => `${l.aspect} (${l.kind} limitation): ${l.detail}`), ...c.missing_supported_aspects.map((a) => `supportable aspect not covered: ${a}`)].map((t, i) => <p key={i} className="muted" role="note">Limitation: {t}</p>)}
         {easy > 0 ? <p className="muted" role="note">{easy} of the selected tasks {easy === 1 ? "is" : "are"} answerable from the home page (marked “easy” below) and measure less than a navigation task.</p> : null}
@@ -474,8 +477,8 @@ export function Hero({ d }: { d: InvestigationExport }) {
         </div>) : (
         <div className="herometrics"><p className="eyebrow">This run</p>
           {d.goal ? <>
-            <p className="herostat"><strong>{bt.passed} of {bt.usable} selected {bt.usable === 1 ? "task" : "tasks"} passed</strong>{d.goal_coverage ? <> — goal coverage <strong className={`cov-word cov-${d.goal_coverage.status}`}>{d.goal_coverage.status.toUpperCase()}</strong></> : <> — goal coverage not recorded in this export</>}</p>
-            <p className="muted">Passing the selected tasks is not proof that the goal was achieved or evaluated{d.goal_coverage ? `: ${d.goal_coverage.entities_covered} of ${d.goal_coverage.entities_total} of the goal's items are covered` : ""}. Outcome: {d.run.outcome.replace(/_/g, " ")}.</p>
+            <p className="herostat"><strong>{bt.passed} of {bt.usable} selected {bt.usable === 1 ? "task" : "tasks"} passed</strong>{d.goal_coverage ? (d.goal_coverage.entities_total === 0 ? <> — <strong className="cov-word cov-partial">attribute-level coverage only</strong></> : <> — goal coverage <strong className={`cov-word cov-${d.goal_coverage.status}`}>{d.goal_coverage.status.toUpperCase()}</strong></>) : <> — goal coverage not recorded in this export</>}</p>
+            <p className="muted">Passing the selected tasks is not proof that the goal was achieved or evaluated{d.goal_coverage ? (d.goal_coverage.entities_total === 0 ? ": the goal names no specific items, so catalogue-wide coverage was not assessed" : `: ${d.goal_coverage.entities_covered} of ${d.goal_coverage.entities_total} of the goal's items are covered`) : ""}. Outcome: {d.run.outcome.replace(/_/g, " ")}.</p>
           </> : <p className="muted">{d.tasks.length} frozen tasks · baseline pass rate {pct(bt.passed, bt.usable)} ({bt.passed}/{bt.usable} usable trials) · outcome: {d.run.outcome.replace(/_/g, " ")}</p>}
         </div>)}
       <p className="muted">{d.run.target} · run <code>{d.run.id}</code> · mode {d.run.mode}</p>

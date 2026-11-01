@@ -245,7 +245,7 @@ def step(tool, thought="looking", hyps=None, **kw):
 
 
 def hyp(statement, citations, **kw):
-    return {"statement": statement, "claim_kind": None, "label": None, "scope": None, "k": None, "prediction": None, "citations": citations, "proposed_change": None, **kw}
+    return {"statement": statement, "claim_kind": None, "label": None, "scope": None, "k": None, "prediction": None, "citations": citations, "proposed_change": None, "replaces": None, **kw}
 
 
 def test_loop_finds_a_verified_pattern_keeps_a_novel_idea_unverified_and_rejects_bad_hypotheses(tmp_path):
@@ -261,7 +261,7 @@ def test_loop_finds_a_verified_pattern_keeps_a_novel_idea_unverified_and_rejects
         return step("finish", hyps=[
             hyp("The price is only on detail pages, not on the listing", [ids["dom"]], claim_kind="info_absent_on_template", label="price"),
             hyp("Agents lose track of which workshops they already opened", [ids["dom"]], prediction="If cards listed seats left, page views would drop", proposed_change="Add seats left to each card"),
-            hyp("This cites evidence that does not exist", ["obs-doesnotexist"], claim_kind="info_absent_on_template", label="price"),
+            hyp("The price claim cites evidence that does not exist", ["obs-doesnotexist"], claim_kind="info_absent_on_template", label="price"),
             hyp("No prediction and no known pattern", [ids["dom"]]),
         ])
     llm = ScriptedClient(scripted_model([step("list_trials"), step("page_dom", path="/workshops", css="li.card a"), p1, finish]))

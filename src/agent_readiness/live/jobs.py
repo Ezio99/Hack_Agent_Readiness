@@ -378,15 +378,20 @@ class JobManager:
         data = exporter.export_run(self.root / job_id)
         exporter.check_clean(data)
         data["notices"] = [MOCK_NOTICE if job["mode"] == "mock" else (DEV_NOTICE if self._dev(job) else LIVE_NOTICE), *data.get("notices", [])]
-        data["goal"] = job["goal"]
-        run = InvestigationRun(self.root / job_id)
-        data["goal_coverage"] = goal_coverage(run)                                      # persisted in the run's own artifacts (taskgen-report), so a replay or an older run without it simply reports null
-        tags = {t["task_id"]: t.get("tags") for t in (run.artifact("tasks-manifest")["tasks"] if run.has_artifact("tasks-manifest") else [])}
-        for t in data.get("tasks", []):
-            if tags.get(t["task_id"]):
-                t["tags"] = tags[t["task_id"]]
-        data["client_context"] = {"text": job["context"], "sha256": job["grant"]["context_sha256"] if job.get("grant") else None, "label": CONTEXT_LABEL} if job.get("context") else None
+        augment_export(InvestigationRun(self.root / job_id), data, job["goal"], job.get("context"), job["grant"]["context_sha256"] if job.get("grant") else None)
         return data
+
+
+def augment_export(run, data: dict, goal: str, context: str | None, context_sha256: str | None) -> dict:
+    """The live-product additions to a run export: the goal, the client briefing (labelled), the goal-coverage details and per-task tags. Used for a job's export and for an investigator-only replay run."""
+    data["goal"] = goal
+    data["client_context"] = {"text": context, "sha256": context_sha256, "label": CONTEXT_LABEL} if context else None
+    data["goal_coverage"] = goal_coverage(run)                                      # persisted in the run's own artifacts (taskgen-report), so a replay or an older run without it simply reports null
+    tags = {t["task_id"]: t.get("tags") for t in (run.artifact("tasks-manifest")["tasks"] if run.has_artifact("tasks-manifest") else [])}
+    for t in data.get("tasks", []):
+        if tags.get(t["task_id"]):
+            t["tags"] = tags[t["task_id"]]
+    return data
 
 
 def goal_coverage(run) -> dict | None:

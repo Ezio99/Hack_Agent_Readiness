@@ -41,8 +41,8 @@ def make(run) -> ScriptedClient:
         hyps = []
         if label and obs and last.get("result") == "supported":
             hyps = [{"statement": f"The field '{label}' is only on the item pages, not in the listing items, so an agent must open each item to compare it.", "claim_kind": "info_absent_on_template", "label": label,
-                     "scope": None, "k": None, "prediction": None, "citations": [obs], "proposed_change": None},
+                     "scope": None, "k": None, "prediction": None, "citations": [obs], "proposed_change": None, "replaces": None},
                     {"statement": f"Agents comparing items lose steps because '{label}' is not visible on the listing cards.", "claim_kind": None, "label": None, "scope": None, "k": None,
-                     "prediction": f"If each listing card showed '{label}', page views per comparison task would drop.", "citations": [obs], "proposed_change": f"Show '{label}' on every listing card."}]
+                     "prediction": f"If each listing card showed '{label}', page views per comparison task would drop.", "citations": [obs], "proposed_change": f"Show '{label}' on every listing card.", "replaces": None}]
         return json.dumps(_step("finish", "MOCK: report the verified pattern", hyps=hyps))
     return ScriptedClient(respond)
