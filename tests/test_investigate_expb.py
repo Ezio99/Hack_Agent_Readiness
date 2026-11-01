@@ -603,3 +603,52 @@ def test_the_non_spending_modes_need_no_approval_but_still_use_the_same_stage(tm
     run, p, plan, ctx = exp_ctx(tmp_path, "mockmode")
     m = ev.post_manifest(ctx)
     assert ev.approved_post_manifest(run, m) is m                                                                           # scripted/mock runs spend nothing: no approval is demanded
+
+
+# ------------------------------------------------------------------------------------------------------------ EXP-C numbers (plan-level arm caps) in the ACTUAL execution path
+EXPC_CAPS = {"placebo_arm": 0.8, "patched_arm": 0.8}
+
+
+def expc(tmp_path, monkeypatch, name="c", **kw):
+    run, p, plan, ctx = exp_ctx(tmp_path, name, live=True, allow_model_calls=True, total_cap_usd=2.5)
+    ctx.options["post_plan"] = {**plan, "caps_usd": dict(EXPC_CAPS)}
+    approve_post(run, ctx)
+    calls = []
+    faked(run, monkeypatch, calls, **kw)
+    return run, p, ctx.options["post_plan"], ctx, calls
+
+
+def test_expc_caps_ceiling_per_request_limit_and_zero_retries_are_what_the_stage_actually_enforces(tmp_path, monkeypatch):
+    run, p, plan, ctx, calls = expc(tmp_path, monkeypatch)
+    m = ev.post_manifest(ctx)
+    caps = m["caps_usd"]
+    assert (caps["patched_arm"], caps["placebo_arm"], caps["post_trials_combined"], caps["per_trial"], caps["per_request"], caps["ledger_ceiling"]) == (0.8, 0.8, 1.6, 0.5, 0.05, 2.5)
+    assert m["retries"] == 0 and m["ledger_ceiling_usd"] == 2.5 and m["max_requests_per_trial"] == 16
+    ev.post_trials_stage(ctx)
+    assert calls
+    for c in calls:
+        g = c["gate"]
+        arm_scope, combined = g.scopes
+        assert arm_scope[1] == 0.8 and combined[1] == 1.6 and g.run_cap == 0.5 and g.per_request_cap == 0.05 and g.max_requests == 16
+        assert g.ledger.ceiling == 2.5
+
+
+def test_expc_arm_caps_bind_at_the_overridden_values(tmp_path, monkeypatch):
+    run, p, plan, ctx, calls = expc(tmp_path, monkeypatch, "c1", reserve_usd=0.02)
+    steps = exploratory.execution_plan(plan, ev.post_manifest(ctx)["arms"][0]["task_ids"], p.id)
+    run.ledger(2.5).reserve(f"patched-{p.id}-{[s for s in steps if s['arm'] == 'patched'][-1]['task_id']}-r1:req09", 0.79)             # 0.79 already in the patched arm; the cap is now 0.80
+    with pytest.raises(Halt, match="void trial"):
+        ev.post_trials_stage(ctx)
+    assert "patched-arm cap US$0.8" in [c for c in calls if c.get("refused")][0]["refused"]
+
+
+def test_expc_the_ledger_ceiling_and_the_per_request_cap_refuse_in_the_real_gate(tmp_path, monkeypatch):
+    run, p, plan, ctx, calls = expc(tmp_path, monkeypatch, "c2", reserve_usd=0.02)
+    run.ledger(2.5).reserve("unrelated:req01", 2.49)                                                                                      # 2.49 committed of the 2.50 ceiling
+    with pytest.raises(Halt, match="void trial"):
+        ev.post_trials_stage(ctx)
+    assert "budget ceiling US$2.50" in [c for c in calls if c.get("refused")][0]["refused"]
+    run2, p2, plan2, ctx2, calls2 = expc(tmp_path, monkeypatch, "c3", reserve_usd=0.06)                                                  # one request whose upper bound exceeds US$0.05
+    with pytest.raises(Halt, match="void trial"):
+        ev.post_trials_stage(ctx2)
+    assert "per-request cap US$0.05" in [c for c in calls2 if c.get("refused")][0]["refused"]
