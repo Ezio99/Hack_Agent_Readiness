@@ -49,3 +49,17 @@ Before proceeding to motion, review legibility at 50% scale, visual consistency,
 ## Approval gate
 
 Checkpoint A is complete when six frames + contact sheet + editable source exist and the owner approves the look. Checkpoint B (animation) is a separate decision.
+
+## Configurability requirement (added before Checkpoint A implementation)
+
+The film must be **data-driven**, not a hardcoded S1-only composition. Separate three layers:
+
+1. **Evidence adapter:** Load an explicitly selected, existing, validated recorded evaluation/report through a read-only adapter. Preserve task outcomes, request counts, source event references, provenance and uncertainty/verdict metadata. Never invent missing fields.
+2. **Demo manifest:** A human-reviewed configuration selects the report/run, featured task/event sequence, scene order, headline copy, voiceover copy, visual emphasis and optional scene visibility. Store presentation text separately from evidence. Mark illustrative content as such.
+3. **Reusable scene components:** Render static frames from the manifest and adapter. Metric values and denominators must be derived from the selected report, never embedded in scene markup. Handle varying task counts, missing optional fields and longer numbers gracefully.
+
+For Checkpoint A, supply a sample manifest pointing at the existing S1 report and a small, documented schema/interface. **Do not create a new report or change evidence data.** If a complete automated adapter is too large for Checkpoint A, implement a minimal read-only fixture adapter with source references and clearly document the remaining adapter work; don't pretend it supports arbitrary reports yet.
+
+No automatic cherry-picking of the best-looking run. Switching runs must be an explicit editorial decision, and results, qualifications, labels and narration must remain consistent with the selected evidence. Avoid causal language when a report's verdict doesn't support it.
+
+Acceptance check: changing the manifest's featured task and presentation copy must not require changing scene source code. A later validated report should be swappable through a documented data adapter without redesigning the six scenes.
