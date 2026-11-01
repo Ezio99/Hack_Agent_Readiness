@@ -91,3 +91,5 @@ it('aggregate adapter rejects missing/void/repeated/unsupported rows and ignores
  const source=structuredClone(recording) as any;edit(source);expect(summarizeArchivedS1(source,task)).toBeNull();
  }
 });
+
+it('Scan describes the archived case and opens the existing journey',()=>{mount();click('Scan');const scan=host.querySelector('.studio-scan')!;expect(scan.textContent).toContain('not a live scan');expect(scan.textContent).toContain('Ironbark Hire Co.');expect(scan.textContent).toContain('4 recorded tasks');expect(scan.textContent).toContain('Meta Muse Spark 1.3');click('Explore agent journey →');expect(position()).toBe('/storyboard/steps/0');});

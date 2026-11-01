@@ -2,6 +2,10 @@
 
 **Authoritative current state (2026-10-29, Task 015 stack and 015f merged; Task 016 next).** Verify against the repository, not this text. Full historical checkpoints are preserved verbatim in [docs/archive/STATUS-through-2026-10-29.md](docs/archive/STATUS-through-2026-10-29.md); architecture, execution paths, frozen artifacts and technical debt are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## Scan overview refinement (2026-11-02)
+
+Scan now introduces the archived evaluation with three compact cards and Explore agent journey. Task count and model version derive from approved metadata; Ironbark Hire Co. is the approved friendly label for the source target. Imported metadata remains explicitly unavailable where not projected. Other stages, evidence and grading unchanged. 14 focused / 149 dashboard tests, TypeScript/build/guard and desktop/390px keyboard checks pass; 214 critical tests passed (17 deselected). No paid calls, merge or deployment.
+
 ## Metrics-first Results presentation (2026-11-02)
 
 Results now emphasizes +1 additional evidence-supported task (2/4 → 3/4) and 42% fewer requests (50 → 29), computed from the same archived source. Original/Modified and recorded-observation labels, owner-selected attribution and classic access remain. Unchanged verdicts, improvement-not-established statement, methodology/provenance/limitations are in accessible Technical details. 13 focused / 148 dashboard tests, TypeScript/build/guard and fresh desktop/390px keyboard/reduced-motion checks passed; 214 critical tests passed (17 deselected, 60.90s). Evidence, aggregation and grading untouched; no paid evaluation, merge or deployment.
