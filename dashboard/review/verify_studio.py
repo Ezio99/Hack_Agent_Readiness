@@ -1,5 +1,5 @@
 """Offline browser rehearsal. Serve dashboard/dist on loopback port 4192 first."""
-import json
+import json, re
 from pathlib import Path
 from playwright.sync_api import sync_playwright, expect
 ROOT=Path(__file__).resolve().parents[1]
@@ -56,6 +56,23 @@ with sync_playwright() as pw:
  assert page.locator('.studio-action h3').inner_text()==source['storyboard']['steps'][1]['text']
  assert page.locator('button:focus-visible').count()==1
  page.screenshot(path=str(OUT/'narrow.png'),full_page=True,animations='disabled')
+ # B.2: explicit illustration, preserved replay position and separate measured outcomes.
+ page.get_by_role('navigation',name='Product stages').get_by_role('button',name=re.compile('Improvements')).click()
+ expect(page.get_by_text('Illustrative transformation — not recorded browser footage.',exact=True)).to_be_visible()
+ assert page.evaluate('document.documentElement.scrollWidth===390')
+ page.get_by_text('Patch basis & separate experimental outcomes',exact=True).click()
+ assert '50 versus 29' in page.locator('.transformation-evidence').inner_text()
+ assert 'Website improvement not established' in page.locator('.transformation-evidence').inner_text()
+ page.get_by_role('button',name='Focus proposed layout').focus();page.keyboard.press('Enter')
+ expect(page.get_by_role('button',name='Show both layouts')).to_have_attribute('aria-pressed','true')
+ expect(page.get_by_text('Illustrative transformation — not recorded browser footage.',exact=True)).to_be_visible()
+ page.get_by_role('button',name='Show both layouts').click()
+ page.screenshot(path=str(OUT/'transformation-narrow.png'),full_page=True,animations='disabled')
+ page.set_viewport_size({'width':1440,'height':1080})
+ page.screenshot(path=str(OUT/'transformation-desktop.png'),full_page=True,animations='disabled')
+ page.get_by_role('button',name='Return to agent journey').click()
+ expect(page.locator('.studio-action')).to_have_attribute('data-event-ref','/storyboard/steps/1')
+ expect(page.get_by_role('button',name='Play',exact=True)).to_be_enabled()
  assert not errors,errors
  assert not blocked,blocked
  context.close();browser.close()

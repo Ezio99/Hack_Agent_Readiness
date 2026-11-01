@@ -1,5 +1,7 @@
 # Checkpoint B.1 — Agent Replay Studio
 
+> B.2 is now implemented; see [current transformation notes](TRANSFORMATION.md). The following records the B.1 milestone.
+
 Isolated branch `dashboard-replay-studio`, from PR #60 baseline `049292e37385dd9457b55ae2991f4ed83af61234`. Design reference: approved cinematic `59eb161`. The storyboard and original PR branch are unchanged. No paid inference, evaluation/decision-rule change, deployment, merge or submission.
 
 ## Preview

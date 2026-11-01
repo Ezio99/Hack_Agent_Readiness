@@ -5,6 +5,9 @@ import {afterEach,beforeEach,expect,it,vi} from 'vitest';
 import {ReplayStudio} from './ReplayStudio';
 import {adaptReplay} from './evidence';
 import App from '../App';
+import {Transformation,transformationReference} from './Transformation';
+import {createHash} from 'node:crypto';
+import {readFileSync} from 'node:fs';
 import recording from '../fixtures/ironbark-s1-recorded.json';
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT=true;
 let host:HTMLDivElement,root:Root;
@@ -47,3 +50,21 @@ it('rejects private/raw data and excludes unselected payload fields from project
  const d=structuredClone(recording) as any;d.audience='private';expect(()=>adaptReplay(JSON.stringify(d))).toThrow('public-demo');d.audience='public-demo';d.raw_trace='SECRET';expect(()=>adaptReplay(JSON.stringify(d))).toThrow();delete d.raw_trace;d.unknown_payload='DO_NOT_PROJECT';expect(JSON.stringify(adaptReplay(JSON.stringify(d)))).not.toContain('DO_NOT_PROJECT');d.storyboard.steps[0].text=null;expect(()=>adaptReplay(JSON.stringify(d))).toThrow('text is missing');
 });
 it('shows owner-selection and original verdicts without implementing transformation/results',()=>{mount();click('Improvements');expect(host.textContent).toContain('Owner-selected · Not independently verified');click('Results');expect(host.textContent).toContain('inconclusive');expect(host.textContent).toContain('not_supported');expect(host.textContent).toContain('future checkpoint');});
+
+it('transformation preserves replay position, pauses on exit, and separates illustration from evidence',()=>{
+ vi.useFakeTimers();mount();click('Next event');click('Play');click('Inspect listing change →');
+ expect(host.querySelector('.illustration-notice')?.textContent).toBe('Illustrative transformation — not recorded browser footage.');
+ expect(host.querySelectorAll('.surfaced-fields>div')).toHaveLength(3);
+ expect(host.querySelector('.transformation')?.textContent).toContain('No product values shown');
+ click('Focus proposed layout');expect(host.querySelector('.focus-proposed')).not.toBeNull();click('Show both layouts');
+ act(()=>vi.advanceTimersByTime(5000));click('Return to agent journey');expect(position()).toBe('/storyboard/steps/1');expect(host.textContent).not.toContain('Pause');
+ click('Next event');expect(position()).toBe('/storyboard/steps/2');click('Restart replay');expect(position()).toBe('/storyboard/steps/0');
+});
+it('S1 illustration is source-pinned, preserves separate derived outcomes, and is unavailable for other reports',()=>{
+ expect(createHash('sha256').update(readFileSync('src/fixtures/ironbark-s1-recorded.json')).digest('hex')).toBe(transformationReference.sha256);
+ act(()=>root.render(<Transformation available={true} returnToReplay={()=>{}}/>));
+ expect(host.querySelector('.transformation-evidence')?.textContent).toContain('original 2/4 versus modified 3/4');
+ expect(host.querySelector('.transformation-evidence')?.textContent).toContain('50 versus 29');
+ expect(host.textContent).toContain('Website improvement not established');
+ act(()=>root.render(<Transformation available={false} returnToReplay={()=>{}}/>));expect(host.textContent).toContain('No reviewed transformation');expect(host.querySelector('.transformation-layouts')).toBeNull();
+});
