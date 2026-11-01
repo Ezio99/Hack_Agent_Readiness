@@ -88,7 +88,7 @@ describe("verified / observed / inconclusive classes", () => {
     expect((html(empty).match(/None\./g) ?? []).length).toBeGreaterThanOrEqual(3);
     const d = live(); d.goal_coverage = cov(); d.tasks[1].baseline = [{ ...d.tasks[1].baseline[0], void: true, passed: null }]; d.tasks[0].baseline = [{ ...d.tasks[0].baseline[0], passed: false, attribution: "agent", why: "path existed" }];
     const h = html(d);
-    expect(h).toContain("void"); expect(h).toContain("attributed to “agent”");
+    expect(h).toContain("void"); expect(h).toContain("automatic label “agent”");
   });
 });
 
@@ -125,7 +125,7 @@ describe("owner insights", () => {
   it("shows measurements, hypotheses and an UNVALIDATED text suggestion above the strict results, with the owner-authored label, and never the word VERIFIED", () => {
     const h = html(withInsights()), s = section(h);
     expect(h.indexOf('class="insights"')).toBeLessThan(h.indexOf('class="outcomeclasses"'));
-    expect(s).toContain("What the measurements suggest"); expect(s).toContain("on none of the"); expect(s).toContain("not proof of a usability problem"); expect(s).toMatch(/minimum[^0-9]*6[^0-9]*\+[^0-9]*7/);
+    expect(s).toContain("Details: what was measured"); expect(s).toContain("on none of the"); expect(s).toContain("not by itself a usability problem"); expect(s).toMatch(/minimum[^0-9]*6[^0-9]*\+[^0-9]*7/);
     expect(s).toContain("strict name match: recall 0.0"); expect(s).toContain("not a measure of how much the agent understood");
     expect(s).toContain("HYPOTHESES"); expect(s).toContain("could not be checked"); expect(s).toContain("UNVALIDATED"); expect(s).toContain("no change was generated or applied");
     expect(s).toContain("owner-authored"); expect(s).toContain("not autonomous task generation"); expect(s).not.toContain("VERIFIED");
@@ -133,7 +133,53 @@ describe("owner insights", () => {
   it("says so when nothing was suggested and renders nothing for exports without insights", () => {
     const h = html(withInsights({ suggestions: [], possible_causes: [], summary: "No friction was observed on these 1 task(s). No friction-based suggestion is made." }));
     expect(section(h)).toContain("None: no friction on a measured property was observed"); expect(section(h)).toContain("None proposed.");
-    const d = withInsights(); d.insights = null; expect(html(d)).not.toContain("What the measurements suggest");
-    const old = withInsights(); delete old.insights; expect(html(old)).not.toContain("What the measurements suggest");
+    const d = withInsights(); d.insights = null; expect(html(d)).not.toContain("Details: what was measured");
+    const old = withInsights(); delete old.insights; expect(html(old)).not.toContain("Details: what was measured");
+  });
+});
+
+
+describe("owner-facing summary and simplified trial table", () => {
+  const base = () => {
+    const d = live(); d.goal_coverage = cov({ entities_total: 0, entities: [], entities_covered: 0 });
+    const eff = (id: string, extra: number, passed: boolean, attr: string) => ({ task_id: id, question: `Question ${id}?`, source: "owner", partition: "investigation", trial_id: `${id}-r1`, passed, requests: 13, steps_used: 14, step_limit: 14, page_views: 6 + extra, minimum_page_views: 6, extra_page_views: extra,
+      attribution: attr, strict_grade: "strict name match: recall 0.5, precision 1.0", names_mentioned_in_answer: "2 of 4", friction: extra >= 2, fields_needed: ["refundable deposit"], needs_field_absent_from_cards: extra >= 2 ? ["refundable deposit"] : [], notes: ["The answer text mentions 2 of the 4 expected names; the strict grade is not a measure of how much the agent understood."] });
+    d.insights = { schema: "owner-insights-v1", summary: "s", site_properties: ["refundable deposit", "minimum hire"].map((f) => ({ field: f, listing: "/hire", item_pages_with_field: 16, listing_items: 16, shown_on_listing_items: 0, absent_from_cards: true, evidence: "e" })),
+      task_effort: [eff("a", 7, false, "tool_interface"), eff("b", 8, false, "tool_interface"), eff("c", 0, true, "success")], friction_tasks: ["a", "b"],
+      possible_causes: [{ text: "Possible cause (rule-based, untested): the cards do not show the fields.", fields: ["refundable deposit"], claim_kind: null, status: "derived by a fixed rule", refs: ["a-r1"], source: "rule", label: "POSSIBLE CAUSE (hypothesis, not established)" }],
+      suggestions: [{ text: "Consider showing refundable deposit and minimum hire on each listing card on /hire.", fields: ["refundable deposit"], tasks: ["a"], basis: ["a-r1"], expected_benefit: "HYPOTHESIS, not measured: fewer page views.", risks: ["Cards become busier"], label: "SUGGESTED IMPROVEMENT (UNVALIDATED)", source: "rule", patch: null }],
+      strict_findings: 0, provenance: { run_id: "live-x", mode: "live", source_run: null, task_sources: { owner: 3 }, investigator_model: "m", investigation_status: "completed", frozen_tasks: 3, note: "n" } };
+    return d;
+  };
+  it("opens with a short owner summary: what the agent experienced, a hypothesis, an UNVALIDATED suggestion and a few metrics", () => {
+    const h = html(base()); const s = h.slice(h.indexOf('class="diagsummary'), h.indexOf('class="goalbanner'));
+    expect(h.indexOf('class="diagsummary')).toBeLessThan(h.indexOf('class="goalbanner'));
+    expect(s).toContain("Summary for the site owner"); expect(s).toContain("What the agent experienced"); expect(s).toContain("2 of 3"); expect(s).toContain("8 extra page views");
+    expect(s).toContain("Possible cause"); expect(s).toContain("HYPOTHESIS"); expect(s).toContain("Not an established cause"); expect(s).toContain("Suggested improvement"); expect(s).toContain("UNVALIDATED");
+    expect(s).toContain("tasks measured"); expect(s).toContain("verified findings"); expect(s).not.toContain("VERIFIED"); expect(s).not.toContain("tool_interface");
+  });
+  it("shows a clear no-friction state with no cause or suggestion", () => {
+    const d = base(); d.insights!.task_effort = d.insights!.task_effort.map((e) => ({ ...e, friction: false, extra_page_views: 0, page_views: 6, passed: true, attribution: "success" })); d.insights!.possible_causes = []; d.insights!.suggestions = [];
+    const h = html(d); const s = h.slice(h.indexOf('class="diagsummary'), h.indexOf('class="goalbanner'));
+    expect(s).toContain("No friction observed"); expect(s).toContain("diag-clear"); expect(s).not.toContain("Possible cause"); expect(s).not.toContain("Suggested improvement");
+  });
+  it("keeps the trial table scannable (task, outcome, page views with extra effort) and moves grading detail, attribution and evidence ids into expandable details", () => {
+    const h = html(base()); const t = h.slice(h.indexOf('class="runs triage"'), h.indexOf("</table>", h.indexOf('class="runs triage"')));
+    const heads = [...t.matchAll(/<th scope="col">([^<]*)<\/th>/g)].map((m) => m[1]);
+    expect(heads).toEqual(["Task", "Outcome", "Page views (extra beyond the minimum)"]);
+    expect(t).toContain("<details>"); expect(t).toContain("details and evidence"); expect(t).toContain("a-r1"); expect(t).toContain("Strict grade");
+    expect(t.split("not a measure of how much the agent understood").length - 1).toBe(3);                         // the caveat lives in each row's details, not in the visible row
+    const visible = t.replace(/<details>[\s\S]*?<\/details>/g, "");
+    expect(visible).not.toContain("tool_interface"); expect(visible).not.toContain("recall"); expect(visible).not.toContain("a-r1");
+    expect(h).toContain("Outcomes use strict name matching");                                                      // one shared note under the table
+  });
+  it("never presents a tool_interface label as a cause: it is a heuristic, in details only, and the strict INCONCLUSIVE class says so once", () => {
+    const d = base(); d.tasks.forEach((t) => { t.baseline = [{ ...t.baseline[0], passed: false, attribution: "tool_interface" }]; });
+    const h = html(d);
+    expect(h).toContain("a heuristic that can misfire; it is not treated as a cause here"); expect(h).not.toContain("attributed to “tool_interface”"); expect(h).toContain("labels such as “tool_interface” or “agent” can misfire");
+  });
+  it("groups fields that share the same measurement into one line and one suggestion", () => {
+    const h = html(base()); const s = h.slice(h.indexOf('class="insights"'), h.indexOf('class="outcomeclasses"'));
+    expect(s).toContain("<strong>refundable deposit, minimum hire</strong>"); expect((s.match(/Consider showing/g) ?? []).length).toBe(1);
   });
 });

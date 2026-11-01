@@ -396,27 +396,77 @@ export function provenanceOf(d: InvestigationExport): { kind: "live" | "syntheti
   return { kind: "other", label: `${d.modes.map((m) => MODE_LABEL[m]).join(" + ") || MODE_LABEL[d.run.mode]} EVIDENCE · not a live experiment` };
 }
 
+const ATTR_NOTE: Record<string, string> = {
+  tool_interface: "automatic label \u201ctool_interface\u201d: a heuristic that can misfire; it is not treated as a cause here",
+  success_unsupported: "correct answer, but the required page was not shown to the model",
+  agent: "automatic label \u201cagent\u201d (the answer, not the site, was wrong by the heuristic)",
+};
+const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
+
+/** The short owner-facing summary: what the agent experienced, a possible cause (hypothesis), a suggestion (UNVALIDATED) and a few metrics; or a clear no-friction state. Derived from `insights` only. */
+export function DiagnosticSummary({ d }: { d: InvestigationExport }) {
+  const x = d.insights;
+  if (!x) return null;
+  const rows = x.task_effort, fr = rows.filter((r) => r.friction), maxExtra = Math.max(0, ...rows.map((r) => r.extra_page_views));
+  const failed = rows.filter((r) => !r.passed).length, budget = rows.filter((r) => r.steps_used != null && r.steps_used >= r.step_limit - 1).length;
+  const absent = x.site_properties.filter((p) => p.absent_from_cards);
+  const cause = x.possible_causes[0], sug = x.suggestions[0];
+  const fields = cause?.fields?.length ? cause.fields.join(", ") : absent.map((p) => p.field).join(", ");
+  return (
+    <section className={`diagsummary ${fr.length ? "diag-friction" : "diag-clear"}`} aria-label="Summary for the site owner">
+      <h2>Summary for the site owner</h2>
+      {fr.length === 0 ? <>
+        <p className="diag-state"><span className="pill pill-pass">No friction observed</span> The agent completed {plural(rows.length, "task")} without extra navigation ({rows.map((r) => `${r.page_views} page views, minimum ${r.minimum_page_views}`).join("; ") || "no usable trial"}). Nothing is suggested, because nothing in the measurements calls for it.</p>
+      </> : <>
+        <div className="diag-block"><h3>What the agent experienced</h3>
+          <p>On <strong>{fr.length} of {rows.length}</strong> tasks the agent needed far more navigation than necessary (up to <strong>{maxExtra} extra page views</strong>){budget ? <>; on {plural(budget, "task")} it used almost its whole step budget</> : null}. {failed ? <>{failed} of {rows.length} answers did not match the strict grading (some may be right in substance; see the details).</> : <>All answers matched the strict grading.</>}{fields ? <> The tasks needed: <strong>{fields}</strong>.</> : null}</p></div>
+        {cause ? <div className="diag-block"><h3>Possible cause <span className="pill pill-warn">HYPOTHESIS</span></h3><p>{absent.length ? <>The listing cards on <code>{absent[0].listing}</code> do not show {(cause.source === "rule" && cause.fields.length ? cause.fields : absent.map((p) => p.field)).join(", ")} (measured on the captured site), so an agent has to open each item page to read them.</> : cause.text} <span className="muted">Not an established cause; other explanations, such as the agent&rsquo;s strategy or the step limit, are not ruled out.</span></p></div> : null}
+        {sug ? <div className="diag-block"><h3>Suggested improvement <span className="pill pill-warn">UNVALIDATED</span></h3><p>{sug.text} <span className="muted">Expected benefit is a hypothesis; nothing was changed or re-tested.</span></p></div> : null}
+      </>}
+      <ul className="diag-metrics" aria-label="Key measurements">
+        <li><strong>{rows.length}</strong><span>tasks measured</span></li>
+        <li><strong>{fr.length}</strong><span>with extra navigation</span></li>
+        <li><strong>{maxExtra}</strong><span>most extra page views</span></li>
+        <li><strong>{rows.length - failed}/{rows.length}</strong><span>strict-graded correct</span></li>
+        <li><strong>{x.strict_findings}</strong><span>verified findings</span></li>
+      </ul>
+    </section>
+  );
+}
+
 /** Measurements, possible causes and suggestions for a website owner. Everything here is derived from recorded measurements; none of it is VERIFIED (that word is reserved for the strict path below). */
 export function OwnerInsights({ d }: { d: InvestigationExport }) {
   const x = d.insights;
   if (!x) return null;
   const owner = x.provenance.task_sources.owner ?? 0;
+  const maxViews = Math.max(1, ...x.task_effort.map((e) => e.page_views));
+  const props = new Map<string, typeof x.site_properties>();
+  for (const p of x.site_properties) { const k = `${p.listing}|${p.item_pages_with_field}|${p.listing_items}|${p.shown_on_listing_items}`; props.set(k, [...(props.get(k) ?? []), p]); }
   return (
     <section className="insights" aria-label="Measurements, possible causes and suggestions for the site owner">
-      <h2>What the measurements suggest</h2>
+      <h2>Details: what was measured</h2>
       <p className="muted" role="note">Derived from the recorded measurements only (no model call). These are observations, hypotheses and untested suggestions, <strong>not verified findings</strong>; the strict verified results are further down.</p>
-      <p className="insight-summary"><strong>{x.summary}</strong></p>
-      <h3>Measured on the site <span className="pill pill-neutral">OBSERVED</span></h3>
-      {x.site_properties.length ? <ul>{x.site_properties.map((p) => <li key={p.field}><strong>{p.field}</strong> is on {p.item_pages_with_field} of {p.listing_items} item pages and {p.shown_on_listing_items === 0 ? "on none of the" : `on ${p.shown_on_listing_items} of the`} {p.listing_items} cards of <code>{p.listing}</code> (captured copy, measured by code).{p.absent_from_cards ? <span className="muted"> On its own this is a property of the page, not proof of a usability problem.</span> : null}</li>)}</ul> : <p className="muted">None.</p>}
-      <h3>Measured on the agent trials <span className="pill pill-neutral">OBSERVED</span></h3>
-      {x.task_effort.length ? <div className="table-wrap" role="region" aria-label="Measured effort per task" tabIndex={0}><table className="runs"><thead><tr><th scope="col">Task</th><th scope="col">Effort</th><th scope="col">Strict grade (name matching)</th><th scope="col">Answer text mentions</th></tr></thead><tbody>
-        {x.task_effort.map((e) => <tr key={e.task_id} className={e.friction ? "row-fail" : undefined}><th scope="row"><span>{e.question}</span>{e.source === "owner" ? <> <span className="pill pill-warn">owner-authored</span></> : null}{e.partition === "holdout" ? <> <span className="muted">(held out from the investigator)</span></> : null}</th>
-          <td>{e.requests} requests · {e.steps_used ?? "?"}/{e.step_limit} steps · {e.page_views} page views (minimum {e.minimum_page_views}, <strong>+{e.extra_page_views}</strong>) · {e.attribution}</td>
-          <td>{e.strict_grade}</td><td>{e.names_mentioned_in_answer} expected names{e.notes.map((n, i) => <div key={i} className="muted">{n}</div>)}</td></tr>)}</tbody></table></div> : <p className="muted">No usable trial.</p>}
+      <h3>On the site <span className="pill pill-neutral">OBSERVED</span></h3>
+      {x.site_properties.length ? <ul>{[...props.values()].map((g) => { const p = g[0]; return <li key={p.field}><strong>{g.map((q) => q.field).join(", ")}</strong>: on {p.item_pages_with_field} of {p.listing_items} item pages and {p.shown_on_listing_items === 0 ? "on none of the" : `on ${p.shown_on_listing_items} of the`} {p.listing_items} cards of <code>{p.listing}</code> (captured copy, measured by code).{p.absent_from_cards ? <span className="muted"> A property of the page, not by itself a usability problem.</span> : null}</li>; })}</ul> : <p className="muted">None.</p>}
+      <h3>On the agent trials <span className="pill pill-neutral">OBSERVED</span></h3>
+      {x.task_effort.length ? <>
+        <div className="table-wrap" role="region" aria-label="Measured effort per task" tabIndex={0}><table className="runs triage"><thead><tr><th scope="col">Task</th><th scope="col">Outcome</th><th scope="col">Page views (extra beyond the minimum)</th></tr></thead><tbody>
+          {x.task_effort.map((e) => <tr key={e.task_id} className={e.friction ? "row-fail" : undefined}>
+            <th scope="row"><span>{e.question}</span>{e.source === "owner" ? <> <span className="pill pill-warn">owner-authored</span></> : null}{e.partition === "holdout" ? <> <span className="muted">(held out from the investigator)</span></> : null}
+              <details><summary>details and evidence</summary>
+                <ul className="muted">
+                  <li>{e.requests} requests · {e.steps_used ?? "?"} of {e.step_limit} steps</li>
+                  <li>Strict grade ({e.strict_grade})</li>
+                  <li>Answer text mentions {e.names_mentioned_in_answer} expected names{e.notes.filter((n) => !n.includes("step budget")).map((n, i) => <div key={i}>{n}</div>)}</li>
+                  <li>Automatic attribution: {ATTR_NOTE[e.attribution] ?? e.attribution}</li>
+                  <li>Evidence: <code>{e.trial_id}</code></li></ul></details></th>
+            <td><span className={`pill pill-${e.passed ? "pass" : "fail"}`}>{e.passed ? "matched" : "not matched"}</span></td>
+            <td><span className="effortbar" aria-hidden="true"><span style={{ width: `${(e.minimum_page_views / maxViews) * 100}%` }} className="eb-min" /><span style={{ width: `${(e.extra_page_views / maxViews) * 100}%` }} className="eb-extra" /></span> {e.page_views} <span className="muted">(minimum {e.minimum_page_views},</span> <strong>+{e.extra_page_views}</strong><span className="muted">)</span></td></tr>)}</tbody></table></div>
+        <p className="muted" role="note">Outcomes use strict name matching: an answer that is right in substance but worded differently shows as &ldquo;not matched&rdquo;. The &ldquo;answer text mentions&rdquo; figure in each row&rsquo;s details shows how much of the expected answer the text names. Automatic attribution labels are heuristics and are not treated as causes.</p></> : <p className="muted">No usable trial.</p>}
       <h3>Possible causes <span className="pill pill-warn">HYPOTHESES</span></h3>
-      {x.possible_causes.length ? <ul>{x.possible_causes.map((c, i) => <li key={i}>{c.text} <span className="muted">— {c.source === "rule" ? "rule-based" : `from ${c.source}`}; status: {c.status}.</span> {c.refs.slice(0, 5).map((r) => <code key={r}>{r}</code>)}</li>)}</ul> : <p className="muted">None proposed.</p>}
+      {x.possible_causes.length ? <ul>{x.possible_causes.map((c, i) => <li key={i}>{c.text}<div className="muted">{c.source === "rule" ? "Rule-based" : `From ${c.source}`}; status: {c.status}.</div><details><summary>evidence</summary>{c.refs.slice(0, 8).map((r) => <code key={r}>{r}</code>)}</details></li>)}</ul> : <p className="muted">None proposed.</p>}
       <h3>Suggested improvements <span className="pill pill-warn">UNVALIDATED</span></h3>
-      {x.suggestions.length ? <ul>{x.suggestions.map((s, i) => <li key={i}>{s.text}<div className="muted">{s.expected_benefit} Risks: {s.risks.join("; ")}. Source: {s.source}. Text only: no change was generated or applied. {s.basis.slice(0, 4).map((r) => <code key={r}>{r}</code>)}</div></li>)}</ul>
+      {x.suggestions.length ? <ul>{x.suggestions.map((s, i) => <li key={i}>{s.text}<div className="muted">{s.expected_benefit} Risks: {s.risks.join("; ")}. Source: {s.source}. Text only: no change was generated or applied.</div><details><summary>evidence</summary>{s.basis.slice(0, 6).map((r) => <code key={r}>{r}</code>)}</details></li>)}</ul>
         : <p className="muted">None: no friction on a measured property was observed, so nothing is suggested.</p>}
       <p className="muted" role="note">Run <code>{x.provenance.run_id}</code>{x.provenance.source_run ? <> · investigator replay of <code>{x.provenance.source_run}</code> (tasks and trials imported unchanged)</> : null} · {Object.entries(x.provenance.task_sources).map(([k, v]) => `${v} ${k === "owner" ? "owner-authored" : k === "model" ? "model-generated" : k}`).join(", ")} task(s){owner ? <> — <strong>owner-authored tasks are not autonomous task generation</strong></> : null} · investigator: {x.provenance.investigator_model ?? "none"} ({x.provenance.investigation_status ?? "not run"}).</p>
     </section>
@@ -542,6 +592,7 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
     <div className="investigation">
       {d.synthetic ? <p className="replay-banner" role="note">SYNTHETIC FIXTURE — hand-written test data, not produced by any model, agent or website.</p> : null}
       <Hero d={d} />
+      <DiagnosticSummary d={d} />
       <GoalBanner d={d} />
       <OwnerInsights d={d} />
       <OutcomeSummary d={d} />
