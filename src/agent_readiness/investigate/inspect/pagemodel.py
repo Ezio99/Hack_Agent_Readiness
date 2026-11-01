@@ -25,6 +25,29 @@ def _hidden(el: Tag) -> bool:
     return el.has_attr("hidden") or "display:none" in style or "visibility:hidden" in style
 
 
+def hidden_in_capture(el: Tag) -> bool:
+    """True when the element or any ancestor is hidden by an inline style / `hidden` attribute IN THE CAPTURED HTML (a page often hides a control until a script reveals it; the capture removes scripts,
+    so it stays hidden here). This says nothing about the live site."""
+    return any(isinstance(p, Tag) and _hidden(p) for p in [el, *el.parents])
+
+
+def referenced_text(node) -> str:
+    """Text used to name an element that points at `node` with aria-labelledby: the referenced element itself is used even when it is hidden (accessible-name computation, step 2B), but text inside
+    hidden DESCENDANTS and in script/style is not."""
+    out = []
+    for s in node.find_all(string=True):
+        skip = False
+        for p in s.parents:
+            if p is node:
+                break
+            if isinstance(p, Tag) and (p.name in SKIP_TEXT or _hidden(p)):
+                skip = True
+                break
+        if not skip and node.name not in SKIP_TEXT:
+            out.append(str(s))
+    return norm(" ".join(out))
+
+
 def visible_text(node) -> str:
     out = []
     for s in node.find_all(string=True):
@@ -59,7 +82,7 @@ def accessible_name(el: Tag, soup: BeautifulSoup) -> tuple[str | None, str | Non
     """Simplified accessible-name computation (aria-labelledby, aria-label, native label, content, alt, title, placeholder). Returns (name, source) or (None, None)."""
     ids = (el.get("aria-labelledby") or "").split()
     if ids:
-        t = norm(" ".join(visible_text(x) for i in ids if (x := soup.find(id=i))))
+        t = norm(" ".join(referenced_text(x) for i in ids if (x := soup.find(id=i))))
         if t:
             return t, "aria-labelledby"
     if norm(el.get("aria-label") or ""):
@@ -208,7 +231,7 @@ def parse_page(path: str, html: str) -> dict:
         name, source = accessible_name(el, soup)
         controls.append({"tag": el.name, "role": role, "type": el.get("type"), "name": name, "name_source": source, "href": internal_path(el.get("href"), path) if el.name == "a" else None,
                          "external_href": el.get("href") if el.name == "a" and el.get("href") and internal_path(el.get("href"), path) is None else None,
-                         "landmark": landmark_of(el), "locator": locator(el), "native": el.name in ("a", "button", "input", "select", "textarea", "summary")})
+                         "landmark": landmark_of(el), "hidden_in_capture": hidden_in_capture(el), "locator": locator(el), "native": el.name in ("a", "button", "input", "select", "textarea", "summary")})
     forms = []
     for f in soup.find_all("form"):
         fields = []
@@ -216,7 +239,7 @@ def parse_page(path: str, html: str) -> dict:
             if (x.get("type") or "text").lower() in ("hidden", "submit", "button", "reset", "image"):
                 continue
             name, source = accessible_name(x, soup)
-            fields.append({"tag": x.name, "type": x.get("type"), "name_attr": x.get("name"), "accessible_name": name, "name_source": source, "required": x.has_attr("required"), "locator": locator(x)})
+            fields.append({"tag": x.name, "type": x.get("type"), "name_attr": x.get("name"), "accessible_name": name, "name_source": source, "required": x.has_attr("required"), "hidden_in_capture": hidden_in_capture(x), "locator": locator(x)})
         submits = [accessible_name(b, soup)[0] for b in f.find_all(["button", "input"]) if b.name == "button" or (b.get("type") or "").lower() in ("submit", "image")]
         forms.append({"action": internal_path(f.get("action") or path, path), "method": (f.get("method") or "get").lower(), "fields": fields, "locator": locator(f), "submit_names": submits})
     jsonld = []
