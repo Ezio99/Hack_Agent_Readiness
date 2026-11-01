@@ -1,3 +1,5 @@
+> Current pitch/submission drafts: [pitch](HACKATHON_PITCH_DRAFT.md), [three-minute script](THREE_MINUTE_DEMO_SCRIPT.md), [verified/unresolved submission checklist](SUBMISSION_PLAN.md). The current public S1 asset omits captured pages: use the new script rather than the older two-minute page-diff interaction below. Packaging/CI repair `1c66a1d` is accepted; merge/publication still require separate approval.
+
 # Recorded demo release checklist and two-minute script
 
 2026-11-01. Packaging/rehearsal only; no deployment, merge, paid call or experimental change is authorized.

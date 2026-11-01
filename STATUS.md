@@ -2,6 +2,10 @@
 
 **Authoritative current state (2026-10-29, Task 015 stack and 015f merged; Task 016 next).** Verify against the repository, not this text. Full historical checkpoints are preserved verbatim in [docs/archive/STATUS-through-2026-10-29.md](docs/archive/STATUS-through-2026-10-29.md); architecture, execution paths, frozen artifacts and technical debt are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## Pitch/submission drafts resumed after accepted CI repair (2026-11-01)
+
+Owner accepted `1c66a1d` (all current-head checks observed complete/success in run 41279948276, including required gate, plus dashboard). Documentation-only current drafts: [pitch/rubric/provenance inventory](docs/HACKATHON_PITCH_DRAFT.md), [three-minute exact UI script](docs/THREE_MINUTE_DEMO_SCRIPT.md), [submission plan](docs/SUBMISSION_PLAN.md). S1 tasks are owner-authored; intervention owner-selected; zero verified findings. Public S1 asset omits captured pages, so the new script uses available storyboard/proposal/outcome screens rather than promising a page diff. Contemporary supported passes 2/4→3/4, requests 50→29; frozen inconclusive, exploratory not_supported. Meta personal-agent connection is positioning, not production integration. Public repo confirmed; license/contributor roster and final participant form still require confirmation. No product change, paid call, merge/deployment/submission authorized.
+
 ## CI compatibility repair (2026-11-01; pitch work paused)
 
 CI at release head `7df69ce` confirmed four stale programme-balance test assertions and an EXP-2 mock-pilot `KeyError: agent_profile` from shared-runner successor wiring. Both reproduced locally. Repair restores the original compat1 default only for manifests lacking a profile; explicit S1 compat2 and grading/integrity checks remain unchanged. Accounting expectations now reflect the already-authorized reconciled subtotal, without changing the ledger. [Report 016s](collaboration/reports/016s-ci-compatibility-repair.md). Replacement CI must be observed complete; pending checks are not green. No merge/deploy/model calls authorized.

@@ -1,3 +1,5 @@
+> Current submission draft: [revised pitch](../../docs/HACKATHON_PITCH_DRAFT.md), [three-minute script](../../docs/THREE_MINUTE_DEMO_SCRIPT.md), [submission plan](../../docs/SUBMISSION_PLAN.md). The October 28 proposal below is retained as historical context; its future-work steps and participant-rule claims are not current validation.
+
 # Agent Readiness — Hackathon Pitch, Positioning & Demo Plan
 
 **Status:** Working product pitch and hackathon execution priorities; not a claim of market validation or approval for new paid experiments.
