@@ -22,13 +22,23 @@ export function summarizeArchivedS1(d: InvestigationExport, task: string) {
 export function ArchivedResults({available,task,openReport}:{available:boolean;task:string;openReport:()=>void}) {
   const result=available?summarizeArchivedS1(recording as unknown as InvestigationExport,task):null;
   if(!result)return <section className="studio-context"><p className="studio-kicker">RESULTS</p><h1>Archived results unavailable</h1><p>This report/task selection does not have a supported aggregate comparison in this summary. No S1 values are substituted. Choose the built-in reviewed report or use the classic dashboard’s own report selection.</p><button onClick={openReport}>Classic dashboard details ↗</button></section>;
+  const additional=result.modified.supported-result.original.supported;
+  const fewerRequests=result.original.requests>0?Math.round(100*(result.original.requests-result.modified.requests)/result.original.requests):null;
   return <section className="archived-results" aria-label="Archived S1 results">
-    <div className="studio-title"><div><p className="studio-kicker">ARCHIVED IRONBARK S1 · SENSITIVITY EXPERIMENT</p><h1>Compare the recorded outcomes.</h1></div><button onClick={openReport}>Classic dashboard details ↗</button></div>
-    <p className="results-scope">Report-wide observations across all {result.original.total} frozen tasks. These are not scores for the selected task.</p>
-    <div className="results-comparison">{[['Original · Placebo',result.original],['Modified · Patched',result.modified]].map(([label,arm])=>{const values=arm as typeof result.original;return <article key={String(label)}><h2>{String(label)}</h2><dl><div><dt>Evidence-supported passes</dt><dd>{values.supported}/{values.total}</dd></div><div><dt>Agent requests</dt><dd>{values.requests}</dd></div></dl></article>;})}</div>
-    <div className="results-verdicts"><div><span>Frozen verdict</span><strong>{result.frozen}</strong></div><div><span>Exploratory result</span><strong>{result.exploratory}</strong></div></div>
-    <p className="results-qualification">Website improvement was not established.</p>
-    <p className="results-scope">Owner-selected patch · Not an independently verified recommendation. The descriptive differences do not establish statistical significance, causal proof or generalizability.</p>
-    <details className="transformation-evidence"><summary>Source & scope</summary><p>Static archived summary of contemporary placebo versus patched trials from the approved public S1 report. Historical baseline, EXP-C and R1 are excluded. Stored verdicts are shown unchanged; grading and decision rules are not rerun.</p><p>This release shows static archived outcomes. Interactive result exploration remains future work. The classic dashboard retains detailed investigation and its separate report selection.</p></details>
+    <div className="studio-title"><div><p className="studio-kicker">RECORDED OBSERVATIONS · IRONBARK S1</p><h1>See what changed.</h1></div><button onClick={openReport}>Classic dashboard details ↗</button></div>
+    <p className="results-scope">Original → Modified · Across all {result.original.total} tasks</p>
+    <div className="results-comparison results-impact">
+      <article><div className="results-impact-number">{additional>0?'+':''}{additional}</div><h2>additional {additional===1?'task':'tasks'} passed</h2><p>Evidence-supported passes</p><dl><div><dt>Original</dt><dd>{result.original.supported}/{result.original.total}</dd></div><span aria-hidden="true">→</span><div><dt>Modified</dt><dd>{result.modified.supported}/{result.modified.total}</dd></div></dl></article>
+      <article><div className="results-impact-number">{fewerRequests===null?'—':`${fewerRequests}%`}</div><h2>fewer agent requests</h2><p>Recorded model requests</p><dl><div><dt>Original</dt><dd>{result.original.requests}</dd></div><span aria-hidden="true">→</span><div><dt>Modified</dt><dd>{result.modified.requests}</dd></div></dl></article>
+    </div>
+    <p className="results-attribution">Owner-selected change · Not an independently verified recommendation</p>
+    <details className="transformation-evidence results-technical"><summary>Technical details</summary>
+      <div className="results-verdicts"><div><span>Frozen verdict</span><strong>{result.frozen}</strong></div><div><span>Exploratory result</span><strong>{result.exploratory}</strong></div></div>
+      <p className="results-qualification">Website improvement was not established.</p>
+      <p>Report-wide observations across all {result.original.total} frozen tasks, not scores for the selected task. The descriptive differences do not establish statistical significance, causal proof or generalizability.</p>
+      <p>Static archived summary of the Ironbark S1 sensitivity experiment: Original is the contemporary placebo arm; Modified is the patched arm. Values come from the approved public report, not a fresh evaluation. Historical baseline, EXP-C and R1 are excluded.</p>
+      <p>The frozen evaluation uses the archived {recording.evaluation.rule.id} rule; the separate exploratory result uses {recording.evaluation.exploratory.rules_id}. Stored verdicts are shown unchanged; grading and decision rules are not rerun. Request reduction is rounded to a whole percent relative to Original.</p>
+      <p>This release shows static archived outcomes. Interactive result exploration remains future work. The classic dashboard retains detailed investigation and its separate report selection.</p>
+    </details>
   </section>;
 }

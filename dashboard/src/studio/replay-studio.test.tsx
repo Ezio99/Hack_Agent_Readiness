@@ -72,8 +72,10 @@ it('S1 illustration is source-pinned, preserves separate derived outcomes, and i
 
 it('Results shows contemporary aggregates, both arm labels, original verdicts and no established improvement',()=>{
  mount();click('Results');const summary=host.querySelector('.archived-results')!;
- expect(summary.textContent).toContain('Original · Placebo');expect(summary.textContent).toContain('Modified · Patched');
- expect([...summary.querySelectorAll('dd')].map(n=>n.textContent)).toEqual(['2/4','50','3/4','29']);
+ expect([...summary.querySelectorAll('dt')].map(n=>n.textContent)).toEqual(['Original','Modified','Original','Modified']);
+ expect(summary.querySelector('.results-impact')?.textContent).toContain('+1additional task passed');expect(summary.querySelector('.results-impact')?.textContent).toContain('42%fewer agent requests');
+ const details=summary.querySelector('details')!;expect(details.open).toBe(false);expect(details.querySelector('summary')?.textContent).toBe('Technical details');expect(details.textContent).toContain('Original is the contemporary placebo arm');
+ expect([...summary.querySelectorAll('dd')].map(n=>n.textContent)).toEqual(['2/4','3/4','50','29']);
  expect(summary.textContent).toContain('inconclusive');expect(summary.textContent).toContain('not_supported');expect(summary.textContent).toContain('Website improvement was not established.');expect(summary.textContent).toContain('Not an independently verified recommendation');expect(summary.textContent).toContain('not scores for the selected task');
 });
 it('Results never borrows S1 values for unsupported report/task selections',()=>{

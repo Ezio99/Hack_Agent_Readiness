@@ -2,6 +2,10 @@
 
 **Authoritative current state (2026-10-29, Task 015 stack and 015f merged; Task 016 next).** Verify against the repository, not this text. Full historical checkpoints are preserved verbatim in [docs/archive/STATUS-through-2026-10-29.md](docs/archive/STATUS-through-2026-10-29.md); architecture, execution paths, frozen artifacts and technical debt are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## Metrics-first Results presentation (2026-11-02)
+
+Results now emphasizes +1 additional evidence-supported task (2/4 → 3/4) and 42% fewer requests (50 → 29), computed from the same archived source. Original/Modified and recorded-observation labels, owner-selected attribution and classic access remain. Unchanged verdicts, improvement-not-established statement, methodology/provenance/limitations are in accessible Technical details. 13 focused / 148 dashboard tests, TypeScript/build/guard and fresh desktop/390px keyboard/reduced-motion checks passed; 214 critical tests passed (17 deselected, 60.90s). Evidence, aggregation and grading untouched; no paid evaluation, merge or deployment.
+
 ## B.2.1 archived Results release fix (2026-11-01)
 
 Studio Results now shows source-derived contemporary S1 arm totals and prominent stored verdicts, with website improvement not established and owner-selected/not-independently-verified attribution. Static report-wide summary only; imported/unsupported selections are unavailable, classic details preserved. 13 focused/148 dashboard tests, TypeScript/build/unchanged guard pass; fresh desktop/390px keyboard/reduced-motion replay/transformation/results review passed. 214 critical tests passed (17 deselected); clean lockfile build and fresh browser rehearsal passed. [Studio handoff](dashboard/REPLAY_STUDIO.md). No evidence, grading, paid calls, merge or deployment changes.
