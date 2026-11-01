@@ -20,7 +20,7 @@ const position=()=>host.querySelector('.studio-action')?.getAttribute('data-even
 it('studio is the default, with full-report fallback navigation',()=>{window.location.hash='';act(()=>root.render(<App/>));expect(host.textContent).toContain('See the journey.');click('Classic dashboard ↗');expect(window.location.hash).toBe('#/investigation');});
 it('steps, event selection, scrub and inspector refer to the same archived entry',()=>{
  mount();const events=recording.storyboard.steps;
- expect(position()).toBe('/storyboard/steps/0');expect(host.textContent).not.toContain('Pause');
+ expect(position()).toBe('/storyboard/steps/0');expect([...host.querySelectorAll('button')].some(b=>b.textContent==='Pause')).toBe(false);
  click('Next event');expect(position()).toBe('/storyboard/steps/1');expect(host.querySelector('.studio-inspector')?.textContent).toContain(events[1].text);
  click('Previous event');expect(position()).toBe('/storyboard/steps/0');
  act(()=>{(host.querySelectorAll('.studio-events button')[7] as HTMLButtonElement).click();});expect(position()).toBe('/storyboard/steps/7');
@@ -31,7 +31,7 @@ it('steps, event selection, scrub and inspector refer to the same archived entry
 it('play, pause and restart use fixed presentation pacing and stop at the end',()=>{
  vi.useFakeTimers();mount();click('Play');act(()=>vi.advanceTimersByTime(2200));expect(position()).toBe('/storyboard/steps/1');click('Pause');act(()=>vi.advanceTimersByTime(5000));expect(position()).toBe('/storyboard/steps/1');click('Restart replay');click('Play');
  for(let i=0;i<recording.storyboard.steps.length-1;i++)act(()=>vi.advanceTimersByTime(2200));
- expect(position()).toBe(`/storyboard/steps/${recording.storyboard.steps.length-1}`);expect(host.textContent).not.toContain('Pause');expect(host.textContent).toContain('not recorded timing');
+ expect(position()).toBe(`/storyboard/steps/${recording.storyboard.steps.length-1}`);expect([...host.querySelectorAll('button')].some(b=>b.textContent==='Pause')).toBe(false);expect(host.textContent).toContain('not recorded timing');
 });
 it('selecting a task with no archive stops playback and shows no borrowed events',()=>{
  vi.useFakeTimers();mount();click('Play');const select=host.querySelectorAll('select')[1];
@@ -58,7 +58,7 @@ it('transformation preserves replay position, pauses on exit, and separates illu
  expect(host.querySelectorAll('.surfaced-fields>div')).toHaveLength(3);
  expect(host.querySelector('.transformation')?.textContent).toContain('No product values shown');
  click('Focus proposed layout');expect(host.querySelector('.focus-proposed')).not.toBeNull();click('Show both layouts');
- act(()=>vi.advanceTimersByTime(5000));click('Return to agent journey');expect(position()).toBe('/storyboard/steps/1');expect(host.textContent).not.toContain('Pause');
+ act(()=>vi.advanceTimersByTime(5000));click('Return to agent journey');expect(position()).toBe('/storyboard/steps/1');expect([...host.querySelectorAll('button')].some(b=>b.textContent==='Pause')).toBe(false);
  click('Next event');expect(position()).toBe('/storyboard/steps/2');click('Restart replay');expect(position()).toBe('/storyboard/steps/0');
 });
 it('S1 illustration is source-pinned, preserves separate derived outcomes, and is unavailable for other reports',()=>{
@@ -93,3 +93,5 @@ it('aggregate adapter rejects missing/void/repeated/unsupported rows and ignores
 });
 
 it('Scan describes the archived case and opens the existing journey',()=>{mount();click('Scan');const scan=host.querySelector('.studio-scan')!;expect(scan.textContent).toContain('not a live scan');expect(scan.textContent).toContain('Ironbark Hire Co.');expect(scan.textContent).toContain('4 recorded tasks');expect(scan.textContent).toContain('Meta Muse Spark 1.3');click('Explore agent journey →');expect(position()).toBe('/storyboard/steps/0');});
+
+it('repetitive scrolls have distinct selected entries without rewriting their archived text',()=>{mount();for(const i of [2,3,4]){act(()=>{(host.querySelectorAll('.studio-events button')[i] as HTMLButtonElement).click();});expect(host.querySelector('.replay-state')?.textContent).toContain(`Entry ${i+1} of 9`);expect(host.querySelector('.studio-action h3')?.textContent).toBe('Scrolled');expect(host.querySelector('.action-top')?.textContent).toContain(`Entry ${String(i+1).padStart(2,'0')}`);expect(host.querySelector('.studio-inspector')?.textContent).toContain('Scrolled');}act(()=>{(host.querySelectorAll('.studio-events button')[5] as HTMLButtonElement).click();});expect(host.querySelector('.tool-action')?.textContent).toContain('Missing scroll index');expect(host.querySelector('.scroll-evidence-note')).toBeNull();});

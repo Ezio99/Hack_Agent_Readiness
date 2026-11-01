@@ -2,6 +2,10 @@
 
 **Authoritative current state (2026-10-29, Task 015 stack and 015f merged; Task 016 next).** Verify against the repository, not this text. Full historical checkpoints are preserved verbatim in [docs/archive/STATUS-through-2026-10-29.md](docs/archive/STATUS-through-2026-10-29.md); architecture, execution paths, frozen artifacts and technical debt are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## Playback and repeated-scroll investigation (2026-11-02)
+
+Fresh production-browser reproduction advanced through all nine entries; no timer failure reproduced. Perceived inactivity arose from the 2.2s initial wait and identical scroll display (entries 03/04 both archive 17). Canvas now exposes playback state and entry ordinal; timeline follows selection/resizing. Read-only archive confirms two executed scrolls in result 17 and one in 24; public source has no destination/coordinate/duration detail. Fallback 31 remains separate. No evidence or pacing change. [Investigation and real-clock regression](dashboard/PLAYBACK_REVIEW.md). Scan overview already existed at `5c35e53`; no extra polish. 15 focused/150 dashboard/214 critical tests, TypeScript/build/guard and real-clock desktop/390px regressions passed. No paid call, experiment, merge or deployment.
+
 ## Scan overview refinement (2026-11-02)
 
 Scan now introduces the archived evaluation with three compact cards and Explore agent journey. Task count and model version derive from approved metadata; Ironbark Hire Co. is the approved friendly label for the source target. Imported metadata remains explicitly unavailable where not projected. Other stages, evidence and grading unchanged. 14 focused / 149 dashboard tests, TypeScript/build/guard and desktop/390px keyboard checks pass; 214 critical tests passed (17 deselected). No paid calls, merge or deployment.
