@@ -120,6 +120,9 @@ def analyse(goal: str, profile: dict, lexicon: dict | None = None) -> dict:
     ent_terms = sorted({stem(w) for w in content if stem(w) in heading_stems})                      # words that name a listing/category of this site
     label_stems = {stem(x): l for l in labels_on_site for x in words(l)}
     attr_labels = sorted({label_stems[stem(w)] for w in content if stem(w) in label_stems and stem(w) not in set(ent_terms)})
+    if not ASPECTS:                                                          # no domain vocabulary (e.g. a documentation target): fuzzy word-to-label matching over arbitrary page text only produces noise,
+        gw = {stem(w) for w in content} - set(ent_terms)                     # so a goal word names an attribute only when a fact label IS that single word
+        attr_labels = sorted(l for l in labels_on_site if len(words(l)) == 1 and stem(words(l)[0]) in gw)
     listings, items = [], []
     for path, rec in pages.items():
         h1 = (rec["headings"][0]["text"] if rec["headings"] else "") or ""

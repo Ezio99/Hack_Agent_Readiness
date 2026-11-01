@@ -67,7 +67,7 @@ def execute(root: Path, job_id: str) -> None:
         update(root, job_id, state="failed", error=f"pipeline stopped: {res.status}" + (f" at {res.stage}" if res.stage else "") + (f": {res.error}" if res.error else ""), finished_at=time.time())
 
 
-def live_options(snapshot, goal: str, context: str | None, *, budget: float, cfg, n_tasks: int = 4, owner_tasks: dict | None = None) -> dict:
+def live_options(snapshot, goal: str, context: str | None, *, budget: float, cfg, n_tasks: int = 4, owner_tasks: dict | None = None, target=None) -> dict:
     """The ONE definition of the options a live run is built with. The worker uses it for the real run and `readiness live run/smoke --plan` uses it to compute the approval manifest, so the printed hash is the
     hash the run presents (the budget is the ledger ceiling and is part of the manifest's allocation)."""
     from .lexicon import RENTAL
@@ -75,7 +75,9 @@ def live_options(snapshot, goal: str, context: str | None, *, budget: float, cfg
     g = sanitize_goal(goal)
     goals = {"focus": g, **({"tasks": owner_tasks["tasks"]} if owner_tasks else {})}
     extra = ({"owner_tasks_sha256": canonical_hash(owner_tasks), **({} if owner_tasks["model_tasks"] else {"owner_tasks_only": True})} if owner_tasks else {})
-    return {**extra, "snapshot": snapshot, "n_tasks": n_tasks, "goals": goals, "focus": g, "rule_topup": False, "goal_binding": True, "first_page_policy": "tag", "goal_lexicon": RENTAL, "context": context, "model_config": cfg, "allow_model_calls": True,
+    lexicon = target.lexicon() if target is not None else RENTAL                  # per-target goal vocabulary; the default (and Ironbark) stays the rental one
+    tv = {"term_values": True} if target is not None and target.term_values else {}            # the opt-in task kind appears in a run's options only for a target that enables it
+    return {**extra, **tv, "snapshot": snapshot, "n_tasks": n_tasks, "goals": goals, "focus": g, "rule_topup": False, "goal_binding": True, "first_page_policy": "tag", "goal_lexicon": lexicon, "context": context, "model_config": cfg, "allow_model_calls": True,
             "total_cap_usd": budget, "repeats": 1}
 
 
@@ -106,7 +108,7 @@ def execute_live(root: Path, job_id: str, job: dict) -> None:
         return
     budget = g["budget_usd"]
     cfg = ModelConfig(model=g["model"], base_url=g["endpoint"])
-    opts = live_options(snap, job["goal"], job.get("context"), budget=budget, cfg=cfg, n_tasks=job.get("n_tasks", 4), owner_tasks=job.get("owner_tasks"))
+    opts = live_options(snap, job["goal"], job.get("context"), budget=budget, cfg=cfg, n_tasks=job.get("n_tasks", 4), owner_tasks=job.get("owner_tasks"), target=target)
     run, pipe, ctx = flow.build(root, job_id, target.id, mode="live", options=opts)
     run.write_artifact("live-grant", g)
     if job.get("owner_tasks"):                                                     # the exact operator-authored tasks, kept with the run; their hash is in the grant and in the approved manifest

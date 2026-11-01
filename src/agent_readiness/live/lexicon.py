@@ -7,3 +7,6 @@ RENTAL = {
     "availability": {"terms": {"availability", "available", "free", "booked", "booking", "stock", "calendar", "vacant"}, "labels": {"availability", "available", "booked", "calendar"}, "path_suffix": "/availability", "text_pattern": r"(?i)\b(available|booked)\b",
                      "unsupported_note": "no availability page was found for the goal's entities"},
 }
+
+
+NEUTRAL: dict = {}      # no domain vocabulary: used for targets (such as documentation sites) whose goals are grounded only in the captured site's own fact labels and pages

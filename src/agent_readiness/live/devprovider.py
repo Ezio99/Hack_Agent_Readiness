@@ -71,6 +71,19 @@ def follow_goal(goal: str, profile: dict, n: int = 12) -> tuple[dict, list[dict]
     return analysis, tasks[:n]
 
 
+def follow_goal_docs(profile: dict, n: int = 12) -> tuple[dict, list[dict]]:
+    """Stand-in for a goal-following MODEL on a documentation-style target (dev provider and tests only): `term_value` tasks written from the run's own captured site, using only term/label pairs that
+    already compile. The expected answers are never supplied; the gate derives them by code."""
+    from ..investigate.taskgen import termvalue
+    tasks = []
+    for d in termvalue.drafts(profile, "/", n):
+        c = d.criterion
+        tasks.append({"question": d.question, "start_path": "/", "criterion": {"kind": "term_value", "page": c["page"], "term": c["term"], "label": c["label"], **{k: None for k in ("target", "listing", "direction", "conditions")}},
+                      "rationale": "stand-in for a goal-following model (documentation target)", "goal_link": f"{c['term']}: {c['label']}"})
+    analysis = {"entities": sorted({t["criterion"]["term"] for t in tasks})[:8], "attributes": sorted({t["criterion"]["label"] for t in tasks}), "comparisons": [], "information_gaps": []}
+    return analysis, tasks
+
+
 class DevProvider:
     def __init__(self, root: Path, usage_scale: float = 1.0, scale_roles: tuple = ("taskgen", "agent", "investigator")):
         self.root, self.scale, self.scale_roles = Path(root), usage_scale, tuple(scale_roles)
@@ -107,7 +120,10 @@ class DevProvider:
         self.calls["taskgen"] += 1
         if "taskgen_goal" in json.dumps(body.get("response_format", {})):                                      # goal-bound request: emulate a model that follows the goal when the site allows it (deterministic stand-in), else an ignoring one
             m = re.search(r"EVALUATION GOAL \(binding\): (.*?)\\nStep 1", text)
-            analysis, tasks = follow_goal(m.group(1) if m else "", run.artifact("site-profile"), 12)
+            if "term_value" in json.dumps(body.get("response_format", {})):                                      # a target that enabled term_value (documentation): the stand-in proposes those tasks
+                analysis, tasks = follow_goal_docs(run.artifact("site-profile"), 12)
+            else:
+                analysis, tasks = follow_goal(m.group(1) if m else "", run.artifact("site-profile"), 12)
             if not tasks:
                 drafts = candidates(run.artifact("site-profile"))
                 tasks = [{"question": d.question, "start_path": d.start_path, "criterion": {"kind": d.criterion["kind"], **{k: None for k in CRITERION_KEYS}, **d.criterion}, "rationale": "DEV PROVIDER fixture (ignores the goal)", "goal_link": "none"} for d in drafts[i * 3:i * 3 + 4]]
@@ -123,7 +139,8 @@ class DevProvider:
 
     def _agent(self, run, body, text) -> dict:
         self.calls["agent"] += 1
-        inst = next((x for x in freezer.instances(run) if x.spec.objective in text), None)
+        plain = " ".join(str(m.get("content")) if not isinstance(m.get("content"), list) else " ".join(str(c.get("text", "")) for c in m["content"] if isinstance(c, dict)) for m in body.get("messages", []))
+        inst = next((x for x in freezer.instances(run) if x.spec.objective in text or x.spec.objective in plain), None)          # `text` is JSON-escaped: an objective with quotes or non-ASCII characters only matches the decoded messages
         if inst is None:
             raise RuntimeError("the browser agent asked about a task that is not in the run")
         base = re.search(r"http://127\.0\.0\.1:\d+", text)

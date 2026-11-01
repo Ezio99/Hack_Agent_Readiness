@@ -32,7 +32,7 @@ MOCK_NOTICE = ("MOCK EVALUATION: pages were visited by a scripted browser agent,
 CONTEXT_LABEL = "CLIENT-SUPPLIED CONTEXT: a briefing written by the site owner. Unverified. It guided what to look at; it is not evidence about the website and no finding rests on it."
 LIVE_NOTICE = ("LIVE EVALUATION: the language model was called for task generation, browsing and investigation. Cost is calculated from reported tokens at published prices (not a bill) and is hard-capped "
                "by the approved budget. Findings are labelled by how they were checked: verified by the deterministic checker, supported hypothesis, or unvalidated proposal.")
-LIVE_TARGETS = ("ironbark",)                        # M1: live evaluations are restricted to the registered Ironbark demo site
+LIVE_TARGETS = ("ironbark", "flask-docs")           # registered targets that may be started as live jobs (Flask only when its saved snapshot exists: see `targets.live_target_ids`)
 DEV_NOTICE = ("DEV PROVIDER: this run used the loopback stand-in for the model endpoint (a fixture, not a model). The plumbing, spend gate and ledger are real; token counts and cost are calculated from "
               "fixture output, and nothing here says anything about model behaviour. Labels below that say LIVE describe the code path, not a model.")
 ACTIVE = ("queued", "running")
@@ -199,15 +199,15 @@ class JobManager:
         owner_tasks = clean_owner_tasks(owner_tasks)
         if owner_tasks and mode != "live":
             raise JobError(422, "Owner-authored tasks are supported for live evaluations only.")
-        if target_id not in TARGETS:
+        if target_id not in TARGETS or not TARGETS[target_id].available():
             raise JobError(422, "Unknown target: only registered demo websites can be evaluated.")
         if not GOAL_MIN <= len(goal) <= GOAL_MAX:
             raise JobError(422, f"The evaluation goal must be {GOAL_MIN}-{GOAL_MAX} characters.")
         if mode not in ("mock", "live"):
             raise JobError(422, "Unknown evaluation mode.")
         if mode == "live":
-            if target_id not in LIVE_TARGETS:
-                raise JobError(422, "Live evaluation is limited to the registered Ironbark site in this build.")
+            if target_id not in LIVE_TARGETS or not TARGETS[target_id].live or not TARGETS[target_id].available():
+                raise JobError(422, "Live evaluation is limited to the registered demo sites that are available on this server.")
             if not self.live.available():
                 raise JobError(409, "Live model evaluation is not enabled on this server.")
             if under_test_with_real_endpoint(self.live.base_url):

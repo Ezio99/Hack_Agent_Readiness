@@ -202,6 +202,7 @@ def test_the_model_key_reaches_only_a_live_worker_and_never_argv_files_views_or_
 
 def test_the_api_exposes_the_confirmation_contract_and_never_the_key(tmp_path, monkeypatch):
     monkeypatch.setenv("META_MODEL_API_KEY", KEY)
+    monkeypatch.setenv("AR_TARGET_SNAPSHOTS", str(tmp_path / "no-saved-snapshots"))                 # a saved-snapshot target (flask-docs) is offered only where its capture exists; this test is about the always-present Ironbark
     from fastapi.testclient import TestClient
     from agent_readiness.scanner.service import api as api_mod
     from agent_readiness.scanner.service.config import ScannerConfig

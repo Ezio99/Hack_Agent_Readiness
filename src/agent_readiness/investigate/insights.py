@@ -81,6 +81,8 @@ def _site_properties(profile: dict, wanted: set[str]) -> list[dict]:
     for label in sorted(wanted):
         best = None
         for l in profile.get("listings", []):
+            if l.get("classification", "catalogue") != "catalogue":               # an uncertain or navigation group is never reported as an item listing
+                continue
             f = next((v for k, v in l["fields"].items() if norm_answer(k) == norm_answer(label)), None)
             if f and f["detail_pages"] >= 2 and (best is None or f["of"] > best[1]["of"]):
                 best = (l, f)

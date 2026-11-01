@@ -70,7 +70,7 @@ def replay_investigator(args) -> int:
         fork(src.dir, root, args.id)
     imported = json.loads((new_dir / "fork.json").read_text())["source_ledger"]["committed_usd"]
     ceiling = round(int((imported + alloc.INVESTIGATE_CAP_USD) * 100) / 100 + 0.01, 2)                       # imported spend + the investigator stage cap, rounded up to the cent
-    opts = worker.live_options(target.snapshot(), grant["goal"], context, budget=ceiling, cfg=ModelConfig(model=grant["model"], base_url=grant["endpoint"]))
+    opts = worker.live_options(target.snapshot(), grant["goal"], context, budget=ceiling, cfg=ModelConfig(model=grant["model"], base_url=grant["endpoint"]), target=target)
     opts.update({"max_calls": args.max_calls, "allow_model_calls": bool(args.approve_hash and args.allow_model_calls)})
     if opts["allow_model_calls"]:
         from ..env import load_repo_env

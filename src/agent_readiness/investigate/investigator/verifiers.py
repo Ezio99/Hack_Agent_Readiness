@@ -66,6 +66,8 @@ def v_info_absent_on_template(ws, p):
     if not label:
         return Result("unverifiable", "needs `label`: the labelled field claimed to be absent from the listing")
     for l in ws.profile["listings"]:
+        if l.get("classification", "catalogue") != "catalogue":              # an UNCERTAIN group (or a navigation group, which is not in `listings`) is not an item listing: no verified claim about it
+            continue
         f = next((v for k, v in l["fields"].items() if norm_answer(k) == label), None)
         if f is None or f["detail_pages"] < 2:
             continue

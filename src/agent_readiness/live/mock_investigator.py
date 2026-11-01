@@ -17,6 +17,8 @@ def _step(tool, thought, hyps=None, **kw):
 def _label(profile: dict) -> str | None:
     best = None
     for listing in profile.get("listings", []):
+        if listing.get("classification", "catalogue") != "catalogue":
+            continue
         for name, f in listing.get("fields", {}).items():
             if f["detail_pages"] >= 2 and f["in_listing_item"] <= f["detail_pages"] * 0.5 and (best is None or f["detail_pages"] > best[0]):
                 best = (f["detail_pages"], name)

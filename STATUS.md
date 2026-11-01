@@ -2,6 +2,9 @@
 
 **Authoritative current state (2026-10-29, Task 015 stack and 015f merged; Task 016 next).** Verify against the repository, not this text. Full historical checkpoints are preserved verbatim in [docs/archive/STATUS-through-2026-10-29.md](docs/archive/STATUS-through-2026-10-29.md); architecture, execution paths, frozen artifacts and technical debt are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## Second target (2026-11-01, offline only)
+`flask-docs` (saved documentation snapshot) is registered with a neutral goal vocabulary and the `term_value` kind enabled for it only; Ironbark's lexicon, requests and hashes are unchanged. Exercised only with the dev provider. **No paid run is authorized.** See [docs/SECOND_TARGET.md](docs/SECOND_TARGET.md).
+
 ## Profile evidence correctness (2026-11-01, Priority 1; draft PR #60 branch)
 - Accessible names now use hidden `aria-labelledby` targets; controls inside elements hidden in the captured HTML are reported as `controls_hidden_in_capture` (not findings); repeated-link groups are classified `catalogue` / `uncertain` / `navigation_group` (reported as `navigation_link_groups`, nothing dropped silently).
 - **The listing-classification thresholds (50 % / 25 % / 2 pages) are provisional heuristics tuned on Ironbark, one Sphinx site and four zoo sites; they are not generally validated.**
