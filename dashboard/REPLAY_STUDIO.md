@@ -1,3 +1,5 @@
+> B.2.1 release update: Results now shows a static, source-derived archived S1 sensitivity summary: contemporary Original/Placebo 2/4 and Modified/Patched 3/4 supported passes, 50 and 29 model requests. Frozen inconclusive and exploratory not_supported are prominent; website improvement was not established. This is not full B.3 interactive exploration. Only the selected built-in reviewed report and its task IDs enable the summary; other reports/tasks are explicitly unavailable. Figures cover all four tasks, never the selected task alone. Classic investigation remains accessible with its separate report selection.
+
 # Checkpoint B.1 — Agent Replay Studio
 
 > B.2 is now implemented; see [current transformation notes](TRANSFORMATION.md). The following records the B.1 milestone.
@@ -46,3 +48,11 @@ Reproduce browser rehearsal after building: serve `dashboard/dist` with `python3
 The public archive exposes nine selected entries for one task/arm, no pages or exact click/scroll targets, no complete reasoning or recorded timing. Sparse entries such as “Clicked a page element” remain sparse. No exact cursor reconstruction or autonomous verified recommendation is claimed. Other tasks cannot replay until reviewed public evidence is supplied. The timeline scrolls horizontally; inspector stacks on mobile. This is a local checkpoint, not a deployment or CI-green claim.
 
 For B.2, add a clearly labelled illustrative listing transformation in the existing Improvements stage, preserving owner selection and source provenance, with no invented rental values. Keep any future captured-page mode separate and require validated sanitized page evidence before enabling it. B.3 remains a separate report-derived comparison milestone.
+
+## B.2.1 validation and limits
+
+`ArchivedResults.tsx` projects the current approved source without editing it, ignoring historical baseline and refusing incomplete, void, missing-field or repeated-trial structures. Arm totals and denominators are derived from contemporary source rows; original frozen verdicts are read, not recomputed. Owner-selected attribution stays separate from independently verified recommendations. No new assets/dependencies, evaluation logic, timing or causal effects.
+
+13 focused studio tests and 148 dashboard tests pass (7 existing skips). TypeScript, build and unchanged distribution guard pass: 8 output files, no replay directory or unapproved data. Fresh Chromium review covers desktop/390px, keyboard navigation, reduced motion, existing replay/transformation continuity, Results/source labels and totals, unavailable imported report and classic-detail navigation. [Results desktop](review/results-desktop.png), [390px](review/results-narrow.png). Source fixture, frozen verdicts, grading and experimental history are unchanged. Critical suite: 214 passed, 17 deselected (62.11s). A mixed local React dependency installation caused the first production-browser startup failure; a fresh lockfile `npm ci` rebuild resolved it without application changes. All dashboard tests and the complete browser rehearsal passed against that clean build.
+
+This summary intentionally supports only the built-in approved S1 case. Even an imported report with an S1-like name receives unavailable; no display-name matching or favorable-run selection. Future richer/repeated-trial reports require a reviewed summary adapter. Sparse archived replay and illustrative transformation limitations remain. No full B.3, inference, merge or deployment.

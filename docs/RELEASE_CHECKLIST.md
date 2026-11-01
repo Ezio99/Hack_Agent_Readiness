@@ -1,3 +1,5 @@
+> B.2.1: the studio Results tab now contains a static archived S1 summary, not a redirect-only placeholder. Rehearse Insights → Improvements → Results: Original/Placebo 2/4 → Modified/Patched 3/4 evidence-supported passes; 50 → 29 model requests. Preserve frozen inconclusive, exploratory not_supported and “Website improvement was not established.” These are report-wide observations, not selected-task scores or verified owner-selected remediation. Imported/unsupported report/task selections show unavailable. Full B.3 remains deferred. See [current studio notes](../dashboard/REPLAY_STUDIO.md).
+
 > Current demo entry is **Replay Studio** (empty hash or `#/studio`). The approved classic report remains at `#/investigation`. See [studio integration review](STUDIO_INTEGRATION_REVIEW.md). Existing packaging checks/scripts below are retained as historical evidence; their seven-file/141-test counts are not the current candidate counts.
 
 ## Studio integration release checks (current candidate)

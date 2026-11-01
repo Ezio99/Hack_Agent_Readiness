@@ -88,6 +88,29 @@ with sync_playwright() as pw:
  page.reload(wait_until='networkidle')
  expect(page.locator('.studio-action')).to_have_attribute('data-event-ref','/storyboard/steps/0')
  expect(page.get_by_role('button',name='Play',exact=True)).to_be_enabled()
+ # B.2.1: static archived summary, keyboard activation and source binding.
+ results=page.get_by_role('navigation',name='Product stages').get_by_role('button',name=re.compile('Results'))
+ results.focus();page.keyboard.press('Enter')
+ expect(page.get_by_role('region',name='Archived S1 results')).to_be_visible()
+ assert page.locator('.results-comparison dd').all_text_contents()==['2/4','50','3/4','29']
+ assert 'inconclusive' in page.locator('.results-verdicts').inner_text()
+ assert 'not_supported' in page.locator('.results-verdicts').inner_text()
+ expect(page.get_by_text('Website improvement was not established.',exact=True)).to_be_visible()
+ page.screenshot(path=str(OUT/'results-desktop.png'),full_page=True,animations='disabled')
+ page.set_viewport_size({'width':390,'height':844})
+ assert page.evaluate('document.documentElement.scrollWidth===390')
+ assert 'Not an independently verified recommendation' in page.locator('.archived-results').inner_text()
+ page.screenshot(path=str(OUT/'results-narrow.png'),full_page=True,animations='disabled')
+ page.get_by_label('Task',exact=True).select_option(source['tasks'][1]['task_id'])
+ assert 'not scores for the selected task' in page.locator('.results-scope').first.inner_text()
+ page.get_by_text('Report sources & technical details',exact=True).click()
+ page.get_by_label('Load a reviewed public report',exact=True).set_input_files(ROOT/'src/fixtures/ironbark-s1-recorded.json')
+ expect(page.get_by_text('Archived results unavailable',exact=True)).to_be_visible()
+ assert page.locator('.results-comparison').count()==0
+ page.get_by_label('Report',exact=True).select_option('built-in')
+ expect(page.get_by_role('region',name='Archived S1 results')).to_be_visible()
+ page.get_by_role('button',name='Classic dashboard details',exact=False).click()
+ page.locator('.product-story').wait_for()
  assert not errors,errors
  assert not blocked,blocked
  context.close();browser.close()

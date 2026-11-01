@@ -5,6 +5,7 @@ import {afterEach,beforeEach,expect,it,vi} from 'vitest';
 import {ReplayStudio} from './ReplayStudio';
 import {adaptReplay} from './evidence';
 import App from '../App';
+import {ArchivedResults,summarizeArchivedS1} from './ArchivedResults';
 import {Transformation,transformationReference} from './Transformation';
 import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
@@ -49,7 +50,7 @@ it('never labels development or unknown provenance as a real-model replay',()=>{
 it('rejects private/raw data and excludes unselected payload fields from projected evidence',()=>{
  const d=structuredClone(recording) as any;d.audience='private';expect(()=>adaptReplay(JSON.stringify(d))).toThrow('public-demo');d.audience='public-demo';d.raw_trace='SECRET';expect(()=>adaptReplay(JSON.stringify(d))).toThrow();delete d.raw_trace;d.unknown_payload='DO_NOT_PROJECT';expect(JSON.stringify(adaptReplay(JSON.stringify(d)))).not.toContain('DO_NOT_PROJECT');d.storyboard.steps[0].text=null;expect(()=>adaptReplay(JSON.stringify(d))).toThrow('text is missing');
 });
-it('shows owner-selection and original verdicts without implementing transformation/results',()=>{mount();click('Improvements');expect(host.textContent).toContain('Owner-selected · Not independently verified');click('Results');expect(host.textContent).toContain('inconclusive');expect(host.textContent).toContain('not_supported');expect(host.textContent).toContain('future checkpoint');});
+it('shows owner-selection and stored verdicts with the static archived Results summary',()=>{mount();click('Improvements');expect(host.textContent).toContain('Owner-selected · Not independently verified');click('Results');expect(host.textContent).toContain('inconclusive');expect(host.textContent).toContain('not_supported');expect(host.textContent).toContain('Static archived summary');});
 
 it('transformation preserves replay position, pauses on exit, and separates illustration from evidence',()=>{
  vi.useFakeTimers();mount();click('Next event');click('Play');click('Inspect listing change →');
@@ -67,4 +68,24 @@ it('S1 illustration is source-pinned, preserves separate derived outcomes, and i
  expect(host.querySelector('.transformation-evidence')?.textContent).toContain('50 versus 29');
  expect(host.textContent).toContain('Website improvement not established');
  act(()=>root.render(<Transformation available={false} returnToReplay={()=>{}}/>));expect(host.textContent).toContain('No reviewed transformation');expect(host.querySelector('.transformation-layouts')).toBeNull();
+});
+
+it('Results shows contemporary aggregates, both arm labels, original verdicts and no established improvement',()=>{
+ mount();click('Results');const summary=host.querySelector('.archived-results')!;
+ expect(summary.textContent).toContain('Original · Placebo');expect(summary.textContent).toContain('Modified · Patched');
+ expect([...summary.querySelectorAll('dd')].map(n=>n.textContent)).toEqual(['2/4','50','3/4','29']);
+ expect(summary.textContent).toContain('inconclusive');expect(summary.textContent).toContain('not_supported');expect(summary.textContent).toContain('Website improvement was not established.');expect(summary.textContent).toContain('Not an independently verified recommendation');expect(summary.textContent).toContain('not scores for the selected task');
+});
+it('Results never borrows S1 values for unsupported report/task selections',()=>{
+ for(const props of [{available:false,task:recording.tasks[0].task_id},{available:true,task:'unknown-task'}]){
+ act(()=>root.render(<ArchivedResults {...props} openReport={()=>{}}/>));expect(host.textContent).toContain('Archived results unavailable');expect(host.querySelector('.results-comparison')).toBeNull();
+ }
+});
+it('aggregate adapter rejects missing/void/repeated/unsupported rows and ignores historical trials',()=>{
+ const task=recording.tasks[1].task_id;
+ const d=structuredClone(recording) as any;d.tasks.forEach((t:any)=>t.baseline.forEach((r:any)=>{r.passed=true;r.evidence_backed=true;r.model_requests=99999;}));
+ expect(summarizeArchivedS1(d,task)?.original).toEqual({supported:2,total:4,requests:50});expect(summarizeArchivedS1(d,task)?.modified.requests).toBe(29);
+ for(const edit of [(x:any)=>delete x.tasks[0].patched['change-1'],(x:any)=>x.tasks[0].placebo['change-1'][0].void=true,(x:any)=>x.tasks[0].patched['change-1'].push(x.tasks[0].patched['change-1'][0]),(x:any)=>delete x.tasks[0].patched['change-1'][0].model_requests,(x:any)=>x.evidence_origin.provider='dev_fixture']){
+ const source=structuredClone(recording) as any;edit(source);expect(summarizeArchivedS1(source,task)).toBeNull();
+ }
 });
