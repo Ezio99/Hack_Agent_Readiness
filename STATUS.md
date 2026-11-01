@@ -1,5 +1,9 @@
 # Agent Readiness — status
 
+## Local Ironbark operator runner (2026-11-02)
+
+Separate localhost paired-evaluation operator on `ironbark-evaluation-runner`; no paid execution authorized or performed. It prepares a fresh fork, requires an explicit reviewed manifest and arm caps, displays per-task progress and exports only through the existing sanitized exporter. Instructions, unapproved proposed limits and caveats: [operator guide](docs/IRONBARK_OPERATOR.md); validation and remaining limitations: [implementation report](collaboration/reports/ironbark-operator-runner.md). Historical data and the public Replay Studio are unchanged.
+
 **Authoritative current state (2026-10-29, Task 015 stack and 015f merged; Task 016 next).** Verify against the repository, not this text. Full historical checkpoints are preserved verbatim in [docs/archive/STATUS-through-2026-10-29.md](docs/archive/STATUS-through-2026-10-29.md); architecture, execution paths, frozen artifacts and technical debt are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Tasks page and focused UX simplification (2026-11-02)

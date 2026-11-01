@@ -27,9 +27,9 @@ CITES = ["obs-8d20d6d5d9"]                                   # the /hire listing
 CAPS = {"placebo_arm": 0.80, "patched_arm": 0.80}            # per-arm caps (US$, calculated): the 4 baseline trials cost 0.17-0.20 each, so one repeat per task is about 0.74; a patched trial costs 0.03-0.20 (the cap covers four failures)
 
 
-def ledger_ceiling(imported_usd: float) -> float:
+def ledger_ceiling(imported_usd: float, caps: dict | None = None) -> float:
     """Imported spend + the two arm caps, rounded UP to the next 5 cents: the hard ceiling on the shared ledger."""
-    return round(math.ceil((imported_usd + sum(CAPS.values())) * 20) / 20, 2)
+    return round(math.ceil((imported_usd + sum((caps or CAPS).values())) * 20) / 20, 2)
 
 
 def ensure_fork(source: Path, root: Path, run_id: str) -> InvestigationRun:
@@ -48,13 +48,13 @@ def ensure_proposal(run: InvestigationRun):
     return add_owner_proposal(run, owner=OWNER, claim_kind="info_absent_on_template", params={"labels": LABELS}, hypothesis=HYPOTHESIS, prediction=PREDICTION, cites=CITES)
 
 
-def build_plan(run: InvestigationRun) -> dict:
+def build_plan(run: InvestigationRun, caps: dict | None = None) -> dict:
     from ..investigate.taskgen import freeze as freezer
     ids = sorted(t["task_id"] for t in freezer.load(run)[0]["tasks"])
-    return {"placebo_tasks": ids, "affected": ids, "same_shape_controls": [], "detail_controls": [], "caps_usd": dict(CAPS)}
+    return {"placebo_tasks": ids, "affected": ids, "same_shape_controls": [], "detail_controls": [], "caps_usd": dict(caps if caps is not None else CAPS)}
 
 
-def drive(source: Path, root: Path, run_id: str, *, cfg, snapshot, approve: frozenset[str] = frozenset(), allow_model_calls: bool = False, scroll_sensitivity: bool = False) -> dict:
+def drive(source: Path, root: Path, run_id: str, *, cfg, snapshot, approve: frozenset[str] = frozenset(), allow_model_calls: bool = False, scroll_sensitivity: bool = False, caps: dict | None = None) -> dict:
     """Run the pipeline of the fork until it needs an approval it does not have; return where it stopped. When a pending manifest's hash is in `approve` (and, for the spending stage,
     `allow_model_calls` is set), record that exact approval and continue. Anything else stops with a plain report; the free steps (fork, proposal, apply_fix) spend nothing."""
     from ..investigate import flow
@@ -68,9 +68,9 @@ def drive(source: Path, root: Path, run_id: str, *, cfg, snapshot, approve: froz
     elif run.has_artifact(scroll_successor.ARTIFACT):
         raise ValueError("this fork requires --scroll-sensitivity on every invocation")
     prop = ensure_proposal(run)
-    plan = build_plan(run)
+    plan = build_plan(run, caps)
     imported = json.loads((run.dir / "fork.json").read_text())["source_ledger"]["committed_usd"]
-    opts = {"model_config": cfg, "snapshot": snapshot, "fix": [prop.id], "post_plan": plan, "repeats": 1, "total_cap_usd": ledger_ceiling(imported),
+    opts = {"model_config": cfg, "snapshot": snapshot, "fix": [prop.id], "post_plan": plan, "repeats": 1, "total_cap_usd": ledger_ceiling(imported, caps),
             "allow_model_calls": bool(approve and allow_model_calls)}
     if opts["allow_model_calls"]:
         from ..env import load_repo_env
