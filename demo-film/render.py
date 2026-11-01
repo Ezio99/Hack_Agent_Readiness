@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parent
 
 async def replacement_checks(browser, payload, manifest):
     """Alternate data stays in browser memory and is never exported as evidence."""
-    css = (ROOT / 'film.css').read_text()
+    css = (ROOT / 'tokens.css').read_text().replace('./assets/fonts/', (ROOT / 'assets/fonts').as_uri() + '/') + (ROOT / 'film.css').read_text().replace("@import url('./tokens.css');", '')
     js = (ROOT / 'scenes.js').read_text()
     report = json.loads((ROOT / manifest['evidence']['source']).read_text())
     alternate = copy.deepcopy(payload)
@@ -79,6 +79,17 @@ async def main(manifest_path):
             assert await page.evaluate('document.documentElement.scrollWidth===1920 && document.documentElement.scrollHeight===1080')
             assert await page.locator('img').evaluate_all('(imgs)=>imgs.every(i=>i.complete && i.naturalWidth>0)')
             assert not errors, errors
+            assert await page.evaluate("[...document.fonts].some(f=>f.family==='Geist' && f.status==='loaded')")
+            if scene['component'] == 'behavior':
+                refs = await page.locator('.timeline-event').evaluate_all('(nodes)=>nodes.map(n=>n.dataset.ref)')
+                assert refs == [step['ref'] for step in payload['evidence']['featured']['events']]
+                focus = payload['evidence']['featured']['focus']
+                if focus:
+                    assert await page.locator('.action-focus h3').inner_text() == focus['text']
+                    assert await page.locator('.action-focus').get_attribute('data-ref') == focus['ref']
+            if scene['component'] == 'results':
+                assert await page.locator('.pass-strip').first.locator('i.passed').count() == sum(row['original']['supported'] is True for row in payload['evidence']['rows'])
+                assert await page.locator('.pass-strip').last.locator('i.passed').count() == sum(row['modified']['supported'] is True for row in payload['evidence']['rows'])
             assert await page.locator('h1').evaluate('(n)=>n.getBoundingClientRect().right<=1761')
             assert await page.locator('.proof').evaluate('(n)=>n.getBoundingClientRect().right<=1761')
             out = ROOT / 'exports' / f"{scene['id']}.png"
@@ -104,11 +115,11 @@ async def main(manifest_path):
         await replacement_checks(browser, payload, manifest)
         await browser.close()
     (ROOT / 'exports/render-manifest.json').write_text(json.dumps({
-        'format':'Static Checkpoint A; no animation', 'source_sha256':payload['evidence']['source_sha256'],
+        'format':'Static Checkpoint A.1; no animation', 'source_sha256':payload['evidence']['source_sha256'],
         'demo_manifest_sha256':hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
         'checks':['images loaded', 'no page errors', '1920x1080', 'safe headline/footer bounds', '50% scale',
                   'no external requests', '390px contact sheet and keyboard focus', 'alternate task/copy',
-                  'missing values and long numbers'], 'frames':frames}, indent=2) + '\n')
+                  'missing values and long numbers', 'local Geist loaded', 'archived action/timeline references', 'report-derived outcome strips'], 'frames':frames}, indent=2) + '\n')
     print(f'Rendered {len(frames)} static 1920x1080 frames and contact sheet. Offline browser and replacement checks passed.')
 
 

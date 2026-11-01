@@ -1,7 +1,7 @@
 {
-  "format": "Static Checkpoint A; no animation",
+  "format": "Static Checkpoint A.1; no animation",
   "source_sha256": "87e3b05804ba05b692c15426142e6ec7192ca27f03f0dd4937330db13fd8156f",
-  "demo_manifest_sha256": "d5ccb21627b8d5ed10e9c36dda56ec68188cb33d424d040fe72b32587f5518b1",
+  "demo_manifest_sha256": "2d8cfca9020b6c3a9a7033c6dc91ba3c99a71dfd4a59e3a84ba5449f26fcb9b2",
   "checks": [
     "images loaded",
     "no page errors",
@@ -11,44 +11,47 @@
     "no external requests",
     "390px contact sheet and keyboard focus",
     "alternate task/copy",
-    "missing values and long numbers"
+    "missing values and long numbers",
+    "local Geist loaded",
+    "archived action/timeline references",
+    "report-derived outcome strips"
   ],
   "frames": [
     {
       "frame": "01-hook",
       "width": 1920,
       "height": 1080,
-      "sha256": "6459770d1ff11e0cef04a37fb6a07fd178ba46996052af3db7d93a2caab5fe44"
+      "sha256": "b1113b2488510489d68733cd1d7cefe7f9149e04831e1df1faeeb3e0075d86b2"
     },
     {
       "frame": "02-product",
       "width": 1920,
       "height": 1080,
-      "sha256": "e907bb1cf2f4caf4b71110df7d11190af9447dafd746a80ef324d25ed395125e"
+      "sha256": "55a22a364da66ece266d00b13a3ae56898c736fe1fe6a8a7cd12e5ee47048b59"
     },
     {
       "frame": "03-behavior",
       "width": 1920,
       "height": 1080,
-      "sha256": "c9189326cae53ccc3a1952b3c20020586e51b451bf43663a9d22bc01f7c137ad"
+      "sha256": "2d413b3470caa7659083b525d8d344a1ddac11c17c6521446be3082e652e382d"
     },
     {
       "frame": "04-improvement",
       "width": 1920,
       "height": 1080,
-      "sha256": "212f8a43cb81263bdf65b373d405714dbe80f02864f8b6124c9bfb949eb3c900"
+      "sha256": "05ec9331985deee85fb93d8a12c34669fe5287d49e276216b0647d276160116c"
     },
     {
       "frame": "05-results",
       "width": 1920,
       "height": 1080,
-      "sha256": "e282a8c6493a0b41e6a33af981c2973f9582aced6edec9b5e76be5ce3888579d"
+      "sha256": "a02e87ba72af53082e66c157b9a89650ab1cc232343a2cc2255364f3fcbae276"
     },
     {
       "frame": "06-vision",
       "width": 1920,
       "height": 1080,
-      "sha256": "9ce6c1ffd668afe83fe5f2da1a458112ac48b6499bbee23c7e85b6fe4b7fb519"
+      "sha256": "6a46db73eba917c4f12664ca5405d63a5fae1e7d5050d37c8275a5c0d001d6ce"
     }
   ]
 }

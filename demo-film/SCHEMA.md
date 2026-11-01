@@ -26,7 +26,7 @@ Voiceover placeholders traverse the projected evidence, e.g. `{evidence.original
 - `proposal`: ID, exact label, owner-selected flag, validation, basis and source pointer.
 - `verdicts`: stored frozen and exploratory verdicts, unchanged. `uncertainty` preserves the report reason, rule ID/scope, storyboard note and demo note. No statistical rule is rerun. An inconclusive frozen verdict produces the persistent improvement-not-established label; other verdicts receive conservative “See stored verdicts” text, never automatic causal language.
 
-Optional captures remain separate from normalized evidence. Captured UI includes its original typography and labels; composed fallback views are explicitly labelled composed, not actual UI screenshots. Large task sets show up to five outcome rows with an explicit remaining-count notice; aggregates include every task. Composed story views show up to eight selected entries plus an explicit additional-entry count. The initial S1 capture shows its complete nine-entry public sequence.
+Optional legacy capture bindings remain separate from normalized evidence and are retained unchanged for reference. A.1 scenes do not render those crops. Results are large metrics with outcome strips derived from every task and request bars scaled to the larger contemporary request total. Missing counts remain unavailable, never zero-valued results. A.1 always uses a composed agent journey rather than screenshot crops: a large exact selected event, up to three adjacent selected entries, and a compact timeline for the full selected sequence. Neighbor text may be visually truncated; full text remains in its tooltip. The focus retains its exact text.
 
 ## Explicit report replacement
 
@@ -37,3 +37,7 @@ Optional captures remain separate from normalized evidence. Captured UI includes
 5. Commit the manifest, projected data and regenerated exports together. Never claim a source change is a newly executed trial.
 
 The replacement browser test changes the featured task/copy and exercises a missing-storyboard state, longer counts and missing metrics. Synthetic test variations remain in memory and are not saved as example reports or exported frames.
+
+## A.1 presentation additions
+
+`presentation.illustration` now includes `browser_label`, `catalog_title`, `item_label`, `detail_label`, `challenge`, `closing_label`, `before_label`, `after_label`. All are editorial concept copy, not fields asserted to exist in a website capture. `field_labels` remain existing-field concepts with an explicit editorial source. The six scene components, report selection, adapter contract and source hashes are unchanged. `tokens.css` is the standalone design-token/font layer; `film.css` defines the static layouts.

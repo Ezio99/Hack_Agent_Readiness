@@ -25,7 +25,15 @@ window.FILM = {
         "Minimum hire",
         "Delivery & collection"
       ],
-      "field_source": "docs/CINEMATIC_DEMO_STORYBOARD.md; approved illustrative existing field labels, no values"
+      "field_source": "docs/CINEMATIC_DEMO_STORYBOARD.md; approved illustrative existing field labels, no values",
+      "browser_label": "equipment / hire",
+      "catalog_title": "Equipment hire",
+      "item_label": "Equipment listing",
+      "detail_label": "View item details",
+      "challenge": "Where are the hire terms?",
+      "closing_label": "Observe. Improve. Measure.",
+      "before_label": "Less prominent terms",
+      "after_label": "Terms surfaced on the card"
     }
   },
   "scenes": [
@@ -69,9 +77,7 @@ window.FILM = {
       "visible": true,
       "time": "00:35–01:25",
       "headline": [
-        "See what",
-        "agents",
-        "actually do."
+        "See what agents actually do."
       ],
       "provenance": "Recorded evidence · Observations are not causal diagnoses",
       "voiceover": "This is {evidence.label}. The selected task is: {evidence.featured.question} The public archive supplies {evidence.featured.event_count} selected events for this task. The highlighted event says: {evidence.featured.focus.text} A browser-tool interaction is not a verified website defect.",
@@ -117,7 +123,10 @@ window.FILM = {
       ],
       "provenance": "Vision · Developer diagnostics",
       "voiceover": "Agent Readiness is infrastructure for developers building for the agentic web: a feedback loop grounded in observed behavior and measured outcomes.",
-      "emphasis": "workflow"
+      "emphasis": "workflow",
+      "body": [
+        "Build for the way agents navigate."
+      ]
     }
   ],
   "evidence": {
