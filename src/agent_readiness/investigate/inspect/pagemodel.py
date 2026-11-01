@@ -133,6 +133,37 @@ AMOUNT = re.compile(r"^[$€£]\s?\d[\d,]*(\.\d{1,2})?$")
 DATE = re.compile(r"^\d{1,2} [A-Z][a-z]{2}$")
 
 
+PERMALINK_TEXT = {"¶", "#", "§"}
+NOT_DESCRIPTION_TAGS = ("dl", "details", "pre", "table", "aside")
+NOT_DESCRIPTION_CLASSES = {"admonition", "versionadded", "versionchanged", "versionremoved", "deprecated", "changelog", "versionmodified"}
+
+
+def _is_permalink(p: Tag) -> bool:
+    return p.name == "a" and ("headerlink" in (p.get("class") or []) or norm(p.get_text()) in PERMALINK_TEXT)
+
+
+def _is_not_description(p: Tag) -> bool:
+    return p.name in NOT_DESCRIPTION_TAGS or bool(NOT_DESCRIPTION_CLASSES & set(p.get("class") or []))
+
+
+def _text_excluding(node: Tag, drop) -> str:
+    """`visible_text(node)` minus text inside descendants (below `node`) for which `drop(tag)` is true. The page itself is not modified."""
+    out = []
+    for s in node.find_all(string=True):
+        parents = [p for p in s.parents if isinstance(p, Tag)]
+        if any(p.name in SKIP_TEXT or _hidden(p) for p in parents):
+            continue
+        inside = []
+        for p in parents:
+            if p is node:
+                break
+            inside.append(p)
+        if any(drop(p) for p in inside):
+            continue
+        out.append(str(s))
+    return norm(" ".join(out))
+
+
 def _facts(root: Tag) -> list[dict]:
     """Label/value pairs from definition lists, two-column table rows, and 'Label: value' text — in that order of reliability."""
     out = []
@@ -144,7 +175,7 @@ def _facts(root: Tag) -> list[dict]:
     for dt in root.find_all("dt"):
         dd = dt.find_next_sibling("dd")
         if dd is not None:
-            add(visible_text(dt), visible_text(dd), dt, "dl")
+            add(_text_excluding(dt, _is_permalink), _text_excluding(dd, _is_not_description), dt, "dl")        # label without permalink anchors; description without nested lists, code/tables, notes and version/changelog blocks
     for tr in root.find_all("tr"):
         cells = tr.find_all(["th", "td"], recursive=False)
         if len(cells) == 2 and cells[0].name == "th":

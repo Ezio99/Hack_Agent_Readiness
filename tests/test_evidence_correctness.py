@@ -101,3 +101,33 @@ def test_a_contents_list_whose_pages_all_state_one_common_label_is_uncertain_not
     prof = docs_site(shared_note=True)
     assert {l["classification"] for l in prof["listings"]} == {"uncertain"} and prof["navigation_groups"] == []
     assert any("UNCERTAIN" in o.summary for o in observations(prof) if o.kind == "listing_detail_fields")
+
+
+# --- definition-list fact cleaning (P2a) ------------------------------------------------------------------------------------------------------------------------------------------
+SPHINX_DL = ('<dl class="py data"><dt class="sig" id="SESSION_COOKIE_NAME"><span class="pre">SESSION_COOKIE_NAME</span><a class="headerlink" href="#SESSION_COOKIE_NAME" title="Link">¶</a></dt>'
+             '<dd><p>The name of the <code>session</code> cookie, see <a href="/x">sessions</a>.</p><p>Default: <code>\'session\'</code></p>'
+             '<details class="changelog"><summary>Changelog</summary><div class="versionchanged"><p>Changed in version 2.0: renamed.</p></div></details>'
+             '<div class="admonition note"><p>Note: careful.</p></div><pre>x = 1</pre>'
+             '<dl class="field-list"><dt>Parameters</dt><dd><p>app: the app</p></dd></dl></dd></dl>')
+
+
+def test_definition_term_label_has_no_permalink_and_description_has_no_nested_or_changelog_blocks():
+    rec = parse_page("/c", page("Config", SPHINX_DL))
+    dl = {f["label"]: f["value"] for f in rec["facts"] if f["how"] == "dl"}
+    assert "session_cookie_name" in dl and not any("¶" in k for k in dl)
+    v = dl["session_cookie_name"]
+    assert v.startswith("The name of the session cookie, see sessions") and "Default: 'session'" in v          # ordinary descriptive text (inline code, links) is kept
+    for gone in ("Changelog", "Changed in version", "careful", "x = 1", "Parameters", "app: the app"):
+        assert gone not in v
+    assert dl["parameters"] == "app: the app"                       # the nested field list is still its own fact, with its own text
+    assert "¶" in rec["text"]                                       # the captured page text (evidence) is untouched
+
+
+def test_plain_spec_style_definition_lists_are_unchanged():
+    rec = parse_page("/h", page("Drill", "<dl><dt>Refundable deposit</dt><dd>$150</dd><dt>Minimum hire</dt><dd>2 days <a href='/t'>terms</a></dd></dl>"))
+    assert [(f["label"], f["value"]) for f in rec["facts"]] == [("refundable deposit", "$150"), ("minimum hire", "2 days terms")]
+
+
+def test_a_permalink_is_recognised_by_its_symbol_even_without_the_headerlink_class():
+    rec = parse_page("/p", page("P", "<dl><dt>Term<a href='#t'> # </a></dt><dd>Short value</dd></dl>"))
+    assert [(f["label"], f["value"]) for f in rec["facts"]] == [("term", "Short value")]
