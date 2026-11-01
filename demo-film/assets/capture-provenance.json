@@ -1,0 +1,38 @@
+{
+  "dashboard_base": "4eac56a",
+  "recorded_asset_sha256": "87e3b05804ba05b692c15426142e6ec7192ca27f03f0dd4937330db13fd8156f",
+  "source": "dashboard/src/fixtures/ironbark-s1-recorded.json",
+  "viewport": {
+    "width": 1365,
+    "height": 1800
+  },
+  "capture": "Unmodified local static dashboard, no backend or model; selected component screenshots.",
+  "images": {
+    "recorded-storyboard.png": {
+      "selector": ".product-story",
+      "sha256": "076ed2cb3a5c325ab2ab18aba8663a16343c024ce2cd4bcbb0c831d9206a2c71"
+    },
+    "recorded-suggestion.png": {
+      "selector": ".suggestion-card",
+      "sha256": "4eac7e4ce2dac38fbab6b01721df1ba1e7af3befb09f8dea956aa166847de35b"
+    },
+    "recorded-outcomes.png": {
+      "selector": "#product-measure .table-wrap",
+      "sha256": "1293e590524f9fefc0f2c20dbdbfaadda86c573551623e246a0ec4f0dcbe578f"
+    }
+  },
+  "task_id": "task-1",
+  "arm": "patched",
+  "proposal_id": "change-1",
+  "story_event_refs": [
+    "/storyboard/steps/0",
+    "/storyboard/steps/1",
+    "/storyboard/steps/2",
+    "/storyboard/steps/3",
+    "/storyboard/steps/4",
+    "/storyboard/steps/5",
+    "/storyboard/steps/6",
+    "/storyboard/steps/7",
+    "/storyboard/steps/8"
+  ]
+}

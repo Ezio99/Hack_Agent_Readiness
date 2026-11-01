@@ -1,0 +1,83 @@
+{
+  "schema": "demo-manifest-v1",
+  "editorial_status": "Checkpoint A draft; owner visual review pending",
+  "evidence": {
+    "adapter": "investigation-dashboard-v1-public",
+    "source": "../dashboard/src/fixtures/ironbark-s1-recorded.json",
+    "sha256": "87e3b05804ba05b692c15426142e6ec7192ca27f03f0dd4937330db13fd8156f",
+    "run_id": "public-demo",
+    "proposal_id": "change-1",
+    "original_arm": "placebo",
+    "modified_arm": "patched"
+  },
+  "featured": {
+    "task_id": "task-1",
+    "arm": "patched",
+    "event_refs": ["/storyboard/steps/0", "/storyboard/steps/1", "/storyboard/steps/2", "/storyboard/steps/3", "/storyboard/steps/4", "/storyboard/steps/5", "/storyboard/steps/6", "/storyboard/steps/7", "/storyboard/steps/8"],
+    "focus_ref": "/storyboard/steps/5"
+  },
+  "captures": {
+    "provenance": "assets/capture-provenance.json",
+    "task_id": "task-1",
+    "arm": "patched",
+    "proposal_id": "change-1"
+  },
+  "presentation": {
+    "brand": "AGENT READINESS",
+    "workflow": ["Scan", "Insights", "Improvements", "Results"],
+    "repository": "https://github.com/Ezio99/Hack_Agent_Readiness",
+    "repository_verified": "2026-11-01; GitHub PUBLIC",
+    "illustration": {
+      "goal": ["Find equipment.", "Check the hire terms."],
+      "actions": ["Browse", "Compare", "Verify"],
+      "field_labels": ["Refundable deposit", "Minimum hire", "Delivery & collection"],
+      "field_source": "docs/CINEMATIC_DEMO_STORYBOARD.md; approved illustrative existing field labels, no values"
+    }
+  },
+  "scenes": [
+    {
+      "id": "01-hook", "component": "hook", "visible": true, "time": "00:00–00:20",
+      "headline": ["The web", "is changing."], "eyebrow": "A new way to use the web",
+      "body": ["People set goals.", "Agents navigate."],
+      "provenance": "Illustrative concept · Not recorded actions or a website capture",
+      "voiceover": "The web is changing. People increasingly set goals and ask agents to navigate. Developers need a way to see how their websites support that interaction.",
+      "emphasis": "concept"
+    },
+    {
+      "id": "02-product", "component": "product", "visible": true, "time": "00:20–00:35",
+      "headline": ["Meet", "Agent Readiness."], "body": ["A feedback loop for websites and agents."],
+      "provenance": "Product workflow concept · No Meta production-agent integration",
+      "voiceover": "Meet Agent Readiness. Scan a website, inspect agent behavior, explore an improvement, and compare the results.",
+      "emphasis": "workflow"
+    },
+    {
+      "id": "03-behavior", "component": "behavior", "visible": true, "time": "00:35–01:25",
+      "headline": ["See what", "agents", "actually do."],
+      "provenance": "Recorded evidence · Observations are not causal diagnoses",
+      "voiceover": "This is {evidence.label}. The selected task is: {evidence.featured.question} The public archive supplies {evidence.featured.event_count} selected events for this task. The highlighted event says: {evidence.featured.focus.text} A browser-tool interaction is not a verified website defect.",
+      "emphasis": "focus-event"
+    },
+    {
+      "id": "04-improvement", "component": "improvement", "visible": true, "time": "01:25–02:05",
+      "headline": ["Turn observations", "into action."], "eyebrow": "Explore a concrete change",
+      "body": ["Bring the terms forward."],
+      "provenance": "Illustrative layout · Not a captured website or page diff",
+      "voiceover": "The intervention here was owner-selected, not an independently verified recommendation. The concept illustrates bringing existing deposit, minimum-hire, and delivery terms onto listing cards. No website capture or rental value is invented.",
+      "emphasis": "illustration"
+    },
+    {
+      "id": "05-results", "component": "results", "visible": true, "time": "02:05–02:40",
+      "headline": ["See what changed."],
+      "provenance": "Recorded contemporary arms only",
+      "voiceover": "In this recorded comparison, the original arm had {evidence.original.supported} evidence-supported passes out of {evidence.task_count}; the modified arm had {evidence.modified.supported}. Requests went from {evidence.original.requests} to {evidence.modified.requests}: {evidence.request_change_label}. The frozen verdict is {evidence.verdicts.frozen}; exploratory verdict, {evidence.verdicts.exploratory}. Website improvement was not established.",
+      "emphasis": "metrics"
+    },
+    {
+      "id": "06-vision", "component": "vision", "visible": true, "time": "02:40–03:00",
+      "headline": ["Ready for the", "agentic web."],
+      "provenance": "Vision · Developer diagnostics",
+      "voiceover": "Agent Readiness is infrastructure for developers building for the agentic web: a feedback loop grounded in observed behavior and measured outcomes.",
+      "emphasis": "workflow"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "format": "Static Checkpoint A; no animation",
+  "source_sha256": "87e3b05804ba05b692c15426142e6ec7192ca27f03f0dd4937330db13fd8156f",
+  "demo_manifest_sha256": "d5ccb21627b8d5ed10e9c36dda56ec68188cb33d424d040fe72b32587f5518b1",
+  "checks": [
+    "images loaded",
+    "no page errors",
+    "1920x1080",
+    "safe headline/footer bounds",
+    "50% scale",
+    "no external requests",
+    "390px contact sheet and keyboard focus",
+    "alternate task/copy",
+    "missing values and long numbers"
+  ],
+  "frames": [
+    {
+      "frame": "01-hook",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "6459770d1ff11e0cef04a37fb6a07fd178ba46996052af3db7d93a2caab5fe44"
+    },
+    {
+      "frame": "02-product",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "e907bb1cf2f4caf4b71110df7d11190af9447dafd746a80ef324d25ed395125e"
+    },
+    {
+      "frame": "03-behavior",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "c9189326cae53ccc3a1952b3c20020586e51b451bf43663a9d22bc01f7c137ad"
+    },
+    {
+      "frame": "04-improvement",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "212f8a43cb81263bdf65b373d405714dbe80f02864f8b6124c9bfb949eb3c900"
+    },
+    {
+      "frame": "05-results",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "e282a8c6493a0b41e6a33af981c2973f9582aced6edec9b5e76be5ce3888579d"
+    },
+    {
+      "frame": "06-vision",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "9ce6c1ffd668afe83fe5f2da1a458112ac48b6499bbee23c7e85b6fe4b7fb519"
+    }
+  ]
+}

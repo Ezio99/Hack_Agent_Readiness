@@ -1,0 +1,17 @@
+00:00–00:20 | 01-hook
+The web is changing. People increasingly set goals and ask agents to navigate. Developers need a way to see how their websites support that interaction.
+
+00:20–00:35 | 02-product
+Meet Agent Readiness. Scan a website, inspect agent behavior, explore an improvement, and compare the results.
+
+00:35–01:25 | 03-behavior
+This is Recorded Ironbark S1 · sensitivity experiment. The selected task is: Which hire machine has the highest refundable deposit? The public archive supplies 9 selected events for this task. The highlighted event says: Missing scroll index used a page scroll instead. A browser-tool interaction is not a verified website defect.
+
+01:25–02:05 | 04-improvement
+The intervention here was owner-selected, not an independently verified recommendation. The concept illustrates bringing existing deposit, minimum-hire, and delivery terms onto listing cards. No website capture or rental value is invented.
+
+02:05–02:40 | 05-results
+In this recorded comparison, the original arm had 2 evidence-supported passes out of 4; the modified arm had 3. Requests went from 50 to 29: 42% fewer in this recorded run. The frozen verdict is inconclusive; exploratory verdict, not_supported. Website improvement was not established.
+
+02:40–03:00 | 06-vision
+Agent Readiness is infrastructure for developers building for the agentic web: a feedback loop grounded in observed behavior and measured outcomes.
