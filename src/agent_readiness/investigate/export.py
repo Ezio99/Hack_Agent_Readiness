@@ -98,7 +98,7 @@ def _exploratory(run: InvestigationRun, e: dict) -> dict | None:
     return {**_pick(x, EXPLORATORY_KEYS), "plan": _pick(plan, ("placebo_tasks", "affected", "same_shape_controls", "detail_controls")), "rules": rules, "rules_match_code": rules_ok}
 
 
-def _evaluation(run: InvestigationRun, ev) -> dict:
+def _evaluation(run: InvestigationRun, ev, verified: bool) -> dict:
     e = _artifact(run, "evaluation")
     if e is None:
         return {"state": "missing", "reason": "no evaluation artifact (the evaluate stage has not run)", "rule": None, "results": [], "exploratory": None}
@@ -109,7 +109,7 @@ def _evaluation(run: InvestigationRun, ev) -> dict:
     for pid, r in (e.get("results") or {}).items():
         eff = measured.get(pid)
         results.append({"proposal_id": pid, **_pick(r, ("verdict", "reason", "pairs", "pass_delta", "request_change", "p_pass", "p_requests", "holdout_consistent", "by_partition", "rule_preregistered_at_freeze")),
-                        "excluded": [_pick(x, ("task_id", "reason")) for x in r.get("excluded") or []], "measured": bool(eff and eff.measured), "effect_mode": eff.provenance.mode if eff else None})
+                        "excluded": [_pick(x, ("task_id", "reason")) for x in r.get("excluded") or []], "measured": bool(eff and eff.measured and verified), "effect_mode": eff.provenance.mode if eff else None})
     rule = e.get("rule") or {}
     return {"state": "evaluated", "reason": None, "rule": _pick(rule, ("id", "primary", "secondary", "alpha", "min_pairs", "pass_delta_floor", "request_reduction_floor", "void_policy", "causal_scope")), "results": results, "exploratory": _exploratory(run, e)}
 
@@ -188,6 +188,8 @@ def _storefront(run: InvestigationRun, pids: list[str]) -> dict:
 def export_run(run_dir: Path | str) -> dict:
     run = InvestigationRun(Path(run_dir))
     state, ev = run.state, run.evidence
+    evidence_origin = origin(run)
+    verified = evidence_origin['provider'] == 'real_model' and run.has_artifact('evaluation')
     missing = []
 
     def need(name):
@@ -231,7 +233,7 @@ def export_run(run_dir: Path | str) -> dict:
     rep_inv = (final or interim or {}).get("investigation") or inv
     out = {
         "schema": SCHEMA, "exported_at": now(),
-        "evidence_origin": origin(run), "storyboard": storyboard(run),
+        "evidence_origin": evidence_origin, "storyboard": storyboard(run),
         "run": {"id": state["id"], "target": state["target"], "mode": state["mode"], "created_at": state.get("created_at"), "outcome": (final or interim or {}).get("outcome") or ev.outcome(), "investigation_status": (final or interim or {}).get("investigation_status"), "report_source": report_source,
                 "complete": report_source == "report-final" and all(s.get("status") == "done" for s in state["stages"].values()), "missing_artifacts": sorted(set(missing))},
         "modes": modes, "notices": notices_for(run, modes),
@@ -246,11 +248,11 @@ def export_run(run_dir: Path | str) -> dict:
                         "verification": _pick(h.verification.model_dump(), ("verifier", "result", "evidence")) if h.verification else None, "promoted": h.id in promoted, "provenance": prov(h)}
                        for h in ev.hypotheses.values()],
         "findings": findings,
-        "proposals": [{"id": p.id, "basis": p.basis, "source_id": p.source_id, "label": p.label, "status": p.status, "validation": p.validation, "expected_effect": p.expected_effect, "risks": p.risks,
+        "proposals": [{"id": p.id, "basis": p.basis, "source_id": p.source_id, "label": p.label, "status": 'applied' if p.status == 'measured' and not verified else p.status, "validation": p.validation, "expected_effect": p.expected_effect, "risks": p.risks,
                        "auto_applicable": p.auto_applicable, "owner_selected": bool(p.change.get("owner_selected")), "exploratory": bool(p.change.get("exploratory")), "change": {"manual": p.change["manual"]} if "manual" in p.change else {"ops": [o.get("op") for o in p.change.get("ops", [])]}, "approved": bool(p.approvals), "provenance": prov(p)}
                       for p in ev.proposals.values()],
-        "evaluation": _evaluation(run, ev), "spend": _spend(run), "storefront": _storefront(run, [p.id for p in ev.proposals.values()]),
-        "effects": [{"id": e.id, "proposal_id": e.proposal_id, "verdict": e.verdict, "n_pairs": e.n_pairs, "note": e.note, "measured": e.measured, "mode": e.provenance.mode} for e in ev.effects.values()],
+        "evaluation": _evaluation(run, ev, verified), "spend": _spend(run), "storefront": _storefront(run, [p.id for p in ev.proposals.values()]),
+        "effects": [{"id": e.id, "proposal_id": e.proposal_id, "verdict": e.verdict, "n_pairs": e.n_pairs, "note": e.note, "measured": e.measured and verified, "mode": e.provenance.mode} for e in ev.effects.values()],
         "investigation": {**_pick(rep_inv, ("skipped", "reason", "finished", "incomplete", "tool_calls", "model_requests", "model", "mode", "cost_usd")), "rejected_hypotheses": len(rep_inv.get("rejected_hypotheses") or [])},
         "statement": (final or interim or {}).get("statement"),
     }

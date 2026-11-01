@@ -1,5 +1,9 @@
 # Agent Readiness — status
 
+## Ironbark provenance fix (2026-11-02)
+
+Execution mode, evidence origin and effect measurement are now separate in reports and sanitized exports. Explicit fixture evidence cannot be measured; missing or incomplete provider/browser metadata remains unverified. Existing S1 artifacts and comparison rules are unchanged. Focused suite 124 passed; final provenance and fixture checks 6 passed, critical suite 214 passed, and dashboard build/distribution guard passed. See [provenance report](collaboration/reports/ironbark-provenance-fix.md). No paid run authorized.
+
 ## Ironbark fresh-grading preflight (2026-11-02)
 
 Fixture-only eight-trial job passed the real independent grader, both existing comparisons and sanitized export through the operator job manager; a grader exception produced a failed job without an evaluation. Provider origin was conservative (`unknown`), but the effect is labelled live/measured because this fixture exercises live mode; the fixture export must not be presented as real evidence. No network provider call was possible in the fixture worker. [Preflight report](collaboration/reports/ironbark-fresh-grading-preflight.md). No paid run authorized.

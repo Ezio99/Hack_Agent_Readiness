@@ -201,6 +201,9 @@ def _collect(run, prefix: str, private, profile) -> dict[str, list[dict]]:
 
 def evaluate_stage(ctx: Context) -> dict:
     run = ctx.run
+    from ..presentation import origin
+    source = origin(run)['provider']
+    effect_mode = 'live' if source == 'real_model' else 'scripted' if source in ('scripted', 'dev_fixture') else 'recorded'
     ids = _applied(ctx)
     if not ids:
         run.write_artifact("evaluation", {"evaluated": False, "reason": "no fix was applied"})
@@ -221,7 +224,7 @@ def evaluate_stage(ctx: Context) -> dict:
         results[pid] = cmp_
         p = run.evidence.proposals[pid]
         run.evidence.add_effect(Effect(proposal_id=pid, verdict=cmp_["verdict"], metrics={k: cmp_.get(k) for k in ("pass_delta", "request_change", "p_pass", "p_requests", "by_partition", "holdout_consistent")}, n_pairs=cmp_["pairs"],
-                                       note=cmp_["reason"], provenance=Provenance(mode=run.mode, source="code:evaluate")))
+                                       note=cmp_["reason"], provenance=Provenance(mode=effect_mode, source="code:evaluate")))
     doc = {"evaluated": True, "rule": rule or design.RULE, "results": results}
     plan = _plan(ctx)
     if plan is not None and len(ids) == 1:                                              # EXPLORATORY analysis: separate from, and never a replacement for, the frozen rule above

@@ -113,6 +113,8 @@ def test_full_paired_driver_with_recorded_trial_fixtures(tmp_path, monkeypatch):
     if not (source / 'run.json').exists() or not r.SOURCE.exists():
         pytest.skip('local historical fixture not installed')
     job = r.prepare(tmp_path, {'placebo_arm': .8, 'patched_arm': .8})
+    from agent_readiness.investigate.run import InvestigationRun
+    InvestigationRun(tmp_path / job['id']).write_artifact('fixture-evidence', {'synthetic': True})
     calls = []
     async def recorded(inst, snap, *, output, label, **kwargs):
         path = next((source / 'artifacts' / 'trials').glob(f'{label}-*-{inst.spec.task_id}-r1.json'))
@@ -135,6 +137,8 @@ def test_full_paired_driver_with_recorded_trial_fixtures(tmp_path, monkeypatch):
     assert all(row['state'] == 'completed' for row in view['progress'])
     exported = r.Manager(tmp_path).export(job['id'])
     assert exported['evaluation']['state'] == 'evaluated'
+    assert exported['evidence_origin']['provider'] == 'scripted'
+    assert not any(e['measured'] for e in exported['effects'])
     assert exported['trials']['placebo'] == exported['trials']['patched'] == 4
 
 
@@ -185,15 +189,20 @@ def test_operator_fresh_grading_no_network(tmp_path, monkeypatch, fail):
         assert exported['evaluation']['exploratory'] is not None
         assert exported['evaluation']['exploratory']['rules_match_code'] is True
         assert len(exported['evaluation']['results']) == 1
-        # The production live-mode path labels its effect live even when this test
-        # replaces the agent. This temporary export must never be presented as evidence.
+        # The execution mode remains live; synthetic evidence is never measured.
         effect = exported['evaluation']['results'][0]
-        assert effect['effect_mode'] == 'live' and effect['measured'] is True
+        assert effect['effect_mode'] == 'scripted' and effect['measured'] is False
+        assert all(e['measured'] is False for e in exported['effects'])
+        from agent_readiness.investigate.run import InvestigationRun
+        report = InvestigationRun(tmp_path / j['id']).artifact('report-final')
+        assert report['effects']['measured'] == []
+        assert report['evidence_origin']['provider'] == 'scripted'
         assert effect['verdict'] == 'inconclusive' and effect['pairs'] == 4
         assert exported['evaluation']['exploratory']['verdict'] == 'not_supported'
         assert exported['trials']['placebo'] == exported['trials']['patched'] == 4
         assert exported['run']['id'] == j['id']
-        assert exported['evidence_origin']['provider'] == 'unknown'  # fixture outputs have no provider response evidence
+        assert exported['run']['mode'] == 'live'
+        assert exported['evidence_origin'] == {'provider': 'scripted', 'presentation': 'recorded'}
         for task in exported['tasks']:
             for arm in ('placebo', 'patched'):
                 rows = [row for group in task[arm].values() for row in group]

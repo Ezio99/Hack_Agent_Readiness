@@ -8,8 +8,10 @@ from pathlib import Path
 from agent_readiness.investigate.trials import runner, stage
 from agent_readiness.live import ironbark_runner
 from agent_readiness.suite import core
+from agent_readiness.investigate.run import InvestigationRun
 
 root, job_id, fail = Path(sys.argv[1]), sys.argv[2], sys.argv[3] == 'fail'
+InvestigationRun(root / job_id).write_artifact('fixture-evidence', {'synthetic': True})
 # Enforced at the socket constructor, including any unexpected provider or browser code.
 real_socket = socket.socket
 def no_socket(*args, **kwargs):

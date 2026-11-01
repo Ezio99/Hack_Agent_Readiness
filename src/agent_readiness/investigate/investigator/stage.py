@@ -97,7 +97,8 @@ def report_stage(ctx: Context, *, final: bool = False) -> dict:
     if final and run.has_artifact("evaluation"):
         ev = run.artifact("evaluation")
         rep["evaluation"] = ev
-        rep["evaluation_statement"] = ("Measured effects are for the pre-registered rule, these frozen tasks, this agent profile/model and this patched mirror only. 'inconclusive' means the data neither show an improvement nor a regression. "
+        prefix = 'Measured effects' if rep['evidence_origin']['provider'] == 'real_model' else 'Unverified or synthetic results (not measured effects)'
+        rep["evaluation_statement"] = (f"{prefix} are for the pre-registered rule, these frozen tasks, this agent profile/model and this patched mirror only. 'inconclusive' means the data neither show an improvement nor a regression. "
                                        "A pattern no longer being observed (static re-check) is not an effect on agents.")
         if ev.get("exploratory"):
             rep["exploratory_statement"] = (ev["exploratory"]["label"] + ". The frozen-rule verdict above is reported unchanged and is not replaced. The proposal tested was chosen by the owner; it is not an investigator-verified finding. "

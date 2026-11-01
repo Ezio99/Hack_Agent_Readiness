@@ -1,5 +1,6 @@
 """Read-only, allowlisted presentation facts; never export trace payloads."""
 import json
+import ipaddress
 from urllib.parse import urlsplit
 
 
@@ -17,21 +18,57 @@ def events_for(run, record):
 
 
 def origin(run):
+    def result(provider):
+        return {'provider': provider, 'presentation': 'recorded'}
+    if run.has_artifact('fixture-evidence'):
+        return result('scripted')
     if run.has_artifact('dev-provider'):
-        return {'provider': 'dev_fixture', 'presentation': 'recorded'}
+        return result('dev_fixture')
     if run.mode in ('mock', 'scripted'):
-        return {'provider': 'scripted', 'presentation': 'recorded'}
+        return result('scripted')
     records = [run.artifact('trials/' + p.stem) for p in sorted((run.dir/'artifacts/trials').glob('*.json'))]
     proven = bool(records)
+    # An assessment cannot be verified from a surviving subset of its trials.
+    if run.has_artifact('evaluation'):
+        try:
+            evaluation = run.artifact('evaluation')
+            tasks = run.artifact('tasks-manifest')['tasks']
+            trial_dir = run.dir / 'artifacts' / 'trials'
+            plan = run.artifact('post-plan') if run.has_artifact('post-plan') else {}
+            if not evaluation.get('evaluated') or not evaluation.get('results'):
+                proven = False
+            for pid, assessment in evaluation.get('results', {}).items():
+                excluded = {e['task_id'] for e in assessment.get('excluded', [])}
+                ids = {t['task_id'] for t in tasks} - excluded
+                proven &= bool(ids) and all(list(trial_dir.glob(f'baseline-{t}-r*.json')) and list(trial_dir.glob(f'patched-{pid}-{t}-r*.json')) for t in ids)
+                proven &= all(list(trial_dir.glob(f'placebo-{pid}-{t}-r*.json')) for t in plan.get('placebo_tasks', []))
+        except (OSError, ValueError, KeyError, TypeError, AttributeError):
+            proven = False
     for record in records:
         events = events_for(run, record)
         requests = {e.get('index'): e for e in events if e.get('kind') == 'model_http_request'}
-        if any(urlsplit(e.get('url', '')).hostname in ('localhost', '127.0.0.1', '::1') for e in requests.values()):
-            return {'provider': 'dev_fixture', 'presentation': 'recorded'}
+        def endpoint(value):
+            try:
+                return urlsplit(value if isinstance(value, str) else '')
+            except ValueError:
+                return urlsplit('')
+        def local(host):
+            if not host or host == 'localhost' or host.endswith('.localhost'):
+                return True
+            try:
+                return not ipaddress.ip_address(host).is_global
+            except ValueError:
+                return False
+        if any(local(endpoint(e.get('url')).hostname) for e in requests.values() if endpoint(e.get('url')).hostname):
+            return result('dev_fixture')
         real = any(e.get('kind') == 'model_http_response' and e.get('http_status') == 200
-                   and urlsplit(requests.get(e.get('index'), {}).get('url', '')).scheme == 'https' for e in events)
-        proven &= real and record.get('trial', {}).get('mode') == 'live'
-    return {'provider': 'real_model' if proven and run.mode == 'live' else 'unknown', 'presentation': 'recorded'}
+                   and endpoint(requests.get(e.get('index'), {}).get('url')).scheme == 'https'
+                   and not local(endpoint(requests.get(e.get('index'), {}).get('url')).hostname) for e in events)
+        mirror = record.get('mirror')
+        log = mirror.get('log') if isinstance(mirror, dict) else None
+        browser = isinstance(log, list) and any(isinstance(e, dict) and e.get('method') == 'GET' and e.get('status') == 200 for e in log)
+        proven &= real and browser and record.get('trial', {}).get('mode') == 'live'
+    return result('real_model' if proven and run.mode == 'live' else 'unknown')
 
 
 ACTIONS = {'click': 'Clicked a page element', 'navigate': 'Navigated within the captured site',

@@ -3,12 +3,12 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from agent_readiness.investigate.presentation import origin, storyboard
-from agent_readiness.investigate.export import check_clean, check_public
+from agent_readiness.investigate.export import check_clean, check_public, _evaluation
 
 
 def run_fixture(tmp_path, events):
     d=tmp_path/'artifacts/trials'; d.mkdir(parents=True)
-    rec={'task_id':'task-1','trial_dir':'trial-data/selected','trial':{'mode':'live'},'evaluation':{'passed':True,'evidence_backed':False}}
+    rec={'task_id':'task-1','trial_dir':'trial-data/selected','trial':{'mode':'live'},'mirror':{'log':[{'method':'GET','status':200}]},'evaluation':{'passed':True,'evidence_backed':False}}
     (d/'patched-test.json').write_text(json.dumps(rec))
     t=tmp_path/'trial-data/selected';t.mkdir(parents=True);(t/'trace.jsonl').write_text('\n'.join(map(json.dumps,events)))
     return SimpleNamespace(dir=tmp_path,mode='live',has_artifact=lambda n:False,artifact=lambda n:rec)
@@ -21,8 +21,47 @@ def test_origin_requires_correlated_provider_records_not_mode_or_name(tmp_path):
         path.write_text('\n'.join(map(json.dumps,[{'kind':'model_http_request','index':1,'url':url},{'kind':'model_http_response','index':1,'http_status':200}])))
     put('http://127.0.0.1/v1');assert origin(r)['provider']=='dev_fixture'
     put('https://api.meta.ai/v1');assert origin(r)['provider']=='real_model'
+    r.artifact=lambda n:{'trial':{'mode':'live'},'trial_dir':'trial-data/selected','mirror':{'log':[]}}
+    assert origin(r)['provider']=='unknown'  # provider metadata alone does not prove browser observations
+    r.has_artifact=lambda n:n=='fixture-evidence'; assert origin(r)['provider']=='scripted'
     r.has_artifact=lambda n:n=='dev-provider';assert origin(r)['provider']=='dev_fixture'
     r.mode='mock';r.has_artifact=lambda n:False;assert origin(r)['provider']=='scripted'
+
+
+def test_effect_measurement_requires_verified_origin():
+    effect = SimpleNamespace(proposal_id='p', measured=True, provenance=SimpleNamespace(mode='live'))
+    ev = SimpleNamespace(effects={'effect': effect})
+    evaluation = {'evaluated': True, 'results': {'p': {'verdict': 'inconclusive'}}, 'rule': {}}
+    run = SimpleNamespace(has_artifact=lambda name: name == 'evaluation', artifact=lambda name: evaluation)
+    assert _evaluation(run, ev, False)['results'][0]['measured'] is False
+    assert _evaluation(run, ev, True)['results'][0]['measured'] is True
+
+
+def test_origin_rejects_uncorrelated_and_mixed_provenance(tmp_path):
+    events = [{'kind': 'model_http_request', 'index': 1, 'url': 'https://api.meta.ai/v1'},
+              {'kind': 'model_http_response', 'index': 2, 'http_status': 200}]
+    r = run_fixture(tmp_path, events)
+    assert origin(r)['provider'] == 'unknown'
+    path = tmp_path / 'trial-data/selected/trace.jsonl'
+    events[1]['index'] = 1
+    path.write_text('\n'.join(map(json.dumps, events)))
+    assert origin(r)['provider'] == 'real_model'
+    (tmp_path / 'artifacts/trials/second.json').write_text('{}')
+    original = r.artifact
+    r.artifact = lambda name: {'trial': {'mode': 'live'}} if name.endswith('second') else original(name)
+    assert origin(r)['provider'] == 'unknown'
+
+
+def test_origin_rejects_missing_assessment_trials(tmp_path):
+    events = [{'kind': 'model_http_request', 'index': 1, 'url': 'https://api.meta.ai/v1'},
+              {'kind': 'model_http_response', 'index': 1, 'http_status': 200}]
+    r = run_fixture(tmp_path, events)
+    trial = r.artifact('trials/patched-test')
+    docs = {'evaluation': {'evaluated': True, 'results': {'p': {}}},
+            'tasks-manifest': {'tasks': [{'task_id': 'task-1'}]}}
+    r.has_artifact = lambda name: name in docs
+    r.artifact = lambda name: docs[name] if name in docs else trial
+    assert origin(r)['provider'] == 'unknown'
 
 
 def test_storyboard_allowlists_actions_and_presence_without_exporting_payloads(tmp_path):
