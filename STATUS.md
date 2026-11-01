@@ -1,5 +1,9 @@
 # Agent Readiness — status
 
+## Ironbark fresh-grading preflight (2026-11-02)
+
+Fixture-only eight-trial job passed the real independent grader, both existing comparisons and sanitized export through the operator job manager; a grader exception produced a failed job without an evaluation. Provider origin was conservative (`unknown`), but the effect is labelled live/measured because this fixture exercises live mode; the fixture export must not be presented as real evidence. No network provider call was possible in the fixture worker. [Preflight report](collaboration/reports/ironbark-fresh-grading-preflight.md). No paid run authorized.
+
 ## Local Ironbark operator runner (2026-11-02)
 
 Separate localhost paired-evaluation operator on `ironbark-evaluation-runner`; no paid execution authorized or performed. It prepares a fresh fork, requires an explicit reviewed manifest and arm caps, displays per-task progress and exports only through the existing sanitized exporter. Instructions, unapproved proposed limits and caveats: [operator guide](docs/IRONBARK_OPERATOR.md); validation and remaining limitations: [implementation report](collaboration/reports/ironbark-operator-runner.md). Historical data and the public Replay Studio are unchanged.

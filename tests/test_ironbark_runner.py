@@ -149,3 +149,54 @@ def test_prepare_refuses_to_reuse_existing_run(tmp_path, monkeypatch):
     with pytest.raises(FileExistsError):
         r.prepare(tmp_path, {'placebo_arm': .8, 'patched_arm': .8})
     assert (existing / 'run.json').read_text() == 'existing'
+
+
+@pytest.mark.parametrize('fail', [False, True])
+def test_operator_fresh_grading_no_network(tmp_path, monkeypatch, fail):
+    """Actual job control and driver, fixture agent output before independent grading."""
+    if not r.SOURCE.exists():
+        pytest.skip('local historical source not installed')
+    manager = r.Manager(tmp_path, timeout=120)
+    j = r.prepare(tmp_path, {'placebo_arm': .8, 'patched_arm': .8})
+    real_popen = subprocess.Popen
+    worker = Path(__file__).parent / 'support' / 'ironbark_fixture_worker.py'
+    def spawn(_cmd, **kwargs):
+        return real_popen([sys.executable, str(worker), str(tmp_path), j['id'], 'fail' if fail else 'ok'], **kwargs)
+    monkeypatch.setattr(r.subprocess, 'Popen', spawn)
+    manager.start(j['id'], j['manifest_sha256'], 1.6)
+    deadline = time.monotonic() + 120
+    while manager.active and time.monotonic() < deadline:
+        time.sleep(.1)
+    assert manager.active is None
+    view = manager.get(j['id'])
+    count = int((tmp_path / (j['id'] + '.grades')).read_text())
+    exported = manager.export(j['id'])
+    if fail:
+        assert count == 1 and view['state'] == 'failed'
+        assert exported['evaluation']['state'] != 'evaluated'
+        assert all(row['state'] != 'completed' for row in view['progress'])
+    else:
+        assert count == 8 and view['state'] == 'completed'
+        assert all(row['state'] == 'completed' and row['strict_pass'] is False for row in view['progress'])
+        assert view['summary']['Original']['strict_passes'] == view['summary']['Modified']['strict_passes'] == 0
+        assert view['summary']['Original']['evidence_supported_passes'] == view['summary']['Modified']['evidence_supported_passes'] == 0
+        assert view['summary']['Original']['agent_requests'] == view['summary']['Modified']['agent_requests'] == 4
+        assert exported['evaluation']['state'] == 'evaluated'
+        assert exported['evaluation']['exploratory'] is not None
+        assert exported['evaluation']['exploratory']['rules_match_code'] is True
+        assert len(exported['evaluation']['results']) == 1
+        # The production live-mode path labels its effect live even when this test
+        # replaces the agent. This temporary export must never be presented as evidence.
+        effect = exported['evaluation']['results'][0]
+        assert effect['effect_mode'] == 'live' and effect['measured'] is True
+        assert effect['verdict'] == 'inconclusive' and effect['pairs'] == 4
+        assert exported['evaluation']['exploratory']['verdict'] == 'not_supported'
+        assert exported['trials']['placebo'] == exported['trials']['patched'] == 4
+        assert exported['run']['id'] == j['id']
+        assert exported['evidence_origin']['provider'] == 'unknown'  # fixture outputs have no provider response evidence
+        for task in exported['tasks']:
+            for arm in ('placebo', 'patched'):
+                rows = [row for group in task[arm].values() for row in group]
+                assert len(rows) == 1 and rows[0]['passed'] is False and rows[0]['model_requests'] == 1
+        assert 'fixture incorrect' not in json.dumps(exported)
+        r.exporter.check_clean(exported)
