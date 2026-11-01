@@ -21,6 +21,13 @@ with sync_playwright() as pw:
  assert page.get_by_role('button',name='Play',exact=True).is_enabled()
  assert page.locator('.studio-events button').count()==len(source['storyboard']['steps'])
  assert page.evaluate("[...document.fonts].some(f=>f.family==='Geist'&&f.status==='loaded')")
+ # Integration: empty-hash entry and direct studio route survive fresh reloads.
+ page.reload(wait_until='networkidle')
+ expect(page.locator('.studio-action')).to_have_attribute('data-event-ref','/storyboard/steps/0')
+ page.goto(URL+'#/studio',wait_until='networkidle')
+ page.reload(wait_until='networkidle')
+ expect(page.get_by_role('button',name='Play',exact=True)).to_be_enabled()
+ expect(page.get_by_text('Recorded real-model evidence',exact=True)).to_be_visible()
  page.get_by_role('button',name='Play',exact=True).click()
  page.wait_for_function("document.querySelector('.studio-action').dataset.eventRef === '/storyboard/steps/1'")
  page.get_by_role('button',name='Pause',exact=True).click()
@@ -56,6 +63,11 @@ with sync_playwright() as pw:
  assert page.locator('.studio-action h3').inner_text()==source['storyboard']['steps'][1]['text']
  assert page.locator('button:focus-visible').count()==1
  page.screenshot(path=str(OUT/'narrow.png'),full_page=True,animations='disabled')
+ page.reload(wait_until='networkidle')
+ expect(page.locator('.studio-action')).to_have_attribute('data-event-ref','/storyboard/steps/0')
+ expect(page.get_by_role('button',name='Play',exact=True)).to_be_enabled()
+ assert page.evaluate('document.documentElement.scrollWidth===390')
+ page.get_by_role('button',name='Next event',exact=True).click()
  # B.2: explicit illustration, preserved replay position and separate measured outcomes.
  page.get_by_role('navigation',name='Product stages').get_by_role('button',name=re.compile('Improvements')).click()
  expect(page.get_by_text('Illustrative transformation — not recorded browser footage.',exact=True)).to_be_visible()
@@ -73,7 +85,10 @@ with sync_playwright() as pw:
  page.get_by_role('button',name='Return to agent journey').click()
  expect(page.locator('.studio-action')).to_have_attribute('data-event-ref','/storyboard/steps/1')
  expect(page.get_by_role('button',name='Play',exact=True)).to_be_enabled()
+ page.reload(wait_until='networkidle')
+ expect(page.locator('.studio-action')).to_have_attribute('data-event-ref','/storyboard/steps/0')
+ expect(page.get_by_role('button',name='Play',exact=True)).to_be_enabled()
  assert not errors,errors
  assert not blocked,blocked
  context.close();browser.close()
-print('PASS: backend-free desktop/narrow playback, pause/restart/step, keyboard scrub/activation, event/inspector sync, import/rejection, missing task evidence, fallback report, local Geist, reduced motion, no overflow/page errors/external requests.')
+print('PASS: backend-free desktop/narrow playback, pause/restart/step, keyboard scrub/activation, event/inspector sync, import/rejection, missing task evidence, fallback report, local Geist, reduced motion, default/direct studio reloads, no overflow/page errors/external requests.')

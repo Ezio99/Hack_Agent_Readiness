@@ -1,3 +1,20 @@
+> Current demo entry is **Replay Studio** (empty hash or `#/studio`). The approved classic report remains at `#/investigation`. See [studio integration review](STUDIO_INTEGRATION_REVIEW.md). Existing packaging checks/scripts below are retained as historical evidence; their seven-file/141-test counts are not the current candidate counts.
+
+## Studio integration release checks (current candidate)
+
+- [x] PR #60 baseline remained `049292e`; no intervening changes/conflicts. Preserve B.1 `e2273f9` and B.2 `8f88046` by fast-forward integration. No application changes beyond those reviewed commits.
+- [x] Default/direct `#/studio` entry, desktop/390px reload, playback/step/scrub, keyboard focus, reduced motion, Improvements → Replay continuity and classic dashboard fallback checked in a fresh browser without backend/external requests.
+- [x] Recorded/fixture/unknown provenance stays explicit. Missing sequences are unavailable. B.2 is persistently labelled “Illustrative transformation — not recorded browser footage.” Owner-selected attribution and not-independently-verified status stay visible.
+- [x] 10 focused studio tests; 145 dashboard tests (7 existing skips); 214 critical tests (17 deselected); 45 public-export safety tests pass. TypeScript, production build and the unchanged required distribution guard pass: eight files including local Geist/license, no replay directory/private truths/raw traces/credentials/unapproved artifacts.
+- [x] Grading, historical artifacts, public S1 fixture, stored verdicts, ledgers, safe-export and distribution safeguards unchanged. Cinematic branch remains separate and untouched.
+- [ ] Owner review of this integration; PR merge/publication/submission still need separate authorization.
+- [ ] Check current-head CI after push; local passing tests do not imply green CI.
+- [ ] Confirm final participant form/material requirements, judge access, video and URL requirements and contributor/license disclosures (existing unresolved matrix below remains authoritative about what is unconfirmed).
+
+Studio rehearsal: open `#/studio`, select the first supported task, play then pause, choose a recorded click or search event, scrub, inspect its source. Open **Inspect listing change**; explain that existing rental terms are being illustrated on listing cards, not replayed as footage or independently verified remediation. Open **Patch basis & separate experimental outcomes**: 2/4 → 3/4 supported passes, 50 → 29 requests; improvement not established, frozen inconclusive / exploratory not_supported. Return to agent journey: the same event remains selected and playback is paused. Classic dashboard opens its own report selection at `#/investigation`.
+
+Limits for presenters: one archived task/arm, no exact pages/values/cursor paths/timing; other tasks and unrelated transformations show unavailable. Playback pacing is editorial. Imported reports are in-memory; reload returns to the default paused example. B.3 is deferred. The three-minute classic script still applies only when deliberately opening `#/investigation`; do not narrate its interactions over the new default studio. This rehearsal is not a recorded video or a measured human presentation duration.
+
 > Current pitch/submission drafts: [pitch](HACKATHON_PITCH_DRAFT.md), [three-minute script](THREE_MINUTE_DEMO_SCRIPT.md), [verified/unresolved submission checklist](SUBMISSION_PLAN.md). The current public S1 asset omits captured pages: use the new script rather than the older two-minute page-diff interaction below. Packaging/CI repair `1c66a1d` is accepted; merge/publication still require separate approval.
 
 # Recorded demo release checklist and two-minute script
