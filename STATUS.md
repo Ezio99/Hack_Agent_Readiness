@@ -2,6 +2,10 @@
 
 **Authoritative current state (2026-10-29, Task 015 stack and 015f merged; Task 016 next).** Verify against the repository, not this text. Full historical checkpoints are preserved verbatim in [docs/archive/STATUS-through-2026-10-29.md](docs/archive/STATUS-through-2026-10-29.md); architecture, execution paths, frozen artifacts and technical debt are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## CI compatibility repair (2026-11-01; pitch work paused)
+
+CI at release head `7df69ce` confirmed four stale programme-balance test assertions and an EXP-2 mock-pilot `KeyError: agent_profile` from shared-runner successor wiring. Both reproduced locally. Repair restores the original compat1 default only for manifests lacking a profile; explicit S1 compat2 and grading/integrity checks remain unchanged. Accounting expectations now reflect the already-authorized reconciled subtotal, without changing the ledger. [Report 016s](collaboration/reports/016s-ci-compatibility-repair.md). Replacement CI must be observed complete; pending checks are not green. No merge/deploy/model calls authorized.
+
 ## Release packaging/rehearsal (2026-11-01)
 
 P0 milestone `018f9fb` accepted. Ordinary builds now disable Vite's ignored-public-file copy channel and require the unchanged distribution guard; no special workaround needed. Contaminated local and isolated tracked-source builds produce seven identical safe files. 141 dashboard + 40 deployment-safety/export-replay checks passed; fresh-browser recorded-demo navigation/storyboard/labels/comparison/uncertainty/reload verified without a backend. [Report 016r](collaboration/reports/016r-release-packaging.md); [release checklist and two-minute script](docs/RELEASE_CHECKLIST.md). Official public pages confirm deadline Nov 4 21:00 ET = Nov 5 13:00 Sydney (2026); URL/video/repository submission requirements remain unverified pending participant instructions. No further paid calls, merge, deployment or submission authorized.

@@ -193,3 +193,20 @@ def test_sensitivity_manifest_binds_rule_and_execution_uses_approved_profile(tmp
     st = dict(label='placebo', prefix='test', repeat=1, task={'task_id': 'x', 'partition': 'investigation'}, inst=object(), snap=object())
     ts.run_plan(ctx, [st], manifest_=new)
     assert calls[0]['profile_id'] == ss.NEW
+
+
+def test_legacy_trial_plan_without_profile_keeps_original_runner_default(tmp_path, monkeypatch):
+    from agent_readiness.investigate.trials import stage as ts
+    from agent_readiness.investigate.run import InvestigationRun
+    from agent_readiness.investigate.pipeline import Context
+    from agent_readiness.investigate.flow import STAGES
+    run = InvestigationRun.create(tmp_path, 'legacy', target='site-1', mode='mock', stages=STAGES)
+    calls = []
+    async def fake(*args, **kwargs):
+        calls.append(kwargs['profile_id'])
+        out = kwargs['output'] / 'fake'; out.mkdir(parents=True)
+        return {'artifact_path': str(out), 'outcome': {'run_status': 'completed'}}
+    monkeypatch.setattr(ts, 'run_trial', fake)
+    step = dict(label='baseline', prefix='legacy', repeat=1, task={'task_id':'x','partition':'investigation'}, inst=object(), snap=object())
+    ts.run_plan(Context(run), [step], manifest_={})
+    assert calls == ['suite-v2-compat1']
