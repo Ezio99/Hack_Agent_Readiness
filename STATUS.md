@@ -1,5 +1,9 @@
 # Agent Readiness — status
 
+## Hosted Ironbark work in progress (2026-11-02)
+
+Dedicated branch `hosted-ironbark-evaluation`: external/ambiguous snapshot redirects are blocked and tested. The public hosted runner is not implemented; browser pre-request isolation and durable global budget/concurrency controls remain blockers. No paid call or deployment. See [work-in-progress report](collaboration/reports/hosted-ironbark-wip.md).
+
 ## Ironbark operator UI (2026-11-02)
 
 The local runner has a Midnight/Cyan review-and-confirm workflow with a one-use server-bound approval token. No paid call was made. [UI report](collaboration/reports/ironbark-operator-ui.md).

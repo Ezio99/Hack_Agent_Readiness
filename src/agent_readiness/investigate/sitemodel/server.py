@@ -34,5 +34,12 @@ class Mirror:
             return await self._send(send, 404, base + [("content-type", "text/html; charset=utf-8")], b"<!doctype html><title>Not found</title><h1>Not found</h1>")
         self.log.append({"method": method, "path": key, "status": r.status})
         if r.location:
+            # Browsers interpret backslashes and scheme-relative locations as
+            # external navigations. The mirror must never forward those targets.
+            if (not r.location.startswith('/') or r.location.startswith('//') or '\\' in r.location
+                    or any(ord(ch) < 32 or ord(ch) == 127 for ch in r.location)):
+                self.blocked.append({"method": method, "path": key})
+                self.log[-1]['status'] = 403
+                return await self._send(send, 403, base + [("content-type", "text/plain")], b"redirect outside mirror blocked")
             return await self._send(send, r.status, base + [("location", r.location)], b"")
         await self._send(send, r.status, base + [("content-type", r.content_type or "application/octet-stream"), ("content-length", str(len(r.body)))], b"" if method == "HEAD" else r.body)

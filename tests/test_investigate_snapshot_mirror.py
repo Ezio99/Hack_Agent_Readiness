@@ -104,3 +104,16 @@ def test_real_chromium_can_browse_the_mirror_and_pages_cannot_reach_other_origin
             return where, h1
     where, h1 = asyncio.run(go())
     assert (where, h1) == ("/rooms", "Rooms") and [l["status"] for l in m.log] == [200, 200] and m.blocked == []
+
+
+@pytest.mark.parametrize('location', ['https://outside.invalid/path', '//outside.invalid/path', '/\\outside.invalid/path', '/\noutside.invalid'])
+def test_mirror_refuses_external_and_ambiguous_redirects(location):
+    snap = Snapshot({'/old': Resource('/old', 302, '', b'', location)})
+    mirror = Mirror(snap)
+    async def go():
+        async with client_for(mirror) as client:
+            return await client.get('/old', follow_redirects=False)
+    response = asyncio.run(go())
+    assert response.status_code == 403 and 'location' not in response.headers
+    assert mirror.blocked == [{'method': 'GET', 'path': '/old'}]
+    assert mirror.log[-1]['status'] == 403
