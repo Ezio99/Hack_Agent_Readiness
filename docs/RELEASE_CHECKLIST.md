@@ -1,0 +1,61 @@
+# Recorded demo release checklist and two-minute script
+
+2026-11-01. Packaging/rehearsal only; no deployment, merge, paid call or experimental change is authorized.
+
+## Checked release candidate
+
+- [x] Ordinary `cd dashboard && npm run build` typechecks, builds and invokes `check:dist`; a failed guard fails the build.
+- [x] Vite `publicDir: false` prevents unconditional copying of ignored local replay files. Only explicitly imported source assets enter this build. The pre-existing replay files remain local and untouched. The distribution guard and its exclusions/exceptions are unchanged.
+- [x] Seven generated files; no replays, source maps, raw traces, local paths or credential-like content found by the existing guard. The reviewed recorded S1 asset already passes exporter private-field/public-data checks.
+- [x] Isolated tracked-source snapshot: archive of reviewed HEAD plus the two candidate packaging files, no ignored public assets, credentials, runtime data or backend configuration. Reused only installed dependencies through a node_modules symlink. Built source/output were isolated. Its seven output files match the ordinary build byte-for-byte.
+- [x] 141 dashboard tests and 40 deployment-safety/export-replay tests passed; TypeScript and ordinary build guard passed.
+- [x] Fresh Chromium session against isolated production output: all five report-navigation buttons, main Historical/Investigation navigation and return, nine-event storyboard, recorded evidence label, contemporary 2/4→3/4 supported passes / 50→29 requests, unchanged inconclusive/not_supported verdicts, uncertainty language and reload passed. No browser exceptions and no backend/external requests. No backend service was started or configured. This was a software/navigation rehearsal, not a recorded narrated video or evidence of human presentation duration.
+- [x] 2,239 protected historical files and 700 indexed S1 files unchanged. Evaluator, frozen truths, rules and runtime ledgers untouched.
+- [ ] Owner review of packaging candidate; merge/release remains unauthorized.
+- [ ] Final submission form and accepted-participant instructions verified; complete the materials matrix below.
+- [ ] Record/review a narrated video if required. Check any required duration, visibility, captions and link access in a signed-out session.
+- [ ] Confirm repository access/visibility, any required license and provenance disclosure; do not expose ignored data or credentials.
+- [ ] Public hosting only if required/desired AND separately authorized. No public demo URL was created here.
+- [ ] Final browser and distribution guard on the exact release commit, then owner-authorized submission.
+
+Local rehearsal (no backend, no model):
+
+```
+cd dashboard
+npm run build
+npm run preview -- --host 127.0.0.1 --port 4179 --strictPort
+```
+
+Open a fresh browser at `http://127.0.0.1:4179/`. Keep Advanced closed. Use the report navigation buttons; captured site links are intentionally inert. If the required build guard fails, stop rather than bypassing it. The earlier special clean-build workaround in Report 016q is superseded by this standard safe build.
+
+## Submission requirements: confirmed versus unresolved
+
+Checked official public sources on 2026-11-01:
+
+- [Meta event page](https://dev.meta.ai/events/global-hackathon) lists the project deadline as November 4 at 9 PM ET.
+- [Organizer event page](https://cerebralvalley.ai/e/meta-ai-developer-hackathon) corroborates that deadline and labels the event timezone EST. In 2026 this converts to **November 5, 13:00 Australia/Sydney (AEDT)** using America/New_York and Australia/Sydney zoneinfo. Dates may change; check the participant portal again before submission. Internal target remains November 4, 23:59 Sydney.
+- Both public pages still refer to official rules being published before kickoff; the fetched pages do not provide the final project-submission fields. Their statement that GitHub/shipped-product links are optional concerns APPLICATION review, not project submission. It is not evidence that submission links are optional.
+
+| Material | Verified requirement? | Current readiness / needed decision |
+|---|---|---|
+| Public hosted application URL | Unresolved | Local static demo ready; no deployment authorized or performed |
+| Demo video / maximum duration | Unresolved | Two-minute local script below; no video produced or uploaded |
+| Repository URL / public visibility / license | Unresolved | Repository and PR exist; verify judge access and required visibility/license |
+| Description, track, team, Meta technology disclosure | Exact fields unresolved | Prepare from truthful project evidence; select/confirm in the actual form |
+| Pre-existing work / asset reuse disclosures | Exact rules unresolved | Preserve pre-event planning/prototype provenance; review accepted official rules |
+| Submission portal and successful receipt | Unresolved | Owner must inspect authenticated accepted-participant instructions/form and retain receipt |
+
+Local pitch documents mention a three-minute video and public links, but these are historical proposals, not verified submission requirements. No requirement was inferred from another hackathon. Remaining submission blockers are the actual participant rules/form, any required video/link production, access checks and owner authorization for publication/submission.
+
+## Two-minute recorded Ironbark script
+
+| Time | Screen action | Narration |
+|---|---|---|
+| 0:00–0:15 | Default hero; keep recorded provenance visible | “Agent Readiness helps developers see where AI agents struggle on their website, inspect the evidence, and test proposed changes. This is a recorded Ironbark evaluation, not a live run.” |
+| 0:15–0:30 | Website section; show captured listing | “We evaluate a controlled copy of the site. Tasks are frozen, and code grades the answers independently of the agent’s own success claim.” |
+| 0:30–0:55 | Agent analysis; nine-event storyboard | “Here is one actual recorded task. The agent clicked, scrolled and searched the page. A missing scroll index triggered a logged page fallback. That is browser-tool behavior, not a website defect. Response contents and raw traces are withheld.” |
+| 0:55–1:15 | Recommendations, then website changes | “The owner selected this experimental change: show existing deposit, minimum-hire and delivery facts on listing cards. It is not an investigator-verified finding. The side-by-side view shows the controlled change.” |
+| 1:15–1:40 | Measured impact or hero contemporary card | “Using the same agent configuration in both new arms, evidence-supported passes were two of four versus three of four, with fifty versus twenty-nine model requests. These are descriptive differences. Improvement is not established: the frozen result is inconclusive and the exploratory hypothesis is not supported.” |
+| 1:40–2:00 | Return to hero / provenance | “Meta’s model made the recorded browser decisions. The value is the developer’s evidence trail: task, observed behavior, proposed change and honest retest. S1 is a sensitivity experiment; we do not pool it with earlier runs or turn this small result into a universal score.” |
+
+Rehearse spoken timing before recording; shorten narration rather than hiding uncertainty or provenance. Do not start evaluations or use the unrelated historical replay pages during this two-minute story.

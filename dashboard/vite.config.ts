@@ -6,6 +6,9 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   base: "./",
+  // Vite copies public/ verbatim, regardless of Git ignore rules. Demo assets
+  // must be explicitly imported from reviewed source; local replay exports stay local.
+  publicDir: false,
   server: { fs: { allow: [".."] } },
   test: { environment: "node", include: ["src/**/*.test.{ts,tsx}"] },
 });
