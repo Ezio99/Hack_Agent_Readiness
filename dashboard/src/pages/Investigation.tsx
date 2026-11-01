@@ -36,7 +36,7 @@ function Cell({ rows }: { rows: TrialRow[] }) {
     <>
       {rows.map((r) =>
         r.void ? <span key={r.trial_id} title={`${r.run_status}: void, not a website result`}><Pill tone="warn">void</Pill> </span>
-          : <span key={r.trial_id} title={`${r.run_status}; ${r.model_requests ?? "?"} requests, ${r.page_views ?? "?"} page views`}><Pill tone={r.passed ? "pass" : "fail"}>{r.passed ? "pass" : "fail"}</Pill> <span className="muted">{r.model_requests ?? "?"} req · {r.page_views ?? "?"} pages</span> </span>)}
+          : <span key={r.trial_id} title={`${r.run_status}; ${r.model_requests ?? "?"} requests, ${r.page_views ?? "?"} page views`}><Pill tone={r.passed ? "pass" : "fail"}>{r.passed ? "strict pass" : "strict fail"}</Pill> <span>{r.passed && r.evidence_backed ? "evidence-supported" : "not evidence-supported"}</span> <span className="muted">{r.model_requests ?? "?"} req · {r.page_views ?? "?"} pages</span> </span>)}
     </>
   );
 }
@@ -127,11 +127,11 @@ function ResultCard({ d, r }: { d: InvestigationExport; r: EvalResult }) {
       <summary>Frozen rule details: pairs, p-values, holdout flag and how to read them</summary>
       <section className="card">
       <h4>Patch <code>{short(r.proposal_id)}</code>{d.synthetic ? <> <span className="mode mode-scripted">ILLUSTRATIVE — synthetic numbers</span></> : null} <Pill tone={r.verdict === "improvement" ? "pass" : r.verdict === "regression" ? "fail" : "neutral"}>{r.verdict}</Pill>{" "}
-        {r.measured ? <span className="mode mode-live">MEASURED (live)</span> : <span className="mode mode-unmeasured">NOT MEASURED — {r.effect_mode ? MODE_LABEL[r.effect_mode].toLowerCase() : "no"} evidence, a pipeline check only</span>}</h4>
-      <figure className="paired" aria-label={`Evidence-backed pass rate: baseline ${pct(b.passed, b.usable)}, patched ${pct(p.passed, p.usable)}`}>
-        <figcaption>Evidence-backed pass rate on {c.tasks} usable task{c.tasks === 1 ? "" : "s"} (descriptive)</figcaption>
-        <Bar label="Baseline" cls="B" value={b.usable ? b.passed / b.usable : 0} text={`${b.passed}/${b.usable}`} />
-        <Bar label="Patched" cls="A" value={p.usable ? p.passed / p.usable : 0} text={`${p.passed}/${p.usable}`} />
+        {r.measured ? <span className="mode mode-recorded">RECORDED result · provider labelled above</span> : <span className="mode mode-unmeasured">NOT MEASURED — {r.effect_mode ? MODE_LABEL[r.effect_mode].toLowerCase() : "no"} evidence, a pipeline check only</span>}</h4>
+      <figure className="paired" aria-label={`Strict pass rate: baseline ${pct(b.passed, b.usable)}, patched ${pct(p.passed, p.usable)}`}>
+        <figcaption>Strict pass rate (evidence support shown separately) on {c.tasks} usable task{c.tasks === 1 ? "" : "s"} (descriptive)</figcaption>
+        <Bar label="Baseline" cls="B" value={b.usable ? b.passed / b.usable : 0} text={`${b.passed}/${b.usable} strict · ${b.supported}/${b.usable} supported`} />
+        <Bar label="Patched" cls="A" value={p.usable ? p.passed / p.usable : 0} text={`${p.passed}/${p.usable} strict · ${p.supported}/${p.usable} supported`} />
       </figure>
       <p className="muted">Mean model requests per trial: baseline {num(b.requests, 1)} → patched {num(p.requests, 1)}. {c.skipped ? `${c.skipped} task(s) lack a usable trial in one arm and are not compared.` : ""}</p>
       <dl className="facts">
@@ -184,6 +184,27 @@ export function ThreeArmChart({ d, x }: { d: InvestigationExport; x: Exploratory
   );
 }
 
+export function ContemporarySummary({ d }: { d: InvestigationExport }) {
+  const control = tally(d.tasks.flatMap(t => Object.values(t.placebo ?? {}).flat()));
+  const patched = tally(d.tasks.flatMap(t => Object.values(t.patched).flat()));
+  if (!control.usable || !patched.usable) return null;
+  const requests = (pick: "placebo" | "patched") => d.tasks.flatMap(t => Object.values(t[pick] ?? {}).flat()).filter(r => !r.void).reduce((n, r) => n + (r.model_requests ?? 0), 0);
+  return <section aria-label="Contemporary comparison" className="card"><h3>Same agent · original vs changed site</h3>
+    <p><strong>{control.supported}/{control.usable} → {patched.supported}/{patched.usable} evidence-supported passes</strong></p>
+    <p>Strict passes: {control.passed}/{control.usable} → {patched.passed}/{patched.usable}. Model requests: <strong>{requests("placebo")} → {requests("patched")}</strong>.</p>
+    <p>Improvement is not established. One trial per task per arm. Historical baseline, EXP-C and R1 are separate comparisons.</p></section>;
+}
+
+export function AgentStoryboard({ d }: { d: InvestigationExport }) {
+  const story = d.storyboard;
+  if (!story) return <p>No safely summarized action sequence is available for this report.</p>;
+  return <section className="storyboard" aria-label="Recorded agent actions"><h3>Watch one recorded task</h3>
+    <p>{d.tasks.find(t => t.task_id === story.task_id)?.question} · {story.arm} arm</p>
+    <ol>{story.steps.map((s, i) => <li key={i}><strong>{s.category}</strong> · {s.text} <small>(archived event {s.event}{s.ok ? "" : "; execution error"})</small></li>)}</ol>
+    <p>Strict outcome: {story.strict_pass ? "pass" : "fail"}; evidence-supported: {story.evidence_supported ? "yes" : "no"}.</p>
+    <p>{story.note} Website friction is a hypothesis; an incorrect response is an outcome, not proof of a website defect. A tolerated scroll index is browser-tool behavior.</p></section>;
+}
+
 const dropPct = (from?: number, to?: number) => (from && typeof to === "number" ? `−${Math.round(100 * (1 - to / from))}%` : "");
 
 /** Unmodified repeat → patched model requests for each affected task: the headline comparison of the exploratory analysis. */
@@ -234,8 +255,8 @@ export function ExploratoryPanel({ d, x }: { d: InvestigationExport; x: Explorat
         <section className="card verdict-frozen" aria-label="Frozen pre-registered verdict">
           <p className="eyebrow">Frozen rule · fixed before any trial</p>
           <h4><code>{d.evaluation.rule?.id ?? "paired-signflip-v1"}</code> <Pill tone={frozen?.verdict === "improvement" ? "pass" : frozen?.verdict === "regression" ? "fail" : "neutral"}>{frozen?.verdict ?? "—"}</Pill></h4>
-          <p className="muted">Historical baseline vs patched, {frozen?.pairs ?? "—"} task pairs. Reported unchanged. With only two tasks that can be affected, this rule can at best say “inconclusive”.</p>
-          {frozen ? <p className="muted">Pass Δ {num(frozen.pass_delta)} · request Δ {num(frozen.request_change)} (p = {num(frozen.p_requests)}) {frozen.measured ? <span className="mode mode-live">MEASURED (live)</span> : <span className="mode mode-unmeasured">NOT MEASURED — pipeline check only</span>}</p> : null}
+          <p className="muted">Historical baseline vs patched, {frozen?.pairs ?? "—"} task pairs. Reported unchanged. {roles(x).filter((r) => r.role === "Affected").length} affected tasks. The stored verdict is preserved; this small experiment does not establish improvement.</p>
+          {frozen ? <p className="muted">Pass Δ {num(frozen.pass_delta)} · request Δ {num(frozen.request_change)} (p = {num(frozen.p_requests)}) {frozen.measured ? <span className="mode mode-recorded">RECORDED result · provider labelled above</span> : <span className="mode mode-unmeasured">NOT MEASURED — pipeline check only</span>}</p> : null}
         </section>
         <section className={`card verdict-exploratory verdict-${v.tone}`} aria-label="Exploratory verdict">
           <p className="eyebrow">Exploratory rules · owner-selected change · not a replacement</p>
@@ -320,7 +341,7 @@ export function EffortBars({ d }: { d: InvestigationExport }) {
         <div key={t.task_id} className="bar-row">
           <span className="bar-label">{t.question.length > 44 ? `${t.question.slice(0, 44)}…` : t.question}</span>
           <span className="bar-track" aria-hidden="true"><span className="bar bar-H" style={{ width: `${Math.max(2, (100 * r!.model_requests!) / top)}%` }} /></span>
-          <span className="bar-value">{r!.model_requests} req · {r!.passed ? "pass" : "fail"}</span>
+          <span className="bar-value">{r!.model_requests} req · {r!.passed ? "strict pass" : "strict fail"} · {r!.passed && r!.evidence_backed ? "evidence-supported" : "not evidence-supported"}</span>
         </div>))}
     </figure>
   );
@@ -392,8 +413,11 @@ export function ChangeSection({ d, proposalId }: { d: InvestigationExport; propo
 /** What kind of evidence this report is, stated unmistakably. Live = real model trials; synthetic = hand-written fixture; anything else is named and is not a live experiment. */
 export function provenanceOf(d: InvestigationExport): { kind: "live" | "synthetic" | "other"; label: string } {
   if (d.synthetic) return { kind: "synthetic", label: "SYNTHETIC DEMO DATA" };
-  if (d.run.mode === "live" && d.modes.length > 0 && d.modes.every((m) => m === "live")) return { kind: "live", label: "LIVE EXPERIMENT · real model trials" };
-  return { kind: "other", label: `${d.modes.map((m) => MODE_LABEL[m]).join(" + ") || MODE_LABEL[d.run.mode]} EVIDENCE · not a live experiment` };
+  if (d.evidence_origin?.provider === "scripted") return { kind: "other", label: "SCRIPTED EVIDENCE · not a live experiment" };
+  if (d.evidence_origin?.provider === "dev_fixture") return { kind: "other", label: "RECORDED DEV PROVIDER · fixture, not a real model" };
+  if (d.evidence_origin?.provider === "real_model" && d.evidence_origin.presentation === "recorded" && d.run.mode === "live" && d.modes.every(m => m === "live") && d.modes.length > 0) return { kind: "live", label: "RECORDED REAL-MODEL EVIDENCE · no evaluation running" };
+  if (d.run.mode !== "live" || d.modes.some(m => m !== "live")) return { kind: "other", label: `${d.modes.map(m => MODE_LABEL[m]).join(" + ")} EVIDENCE · not a live experiment` };
+  return { kind: "other", label: "RECORDED EVIDENCE · model provenance unverified" };
 }
 
 const ATTR_NOTE: Record<string, string> = {
@@ -536,6 +560,7 @@ export function Hero({ d }: { d: InvestigationExport }) {
       <p className="eyebrow">Agent Readiness</p>
       <p className={`prov prov-${provenanceOf(d).kind}`} role="status" aria-label="Report provenance">{provenanceOf(d).label}</p>
       <h1>Make your website ready for AI agents</h1>
+      {d.demo_case && <p><strong>{d.demo_case.label}</strong> · {d.demo_case.recorded_on}<br />{d.demo_case.note}</p>}
       <p className="lead">We watch an AI agent try to use your site, find where it struggles, test a change on a controlled copy, and measure whether it helped.</p>
       <ol className="flow3" aria-label="How it works">
         <li><span className="n">1</span><strong>Inspect</strong><span>An agent attempts real tasks; outcomes are graded independently.</span></li>
@@ -546,7 +571,7 @@ export function Hero({ d }: { d: InvestigationExport }) {
       {x ? (
         <div className="herometrics">
           <p className="eyebrow">Example result from this run · exploratory · n = 1 per arm · owner-selected change</p>
-          <RequestDrops d={d} x={x} compact />
+          <ContemporarySummary d={d} /><RequestDrops d={d} x={x} compact />
           <div className="verdictchips" aria-label="Verdicts">
             <span className="vchip"><span className="vk">Frozen rule</span><strong>{frozen?.verdict ?? "—"}</strong></span>
             <span className={`vchip vchip-${v?.tone ?? "info"}`}><span className="vk">Exploratory rule</span><strong>{v?.label ?? "—"}</strong></span>
@@ -554,9 +579,9 @@ export function Hero({ d }: { d: InvestigationExport }) {
         </div>) : (
         <div className="herometrics"><p className="eyebrow">This run</p>
           {d.goal ? <>
-            <p className="herostat"><strong>{bt.passed} of {bt.usable} selected {bt.usable === 1 ? "task" : "tasks"} passed</strong>{d.goal_coverage ? (d.goal_coverage.entities_total === 0 ? <> — <strong className="cov-word cov-partial">attribute-level coverage only</strong></> : <> — goal coverage <strong className={`cov-word cov-${d.goal_coverage.status}`}>{d.goal_coverage.status.toUpperCase()}</strong></>) : <> — goal coverage not recorded in this export</>}</p>
+            <p className="herostat"><strong>{bt.passed} of {bt.usable} strict passes; {bt.supported} evidence-supported passes</strong>{d.goal_coverage ? (d.goal_coverage.entities_total === 0 ? <> — <strong className="cov-word cov-partial">attribute-level coverage only</strong></> : <> — goal coverage <strong className={`cov-word cov-${d.goal_coverage.status}`}>{d.goal_coverage.status.toUpperCase()}</strong></>) : <> — goal coverage not recorded in this export</>}</p>
             <p className="muted">Passing the selected tasks is not proof that the goal was achieved or evaluated{d.goal_coverage ? (d.goal_coverage.entities_total === 0 ? ": the goal names no specific items, so catalogue-wide coverage was not assessed" : `: ${d.goal_coverage.entities_covered} of ${d.goal_coverage.entities_total} of the goal's items are covered`) : ""}. Outcome: {d.run.outcome.replace(/_/g, " ")}.</p>
-          </> : <p className="muted">{d.tasks.length} frozen tasks · baseline pass rate {pct(bt.passed, bt.usable)} ({bt.passed}/{bt.usable} usable trials) · outcome: {d.run.outcome.replace(/_/g, " ")}</p>}
+          </> : <p className="muted">{d.tasks.length} frozen tasks · baseline strict passes {bt.passed}/{bt.usable}; evidence-supported {bt.supported}/{bt.usable} · outcome: {d.run.outcome.replace(/_/g, " ")}</p>}
         </div>)}
       <p className="muted">{d.run.target} · run <code>{d.run.id}</code> · mode {d.run.mode}</p>
     </header>
@@ -615,7 +640,7 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
         <div className="kpis">
           <Kpi label="Pages inspected" value={typeof inspect.pages === "number" ? inspect.pages : "—"} note={inspect.fidelity ? `inspection fidelity: ${inspect.fidelity}` : undefined} />
           <Kpi label="Frozen tasks" value={d.tasks.length} note={`${d.tasks.filter((x) => x.partition === "holdout").length} held out from the investigator`} />
-          <Kpi label={d.goal ? "Selected tasks passed" : "Baseline pass rate"} value={pct(bt.passed, bt.usable)} note={`${bt.passed}/${bt.usable} usable trials${d.goal ? " · selected tasks only, not the whole goal" : ""}`} tone={bt.usable && bt.passed < bt.usable ? "bad" : "neutral"} />
+          <Kpi label="Baseline: strict / evidence-supported" value={`${bt.passed} / ${bt.supported}`} note={`${bt.usable} usable trials${d.goal ? " · selected tasks only, not the whole goal" : ""}`} tone={bt.usable && bt.passed < bt.usable ? "bad" : "neutral"} />
           <Kpi label="Void trials" value={d.trials.void} note="excluded, never a website result" tone={d.trials.void ? "b" : "neutral"} />
         </div>
         <Coverage d={d} />
@@ -627,7 +652,7 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
         <p className="muted">One browsing agent (frozen configuration) attempted every task. Effort is the number of model requests and pages viewed; success needs evidence-backed correctness, graded independently of the agent.</p>
         <EffortBars d={d} />
         <h3>Task outcomes</h3>
-        <TaskTable d={d} />
+        <AgentStoryboard d={d} /><TaskTable d={d} />
       </section>
 
       <section id="inv-recommendations" aria-labelledby="inv-recommendations-h">
@@ -646,7 +671,7 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
 
       <section id="inv-impact" aria-labelledby="inv-impact-h">
         <h2 id="inv-impact-h" className="step">5 · Measured impact</h2>
-        <h3>Baseline versus patched</h3>
+        <h3>Historical baseline versus patched (separate reference)</h3>
         <Comparison d={d} />
         <Spend d={d} />
         {d.findings.length > 0 ? (d.statement ? <p className="muted">{d.statement}</p> : null)
@@ -656,14 +681,15 @@ export function InvestigationView({ d }: { d: InvestigationExport }) {
   );
 }
 
-type Source = "public-synthetic" | "expb-synthetic" | "verified-synthetic";
+type Source = "ironbark-recorded" | "public-synthetic" | "expb-synthetic" | "verified-synthetic";
 const SOURCES: Record<Source, { label: string; load: () => Promise<unknown> }> = {
+  "ironbark-recorded": { label: "Recorded Ironbark S1 (accepted sensitivity evidence)", load: async () => (await import("../fixtures/ironbark-s1-recorded.json")).default },
   "public-synthetic": { label: "EXP-B synthetic (public view)", load: async () => (await import("../fixtures/investigation-synthetic-expb-public.json")).default },
   "expb-synthetic": { label: "EXP-B synthetic (private view)", load: async () => (await import("../fixtures/investigation-synthetic-expb.json")).default },
   "verified-synthetic": { label: "Verified-finding synthetic", load: async () => (await import("../fixtures/investigation-synthetic.json")).default },
 };
 
-export function InvestigationPage() {
+export function InvestigationPage({ initialSource = "ironbark-recorded" }: { initialSource?: Source } = {}) {
   const openLive = (report: unknown, label: string): boolean => { const ok = show(JSON.stringify(report)); if (ok) { setKept(null); setNotice(`Showing live evaluation ${label}. It is held in memory only; the server keeps the run, so it can be reopened.`); document.getElementById("main")?.scrollIntoView(); } return ok; };
   const [data, setData] = useState<InvestigationExport | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -680,7 +706,7 @@ export function InvestigationPage() {
     if (r.ok) { setKept(f.name); setNotice(null); }
     else { setKept(null); setNotice(`${SAVE_PROBLEM[r.reason]} Reloading this page will require selecting the file again.`); }
   };
-  const remove = () => { const ok = clearStored(); setKept(null); setNotice(ok ? "Loaded report removed from this tab's session storage." : "Could not clear session storage; close this tab to discard it."); void pick("public-synthetic"); };
+  const remove = () => { const ok = clearStored(); setKept(null); setNotice(ok ? "Loaded report removed from this tab's session storage." : "Could not clear session storage; close this tab to discard it."); void pick(initialSource); };
   useEffect(() => {
     const st = loadStored();
     if (st) {
@@ -688,12 +714,14 @@ export function InvestigationPage() {
       clearStored();                                                            // corrupt or no longer valid: drop it rather than show it
       setNotice("A previously kept report could not be read and was discarded.");
     }
-    void pick("public-synthetic");
+    void pick(initialSource);
   }, []);
   const useKept = () => { const st = loadStored(); if (st && show(st.text)) { setKept(st.name); setNotice(null); } };
   const showingKept = kept !== null && data !== null && !data.synthetic;
   return (
     <>
+      {data ? <InvestigationView key={loadId} d={data} /> : !error ? <p>Loading recorded Ironbark evidence…</p> : null}
+      <details className="advanced"><summary>Advanced: load another report or configure evaluations</summary>
       <LivePanel onOpen={openLive} />
       <div className="sourcebar" role="region" aria-label="Report source">
         <input ref={picker} type="file" accept="application/json,.json" hidden aria-label="Open an exported report" onChange={async (e) => { const f = e.target.files?.[0]; if (f) await fromFile(f); e.target.value = ""; }} />
@@ -705,12 +733,12 @@ export function InvestigationPage() {
         {notice ? <span className="srcnotice" role="alert">{notice}</span> : null}
       </div>
       {error ? <Callout title="Cannot display this file" tone="bad"><p>{error}</p></Callout> : null}
-      {data ? <InvestigationView key={loadId} d={data} /> : !error ? <><h2>Agent Readiness investigation</h2><p className="muted">No report loaded.</p></> : null}
       <details className="disc loader-d"><summary>Demo data source</summary>
       <div className="loader">
-        <label>Built-in demo data <select aria-label="Demo data" defaultValue="public-synthetic" onChange={(e) => { setNotice(null); void pick(e.target.value as Source); }}>{(Object.keys(SOURCES) as Source[]).map((k) => <option key={k} value={k}>{SOURCES[k].label}</option>)}</select></label>
+        <label>Built-in demo data <select aria-label="Demo data" defaultValue="ironbark-recorded" onChange={(e) => { setNotice(null); void pick(e.target.value as Source); }}>{(Object.keys(SOURCES) as Source[]).map((k) => <option key={k} value={k}>{SOURCES[k].label}</option>)}</select></label>
       </div>
       <p className="muted">Create a report with <code>readiness investigate export RUN_DIR --out report.json --public</code>. Built-in fixtures are labelled synthetic and are never kept in session storage.</p>
+      </details>
       </details>
     </>
   );

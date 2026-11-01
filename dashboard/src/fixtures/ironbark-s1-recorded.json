@@ -1,0 +1,1415 @@
+{
+  "schema": "investigation-dashboard-v1",
+  "exported_at": null,
+  "evidence_origin": {
+    "provider": "real_model",
+    "presentation": "recorded"
+  },
+  "storyboard": {
+    "task_id": "task-1",
+    "arm": "patched",
+    "steps": [
+      {
+        "event": 9,
+        "category": "page observation",
+        "text": "Captured view included field labels: refundable deposit, minimum hire, delivery and collection",
+        "ok": true
+      },
+      {
+        "event": 10,
+        "category": "agent action",
+        "text": "Clicked a page element",
+        "ok": true
+      },
+      {
+        "event": 17,
+        "category": "agent action",
+        "text": "Scrolled",
+        "ok": true
+      },
+      {
+        "event": 17,
+        "category": "agent action",
+        "text": "Scrolled",
+        "ok": true
+      },
+      {
+        "event": 24,
+        "category": "agent action",
+        "text": "Scrolled",
+        "ok": true
+      },
+      {
+        "event": 31,
+        "category": "browser tool",
+        "text": "Missing scroll index used a page scroll instead.",
+        "ok": true
+      },
+      {
+        "event": 32,
+        "category": "agent action",
+        "text": "Scrolled",
+        "ok": true
+      },
+      {
+        "event": 39,
+        "category": "agent action",
+        "text": "Searched page text",
+        "ok": true
+      },
+      {
+        "event": 45,
+        "category": "agent action",
+        "text": "Submitted a structured response (content withheld)",
+        "ok": true
+      }
+    ],
+    "strict_pass": true,
+    "evidence_supported": true,
+    "note": "Selected recorded execution events, in order. Content and response payloads withheld; field presence is an observation, not a causal diagnosis."
+  },
+  "run": {
+    "id": "public-demo",
+    "target": "ironbark",
+    "mode": "live",
+    "created_at": null,
+    "outcome": "experimental_only",
+    "investigation_status": "completed",
+    "report_source": "report-final",
+    "complete": true,
+    "missing_artifacts": []
+  },
+  "modes": [
+    "live"
+  ],
+  "notices": [
+    "EXP-C-S1 SENSITIVITY: both new arms use suite-v2-compat2; the archived baseline uses compat1. Historical comparisons confound the site change with the scroll policy; never pool with EXP-C/R1. Frozen and exploratory rules remain unchanged, including their early-termination limitations.",
+    "LIVE: produced by a real model call under the spend gate."
+  ],
+  "stages": [
+    {
+      "name": "inspect",
+      "status": "done",
+      "updated_at": null,
+      "skipped": false,
+      "reason": null,
+      "manifest_sha256": null,
+      "summary": {}
+    },
+    {
+      "name": "taskgen",
+      "status": "done",
+      "updated_at": null,
+      "skipped": false,
+      "reason": null,
+      "manifest_sha256": null,
+      "summary": {}
+    },
+    {
+      "name": "freeze",
+      "status": "done",
+      "updated_at": null,
+      "skipped": false,
+      "reason": null,
+      "manifest_sha256": null,
+      "summary": {}
+    },
+    {
+      "name": "baseline_trials",
+      "status": "done",
+      "updated_at": null,
+      "skipped": false,
+      "reason": null,
+      "manifest_sha256": null,
+      "summary": {}
+    },
+    {
+      "name": "trace",
+      "status": "done",
+      "updated_at": null,
+      "skipped": false,
+      "reason": null,
+      "manifest_sha256": null,
+      "summary": {
+        "observations": 5,
+        "trials": 4,
+        "void": 0
+      }
+    },
+    {
+      "name": "investigate",
+      "status": "done",
+      "updated_at": null,
+      "skipped": false,
+      "reason": null,
+      "manifest_sha256": null,
+      "summary": {}
+    },
+    {
+      "name": "recommend",
+      "status": "done",
+      "updated_at": null,
+      "skipped": false,
+      "reason": null,
+      "manifest_sha256": null,
+      "summary": {}
+    },
+    {
+      "name": "report",
+      "status": "done",
+      "updated_at": null,
+      "skipped": false,
+      "reason": null,
+      "manifest_sha256": null,
+      "summary": {}
+    },
+    {
+      "name": "apply_fix",
+      "status": "done",
+      "updated_at": null,
+      "skipped": false,
+      "reason": null,
+      "manifest_sha256": null,
+      "summary": {}
+    },
+    {
+      "name": "post_trials",
+      "status": "done",
+      "updated_at": null,
+      "skipped": false,
+      "reason": null,
+      "manifest_sha256": null,
+      "summary": {
+        "trials": 8,
+        "void": 0
+      }
+    },
+    {
+      "name": "evaluate",
+      "status": "done",
+      "updated_at": null,
+      "skipped": false,
+      "reason": null,
+      "manifest_sha256": null,
+      "summary": {}
+    },
+    {
+      "name": "final_report",
+      "status": "done",
+      "updated_at": null,
+      "skipped": false,
+      "reason": null,
+      "manifest_sha256": null,
+      "summary": {}
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "task-1",
+      "question": "Which hire machine has the highest refundable deposit?",
+      "kind": "extremum",
+      "partition": "holdout",
+      "start_path": "/",
+      "limits": {
+        "max_model_requests": 14,
+        "max_steps": 14,
+        "timeout_seconds": 240
+      },
+      "baseline": [
+        {
+          "trial_id": "task-1-r1",
+          "repeat": 1,
+          "run_status": "completed",
+          "void": false,
+          "passed": false,
+          "evidence_backed": false,
+          "model_requests": 13,
+          "page_views": 13,
+          "mode": "live"
+        }
+      ],
+      "patched": {
+        "change-1": [
+          {
+            "trial_id": "task-1-r1",
+            "repeat": 1,
+            "run_status": "completed",
+            "void": false,
+            "passed": true,
+            "evidence_backed": true,
+            "model_requests": 6,
+            "page_views": 6,
+            "mode": "live"
+          }
+        ]
+      },
+      "placebo": {
+        "change-1": [
+          {
+            "trial_id": "task-1-r1",
+            "repeat": 1,
+            "run_status": "completed",
+            "void": false,
+            "passed": false,
+            "evidence_backed": false,
+            "model_requests": 12,
+            "page_views": 12,
+            "mode": "live"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task-2",
+      "question": "Which hire machines have a refundable deposit below $200?",
+      "kind": "item_set",
+      "partition": "investigation",
+      "start_path": "/",
+      "limits": {
+        "max_model_requests": 14,
+        "max_steps": 14,
+        "timeout_seconds": 240
+      },
+      "baseline": [
+        {
+          "trial_id": "task-2-r1",
+          "repeat": 1,
+          "run_status": "completed",
+          "void": false,
+          "passed": false,
+          "evidence_backed": false,
+          "model_requests": 13,
+          "page_views": 13,
+          "mode": "live"
+        }
+      ],
+      "patched": {
+        "change-1": [
+          {
+            "trial_id": "task-2-r1",
+            "repeat": 1,
+            "run_status": "completed",
+            "void": false,
+            "passed": false,
+            "evidence_backed": false,
+            "model_requests": 11,
+            "page_views": 11,
+            "mode": "live"
+          }
+        ]
+      },
+      "placebo": {
+        "change-1": [
+          {
+            "trial_id": "task-2-r1",
+            "repeat": 1,
+            "run_status": "completed",
+            "void": false,
+            "passed": false,
+            "evidence_backed": false,
+            "model_requests": 12,
+            "page_views": 12,
+            "mode": "live"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task-3",
+      "question": "Which hire machines list delivery and collection as 'Required for this item'?",
+      "kind": "item_set",
+      "partition": "investigation",
+      "start_path": "/",
+      "limits": {
+        "max_model_requests": 14,
+        "max_steps": 14,
+        "timeout_seconds": 240
+      },
+      "baseline": [
+        {
+          "trial_id": "task-3-r1",
+          "repeat": 1,
+          "run_status": "completed",
+          "void": false,
+          "passed": false,
+          "evidence_backed": false,
+          "model_requests": 13,
+          "page_views": 13,
+          "mode": "live"
+        }
+      ],
+      "patched": {
+        "change-1": [
+          {
+            "trial_id": "task-3-r1",
+            "repeat": 1,
+            "run_status": "completed",
+            "void": false,
+            "passed": true,
+            "evidence_backed": true,
+            "model_requests": 7,
+            "page_views": 7,
+            "mode": "live"
+          }
+        ]
+      },
+      "placebo": {
+        "change-1": [
+          {
+            "trial_id": "task-3-r1",
+            "repeat": 1,
+            "run_status": "completed",
+            "void": false,
+            "passed": true,
+            "evidence_backed": true,
+            "model_requests": 13,
+            "page_views": 13,
+            "mode": "live"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task-4",
+      "question": "Which hire machines have a minimum hire of 2 days?",
+      "kind": "item_set",
+      "partition": "investigation",
+      "start_path": "/",
+      "limits": {
+        "max_model_requests": 14,
+        "max_steps": 14,
+        "timeout_seconds": 240
+      },
+      "baseline": [
+        {
+          "trial_id": "task-4-r1",
+          "repeat": 1,
+          "run_status": "completed",
+          "void": false,
+          "passed": false,
+          "evidence_backed": false,
+          "model_requests": 12,
+          "page_views": 12,
+          "mode": "live"
+        }
+      ],
+      "patched": {
+        "change-1": [
+          {
+            "trial_id": "task-4-r1",
+            "repeat": 1,
+            "run_status": "completed",
+            "void": false,
+            "passed": true,
+            "evidence_backed": true,
+            "model_requests": 5,
+            "page_views": 5,
+            "mode": "live"
+          }
+        ]
+      },
+      "placebo": {
+        "change-1": [
+          {
+            "trial_id": "task-4-r1",
+            "repeat": 1,
+            "run_status": "completed",
+            "void": false,
+            "passed": true,
+            "evidence_backed": true,
+            "model_requests": 13,
+            "page_views": 13,
+            "mode": "live"
+          }
+        ]
+      }
+    }
+  ],
+  "trials": {
+    "baseline": 4,
+    "patched": 4,
+    "placebo": 4,
+    "void": 0,
+    "quarantined": 0,
+    "note": "Void trials (provider, budget, infrastructure, fidelity guard) are never website results and are excluded from comparisons."
+  },
+  "observations": [
+    {
+      "id": "observation-1",
+      "kind": "site_overview",
+      "summary": "55 pages captured in 22 templates; click depth from the entry page ranges 0-3; 0 captured pages not reachable by links from the entry page.",
+      "refs": [
+        "page:/"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-2",
+      "kind": "snapshot_fidelity",
+      "summary": "Capture removed 0 script(s); fidelity level high.",
+      "refs": [],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-3",
+      "kind": "listing_detail_fields",
+      "summary": "On / (6 repeated items linking to /hire/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: delivery and collection, minimum hire, per week, refundable deposit, weekend, weight; shown in the item: availability today, blade diameter, blows per minute, chuck, closed length, compaction force, cord length, direction, duty rating, engine, extended length, grinding depth below ground, impact energy, max cutting depth, max cutting length, max hole, concrete, max hole, steel, max stump diameter, mitre, modes, per day, plate width, power, rails, safe working reach, suited to slabs up to, water, width.",
+      "refs": [
+        "page:/"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-4",
+      "kind": "listing_detail_fields",
+      "summary": "On / (5 repeated items linking to /hire/category/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: none; shown in the item: none.",
+      "refs": [
+        "page:/"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-5",
+      "kind": "listing_detail_fields",
+      "summary": "On /accessories (8 repeated items linking to /accessories/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: fits; shown in the item: bore, capacity, charge time, contents, diameter, fuel, length, material, mix, pieces, protection, rating, shank, size, sizes, to buy, voltage, volume.",
+      "refs": [
+        "page:/accessories"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-6",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire (16 repeated items linking to /hire/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: delivery and collection, minimum hire, per week, power, refundable deposit, weekend, weight; shown in the item: availability today, bar length, base width, batteries, blade diameter, blade length, blows per minute, castors, chain brake, chuck, closed length, collection bag, compaction force, cord length, cutting capacity, depth settings, direction, drive, drum capacity, duty rating, engine, extended length, feed, frame, fuel, grinding depth below ground, impact energy, max branch diameter, max cutting depth, max cutting length, max depth with bit, max hole diameter, max hole, concrete, max hole, masonry (hammer mode), max hole, steel, max hole, timber, max stump diameter, mitre, mixed output per batch, modes, motor, mounting, per day, plate width, platform height, platform size, platform working height, rails, safe working load, safe working reach, speeds, stand, suited to slabs up to, water, water attachment, water supply, weight (drill and stand), weight (no fuel), wet use, width, working width.",
+      "refs": [
+        "page:/hire"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-7",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire (6 repeated items linking to /hire/category/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: none; shown in the item: sort.",
+      "refs": [
+        "page:/hire"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-8",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire (4 repeated items linking to /hire/sort/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: sort; shown in the item: none.",
+      "refs": [
+        "page:/hire"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-9",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/category/access (6 repeated items linking to /hire/category/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: none; shown in the item: sort.",
+      "refs": [
+        "page:/hire/category/access"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-10",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/category/access (3 repeated items linking to /hire/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: delivery and collection, minimum hire, per week, power, refundable deposit, safe working load, weekend, weight; shown in the item: availability today, base width, castors, closed length, drive, duty rating, extended length, per day, platform height, platform size, platform working height, rails, safe working reach.",
+      "refs": [
+        "page:/hire/category/access"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-11",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/category/cutting (6 repeated items linking to /hire/category/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: none; shown in the item: sort.",
+      "refs": [
+        "page:/hire/category/cutting"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-12",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/category/cutting (3 repeated items linking to /hire/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: delivery and collection, engine, fuel, max cutting depth, minimum hire, per week, refundable deposit, weekend, weight; shown in the item: availability today, bar length, blade diameter, chain brake, max cutting length, mitre, per day, power, water, water attachment, weight (no fuel).",
+      "refs": [
+        "page:/hire/category/cutting"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-13",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/category/drilling-and-breaking (6 repeated items linking to /hire/category/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: none; shown in the item: sort.",
+      "refs": [
+        "page:/hire/category/drilling-and-breaking"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-14",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/category/drilling-and-breaking (4 repeated items linking to /hire/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: chuck, delivery and collection, impact energy, max hole, steel, minimum hire, per week, refundable deposit, weekend, weight; shown in the item: availability today, batteries, blows per minute, cord length, max depth with bit, max hole diameter, max hole, concrete, max hole, masonry (hammer mode), max hole, timber, modes, per day, power, speeds, stand, suited to slabs up to, water supply, weight (drill and stand), wet use.",
+      "refs": [
+        "page:/hire/category/drilling-and-breaking"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-15",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/category/ground-and-concrete (6 repeated items linking to /hire/category/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: none; shown in the item: sort.",
+      "refs": [
+        "page:/hire/category/ground-and-concrete"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-16",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/category/landscaping (6 repeated items linking to /hire/category/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: none; shown in the item: sort.",
+      "refs": [
+        "page:/hire/category/landscaping"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-17",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/category/landscaping (4 repeated items linking to /hire/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: delivery and collection, engine, minimum hire, per week, refundable deposit, weekend, weight; shown in the item: availability today, batteries, blade length, collection bag, cutting capacity, depth settings, feed, grinding depth below ground, max branch diameter, max stump diameter, mounting, per day, power, width, working width.",
+      "refs": [
+        "page:/hire/category/landscaping"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-18",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/cordless-drill-driver-kit-18v (3 repeated items linking to /hire/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: availability today, chuck, delivery and collection, impact energy, minimum hire, per week, power, refundable deposit, weekend, weight; shown in the item: blows per minute, cord length, max depth with bit, max hole diameter, max hole, concrete, max hole, steel, modes, per day, speeds, stand, suited to slabs up to, water supply, weight (drill and stand), wet use.",
+      "refs": [
+        "page:/hire/cordless-drill-driver-kit-18v"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-19",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/cordless-hedge-trimmer-60cm (3 repeated items linking to /hire/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: availability today, delivery and collection, engine, minimum hire, per week, power, refundable deposit, weekend, weight; shown in the item: collection bag, depth settings, feed, grinding depth below ground, max branch diameter, max stump diameter, mounting, per day, width, working width.",
+      "refs": [
+        "page:/hire/cordless-hedge-trimmer-60cm"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-20",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/diamond-core-drill-152mm (3 repeated items linking to /hire/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: availability today, chuck, delivery and collection, impact energy, max hole, steel, minimum hire, per week, power, refundable deposit, weekend, weight; shown in the item: batteries, blows per minute, cord length, max hole, concrete, max hole, masonry (hammer mode), max hole, timber, modes, per day, suited to slabs up to.",
+      "refs": [
+        "page:/hire/diamond-core-drill-152mm"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-21",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/electric-demolition-hammer-15kg (3 repeated items linking to /hire/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: availability today, chuck, delivery and collection, max hole, steel, minimum hire, per week, power, refundable deposit, weekend, weight; shown in the item: batteries, impact energy, max depth with bit, max hole diameter, max hole, concrete, max hole, masonry (hammer mode), max hole, timber, modes, per day, speeds, stand, water supply, weight (drill and stand), wet use.",
+      "refs": [
+        "page:/hire/electric-demolition-hammer-15kg"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-22",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/petrol-lawn-scarifier-40cm (3 repeated items linking to /hire/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: availability today, delivery and collection, engine, minimum hire, per week, power, refundable deposit, weekend, weight; shown in the item: batteries, blade length, cutting capacity, feed, grinding depth below ground, max branch diameter, max stump diameter, mounting, per day, width.",
+      "refs": [
+        "page:/hire/petrol-lawn-scarifier-40cm"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-23",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/sds-plus-rotary-hammer-26mm (3 repeated items linking to /hire/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: availability today, chuck, delivery and collection, minimum hire, per week, power, refundable deposit, weekend, weight; shown in the item: batteries, blows per minute, cord length, impact energy, max depth with bit, max hole diameter, max hole, masonry (hammer mode), max hole, steel, max hole, timber, per day, speeds, stand, suited to slabs up to, water supply, weight (drill and stand), wet use.",
+      "refs": [
+        "page:/hire/sds-plus-rotary-hammer-26mm"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-24",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/sort/name (16 repeated items linking to /hire/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: delivery and collection, minimum hire, per week, power, refundable deposit, weekend, weight; shown in the item: availability today, bar length, base width, batteries, blade diameter, blade length, blows per minute, castors, chain brake, chuck, closed length, collection bag, compaction force, cord length, cutting capacity, depth settings, direction, drive, drum capacity, duty rating, engine, extended length, feed, frame, fuel, grinding depth below ground, impact energy, max branch diameter, max cutting depth, max cutting length, max depth with bit, max hole diameter, max hole, concrete, max hole, masonry (hammer mode), max hole, steel, max hole, timber, max stump diameter, mitre, mixed output per batch, modes, motor, mounting, per day, plate width, platform height, platform size, platform working height, rails, safe working load, safe working reach, speeds, stand, suited to slabs up to, water, water attachment, water supply, weight (drill and stand), weight (no fuel), wet use, width, working width.",
+      "refs": [
+        "page:/hire/sort/name"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-25",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/sort/name (6 repeated items linking to /hire/category/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: none; shown in the item: sort.",
+      "refs": [
+        "page:/hire/sort/name"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-26",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/sort/name (4 repeated items linking to /hire/sort/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: sort; shown in the item: none.",
+      "refs": [
+        "page:/hire/sort/name"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-27",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/sort/price-asc (16 repeated items linking to /hire/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: delivery and collection, minimum hire, per week, power, refundable deposit, weekend, weight; shown in the item: availability today, bar length, base width, batteries, blade diameter, blade length, blows per minute, castors, chain brake, chuck, closed length, collection bag, compaction force, cord length, cutting capacity, depth settings, direction, drive, drum capacity, duty rating, engine, extended length, feed, frame, fuel, grinding depth below ground, impact energy, max branch diameter, max cutting depth, max cutting length, max depth with bit, max hole diameter, max hole, concrete, max hole, masonry (hammer mode), max hole, steel, max hole, timber, max stump diameter, mitre, mixed output per batch, modes, motor, mounting, per day, plate width, platform height, platform size, platform working height, rails, safe working load, safe working reach, speeds, stand, suited to slabs up to, water, water attachment, water supply, weight (drill and stand), weight (no fuel), wet use, width, working width.",
+      "refs": [
+        "page:/hire/sort/price-asc"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-28",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/sort/price-asc (6 repeated items linking to /hire/category/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: none; shown in the item: sort.",
+      "refs": [
+        "page:/hire/sort/price-asc"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-29",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/sort/price-asc (4 repeated items linking to /hire/sort/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: sort; shown in the item: none.",
+      "refs": [
+        "page:/hire/sort/price-asc"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-30",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/sort/price-desc (16 repeated items linking to /hire/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: delivery and collection, minimum hire, per week, power, refundable deposit, weekend, weight; shown in the item: availability today, bar length, base width, batteries, blade diameter, blade length, blows per minute, castors, chain brake, chuck, closed length, collection bag, compaction force, cord length, cutting capacity, depth settings, direction, drive, drum capacity, duty rating, engine, extended length, feed, frame, fuel, grinding depth below ground, impact energy, max branch diameter, max cutting depth, max cutting length, max depth with bit, max hole diameter, max hole, concrete, max hole, masonry (hammer mode), max hole, steel, max hole, timber, max stump diameter, mitre, mixed output per batch, modes, motor, mounting, per day, plate width, platform height, platform size, platform working height, rails, safe working load, safe working reach, speeds, stand, suited to slabs up to, water, water attachment, water supply, weight (drill and stand), weight (no fuel), wet use, width, working width.",
+      "refs": [
+        "page:/hire/sort/price-desc"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-31",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/sort/price-desc (6 repeated items linking to /hire/category/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: none; shown in the item: sort.",
+      "refs": [
+        "page:/hire/sort/price-desc"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-32",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/sort/price-desc (4 repeated items linking to /hire/sort/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: sort; shown in the item: none.",
+      "refs": [
+        "page:/hire/sort/price-desc"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-33",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/stump-grinder-13hp (3 repeated items linking to /hire/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: availability today, delivery and collection, engine, minimum hire, per week, power, refundable deposit, weekend, weight; shown in the item: batteries, blade length, collection bag, cutting capacity, depth settings, feed, max branch diameter, mounting, per day, working width.",
+      "refs": [
+        "page:/hire/stump-grinder-13hp"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-34",
+      "kind": "listing_detail_fields",
+      "summary": "On /hire/wood-chipper-100mm (3 repeated items linking to /hire/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: availability today, delivery and collection, engine, minimum hire, per week, power, refundable deposit, weekend, weight; shown in the item: batteries, blade length, collection bag, cutting capacity, depth settings, grinding depth below ground, max stump diameter, per day, width, working width.",
+      "refs": [
+        "page:/hire/wood-chipper-100mm"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-35",
+      "kind": "listing_detail_fields",
+      "summary": "On /kits (3 repeated items linking to /hire/{} pages): labelled fields on the linked pages whose value is NOT shown in the listing item: availability today, delivery and collection, impact energy, minimum hire, per day, per week, power, refundable deposit, weekend, weight; shown in the item: blade diameter, blows per minute, chuck, cord length, max cutting depth, max cutting length, max hole, concrete, max hole, steel, mitre, modes, suited to slabs up to, water.",
+      "refs": [
+        "page:/kits"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-36",
+      "kind": "deep_pages",
+      "summary": "10 page(s) are 3 or more link steps from the entry page: /hire/aluminium-scaffold-tower-4m/availability, /hire/cordless-drill-driver-kit-18v/availability, /hire/cordless-hedge-trimmer-60cm/availability, /hire/diamond-core-drill-152mm/availability, /hire/electric-concrete-mixer-140l/availability, /hire/electric-scissor-lift-6m/availability.",
+      "refs": [
+        "page:/hire/aluminium-scaffold-tower-4m/availability",
+        "page:/hire/cordless-drill-driver-kit-18v/availability",
+        "page:/hire/cordless-hedge-trimmer-60cm/availability",
+        "page:/hire/diamond-core-drill-152mm/availability",
+        "page:/hire/electric-concrete-mixer-140l/availability",
+        "page:/hire/electric-scissor-lift-6m/availability"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:inspector"
+      }
+    },
+    {
+      "id": "observation-37",
+      "kind": "trial_summary",
+      "summary": "Trial task-2-r1 (item_set): failed; attribution tool_interface (/hire was loaded and contains the decisive text, but the model's observation did not); 13 page views against a minimum of about 6; 13 model requests; evidence pages visited 3 of 5.",
+      "refs": [
+        "trial:task-2-r1"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:trace-analysis"
+      }
+    },
+    {
+      "id": "observation-38",
+      "kind": "trial_summary",
+      "summary": "Trial task-3-r1 (item_set): failed; attribution tool_interface (/hire was loaded and contains the decisive text, but the model's observation did not); 13 page views against a minimum of about 6; 13 model requests; evidence pages visited 4 of 5.",
+      "refs": [
+        "trial:task-3-r1"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:trace-analysis"
+      }
+    },
+    {
+      "id": "observation-39",
+      "kind": "trial_summary",
+      "summary": "Trial task-4-r1 (item_set): failed; attribution tool_interface (/hire was loaded and contains the decisive text, but the model's observation did not); 12 page views against a minimum of about 4; 12 model requests; evidence pages visited 2 of 3.",
+      "refs": [
+        "trial:task-4-r1"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:trace-analysis"
+      }
+    },
+    {
+      "id": "observation-40",
+      "kind": "trial_aggregate",
+      "summary": "3 non-void investigation trials: tool_interface 3; median extra page views over the minimum 7; 3 failed.",
+      "refs": [
+        "trial:task-2-r1",
+        "trial:task-3-r1",
+        "trial:task-4-r1"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:trace-analysis"
+      }
+    },
+    {
+      "id": "observation-41",
+      "kind": "kind_summary",
+      "summary": "Tasks of kind item_set: 0 of 3 passed; median extra page views 7.",
+      "refs": [
+        "trial:task-2",
+        "trial:task-3",
+        "trial:task-4"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "rule:trace-analysis"
+      }
+    },
+    {
+      "id": "observation-42",
+      "kind": "trial_detail",
+      "summary": "Trial task-2-r1 detail: tool_interface, 13 pages visited, passed=False",
+      "refs": [
+        "trial:task-2-r1"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "tool:investigator"
+      }
+    },
+    {
+      "id": "observation-43",
+      "kind": "page_text",
+      "summary": "Visible text of /hire (4292 characters)",
+      "refs": [
+        "page:/hire"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "tool:investigator"
+      }
+    },
+    {
+      "id": "observation-44",
+      "kind": "trial_step",
+      "summary": "Trial task-2-r1 step 1: page /, actions ['click']",
+      "refs": [
+        "trial:task-2-r1#step1"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "tool:investigator"
+      }
+    },
+    {
+      "id": "observation-45",
+      "kind": "trial_step",
+      "summary": "Trial task-2-r1 step 2: page /hire, actions ['find_elements']",
+      "refs": [
+        "trial:task-2-r1#step2"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "tool:investigator"
+      }
+    },
+    {
+      "id": "observation-46",
+      "kind": "page_text",
+      "summary": "Visible text of /hire/cordless-drill-driver-kit-18v (2362 characters)",
+      "refs": [
+        "page:/hire/cordless-drill-driver-kit-18v"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "tool:investigator"
+      }
+    },
+    {
+      "id": "observation-47",
+      "kind": "observation_vs_dom",
+      "summary": "Trial task-2-r1 step 1 (/): 12 of 30 page facts/headings absent from the model's observation",
+      "refs": [
+        "trial:task-2-r1#step1",
+        "page:/"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "tool:investigator"
+      }
+    },
+    {
+      "id": "observation-48",
+      "kind": "page_text",
+      "summary": "Visible text of /hire/sds-plus-rotary-hammer-26mm (2310 characters)",
+      "refs": [
+        "page:/hire/sds-plus-rotary-hammer-26mm"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "tool:investigator"
+      }
+    },
+    {
+      "id": "observation-49",
+      "kind": "page_text",
+      "summary": "Visible text of /hire/cordless-hedge-trimmer-60cm (2134 characters)",
+      "refs": [
+        "page:/hire/cordless-hedge-trimmer-60cm"
+      ],
+      "provenance": {
+        "mode": "live",
+        "source": "tool:investigator"
+      }
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "hypothesis-1",
+      "tier": "verifiable",
+      "statement": "Refundable deposit is not shown on the /hire listing (16 items linking to /hire detail pages) and is only visible after 1 hop on the individual /hire detail pages (e.g. $100 on cordless-drill-driver-kit-18v, $150 on sds-plus-rotary-hammer-26mm), forcing agents to open each machine page to compare deposits.",
+      "claim_kind": "info_only_after_k_hops",
+      "prediction": null,
+      "status": "unverifiable",
+      "observation_ids": [
+        "observation-6",
+        "observation-46",
+        "observation-48",
+        "observation-42"
+      ],
+      "verification": {
+        "verifier": "deterministic:info_only_after_k_hops",
+        "result": "unverifiable",
+        "evidence": []
+      },
+      "promoted": false,
+      "provenance": {
+        "mode": "live",
+        "source": "llm:muse-spark-1.3"
+      }
+    },
+    {
+      "id": "hypothesis-2",
+      "tier": "verifiable",
+      "statement": "Minimum hire is not shown on the /hire listing and is only visible after 1 hop on individual /hire detail pages (e.g. Minimum hire 1 day on detail pages), forcing exhaustive per-item visits that agents truncated (2 of 3 evidence pages visited).",
+      "claim_kind": "info_only_after_k_hops",
+      "prediction": null,
+      "status": "unverifiable",
+      "observation_ids": [
+        "observation-6",
+        "observation-46",
+        "observation-48",
+        "observation-49",
+        "observation-39"
+      ],
+      "verification": {
+        "verifier": "deterministic:info_only_after_k_hops",
+        "result": "unverifiable",
+        "evidence": []
+      },
+      "promoted": false,
+      "provenance": {
+        "mode": "live",
+        "source": "llm:muse-spark-1.3"
+      }
+    },
+    {
+      "id": "hypothesis-3",
+      "tier": "verifiable",
+      "statement": "Delivery and collection status (Optional vs Required for this item) is not shown on the /hire listing and is only visible after 1 hop on individual /hire detail pages (e.g. Optional on drill, rotary hammer pages), forcing exhaustive visits; trials visited 4 of 5 evidence pages and failed.",
+      "claim_kind": "info_only_after_k_hops",
+      "prediction": null,
+      "status": "unverifiable",
+      "observation_ids": [
+        "observation-6",
+        "observation-46",
+        "observation-48",
+        "observation-38"
+      ],
+      "verification": {
+        "verifier": "deterministic:info_only_after_k_hops",
+        "result": "unverifiable",
+        "evidence": []
+      },
+      "promoted": false,
+      "provenance": {
+        "mode": "live",
+        "source": "llm:muse-spark-1.3"
+      }
+    },
+    {
+      "id": "hypothesis-4",
+      "tier": "novel",
+      "statement": "Agents asked to compare the refundable deposit, minimum hire period and delivery requirements across the hire machines use nearly their whole step budget opening each machine's detail page, because those three fields appear only on the detail pages. Showing the same three facts on the listing cards would let the comparison be made from the listing pages. (Unverified; owner-selected.)",
+      "claim_kind": null,
+      "prediction": "With the three fields shown on the listing cards, the agent answers each of the four frozen comparison tasks with at most 75% of the model requests it needs on the unmodified site and without losing any evidence-backed pass; the effect is larger than the run-to-run difference between the unmodified repeat and the historical baseline.",
+      "status": "unverified",
+      "observation_ids": [
+        "observation-6"
+      ],
+      "verification": null,
+      "promoted": false,
+      "provenance": {
+        "mode": "live",
+        "source": "owner"
+      }
+    }
+  ],
+  "findings": [],
+  "proposals": [
+    {
+      "id": "change-1",
+      "basis": "unverified_hypothesis",
+      "source_id": "hypothesis-4",
+      "label": "EXPERIMENTAL \u2014 OWNER-SELECTED change; not an investigator-verified finding",
+      "status": "measured",
+      "validation": "unvalidated",
+      "expected_effect": "With the three fields shown on the listing cards, the agent answers each of the four frozen comparison tasks with at most 75% of the model requests it needs on the unmodified site and without losing any evidence-backed pass; the effect is larger than the run-to-run difference between the unmodified repeat and the historical baseline.",
+      "risks": [
+        "Owner-selected exploratory change: the underlying hypothesis is unverified",
+        "A verified pattern removed from the page is not an effect on agents",
+        "Adds text to the page, so layouts get busier"
+      ],
+      "auto_applicable": true,
+      "owner_selected": true,
+      "exploratory": true,
+      "change": {
+        "ops": [
+          "copy_field_to_listing",
+          "copy_field_to_listing",
+          "copy_field_to_listing"
+        ]
+      },
+      "approved": true,
+      "provenance": {
+        "mode": "live",
+        "source": "owner"
+      }
+    }
+  ],
+  "evaluation": {
+    "state": "evaluated",
+    "reason": null,
+    "rule": {
+      "id": "paired-signflip-v1",
+      "primary": "evidence_backed_pass_rate",
+      "secondary": "model_requests",
+      "alpha": 0.1,
+      "min_pairs": 4,
+      "pass_delta_floor": 0.25,
+      "request_reduction_floor": 0.25,
+      "void_policy": "a pair with any void trial in either arm is excluded and listed",
+      "causal_scope": "measured on these frozen tasks, this agent profile and model, this snapshot and patch only"
+    },
+    "results": [
+      {
+        "proposal_id": "change-1",
+        "verdict": "inconclusive",
+        "reason": "neither the improvement nor the regression rule is met",
+        "pairs": 4,
+        "pass_delta": 0.75,
+        "request_change": -0.4314,
+        "p_pass": 0.25,
+        "p_requests": 0.125,
+        "holdout_consistent": true,
+        "by_partition": {
+          "holdout": {
+            "mean_request_change": -7,
+            "pairs": 1,
+            "pass_delta": 1.0
+          },
+          "investigation": {
+            "mean_request_change": -5,
+            "pairs": 3,
+            "pass_delta": 0.6667
+          }
+        },
+        "rule_preregistered_at_freeze": true,
+        "excluded": [],
+        "measured": true,
+        "effect_mode": "live"
+      }
+    ],
+    "exploratory": {
+      "rules_id": "exploratory-listing-v1",
+      "rules_sha256": "f8c25e461c64eb87c0bd77c5e0a38dce0a5721ddfd471a2d2eb35efc4aa6ea99",
+      "label": "EXPLORATORY - owner-selected change; separate from the frozen paired-signflip-v1 rule; never its replacement",
+      "verdict": "not_supported",
+      "reasons": [
+        "missed: task-2: primary_meets_floor, exceeds_noise"
+      ],
+      "tasks": {
+        "baseline": {
+          "task-1": {
+            "page_views": 13,
+            "pass": false,
+            "requests": 13
+          },
+          "task-2": {
+            "page_views": 13,
+            "pass": false,
+            "requests": 13
+          },
+          "task-3": {
+            "page_views": 13,
+            "pass": false,
+            "requests": 13
+          },
+          "task-4": {
+            "page_views": 12,
+            "pass": false,
+            "requests": 12
+          }
+        },
+        "patched": {
+          "task-1": {
+            "page_views": 6,
+            "pass": true,
+            "requests": 6
+          },
+          "task-2": {
+            "page_views": 11,
+            "pass": false,
+            "requests": 11
+          },
+          "task-3": {
+            "page_views": 7,
+            "pass": true,
+            "requests": 7
+          },
+          "task-4": {
+            "page_views": 5,
+            "pass": true,
+            "requests": 5
+          }
+        },
+        "placebo": {
+          "task-1": {
+            "page_views": 12,
+            "pass": false,
+            "requests": 12
+          },
+          "task-2": {
+            "page_views": 12,
+            "pass": false,
+            "requests": 12
+          },
+          "task-3": {
+            "page_views": 13,
+            "pass": true,
+            "requests": 13
+          },
+          "task-4": {
+            "page_views": 13,
+            "pass": true,
+            "requests": 13
+          }
+        }
+      },
+      "missing_or_void": [],
+      "noise_estimate_requests": 1,
+      "controls_within_tolerance": true,
+      "affected": {
+        "task-1": {
+          "drift_flag": false,
+          "exceeds_noise": true,
+          "historical_requests": 13,
+          "page_views_lower": true,
+          "pass_not_lost": true,
+          "patched_requests": 6,
+          "placebo_requests": 12,
+          "primary_meets_floor": true,
+          "secondary_meets_floor": true
+        },
+        "task-2": {
+          "drift_flag": false,
+          "exceeds_noise": false,
+          "historical_requests": 13,
+          "page_views_lower": true,
+          "pass_not_lost": true,
+          "patched_requests": 11,
+          "placebo_requests": 12,
+          "primary_meets_floor": false,
+          "secondary_meets_floor": false
+        },
+        "task-3": {
+          "drift_flag": false,
+          "exceeds_noise": true,
+          "historical_requests": 13,
+          "page_views_lower": true,
+          "pass_not_lost": true,
+          "patched_requests": 7,
+          "placebo_requests": 13,
+          "primary_meets_floor": true,
+          "secondary_meets_floor": true
+        },
+        "task-4": {
+          "drift_flag": false,
+          "exceeds_noise": true,
+          "historical_requests": 12,
+          "page_views_lower": true,
+          "pass_not_lost": true,
+          "patched_requests": 5,
+          "placebo_requests": 13,
+          "primary_meets_floor": true,
+          "secondary_meets_floor": true
+        }
+      },
+      "plan": {
+        "placebo_tasks": [
+          "task-1",
+          "task-2",
+          "task-3",
+          "task-4"
+        ],
+        "affected": [
+          "task-1",
+          "task-2",
+          "task-3",
+          "task-4"
+        ],
+        "same_shape_controls": [],
+        "detail_controls": []
+      },
+      "rules": {
+        "id": "exploratory-listing-v1",
+        "label": "EXPLORATORY - owner-selected change; separate from the frozen paired-signflip-v1 rule; never its replacement",
+        "primary_comparison": "contemporaneous unmodified repeat (placebo) vs patched trial, per affected task, model requests",
+        "secondary_comparison": "imported historical baseline vs patched trial (same tasks)",
+        "effect_floor": 0.25,
+        "support": "for EVERY affected task: patched requests <= (1 - effect_floor) x placebo requests; (placebo - patched) strictly exceeds the noise estimate; patched page views < placebo page views; no evidence-backed pass lost relative to the placebo",
+        "noise_estimate": "max over the placebo tasks of |placebo requests - historical baseline requests|",
+        "same_shape_control_tolerance_requests": 3,
+        "detail_control_tolerance_requests": 1,
+        "controls": "same-shape controls (have a placebo): |patched - placebo| requests <= tolerance; detail-page controls (no placebo): |patched - historical baseline| requests <= tolerance",
+        "drift": "affected task: |placebo - historical| / historical > 0.25 is flagged as drift",
+        "conflict": "any affected task where the two comparisons fall on opposite sides of the effect floor, or a drift flag, while the primary comparison would support H1",
+        "verdicts": {
+          "consistent_with_h1": "all support conditions hold, controls inside tolerance, no conflict",
+          "not_supported": "an affected task misses a support condition, or a pass is lost (the contemporaneous comparison governs; a supportive historical comparison alone changes nothing)",
+          "inconclusive_conflicting_comparisons": "the primary comparison would support H1 but the secondary conflicts or drift is flagged: no support is claimed",
+          "uninterpretable": "a control moved beyond tolerance, a trial is missing or void, or the control is not identical to the baseline"
+        },
+        "claims": "allowed: 'consistent with / not consistent with a reduction in browsing effort for this exploratory change on this site and these tasks'; never 'proved' or a general improvement"
+      },
+      "rules_match_code": true
+    }
+  },
+  "spend": {
+    "state": "ok",
+    "basis": "calculated at published prices from the spend ledger; not a bill",
+    "committed_usd": 2.002312,
+    "ceiling_usd": 2.0,
+    "remaining_usd": -0.002312,
+    "open_reservations": 0,
+    "by_arm_usd": {
+      "baseline": 0.740503,
+      "other": 0.124322,
+      "patched": 0.401599,
+      "placebo": 0.735888
+    }
+  },
+  "storefront": {
+    "state": "omitted",
+    "reason": "captured pages exceed the size limits or contain content a static view must not carry"
+  },
+  "effects": [
+    {
+      "id": "effect-1",
+      "proposal_id": "change-1",
+      "verdict": "inconclusive",
+      "n_pairs": 4,
+      "note": "neither the improvement nor the regression rule is met",
+      "measured": true,
+      "mode": "live"
+    }
+  ],
+  "investigation": {
+    "skipped": false,
+    "reason": null,
+    "finished": true,
+    "incomplete": null,
+    "tool_calls": 11,
+    "model_requests": 12,
+    "model": "muse-spark-1.3",
+    "mode": "live",
+    "cost_usd": 0.124322,
+    "rejected_hypotheses": 0
+  },
+  "statement": "Findings are website properties verified by deterministic checks; the trials that support them show an ASSOCIATION (the pattern coincided with failed or inefficient runs that nothing else explains), not a proven cause - only the pre-registered retest after a fix speaks to cause. Novel hypotheses are unverified and can only back EXPERIMENTAL proposals. A measured effect shows a change moved metrics on the measured tasks; it does not verify a hypothesis' mechanism.",
+  "audience": "public-demo",
+  "demo_case": {
+    "id": "ironbark-s1",
+    "label": "Recorded Ironbark S1 \u00b7 sensitivity experiment",
+    "recorded_on": "2026-11-01",
+    "note": "Owner-selected listing change; improvement not established. EXP-C and R1 are separate experiments."
+  }
+}

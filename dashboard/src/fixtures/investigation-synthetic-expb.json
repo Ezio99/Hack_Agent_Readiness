@@ -214,6 +214,10 @@
     },
     "state": "evaluated"
   },
+  "evidence_origin": {
+    "presentation": "recorded",
+    "provider": "scripted"
+  },
   "exported_at": "2026-01-01T00:00:00+00:00",
   "findings": [],
   "hypotheses": [
@@ -523,6 +527,7 @@
       }
     ]
   },
+  "storyboard": null,
   "synthetic": true,
   "tasks": [
     {

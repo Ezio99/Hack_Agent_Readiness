@@ -38,6 +38,9 @@ export interface InsightSuggestion { text: string; fields: string[]; tasks: stri
 export interface Insights { schema: "owner-insights-v1"; summary: string; site_properties: InsightProperty[]; task_effort: InsightEffort[]; friction_tasks: string[]; possible_causes: InsightCause[]; suggestions: InsightSuggestion[]; strict_findings: number;
   provenance: { run_id: string; mode: string; source_run: string | null; task_sources: Record<string, number>; investigator_model: string | null; investigation_status: string | null; frozen_tasks: number; note: string } }
 export interface InvestigationExport {
+  evidence_origin?: { provider: "real_model" | "dev_fixture" | "scripted" | "unknown"; presentation: "recorded" };
+  demo_case?: { id: string; label: string; recorded_on: string; note: string };
+  storyboard?: { task_id: string; arm: string; steps: { event: number; category: string; text: string; ok: boolean }[]; strict_pass: boolean; evidence_supported: boolean; note: string } | null;
   insights?: Insights | null;
   /** live evaluations only: the user's goal, the client briefing and how well the selected tasks serve the goal (absent in older exports and in non-live modes) */
   goal?: string | null; client_context?: { text: string; sha256: string | null; label: string } | null; goal_coverage?: GoalCoverage | null;
@@ -59,7 +62,7 @@ export type Storefront = { state: "ok"; note: string; original: { pages: Record<
 
 export type Parsed = { ok: true; data: InvestigationExport } | { ok: false; error: string };
 const ARRAYS = ["modes", "notices", "stages", "tasks", "observations", "hypotheses", "findings", "proposals", "effects"] as const;
-const FORBIDDEN = /"(truth|criteria|criterion|expected_answer|answer|answers|transcript|journey|tool_log|api_key|authorization)"\s*:/i;
+const FORBIDDEN = /"(truth|criteria|criterion|expected|evidence_texts|evidence_paths|expected_answer|answer|answers|transcript|journey|tool_log|api_key|authorization|raw_trace|raw_traces|messages|dom|model_output|proposed_actions)"\s*:/i;
 
 /** Parse and validate an exported file. Refuses other schemas and files that contain forbidden private keys, so a raw run artifact can never be displayed by mistake. */
 export function parseInvestigation(text: string): Parsed {
@@ -75,10 +78,10 @@ export function parseInvestigation(text: string): Parsed {
 export const MODE_LABEL: Record<Mode, string> = { scripted: "SCRIPTED", mock: "MOCK", recorded: "RECORDED", live: "LIVE" };
 
 /** Descriptive pass tally for one arm over trials that are not void (void trials are never website results). */
-export function tally(rows: TrialRow[]): { passed: number; usable: number; void: number; requests: number | null } {
+export function tally(rows: TrialRow[]): { passed: number; usable: number; supported: number; void: number; requests: number | null } {
   const usable = rows.filter((r) => !r.void);
   const reqs = usable.map((r) => r.model_requests).filter((x): x is number => typeof x === "number");
-  return { passed: usable.filter((r) => r.passed).length, usable: usable.length, void: rows.length - usable.length, requests: reqs.length ? reqs.reduce((a, b) => a + b, 0) / reqs.length : null };
+  return { supported: usable.filter((r) => r.passed && r.evidence_backed).length, passed: usable.filter((r) => r.passed).length, usable: usable.length, void: rows.length - usable.length, requests: reqs.length ? reqs.reduce((a, b) => a + b, 0) / reqs.length : null };
 }
 
 /** Baseline vs patched over tasks that have a usable trial in BOTH arms. Descriptive only: the verdict comes from the pre-registered rule in `evaluation`. */
@@ -116,7 +119,8 @@ export function classifyOutcome(d: InvestigationExport): OutcomeClasses {
   const verified: ClassItem[] = d.findings.map((f) => ({ text: f.statement, refs: [f.id, ...f.support.map((s) => s.ref), ...f.observation_ids], note: `attributed to the ${f.attribution}; ${f.structural_proof ? "structural proof" : `${f.support.length} independent supporting task(s)`}` }));
   const rows = d.tasks.flatMap((t) => t.baseline.filter((r) => !r.void).map((r) => ({ t, r })));
   const passed = rows.filter((x) => x.r.passed).length;
-  if (rows.length) verified.push({ text: `${passed} of ${rows.length} selected task(s) passed, graded against answers computed by code from the captured copy of the site`, refs: rows.map((x) => x.r.trial_id), note: "a graded outcome of those tasks only; not a statement about the whole goal" });
+  const supported = rows.filter((x) => x.r.passed && x.r.evidence_backed).length;
+  if (rows.length) verified.push({ text: `${passed} of ${rows.length} strict passes; ${supported} evidence-supported passes, graded against answers computed by code from the captured copy of the site`, refs: rows.map((x) => x.r.trial_id), note: "a graded outcome of those tasks only; not a statement about the whole goal" });
   const observed: ClassItem[] = d.hypotheses.filter((h) => h.tier === "verifiable" && h.status === "supported" && !h.promoted).map((h) => ({ text: h.statement, refs: [h.id, ...trialRefs(h)], note: `the checker supported it, but only ${trialRefs(h).length} task(s) show a cost, below the promotion rule; not a finding` }));
   if (d.insights) { if (rows.length) observed.push({ text: `Measured effort and strict grades for ${rows.length} task(s) are in the table above`, refs: rows.map((x) => x.r.trial_id) }); }
   else for (const x of rows) if (x.r.model_requests != null) observed.push({ text: `${x.t.question} — ${x.r.model_requests} model request(s), ${x.r.page_views ?? "?"} page view(s), ${x.r.passed ? "passed" : "failed"}${x.r.attribution && x.r.attribution !== "success" ? ` (${x.r.attribution})` : ""}`, refs: [x.r.trial_id], note: "observed effort; not a cause" });

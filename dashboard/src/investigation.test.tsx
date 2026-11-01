@@ -61,14 +61,14 @@ describe("investigation view", () => {
   it("never presents scripted effects as measured", () => {
     const h = html(base());
     expect(h).toContain("NOT MEASURED");
-    expect(h).not.toContain("MEASURED (live)");
+    expect(h).not.toContain("RECORDED result · provider labelled above");
     expect(h).toContain("fixed before any trial ran");
     expect(h).toContain("it is not evidence about agent behaviour");
   });
   it("shows MEASURED only for live effects", () => {
     const d = base();
     d.evaluation.results[0].measured = true; d.evaluation.results[0].effect_mode = "live"; d.modes = ["live"];
-    expect(html(d)).toContain("MEASURED (live)");
+    expect(html(d)).toContain("RECORDED result · provider labelled above");
   });
   it("handles an incomplete investigation with no evaluation or report", () => {
     const d = base();
@@ -104,7 +104,7 @@ describe("investigation view", () => {
   });
   it("starts empty with a loader and the export instructions (no data bundled eagerly)", () => {
     const h = renderToStaticMarkup(<InvestigationPage />);
-    expect(h).toContain("No report loaded"); expect(h).toContain("readiness investigate export"); expect(h).toContain("EXP-B synthetic (public view)"); expect(h).toContain("nothing is fetched, uploaded or published"); expect(h).toContain("Load real export"); expect(h).toContain("never kept in session storage");
+    expect(h).toContain("Loading recorded Ironbark evidence"); expect(h).toContain("readiness investigate export"); expect(h).toContain("EXP-B synthetic (public view)"); expect(h).toContain("nothing is fetched, uploaded or published"); expect(h).toContain("Load real export"); expect(h).toContain("never kept in session storage");
   });
 });
 
@@ -151,12 +151,12 @@ describe("EXP-B journey: three arms, two verdicts", () => {
     expect(h).toContain("No verified findings"); expect(h).not.toContain("Verified finding</span>");
     expect(h).toContain("not</strong> an investigator-verified finding"); expect(h).toContain("not blind to the owner");
   });
-  it("never claims support when the comparisons conflict, and never as MEASURED (live) for scripted data", () => {
+  it("never claims support when the comparisons conflict, and never as RECORDED result · provider labelled above for scripted data", () => {
     const d = expb();
     d.evaluation.exploratory!.verdict = "inconclusive_conflicting_comparisons"; d.evaluation.exploratory!.reasons = ["no support is claimed"];
     const h = html(d);
     expect(h).toContain("the comparisons conflict, no support claimed"); expect(h).not.toContain("Consistent with the hypothesis");
-    expect(h).toContain("NOT MEASURED"); expect(h).not.toContain("MEASURED (live)");
+    expect(h).toContain("NOT MEASURED"); expect(h).not.toContain("RECORDED result · provider labelled above");
   });
   it("shows an uninterpretable run honestly, with missing trials listed", () => {
     const d = expb();
@@ -242,7 +242,7 @@ describe("investigation-first journey", () => {
     vi.stubGlobal("window", { location: { hash: "" }, addEventListener() {}, removeEventListener() {}, scrollTo() {} });
     const h = renderToStaticMarkup(<App />);
     vi.unstubAllGlobals();
-    expect(h).toContain("Agent Readiness investigation"); expect(h).not.toContain("Recorded experiment data · Task 007");
+    expect(h).toContain("Loading recorded Ironbark evidence"); expect(h).not.toContain("Recorded experiment data · Task 007");
     expect(h.indexOf("Investigation</a>")).toBeLessThan(h.indexOf("Historical experiments"));
     for (const l of ["Task 007 overview", "Scope comparison", "Evidence &amp; method", "Recorded replay", "Protected scanner"]) expect(h.indexOf(l)).toBeGreaterThan(h.indexOf("Historical experiments"));
   });
@@ -357,10 +357,10 @@ describe("PR 54 accessibility regressions (found by an axe-core run)", () => {
 });
 
 describe("provenance labels", () => {
-  const live = () => { const d = structuredClone(publicFixture) as unknown as InvestigationExport; delete d.synthetic; d.run.mode = "live"; d.modes = ["live"]; return d; };
+  const live = () => { const d = structuredClone(publicFixture) as unknown as InvestigationExport; delete d.synthetic; delete d.evidence_origin; d.run.mode = "live"; d.modes = ["live"]; return d; };
   it("labels a live non-synthetic export as a live experiment and never as synthetic", () => {
     const h = html(live());
-    expect(h).toContain("LIVE EXPERIMENT · real model trials"); expect(h).not.toContain("SYNTHETIC DEMO DATA"); expect(h).not.toContain("SYNTHETIC FIXTURE");
+    expect(h).toContain("RECORDED EVIDENCE · model provenance unverified"); expect(h).not.toContain("SYNTHETIC DEMO DATA"); expect(h).not.toContain("SYNTHETIC FIXTURE");
   });
   it("labels fixtures as synthetic demo data and never as a live experiment", () => {
     for (const f of [fixture, expbFixture, publicFixture]) { const h = html(structuredClone(f) as unknown as InvestigationExport); expect(h).toContain("SYNTHETIC DEMO DATA"); expect(h).not.toContain("LIVE EXPERIMENT"); }

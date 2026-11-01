@@ -2,6 +2,10 @@
 
 **Authoritative current state (2026-10-29, Task 015 stack and 015f merged; Task 016 next).** Verify against the repository, not this text. Full historical checkpoints are preserved verbatim in [docs/archive/STATUS-through-2026-10-29.md](docs/archive/STATUS-through-2026-10-29.md); architecture, execution paths, frozen artifacts and technical debt are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## Four P0 demo improvements (2026-11-01)
+
+Recorded Ironbark S1 is now the default backend-free entry; setup/file loading are under Advanced. Provenance is derived conservatively from archived provider records, with explicit fixture/unknown labels. Strict and evidence-supported results are separate. Contemporary S1 2/4→3/4 supported passes and 50→29 requests are shown with improvement not established; frozen/exploratory verdicts unchanged. A sanitized nine-event agent storyboard is derived from archived execution evidence. [Implementation/checks and safe demo-build command: Report 016q](collaboration/reports/016q-p0-recorded-demo.md). No evaluation-engine changes or paid calls. No P1/P2 changes. Historical files unchanged. Ordinary local distribution contains pre-existing ignored legacy replays and fails the guard; the documented clean demo build excludes these and passes. No merge/deployment authorized.
+
 ## Demo readiness and experimental freeze (2026-11-01)
 
 Owner accepted S1 as completed sensitivity evidence and froze experimental development. **No further paid experiment, merge or deployment authorized.** Commits `b6d7534` and `f61c02a` verified and pushed to `live-m1-llm-evaluation`; PR #60 remains draft/unmerged. Read-only rendered dashboard audit and P0/P1/P2 plan: [Report 016p](collaboration/reports/016p-demo-readiness-audit.md). No UI changes implemented. Dashboard checks: 138 tests passed; actual default page and S1 file loading inspected without starting evaluations.

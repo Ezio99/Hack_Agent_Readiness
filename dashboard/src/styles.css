@@ -256,3 +256,13 @@ h2.step { font-size: 1.5rem; }
 .diagsummary{margin:1rem 0;padding:.8rem 1.1rem;border:1px solid #d1d5db;border-left:5px solid #b45309;border-radius:6px;background:#fffbeb}.diagsummary.diag-clear{border-left-color:#15803d;background:#f0fdf4}.diagsummary h3{margin:.6rem 0 .2rem;font-size:1rem}.diagsummary p{margin:.2rem 0}.diag-metrics{display:flex;flex-wrap:wrap;gap:1.2rem;list-style:none;padding:0;margin:.8rem 0 0}.diag-metrics li{display:flex;flex-direction:column}.diag-metrics strong{font-size:1.4rem}.diag-metrics span{font-size:.8rem;color:#4b5563}
 .triage th[scope=row]{font-weight:600}.triage details{font-weight:400;margin-top:.3rem}.triage summary{font-size:.8rem;color:#4338ca;cursor:pointer}.effortbar{display:inline-flex;width:160px;height:.7rem;background:#f3f4f6;vertical-align:middle;border-radius:3px;overflow:hidden}.eb-min{background:#9ca3af}.eb-extra{background:#b45309}.insights details{display:inline-block;margin-left:.4rem}.insights summary{font-size:.8rem;color:#4338ca;cursor:pointer}
 .triage .pill{white-space:nowrap}
+
+/* Recorded demo: keep setup secondary and the evidence sequence readable. */
+.advanced { margin: 2rem 0; padding: 1rem; border: 1px solid var(--line, #ddd); border-radius: 12px; }
+.advanced > summary { cursor: pointer; font-weight: 700; }
+.storyboard { background: #f4f6ff; border-left: 4px solid #4f46e5; border-radius: 10px; padding: 1rem; margin: 1rem 0; }
+.storyboard li { margin: .6rem 0; overflow-wrap: anywhere; }
+.storyboard small { color: #50566b; }
+.investigation, .hero-copy, .herometrics { min-width: 0; }
+button:focus-visible, summary:focus-visible { outline: 3px solid #4338ca; outline-offset: 3px; }
+@media (max-width: 600px) { .hero2 { display: block; } .drops-compact { grid-template-columns: 1fr; } .storyboard { padding: .7rem; } .steprail ol { flex-wrap: wrap; } }

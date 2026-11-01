@@ -25,11 +25,11 @@ describe("goal and coverage in the rendered report", () => {
   it("states the goal, PARTIAL coverage, covered and uncovered items and the named limitation near the top, and never presents task success as goal success", () => {
     const d = live(); d.goal_coverage = cov();
     const h = html(d);
-    expect(h).toContain(d.goal!); expect(h).toContain("Goal coverage: PARTIAL"); expect(h).toContain("2 of 2 selected tasks passed");
+    expect(h).toContain(d.goal!); expect(h).toContain("Goal coverage: PARTIAL"); expect(h).toContain("2 of 2 strict passes; 2 evidence-supported passes");
     expect(h).toContain("goal coverage <strong class=\"cov-word cov-partial\">PARTIAL</strong>");
     expect(h).toContain("1 of 3 of the goal&#x27;s items covered"); expect(h).toContain("✓ Saw A"); expect(h).toContain("✗ Saw B");
     expect(h).toContain("ordering (verifier limitation)"); expect(h).toContain("not proof that the goal was achieved");
-    expect(h).not.toContain("baseline pass rate 100%"); expect(h).toContain("Selected tasks passed");
+    expect(h).not.toContain("baseline pass rate 100%"); expect(h).toContain("Baseline: strict / evidence-supported");
     expect(h.indexOf("Goal coverage: PARTIAL")).toBeLessThan(h.indexOf("1 · The website being evaluated"));
   });
   it("marks tasks answerable from the home page as easy and says so in the banner", () => {
@@ -41,7 +41,7 @@ describe("goal and coverage in the rendered report", () => {
     const d = live(); const h = html(d);
     expect(h).toContain("goal coverage not recorded in this export"); expect(h).toContain("Goal coverage is not recorded in this export"); expect(h).not.toContain("Goal coverage: PARTIAL");
     const none = live(); delete none.goal; const h2 = html(none);
-    expect(h2).not.toContain("Evaluation goal"); expect(h2).toContain("baseline pass rate");
+    expect(h2).not.toContain("Evaluation goal"); expect(h2).toContain("baseline strict passes");
     expect(parseInvestigation(JSON.stringify(d)).ok).toBe(true);
   });
   it("shows an insufficient coverage status and the client context as unverified", () => {

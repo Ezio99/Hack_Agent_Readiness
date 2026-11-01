@@ -13,6 +13,7 @@ from pathlib import Path
 
 from .flow import STAGES as FLOW_STAGES
 from .models import now
+from .presentation import origin, storyboard
 from .evaluate import exploratory
 from .report import NOTICES, notices_for
 from .run import InvestigationRun
@@ -21,7 +22,7 @@ from .trials.stage import VOID_STATUSES
 
 SCHEMA = "investigation-dashboard-v1"
 MODES = ("scripted", "mock", "recorded", "live")
-FORBIDDEN_KEYS = {"truth", "criteria", "criterion", "expected", "expected_answer", "answer", "answers", "transcript", "journey", "tool_log", "api_key", "authorization", "evidence_texts", "evidence_paths"}
+FORBIDDEN_KEYS = {"truth", "criteria", "criterion", "expected", "expected_answer", "answer", "answers", "transcript", "journey", "tool_log", "api_key", "authorization", "evidence_texts", "evidence_paths", "raw_trace", "raw_traces", "messages", "dom", "model_output", "proposed_actions"}
 SECRET = re.compile(r"META_MODEL_API_KEY|\bsk-[A-Za-z0-9]{16,}|Bearer\s+[A-Za-z0-9._-]{16,}|/home/[a-z]|/Users/[A-Za-z]|/tmp/")
 
 
@@ -230,6 +231,7 @@ def export_run(run_dir: Path | str) -> dict:
     rep_inv = (final or interim or {}).get("investigation") or inv
     out = {
         "schema": SCHEMA, "exported_at": now(),
+        "evidence_origin": origin(run), "storyboard": storyboard(run),
         "run": {"id": state["id"], "target": state["target"], "mode": state["mode"], "created_at": state.get("created_at"), "outcome": (final or interim or {}).get("outcome") or ev.outcome(), "investigation_status": (final or interim or {}).get("investigation_status"), "report_source": report_source,
                 "complete": report_source == "report-final" and all(s.get("status") == "done" for s in state["stages"].values()), "missing_artifacts": sorted(set(missing))},
         "modes": modes, "notices": notices_for(run, modes),
