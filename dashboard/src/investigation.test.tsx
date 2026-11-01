@@ -238,8 +238,8 @@ describe("public-demo export", () => {
 
 describe("investigation-first journey", () => {
   const pub = () => structuredClone(publicFixture) as unknown as InvestigationExport;
-  it("Investigation is the default page and the legacy views are a secondary Historical experiments section", () => {
-    vi.stubGlobal("window", { location: { hash: "" }, addEventListener() {}, removeEventListener() {}, scrollTo() {} });
+  it("Investigation remains accessible and legacy views remain in Historical experiments", () => {
+    vi.stubGlobal("window", { location: { hash: "#/investigation" }, addEventListener() {}, removeEventListener() {}, scrollTo() {} });
     const h = renderToStaticMarkup(<App />);
     vi.unstubAllGlobals();
     expect(h).toContain("Loading recorded Ironbark evidence"); expect(h).not.toContain("Recorded experiment data · Task 007");

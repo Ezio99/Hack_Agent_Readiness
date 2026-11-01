@@ -1,0 +1,16 @@
+/* Midnight / Electric Cyan. Standalone tokens for possible future dashboard reuse. */
+@font-face{font-family:Geist;src:url('./assets/Geist.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+.replay-studio{
+  --canvas:#080D16;
+  --surface:#101B2B;
+  --elevated:#19283B;
+  --accent:#66D9EF;
+  --text:#F5F8FC;
+  --secondary:#A5B4C8;
+  --friction:#E9B86C;
+  --success:#83D6AE;
+  --border:rgba(165,180,200,.16);
+  --font:Geist,Inter,'Segoe UI',Arial,sans-serif;
+  --radius:24px;
+  --shadow:0 32px 100px #0005;
+}

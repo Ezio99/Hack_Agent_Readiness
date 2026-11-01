@@ -1,3 +1,4 @@
+import { ReplayStudio } from "./studio/ReplayStudio";
 import { useEffect, useState } from "react";
 import { Overview } from "./pages/Overview";
 import { Scopes } from "./pages/Scopes";
@@ -7,7 +8,7 @@ import { ScannerPage } from "./pages/Scanner";
 import { InvestigationPage } from "./pages/Investigation";
 import { provenance } from "./data/task007";
 
-export type Page = "overview" | "scopes" | "evidence" | "replay" | "scanner" | "investigation";
+export type Page = "studio" | "overview" | "scopes" | "evidence" | "replay" | "scanner" | "investigation";
 const MAIN: { id: Page; label: string } = { id: "investigation", label: "Investigation" };
 /** Earlier experiments, kept as a secondary section. */
 const HISTORICAL: { id: Page; label: string }[] = [
@@ -17,10 +18,10 @@ const HISTORICAL: { id: Page; label: string }[] = [
   { id: "replay", label: "Recorded replay" },
   { id: "scanner", label: "Protected scanner" },
 ];
-const PAGES = [MAIN, ...HISTORICAL];
+const PAGES = [{ id: "studio" as Page, label: "Replay Studio" }, MAIN, ...HISTORICAL];
 const fromHash = (): Page => {
   const h = window.location.hash.replace(/^#\/?/, "");
-  return (PAGES.find((p) => p.id === h)?.id ?? MAIN.id) as Page;
+  return (PAGES.find((p) => p.id === h)?.id ?? "studio") as Page;
 };
 
 export default function App() {
@@ -35,6 +36,7 @@ export default function App() {
     setPage(p);
     window.scrollTo({ top: 0 });
   };
+  if (page === "studio") return <ReplayStudio openReport={() => go("investigation")} />;
   return (
     <>
       <a className="skip" href="#main">Skip to content</a>
@@ -47,7 +49,7 @@ export default function App() {
           <p className="badge" role="note">{page === "investigation" ? "Recorded Ironbark demo" : "Recorded experiment data · Task 007 · not live inference"}</p>
         </div>
         <nav className="wrap" aria-label="Sections">
-          <ul className="tabs">
+          <ul className="tabs"><li><a href="#/studio" onClick={e => { e.preventDefault(); go("studio"); }}>Replay Studio</a></li>
             <li><a href={`#/${MAIN.id}`} aria-current={page === MAIN.id ? "page" : undefined} onClick={(e) => { e.preventDefault(); go(MAIN.id); }}>{MAIN.label}</a></li>
             <li className="history-menu"><details><summary>Historical experiments</summary><ul>
             {HISTORICAL.map((p) => (
