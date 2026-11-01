@@ -139,3 +139,17 @@ def test_the_pre_registered_inputs_name_no_task_answer_and_cite_a_listing_observ
     text = abtest.HYPOTHESIS + abtest.PREDICTION
     assert "Electric scissor lift" not in text and "$200" not in text and abtest.CITES == ["obs-8d20d6d5d9"]
     assert abtest.LABELS == ["refundable deposit", "minimum hire", "delivery and collection"]
+
+
+# --- the DEV PROVIDER banner (presentation/provenance only) --------------------------------------------------------------------------------------------------------------------------
+def test_a_run_pointed_at_a_loopback_endpoint_is_stamped_and_every_report_and_export_leads_with_the_dev_notice(tmp_path):
+    from agent_readiness.agent import ModelConfig
+    from agent_readiness.investigate import flow
+    from agent_readiness.investigate.report import DEV_ARTIFACT, DEV_NOTICE, build_report, notices_for
+    real, _, _ = flow.build(tmp_path, "real", "site-1", mode="live", options={"model_config": ModelConfig(), "total_cap_usd": 1.0})
+    dev, _, _ = flow.build(tmp_path, "dev", "site-1", mode="live", options={"model_config": ModelConfig(base_url="http://127.0.0.1:8199/v1"), "total_cap_usd": 1.0})
+    flow.build(tmp_path, "dev", "site-1", mode="live", options={"model_config": ModelConfig(base_url="http://127.0.0.1:9999/v1"), "total_cap_usd": 1.0})                  # resumed on another port: no conflict
+    assert not real.has_artifact(DEV_ARTIFACT) and dev.has_artifact(DEV_ARTIFACT)
+    assert notices_for(real, ["live"])[0].startswith("LIVE:") and DEV_NOTICE not in notices_for(real, ["live"])
+    assert notices_for(dev, ["live"])[0] == DEV_NOTICE and notices_for(dev, ["live"])[1].startswith("LIVE:")
+    assert build_report(dev)["notices"][0] == DEV_NOTICE and DEV_NOTICE not in build_report(real)["notices"]

@@ -13,6 +13,17 @@ NOTICES = {
 }
 
 
+DEV_NOTICE = ("DEV PROVIDER: this run used the loopback stand-in for the model endpoint (a fixture, not a model). The plumbing, spend gate and ledger are real; token counts and cost are calculated from "
+              "fixture output, and nothing here says anything about model behaviour. Labels below that say LIVE describe the code path, not a model.")
+DEV_ARTIFACT = "dev-provider"          # written once by `flow.build` when a live run is pointed at a loopback endpoint; constant content so a resumed run on another port is not a conflict
+
+
+def notices_for(run: InvestigationRun, modes) -> list[str]:
+    """The mode notices of a report/export. A run that talked to the loopback stand-in carries the DEV PROVIDER notice FIRST, wherever the report is produced (job, CLI driver, replay)."""
+    out = [NOTICES[m] for m in modes]
+    return [DEV_NOTICE, *out] if run.has_artifact(DEV_ARTIFACT) else out
+
+
 def build_report(run: InvestigationRun) -> dict:
     ev = run.evidence
     modes = sorted({x.provenance.mode for coll in (ev.observations, ev.hypotheses, ev.findings, ev.proposals, ev.effects) for x in coll.values()} | {run.mode})
@@ -20,7 +31,7 @@ def build_report(run: InvestigationRun) -> dict:
     novel = [h for h in ev.hypotheses.values() if h.tier == "novel"]
     return {
         "schema": SCHEMA, "run_id": run.state["id"], "target": run.state["target"], "mode": run.mode, "created_at": now(), "outcome": ev.outcome(),
-        "notices": [NOTICES[m] for m in modes],
+        "notices": notices_for(run, modes),
         "observations": [o.model_dump() for o in ev.observations.values()],
         "hypotheses": {
             "verifiable": [{**h.model_dump(), "label": f"hypothesis — {h.status}"} for h in verifiable],

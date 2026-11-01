@@ -33,8 +33,7 @@ CONTEXT_LABEL = "CLIENT-SUPPLIED CONTEXT: a briefing written by the site owner. 
 LIVE_NOTICE = ("LIVE EVALUATION: the language model was called for task generation, browsing and investigation. Cost is calculated from reported tokens at published prices (not a bill) and is hard-capped "
                "by the approved budget. Findings are labelled by how they were checked: verified by the deterministic checker, supported hypothesis, or unvalidated proposal.")
 LIVE_TARGETS = ("ironbark", "flask-docs")           # registered targets that may be started as live jobs (Flask only when its saved snapshot exists: see `targets.live_target_ids`)
-DEV_NOTICE = ("DEV PROVIDER: this run used the loopback stand-in for the model endpoint (a fixture, not a model). The plumbing, spend gate and ledger are real; token counts and cost are calculated from "
-              "fixture output, and nothing here says anything about model behaviour. Labels below that say LIVE describe the code path, not a model.")
+from ..investigate.report import DEV_NOTICE          # the one definition (also stamped into every report/export of a run that used the loopback stand-in)
 ACTIVE = ("queued", "running")
 
 
@@ -377,7 +376,8 @@ class JobManager:
             raise JobError(409, "The evaluation has not produced a run yet.")
         data = exporter.export_run(self.root / job_id)
         exporter.check_clean(data)
-        data["notices"] = [MOCK_NOTICE if job["mode"] == "mock" else (DEV_NOTICE if self._dev(job) else LIVE_NOTICE), *data.get("notices", [])]
+        lead = MOCK_NOTICE if job["mode"] == "mock" else (DEV_NOTICE if self._dev(job) else LIVE_NOTICE)
+        data["notices"] = [lead, *[n for n in data.get("notices", []) if n != lead]]
         augment_export(InvestigationRun(self.root / job_id), data, job["goal"], job.get("context"), job["grant"]["context_sha256"] if job.get("grant") else None)
         return data
 

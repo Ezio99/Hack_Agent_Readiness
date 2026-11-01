@@ -6,6 +6,7 @@ The live model client is built lazily: nothing reads the key or touches the netw
 from __future__ import annotations
 
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from ..agent import ModelConfig
 from ..ledger import Halt
@@ -16,6 +17,7 @@ from .inspect.stage import run_inspect
 from .llm import LLMRequest, RecordingClient
 from .llm.meta import DEFAULT_REASONING_EFFORT, INPUT_OVERHEAD_TOKENS, MetaClient, reservation_bound_usd
 from .pipeline import Context, Pipeline, Stage
+from .report import DEV_ARTIFACT
 from .run import InvestigationRun
 from .evaluate import stage as evaluator
 from .investigator import stage as investigator
@@ -78,6 +80,8 @@ def build(root: Path, run_id: str, site: str, *, mode: str, options: dict | None
         raise Halt(f"investigation {run_id} was created in {run.state['mode']} mode; it cannot be resumed as {mode}")
     cfg = opts.get("model_config") or ModelConfig()
     live = mode == "live"
+    if live and urlsplit(cfg.base_url).hostname in ("127.0.0.1", "localhost", "::1"):
+        run.write_artifact(DEV_ARTIFACT, {"loopback_stand_in": True})                         # provenance: this run's "model" was the zero-spend dev provider; every report/export says so
     ceiling = opts.get("total_cap_usd", 3.0)                       # ONE hard ceiling on the shared spend ledger for the whole investigation
     llm = LazyMeta(run, cfg, opts.get("allow_model_calls", False), TASKGEN_RUN_CAP_USD, ceiling, max_requests=propose.BATCHES) if live else None
     if live and "investigator_llm" not in opts:
