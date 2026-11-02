@@ -10,9 +10,11 @@ import { History, type HistoryItem } from './History';
 
 type Outcome = 'evidence_supported_pass' | 'strict_pass' | 'not_passed' | string;
 export interface TaskRow { arm: 'Original' | 'Modified'; task: number; state: string; outcome: Outcome; requests: number | null; page_views: number | null; steps: number | null; elapsed_seconds: number | null }
-export interface Rep { index: number; state: string; tasks: TaskRow[]; assessment: { frozen_rule: string | null; exploratory: string | null; evidence_origin: string | null } | null }
+export interface GradingV2 { label: string; faithful: boolean; tasks: { arm: 'Original' | 'Modified'; task: number; outcome: string; reasons: string[] }[]; assessment: { frozen_rule: string | null; exploratory: string | null } | null }
+export interface Rep { index: number; state: string; tasks: TaskRow[]; assessment: { frozen_rule: string | null; exploratory: string | null; evidence_origin: string | null } | null; grading_v2?: GradingV2 | null }
+type ArmV2 = { completed: number; evidence_supported_passes: number; strict_passes: number };
 interface ArmSummary { planned: number; completed: number; failed: number; evidence_supported_passes: number; strict_passes: number; requests_total: number; requests_mean: number | null; page_views_mean: number | null; steps_mean: number | null; elapsed_mean: number | null }
-export interface Job { id: string; state: string; mode: 'live' | 'rehearsal' | null; repetitions: number | null; recovery_required?: boolean; created_at: number; started_at: number | null; finished_at: number | null; reps: Rep[]; summary: Record<'Original' | 'Modified', ArmSummary> }
+export interface Job { id: string; state: string; mode: 'live' | 'rehearsal' | null; repetitions: number | null; recovery_required?: boolean; created_at: number; started_at: number | null; finished_at: number | null; reps: Rep[]; summary: Record<'Original' | 'Modified', ArmSummary>; summary_v2?: ({ label: string; repetitions: number } & Record<'Original' | 'Modified', ArmV2>) | null }
 interface Worker { state: 'idle' | 'busy' | 'unavailable'; job: string | null; started_at?: number | null; repetitions?: number; finished_runs?: number; total_runs?: number | null; estimated_remaining_seconds?: number | null }
 interface Config { worker?: Worker; repetition_duration?: { seconds: number; basis: 'measured' | 'first genuine run' | 'default'; samples: number }; available: boolean; mode: 'live' | 'rehearsal' | null; access?: 'public' | 'operator'; reason?: string | null; repetitions: number[]; model: string; agent_profile: string; tasks: { task: number; question: string; limits?: { max_steps?: number; timeout_seconds?: number } }[]; remaining_repetitions: number; active: string | null }
 
@@ -44,15 +46,19 @@ function cell(t: TaskRow | undefined) {
   return { cls: 'miss', glyph: '✕', text: 'Not passed' };
 }
 
+const V2_TEXT: Record<string, string> = { evidence_supported_pass: 'pass', strict_pass: 'correct, evidence not observed', not_passed: 'not passed' };
+
 export function ProgressGrid({ rep, questions, onSelect, selected }: { rep: Rep; questions: Record<number, string>; onSelect?: (s: Selection) => void; selected?: Selection | null }) {
   const find = (arm: string, task: number) => rep.tasks.find(t => t.arm === arm && t.task === task);
+  const v2 = (arm: string, task: number) => rep.grading_v2?.faithful ? rep.grading_v2.tasks.find(t => t.arm === arm && t.task === task) : undefined;
   return <table className="ws-grid" aria-label={`Repetition ${rep.index} task progress`}>
     <thead><tr><th scope="col">Task</th><th scope="col"><span className="swatch o" aria-hidden="true" />Original</th><th scope="col"><span className="swatch m" aria-hidden="true" />Modified</th></tr></thead>
     <tbody>{[1, 2, 3, 4].map(n => <tr key={n}><th scope="row"><span className="ws-task-n">Task {n}</span><small>{questions[n] ?? ''}</small></th>
       {(['Original', 'Modified'] as const).map(arm => { const t = find(arm, n), c = cell(t), key = arm.toLowerCase() as 'original' | 'modified';
         const isSel = selected?.repetition === rep.index && selected.arm === key && selected.task === n;
         const body = <><span className="ws-glyph" aria-hidden="true">{c.glyph}</span><span className="ws-cell-text"><strong>{c.text}</strong>
-          {t?.state === 'completed' && <small>{t.requests ?? '–'} requests · {t.page_views ?? '–'} pages{t.elapsed_seconds != null ? ` · ${Math.round(t.elapsed_seconds)} s` : ''}</small>}</span></>;
+          {t?.state === 'completed' && <small>{t.requests ?? '–'} requests · {t.page_views ?? '–'} pages{t.elapsed_seconds != null ? ` · ${Math.round(t.elapsed_seconds)} s` : ''}</small>}
+          {(() => { const d = v2(arm, n); return d && t?.state === 'completed' && d.outcome !== t.outcome ? <small className="ws-v2-diff">Grader v2 (post-hoc): {V2_TEXT[d.outcome] ?? d.outcome}</small> : null; })()}</span></>;
         return <td key={arm} className={`ws-cell ${c.cls}${isSel ? ' selected' : ''}`}>
           {onSelect && t && t.state !== 'pending' ? <button className="ws-cell-button" aria-label={`Watch ${arm} task ${n}, repetition ${rep.index}: ${c.text}`} aria-pressed={isSel} onClick={() => onSelect({ repetition: rep.index, arm: key, task: n })}>{body}</button> : <div className="ws-cell-button static">{body}</div>}</td>; })}
     </tr>)}</tbody>
@@ -66,7 +72,8 @@ export function Metrics({ job }: { job: Job }) {
   const metric = (name: string, a: number | null, b: number | null, unit = '') => <div className="ws-metric"><dt>{name}</dt><dd><span className="o">{a ?? '–'}{a != null ? unit : ''}</span><i aria-hidden="true">→</i><span className="m">{b ?? '–'}{b != null ? unit : ''}</span></dd></div>;
   return <section className="ws-results" aria-label="Evaluation metrics">
     <div className="ws-headline">
-      <article><h3>Task success · evidence-supported</h3><div className="ws-big"><span className="o">{o.evidence_supported_passes}/{o.completed}</span><i aria-hidden="true">→</i><span className="m">{m.evidence_supported_passes}/{m.completed}</span></div><p>Original → Modified{rate(o) != null && rate(m) != null ? ` · ${rate(o)}% → ${rate(m)}%` : ''}</p></article>
+      <article><h3>Task success · evidence-supported</h3><div className="ws-big"><span className="o">{o.evidence_supported_passes}/{o.completed}</span><i aria-hidden="true">→</i><span className="m">{m.evidence_supported_passes}/{m.completed}</span></div><p>Original → Modified{rate(o) != null && rate(m) != null ? ` · ${rate(o)}% → ${rate(m)}%` : ''}</p>
+        {job.summary_v2 && <p className="ws-v2-line" title={job.summary_v2.label}>Grader v2, post-hoc rescore: <span className="o">{job.summary_v2.Original.evidence_supported_passes}/{job.summary_v2.Original.completed}</span> → <span className="m">{job.summary_v2.Modified.evidence_supported_passes}/{job.summary_v2.Modified.completed}</span> <small>(official result above: grader v1)</small></p>}</article>
       <article><h3>Model requests per task</h3><div className="ws-big"><span className="o">{o.requests_mean ?? '–'}</span><i aria-hidden="true">→</i><span className="m">{m.requests_mean ?? '–'}</span></div><p>{fewer != null ? (fewer >= 0 ? `${fewer}% fewer on Modified` : `${-fewer}% more on Modified`) : 'Awaiting completed tasks'} · {o.requests_total} → {m.requests_total} total</p></article>
     </div>
     <dl className="ws-metrics">
@@ -223,7 +230,7 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
           <p><strong>Agent.</strong> Browser Use agent driven by <code>{config?.model ?? 'muse-spark-1.3'}</code> with profile <code>{config?.agent_profile ?? 'suite-v2-compat2'}</code>; each task is limited to {config?.tasks[0]?.limits?.max_steps ?? 14} steps and {config?.tasks[0]?.limits?.timeout_seconds ?? 240} seconds; no retries.</p>
           <p><strong>Tasks.</strong> The same four frozen tasks run on both versions, in a counterbalanced order, for every repetition:</p>
           <ol>{(config?.tasks ?? []).map(t => <li key={t.task}>{t.question}</li>)}</ol>
-          <p><strong>Grading.</strong> An independent grader checks each answer against ground truth the agent never sees. “Evidence-supported” also requires that the agent actually viewed the pages holding the answer. Agent self-assessment is ignored.</p>
+          <p><strong>Grading.</strong> An independent grader checks each answer against ground truth the agent never sees. “Evidence-supported” also requires that the agent actually viewed the pages holding the answer. Agent self-assessment is ignored. Official grades use grader v1 (the version pre-registered for these tasks). Grader v2, shown separately as a post-hoc rescore, also accepts a correct answer that adds detail consistent with the site, and still rejects wrong, hedged, contradictory or multiple-candidate answers.</p>
           <p><strong>Sites.</strong> Original and Modified are frozen snapshots of a controlled test site; Modified shows the refundable deposit, minimum hire and delivery fields on the listing cards (an owner-selected change).</p>
           <p><strong>Live view.</strong> Pages, screenshots, actions and the agent’s stated goals are an allowlisted projection of each run’s own trace; prompts, page source and credentials are never shown.</p>
           <p><strong>Isolation.</strong> Each browser runs in its own network namespace that can reach only the snapshot mirror; it has no internet, DNS, local-service or provider access. Model credentials never enter the browser.</p>
@@ -279,6 +286,7 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
                   <a className="ws-link" href={`/api/ironbark/jobs/${job.id}/repetitions/${rep.index}/export`} download={`${job.id.slice(0, 13)}-rep${rep.index}.json`}>Export JSON</a></span>}</header>
               <ProgressGrid rep={rep} questions={questions} onSelect={watch} />
               {rep.assessment && <p className="ws-verdicts">Frozen comparison rule: <strong>{rep.assessment.frozen_rule ?? 'unavailable'}</strong> · Exploratory listing rule: <strong>{rep.assessment.exploratory ?? 'unavailable'}</strong> · Evidence: {rep.assessment.evidence_origin === 'real_model' ? 'real model' : rep.assessment.evidence_origin ?? 'unverified'}</p>}
+              {rep.grading_v2?.faithful && rep.grading_v2.assessment && <p className="ws-verdicts ws-v2-verdicts" title={rep.grading_v2.label}>Grader v2, post-hoc (not pre-registered): frozen rule applied to v2 grades <strong>{rep.grading_v2.assessment.frozen_rule ?? 'unavailable'}</strong> · exploratory rule <strong>{rep.grading_v2.assessment.exploratory ?? 'unavailable'}</strong></p>}
             </article>)}</div>
           </div>}
 

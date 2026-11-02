@@ -111,6 +111,49 @@ def verified_export(root: Path, run_id: str) -> dict:
     return data
 
 
+GRADING_V2_LABEL = ('Post-hoc rescore with grader v2 (accepts correct answers that add consistent detail). Not pre-registered: the official grades '
+                    'and verdicts of this evaluation are grader v1.')
+
+
+def grading_v2(root: Path, run_id: str) -> dict:
+    """Labelled grader_v2 view of a finished repetition, derived read-only from its stored answers and cached beside the job files (never inside
+    the run). Shown only when the rescore reproduces every stored v1 grade and verdict; otherwise it is withheld, never approximated."""
+    cached = root / (run_id + '.grader-v2.json')
+    if cached.is_file():
+        try:
+            return json.loads(cached.read_text())
+        except ValueError:
+            pass
+    from ..grading import rescore
+    doc = rescore.rescore_run(root / run_id)
+    view = {'label': GRADING_V2_LABEL, 'grader': doc['graders']['v2'], 'faithful': doc['faithful'], 'tasks': [], 'assessment': None}
+    if doc['faithful']:
+        aliases = {tid: i + 1 for i, tid in enumerate(sorted({r['task_id'] for r in doc['trials']}))}
+        for r in doc['trials']:
+            if r['arm'] in ('placebo', 'patched') and not r['void'] and r['v2']:
+                v = r['v2']
+                view['tasks'].append({'arm': 'Original' if r['arm'] == 'placebo' else 'Modified', 'task': aliases[r['task_id']],
+                                      'outcome': 'evidence_supported_pass' if v['evidence_backed'] else 'strict_pass' if v['passed'] else 'not_passed', 'reasons': v['reasons']})
+        comps = doc['comparisons']
+        frozen = next(iter((comps.get('frozen') or {}).values()), None)
+        view['assessment'] = {'frozen_rule': frozen and frozen['v2_post_hoc']['verdict'], 'exploratory': (comps.get('exploratory') or {}).get('v2_post_hoc')}
+    ironbark_runner.write(cached, view)
+    return view
+
+
+def summarize_v2(reps: list[dict]) -> dict | None:
+    """Per-arm grader_v2 totals over repetitions that have a faithful v2 view; None when none has."""
+    views = [r['grading_v2'] for r in reps if (r.get('grading_v2') or {}).get('faithful')]
+    if not views:
+        return None
+    out = {}
+    for arm in ('Original', 'Modified'):
+        rows = [t for v in views for t in v['tasks'] if t['arm'] == arm]
+        out[arm] = {'completed': len(rows), 'evidence_supported_passes': sum(t['outcome'] == 'evidence_supported_pass' for t in rows),
+                    'strict_passes': sum(t['outcome'] in ('evidence_supported_pass', 'strict_pass') for t in rows)}
+    return {'label': GRADING_V2_LABEL, 'repetitions': len(views), **out}
+
+
 def _assessment(data: dict) -> dict:
     ev = data.get('evaluation') or {}
     frozen = (ev.get('results') or [{}])[0]
@@ -349,9 +392,14 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
                         out['assessment'] = _assessment(verified_export(root, rep['run_id']))
                     except Exception:
                         out['state'] = 'unverified'
+                        continue
+                    try:
+                        out['grading_v2'] = grading_v2(root, rep['run_id'])
+                    except Exception:
+                        out['grading_v2'] = None              # the official v1 results never depend on the rescore
         out = {'id': job_id, 'state': held['state'], 'recovery_required': recovery_required, 'mode': job['mode'], 'repetitions': job['repetitions'],
                'created_at': job['created_at'], 'started_at': job.get('started_at'), 'finished_at': job.get('finished_at'),
-               'reps': reps, 'summary': summarize(reps)}
+               'reps': reps, 'summary': summarize(reps), 'summary_v2': summarize_v2(reps)}
         if held['state'] in TERMINAL:
             cache.setdefault(job_id, {})['status'] = out
         return out

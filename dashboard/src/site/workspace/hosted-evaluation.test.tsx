@@ -85,3 +85,39 @@ it('shows an available worker and duration estimates from the measured basis', a
   expect(host.textContent).toContain('about 47 min');
   expect(button(host, 'Run evaluation').disabled).toBe(false);
 });
+
+it('shows grader v2 only as a labelled post-hoc line beside the official v1 result, and marks only cells where it differs', async () => {
+  const v2 = { label: 'Post-hoc rescore with grader v2', faithful: true, assessment: { frozen_rule: 'inconclusive', exploratory: 'consistent_with_h1' },
+    tasks: [{ arm: 'Original' as const, task: 1, outcome: 'evidence_supported_pass', reasons: ['matches_truth_with_consistent_detail'] }, { arm: 'Modified' as const, task: 1, outcome: 'evidence_supported_pass', reasons: ['matches_truth'] }] };
+  const done = job({ state: 'completed', finished_at: 61,
+    reps: [{ index: 1, state: 'completed', assessment: { frozen_rule: 'inconclusive', exploratory: 'consistent_with_h1', evidence_origin: 'real_model' }, grading_v2: v2,
+      tasks: [{ arm: 'Original', task: 1, state: 'completed', outcome: 'not_passed', requests: 13, page_views: 13, steps: 14, elapsed_seconds: 62 },
+              { arm: 'Modified', task: 1, state: 'completed', outcome: 'evidence_supported_pass', requests: 6, page_views: 6, steps: 7, elapsed_seconds: 32 }] }],
+    summary: { Original: arm({ completed: 1, requests_total: 13, requests_mean: 13 }), Modified: arm({ completed: 1, evidence_supported_passes: 1, strict_passes: 1, requests_total: 6, requests_mean: 6 }) },
+    summary_v2: { label: 'Post-hoc rescore with grader v2', repetitions: 1, Original: { completed: 1, evidence_supported_passes: 1, strict_passes: 1 }, Modified: { completed: 1, evidence_supported_passes: 1, strict_passes: 1 } } });
+  localStorage.setItem('ironbark-hosted-job', done.id);
+  server(url => url.endsWith('/config') ? config() : url.endsWith('/jobs') ? [] : url.endsWith('/insights') ? { state: 'unavailable' } : done);
+  const { host } = await mount();
+  const big = host.querySelector('.ws-big')!.textContent!;
+  expect(big).toContain('0/1');                                                     // the official headline stays grader v1
+  const line = host.querySelector('.ws-v2-line')!.textContent!;
+  expect(line).toContain('Grader v2, post-hoc rescore: 1/1 → 1/1');
+  expect(line).toContain('official result above: grader v1');
+  const diffs = [...host.querySelectorAll('.ws-v2-diff')].map(e => e.textContent);
+  expect(diffs).toEqual(['Grader v2 (post-hoc): pass']);                           // Original task 1 only; Modified agrees with v1
+  expect(host.querySelector('.ws-v2-verdicts')!.textContent).toContain('not pre-registered');
+});
+
+it('hides grader v2 entirely when the rescore was not faithful', async () => {
+  const done = job({ state: 'completed', finished_at: 61,
+    reps: [{ index: 1, state: 'completed', assessment: { frozen_rule: 'inconclusive', exploratory: null, evidence_origin: 'real_model' },
+      grading_v2: { label: 'x', faithful: false, tasks: [], assessment: null },
+      tasks: [{ arm: 'Original', task: 1, state: 'completed', outcome: 'not_passed', requests: 13, page_views: 13, steps: 14, elapsed_seconds: 62 }] }],
+    summary: { Original: arm({ completed: 1, requests_total: 13, requests_mean: 13 }), Modified: arm() }, summary_v2: null });
+  localStorage.setItem('ironbark-hosted-job', done.id);
+  server(url => url.endsWith('/config') ? config() : url.endsWith('/jobs') ? [] : url.endsWith('/insights') ? { state: 'unavailable' } : done);
+  const { host } = await mount();
+  expect(host.querySelector('.ws-v2-line')).toBeNull();
+  expect(host.querySelector('.ws-v2-diff')).toBeNull();
+  expect(host.querySelector('.ws-v2-verdicts')).toBeNull();
+});

@@ -112,3 +112,23 @@ def test_cli_writes_private_and_public_documents_outside_the_run(tmp_path):
     names = sorted(p.name for p in out.iterdir())
     assert names == [f"{run.dir.name}.grader-v2.json", f"{run.dir.name}.grader-v2.public.json"]
     assert not any(p.name.endswith("grader-v2.json") for p in run.dir.rglob("*"))
+
+
+def test_hosted_view_is_labelled_cached_beside_the_run_and_withheld_when_unfaithful(tmp_path):
+    from agent_readiness.hosted import api
+    run, _ = evaluated_run(tmp_path)
+    before = fingerprint(run.dir)
+    view = api.grading_v2(run.dir.parent, run.dir.name)
+    assert fingerprint(run.dir) == before and (run.dir.parent / f"{run.dir.name}.grader-v2.json").is_file()
+    assert view["faithful"] and "Not pre-registered" in view["label"] and view["grader"]["version"] == "2"
+    assert view["tasks"] and all(t["arm"] == "Modified" and t["outcome"] == "evidence_supported_pass" for t in view["tasks"])   # this run has no placebo arm
+    s = api.summarize_v2([{"grading_v2": view}])
+    assert s["Modified"]["evidence_supported_passes"] == s["Modified"]["completed"] == len(view["tasks"]) and s["Original"]["completed"] == 0
+    assert api.summarize_v2([{"grading_v2": {**view, "faithful": False}}, {"grading_v2": None}]) is None
+    copy = tmp_path / "tampered-root"
+    shutil.copytree(run.dir, copy / run.dir.name)
+    target = next((copy / run.dir.name / "artifacts" / "trials").glob("patched-*.json"))
+    rec_ = json.loads(target.read_text()); rec_["evaluation"]["passed"] = True
+    os.chmod(target, 0o600); target.write_text(json.dumps(rec_))
+    bad = api.grading_v2(copy, run.dir.name)
+    assert bad["faithful"] is False and bad["tasks"] == [] and bad["assessment"] is None

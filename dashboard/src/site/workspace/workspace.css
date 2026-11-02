@@ -274,3 +274,9 @@ button.ws-cell-button:hover{background:var(--paper)}
 @media (max-width:700px){.history-compare{grid-template-columns:1fr}}
 .ws .wrap{max-width:1360px}
 @media (max-width:640px){.ws-jobbar{position:static;margin-top:0;padding-top:0}.ws-jobbar::after{display:none}.ws-agent-anchor{scroll-margin-top:76px}}
+
+.ws-v2-line{margin:8px 0 0;font-size:12.5px;color:var(--ink-2)}
+.ws-v2-line .o{color:var(--original)}.ws-v2-line .m{color:var(--modified)}
+.ws-v2-line small{color:var(--ink-2)}
+.ws-v2-diff{display:block;margin-top:2px;font-style:italic;color:var(--ink-2)}
+.ws-v2-verdicts{margin-top:4px;color:var(--ink-2)}
