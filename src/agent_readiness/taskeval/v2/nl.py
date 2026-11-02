@@ -24,7 +24,8 @@ from . import lexicon as L
 
 GATE_ID = "gate-nl-1"
 OP_WORDS = {"lt": "below", "le": "at most", "gt": "above", "ge": "at least", "eq": "equal to"}
-TOKEN = re.compile(r"\$\d[\d,]*(?:\.\d+)?|\d[\d,]*(?:\.\d+)?|[a-z]+(?:'[a-z]+)?|\$")
+TOKEN = re.compile(r"\$\d[\d,]*(?:\.\d+)?|\d[\d,]*(?:\.\d+)?|[a-z]+(?:'[a-z]+)?|\$|[.?!;:]")
+BOUNDARY = frozenset(".?!;:")
 
 
 # --------------------------------------------------------------------------------------------------------------------------- text utilities
@@ -199,7 +200,9 @@ class Analyser:
     def _negative(self, toks: list[str], i: int) -> bool:
         """A mention is negative when a negative cue occurs within NEGATIVE_WINDOW tokens before it, in the same clause."""
         lo = max(0, i - L.NEGATIVE_WINDOW)
-        return any(t in L.NEGATIVE_CUES or t.endswith("n't") for t in toks[lo:i])
+        window = toks[lo:i]
+        cut = max((k for k, t in enumerate(window) if t in BOUNDARY), default=-1)          # a negative cue never reaches across a sentence boundary
+        return any(t in L.NEGATIVE_CUES or t.endswith("n't") for t in window[cut + 1:])
 
     def _value_mentions(self, toks: list[str], value: str, taken: set[int]) -> list[tuple[int, int]]:
         p = tokens(value)
@@ -355,6 +358,10 @@ class Analyser:
                 continue
             n["used"] = True
             used |= set(range(n["i"], n["j"]))
+            for m in numbers:                                                  # the same value stated again ("a budget of $200 ... $200 or less")
+                if m is not n and not m["used"] and m["value"] == n["value"] and m["money"] == n["money"] and m["comparator"] in (None,) + ((n["comparator"][0],) if n["comparator"] else ()):
+                    if m["comparator"] is None or m["comparator"][0] == op:
+                        m["used"] = True
             if len(owners) > 1:
                 return Trace(comp, "ambiguous", f"'{' '.join(toks[n['i']:n['j']])}' could be any of {', '.join(owners)}; the customer does not say which")
             if n["comparator"] is None:

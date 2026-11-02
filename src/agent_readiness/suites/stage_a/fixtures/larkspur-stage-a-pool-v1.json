@@ -1,0 +1,571 @@
+{
+ "label": "DEVELOPER-WRITTEN FIXTURE - NOT model output. Larkspur Stage A pool for deterministic multi-round loop tests and rehearsals.",
+ "schema_version": "taskplan-schema-v3",
+ "tasks": [
+  {
+   "intent_id": "p01",
+   "persona": "career_switcher",
+   "journey": "fit_schedule",
+   "scenario": "I work weekdays, so I need a beginner course on a Saturday. Which ones are there?",
+   "task_type": "filter",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "level",
+     "operator": "equals",
+     "value": "Beginner",
+     "values": null
+    },
+    {
+     "attribute": "class day",
+     "operator": "equals",
+     "value": "Saturday",
+     "values": null
+    }
+   ],
+   "ranking": null,
+   "answer_form": "list",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "p02",
+   "persona": "career_switcher",
+   "journey": "plan_commitment",
+   "scenario": "I'm switching careers and don't own any equipment. Which beginner courses include materials?",
+   "task_type": "filter",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "level",
+     "operator": "equals",
+     "value": "Beginner",
+     "values": null
+    },
+    {
+     "attribute": "materials",
+     "operator": "equals",
+     "value": "Included",
+     "values": null
+    }
+   ],
+   "ranking": null,
+   "answer_form": "list",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "p03",
+   "persona": "career_switcher",
+   "journey": "match_level",
+   "scenario": "I've done a little before. Which intermediate course takes the fewest weeks?",
+   "task_type": "best",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "level",
+     "operator": "equals",
+     "value": "Intermediate",
+     "values": null
+    }
+   ],
+   "ranking": {
+    "attribute": "duration",
+    "direction": "lowest"
+   },
+   "answer_form": "single",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "p04",
+   "persona": "recent_graduate",
+   "journey": "find_affordable",
+   "scenario": "I'm on a graduate budget. Which courses cost $200 or less?",
+   "task_type": "filter",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "course fee",
+     "operator": "at_most",
+     "value": "$200",
+     "values": null
+    }
+   ],
+   "ranking": null,
+   "answer_form": "list",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "p05",
+   "persona": "recent_graduate",
+   "journey": "plan_commitment",
+   "scenario": "I want something quick for my CV. Which courses run for four weeks or less?",
+   "task_type": "filter",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "duration",
+     "operator": "at_most",
+     "value": "4 weeks",
+     "values": null
+    }
+   ],
+   "ranking": null,
+   "answer_form": "list",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "p06",
+   "persona": "recent_graduate",
+   "journey": "fit_schedule",
+   "scenario": "I'm only free on Mondays or Wednesdays. Which courses meet on one of those days?",
+   "task_type": "filter",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "class day",
+     "operator": "one_of",
+     "value": null,
+     "values": [
+      "Monday",
+      "Wednesday"
+     ]
+    }
+   ],
+   "ranking": null,
+   "answer_form": "list",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "p07",
+   "persona": "budget_learner",
+   "journey": "find_affordable",
+   "scenario": "What is the cheapest course at the Riverside campus?",
+   "task_type": "best",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "campus",
+     "operator": "equals",
+     "value": "Riverside",
+     "values": null
+    }
+   ],
+   "ranking": {
+    "attribute": "course fee",
+    "direction": "lowest"
+   },
+   "answer_form": "single",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "p08",
+   "persona": "budget_learner",
+   "journey": "check_availability",
+   "scenario": "I don't want to pay for a course that's full. Which courses under $250 still have places?",
+   "task_type": "filter",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "course fee",
+     "operator": "less_than",
+     "value": "$250",
+     "values": null
+    },
+    {
+     "attribute": "seats left",
+     "operator": "greater_than",
+     "value": "0",
+     "values": null
+    }
+   ],
+   "ranking": null,
+   "answer_form": "list",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "p09",
+   "persona": "budget_learner",
+   "journey": "find_affordable",
+   "scenario": "Which beginner courses cost less than $200?",
+   "task_type": "filter",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "level",
+     "operator": "equals",
+     "value": "Beginner",
+     "values": null
+    },
+    {
+     "attribute": "course fee",
+     "operator": "less_than",
+     "value": "$200",
+     "values": null
+    }
+   ],
+   "ranking": null,
+   "answer_form": "list",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "p10",
+   "persona": "professional_upskiller",
+   "journey": "match_level",
+   "scenario": "I already have experience. Which advanced courses do you run?",
+   "task_type": "filter",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "level",
+     "operator": "equals",
+     "value": "Advanced",
+     "values": null
+    }
+   ],
+   "ranking": null,
+   "answer_form": "list",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "p11",
+   "persona": "professional_upskiller",
+   "journey": "fit_schedule",
+   "scenario": "I can get to Northside on Tuesdays after work. Which intermediate or advanced courses run there then?",
+   "task_type": "filter",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "level",
+     "operator": "one_of",
+     "value": null,
+     "values": [
+      "Intermediate",
+      "Advanced"
+     ]
+    },
+    {
+     "attribute": "campus",
+     "operator": "equals",
+     "value": "Northside",
+     "values": null
+    },
+    {
+     "attribute": "class day",
+     "operator": "equals",
+     "value": "Tuesday",
+     "values": null
+    }
+   ],
+   "ranking": null,
+   "answer_form": "list",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "p12",
+   "persona": "professional_upskiller",
+   "journey": "check_availability",
+   "scenario": "Is there still room in Life drawing studio? How many seats are left?",
+   "task_type": "lookup",
+   "entity": "Life drawing studio",
+   "attribute": "seats left",
+   "constraints": [],
+   "ranking": null,
+   "answer_form": "single",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "p13",
+   "persona": "professional_upskiller",
+   "journey": "plan_commitment",
+   "scenario": "Which intermediate courses ask you to bring your own materials?",
+   "task_type": "filter",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "level",
+     "operator": "equals",
+     "value": "Intermediate",
+     "values": null
+    },
+    {
+     "attribute": "materials",
+     "operator": "equals",
+     "value": "Bring your own",
+     "values": null
+    }
+   ],
+   "ranking": null,
+   "answer_form": "list",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "p14",
+   "persona": "career_switcher",
+   "journey": "check_availability",
+   "scenario": "Which beginner courses at Northside still have seats?",
+   "task_type": "filter",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "level",
+     "operator": "equals",
+     "value": "Beginner",
+     "values": null
+    },
+    {
+     "attribute": "campus",
+     "operator": "equals",
+     "value": "Northside",
+     "values": null
+    },
+    {
+     "attribute": "seats left",
+     "operator": "greater_than",
+     "value": "0",
+     "values": null
+    }
+   ],
+   "ranking": null,
+   "answer_form": "list",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "p15",
+   "persona": "recent_graduate",
+   "journey": "match_level",
+   "scenario": "What level is Web pages from scratch?",
+   "task_type": "lookup",
+   "entity": "Web pages from scratch",
+   "attribute": "level",
+   "constraints": [],
+   "ranking": null,
+   "answer_form": "single",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "p16",
+   "persona": "budget_learner",
+   "journey": "understand_policies",
+   "scenario": "If I withdraw five days before my first class, what refund do I get?",
+   "task_type": "open",
+   "entity": null,
+   "attribute": null,
+   "constraints": [],
+   "ranking": null,
+   "answer_form": "explanation",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "p17",
+   "persona": "career_switcher",
+   "journey": "understand_policies",
+   "scenario": "Do concession card holders get a discount on course fees?",
+   "task_type": "open",
+   "entity": null,
+   "attribute": null,
+   "constraints": [],
+   "ranking": null,
+   "answer_form": "explanation",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "p18",
+   "persona": "recent_graduate",
+   "journey": "find_affordable",
+   "scenario": "How much does Mindful meditation cost?",
+   "task_type": "lookup",
+   "entity": "Mindful meditation",
+   "attribute": "course fee",
+   "constraints": [],
+   "ranking": null,
+   "answer_form": "single",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "p19",
+   "persona": "budget_learner",
+   "journey": "fit_schedule",
+   "scenario": "I can only do weekends. Which courses under $200 run on a weekend?",
+   "task_type": "filter",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "class day",
+     "operator": "one_of",
+     "value": null,
+     "values": [
+      "Saturday",
+      "Sunday"
+     ]
+    },
+    {
+     "attribute": "course fee",
+     "operator": "less_than",
+     "value": "$200",
+     "values": null
+    }
+   ],
+   "ranking": null,
+   "answer_form": "list",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "p20",
+   "persona": "professional_upskiller",
+   "journey": "fit_schedule",
+   "scenario": "Which courses run at Riverside on Thursdays?",
+   "task_type": "filter",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "campus",
+     "operator": "equals",
+     "value": "Riverside",
+     "values": null
+    },
+    {
+     "attribute": "class day",
+     "operator": "equals",
+     "value": "Thursday",
+     "values": null
+    }
+   ],
+   "ranking": null,
+   "answer_form": "list",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "u01",
+   "persona": "recent_graduate",
+   "journey": "find_affordable",
+   "scenario": "Money is tight. Which courses are cheap?",
+   "task_type": "filter",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "course fee",
+     "operator": "at_most",
+     "value": "$200",
+     "values": null
+    }
+   ],
+   "ranking": null,
+   "answer_form": "list",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "u02",
+   "persona": "career_switcher",
+   "journey": "plan_commitment",
+   "scenario": "I want something short. Which courses only take a few weeks?",
+   "task_type": "filter",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "duration",
+     "operator": "at_most",
+     "value": "5 weeks",
+     "values": null
+    }
+   ],
+   "ranking": null,
+   "answer_form": "list",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "r01",
+   "persona": "budget_learner",
+   "journey": "find_affordable",
+   "scenario": "Is Advanced joinery $480? What is the course fee for Advanced joinery?",
+   "task_type": "lookup",
+   "entity": "Advanced joinery",
+   "attribute": "course fee",
+   "constraints": [],
+   "ranking": null,
+   "answer_form": "single",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "r02",
+   "persona": "recent_graduate",
+   "journey": "fit_schedule",
+   "scenario": "Which beginner courses run on Sundays?",
+   "task_type": "filter",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "class day",
+     "operator": "equals",
+     "value": "Sunday",
+     "values": null
+    }
+   ],
+   "ranking": null,
+   "answer_form": "list",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "r03",
+   "persona": "career_switcher",
+   "journey": "fit_schedule",
+   "scenario": "Which courses start in February?",
+   "task_type": "filter",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "start date",
+     "operator": "equals",
+     "value": "February",
+     "values": null
+    }
+   ],
+   "ranking": null,
+   "answer_form": "list",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "r04",
+   "persona": "budget_learner",
+   "journey": "find_affordable",
+   "scenario": "I'm a beginner with under $200 to spend. Which beginner courses fit?",
+   "task_type": "filter",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "level",
+     "operator": "equals",
+     "value": "Beginner",
+     "values": null
+    },
+    {
+     "attribute": "course fee",
+     "operator": "less_than",
+     "value": "$200",
+     "values": null
+    }
+   ],
+   "ranking": null,
+   "answer_form": "list",
+   "rationale": "developer-written fixture (NOT model output)"
+  }
+ ]
+}

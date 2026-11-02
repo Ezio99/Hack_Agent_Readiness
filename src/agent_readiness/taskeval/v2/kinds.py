@@ -320,6 +320,7 @@ class Extension:
         self.base, self.profiles, self.oracle = v1.framed.base, v1.framed.profiles, v1.framed.oracle
         self.accepted: list[Accepted] = []
         self.seen: set[str] = set()
+        self.prior: list[Accepted] = []                           # v1-accepted tasks of EARLIER candidates only (so a later candidate never changes an earlier record)
         self.enabled = set(ev.config.get("new_kinds") or ())
 
     def gate(self, draft: Draft):
@@ -380,10 +381,10 @@ class Extension:
             return [self.ev._rejected(cand, r1, p, [f"answerable: {exc}"], crit=crit, gates=gates)]
         gates["answerable"] = {"pass": True, "evidence": []}
         h = canonical_hash(crit)
-        dup = h in self.seen or h in self.framed.seen
+        dup = h in self.seen or h in {canonical_hash(a.criterion) for a in self.prior}
         gates["unique"] = {"pass": not dup, "evidence": ["same criterion as an earlier accepted proposal"] if dup else []}
         restated = f"{p.scenario.strip()} Precisely: {canonical(crit, self.site.noun)}"
-        verdict = gate(Draft(restated, self.site.start_path, crit, "llm"), self.base, list(self.framed.accepted) + self.accepted)
+        verdict = gate(Draft(restated, self.site.start_path, crit, "llm"), self.base, self.prior + self.accepted)
         framed = verdict if isinstance(verdict, Accepted) else None
         gates["executable_wording_unambiguous"] = {"pass": framed is not None, "evidence": [] if framed else [verdict.reason]}
         ans = oracle_answer(self.oracle, crit)

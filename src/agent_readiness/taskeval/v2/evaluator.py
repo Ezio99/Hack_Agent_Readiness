@@ -48,6 +48,29 @@ def config_fingerprint(config: dict | None = None) -> str:
     return h.hexdigest()[:16]
 
 
+def v1_shape(raw):
+    """A taskplan-schema-v3 wire item (strict mode sends `values: null` on plain constraints) in the v1 shape, when it has no one_of constraint.
+    The identity on v1-shaped items; one_of items are left as they are (evaluator v1 refuses them; the M2b extension evaluates them)."""
+    if not isinstance(raw, dict) or not isinstance(raw.get("constraints"), list):
+        return raw
+    cs = raw["constraints"]
+    if any(isinstance(c, dict) and c.get("operator") == "one_of" for c in cs) or not any(isinstance(c, dict) and "values" in c for c in cs):
+        return raw
+    return {**raw, "constraints": [{k: v for k, v in c.items() if not (k == "values" and v is None)} if isinstance(c, dict) else c for c in cs]}
+
+
+V1_PRIMARY_GATE = {"duplicate": "unique", "not_answerable": "answerable", "gate_rejected": "executable_wording_unambiguous", "schema_invalid": "schema_valid",
+                   "inconsistent_shape": "expressible", **{c: "grounded" for c in V1.GROUNDING_CATEGORIES}}
+
+
+def _primary_first(r1: dict) -> list[str]:
+    """v1's rejection reasons with the gate that v1's own decision category names first (a duplicate is reported as 'unique', not as the
+    downstream 'answerable: failed')."""
+    reasons = list(r1["rejection_reasons"])
+    gate = V1_PRIMARY_GATE.get((r1.get("decision") or {}).get("category"))
+    return sorted(reasons, key=lambda x: not x.startswith(f"{gate}:")) if gate else reasons
+
+
 def _attrs(crit: dict | None) -> list[str]:
     if not crit:
         return []
@@ -76,13 +99,16 @@ class TaskEvaluatorV2:
         v1 = V1.TaskEvaluator(self.site, self.view, self.context)                   # fresh: the v1 verifiers keep per-batch state
         self.base = v1.framed.base
         self._ext = self._extension(v1)
-        v1_records = v1.evaluate(candidates)
         if not self.checks:
-            return v1_records
+            return v1.evaluate(candidates)
+        candidates = [{**c, "raw": v1_shape(c["raw"])} for c in candidates]
+        v1_records = v1.evaluate(candidates)
         out: list[dict] = []
         self._natural: list[Accepted] = []
         for cand, r1 in zip(candidates, v1_records):
             out += self._judge(cand, r1)
+            if self._ext and r1.get("_accepted") is not None:
+                self._ext.prior.append(r1["_accepted"])
         self._soft(out)
         return out
 
@@ -141,7 +167,7 @@ class TaskEvaluatorV2:
         crit, truth = r1["specification"], r1["expected_answer"]
         failed = [k for k, g in r1["hard_gates"].items() if k != WORDING_GATE and not g["pass"]]
         if crit is None or failed:
-            return [self._rejected(cand, r1, p, [x for x in r1["rejection_reasons"]] or ["no verifiable specification"], crit=crit)]
+            return [self._rejected(cand, r1, p, _primary_first(r1) or ["no verifiable specification"], crit=crit)]
         analysis = self.nl.analyse(customer, crit)
         return self._admit(cand, r1, p, crit, truth, analysis, r1["_accepted"], r1["hard_gates"])
 
