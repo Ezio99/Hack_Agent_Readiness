@@ -153,6 +153,14 @@
       "source": "research-local ledger scanner-data/research/pilot/pilot-larkspur-live-2f8108d3/spend/ledger.jsonl (83 reservations, 83 settled, 0 open); the hosted ledger was not used",
       "recorded_on": "2026-11-02",
       "authorized_by": "owner (explicit approval: isolated Larkspur pilot, up to US$5 new spending, at most 8 paid browser trials, no retries)"
+    },
+    {
+      "id": "research-stage-a-m6-1",
+      "label": "Research M6 Stage A: ONE owner-authorised task-generation experiment (Larkspur, muse-spark-1.3, reasoning_effort low, max_completion_tokens 6000, prompt taskplan-v2, schema taskplan-schema-v3, 12 proposals/round; stopped targets_met after 2 of max 3 requests; hard cap US$0.10)",
+      "usd": 0.049804,
+      "basis": "CALCULATED from provider-reported usage (2 requests; 6595 prompt + 9779 completion tokens incl. 6266 reasoning) at published prices; not a bill",
+      "source": "scanner-data/research/stage-a/ledgers/m6-larkspur-core/ledger.jsonl (git-ignored); run m6-larkspur-core-20261102T121242Z",
+      "authorized_by": "owner (explicit approval 2026-11-02: one Stage A generation experiment, hard total cap US$0.10, at most 3 requests; no Stage B)"
     }
   ],
   "recorded_runtime_stages": [
@@ -207,6 +215,14 @@
       "known_spend_subtotal_before_usd": 10.619669,
       "known_spend_subtotal_after_usd": 11.848482,
       "note": "Appended only. Calculated from usage; the pilot's US$5 hard cap and worst-case reservation (US$4.928) are limits, not spend."
+    },
+    "research_addendum_4": {
+      "as_of": "2026-11-02",
+      "added_entry": "research-stage-a-m6-1",
+      "added_usd": 0.049804,
+      "known_spend_subtotal_before_usd": 11.848482,
+      "known_spend_subtotal_after_usd": 11.898286,
+      "note": "Appended only; earlier entries unchanged. The owner-authorised cap US$0.10 is a limit, not spend; both requests settled from reported usage."
     }
   }
 }

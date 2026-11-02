@@ -33,7 +33,9 @@ Nothing in this document authorises spending, deployment, merging or modifying e
   - no paid call has been made by the lifecycle code;
   - v1 code (`criteria`, `gate`, `key`, `grader v2`, `oracle`, taskeval v1, `verify`, `schema`, `freeze`) is unchanged and pinned by hash;
   - only synthetic suites have been approved.
-- **Next: M6** (paid validation). It needs explicit owner approval, a cap and an approval note. Instructions and cost estimates: report §7. `evalruns.runner.execute` refuses paid mode until M6 adds the approval check.
+- **M6 Stage A done** (owner-authorised, US$0.10 cap): US$0.049804 spent; the `larkspur-core` proposal is UNAPPROVED. See [`reports/lifecycle-m6-stage-a.md`](reports/lifecycle-m6-stage-a.md).
+  - The driver is `python -m agent_readiness.suites.experiments.m6_stage_a` (preflight-only by default; its fixed ledger is now used, so it refuses to run again).
+  - Next: owner review of the generated tasks. Stage B and any further paid call need new authorisation. `evalruns.runner.execute` still refuses paid mode.
 - The step-5 "stop for approval after M2" instruction below is superseded by the owner's later authorisation. "The research branch is not pushed" (§2) is no longer true.
 
 ## NEW AGENT START HERE

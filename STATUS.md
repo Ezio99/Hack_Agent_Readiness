@@ -69,12 +69,19 @@ Future product architecture (not implemented): [docs/FUTURE_ARCHITECTURE.md](doc
   - **No paid call.** Every approval made was of a SYNTHETIC fixture suite.
   - Report: [collaboration/reports/lifecycle-m2-m5.md](collaboration/reports/lifecycle-m2-m5.md).
 
-M6 (paid validation) needs separate owner approval. Handoff: [collaboration/LIFECYCLE_HANDOFF.md](collaboration/LIFECYCLE_HANDOFF.md).
+**M6 Stage A (owner-authorised, cap US$0.10): done.**
+- One paid generation: 2 requests, **US$0.049804 calculated**; schema v3 accepted; stopped at `targets_met` after 2 rounds.
+- 18/24 proposals natural_verifiable as run; 20/24 after a zero-cost lexicon fix ("at least N" was misread as a superlative) re-evaluated offline.
+- Suite proposal `larkspur-core` is UNAPPROVED, awaiting the owner's review.
+- Report: [collaboration/reports/lifecycle-m6-stage-a.md](collaboration/reports/lifecycle-m6-stage-a.md).
+- Stage B and further paid calls are not authorised.
+
+Handoff: [collaboration/LIFECYCLE_HANDOFF.md](collaboration/LIFECYCLE_HANDOFF.md).
 
 ## Budget
 
 - Hosted admission: US$10 ceiling, US$3.30 reserved, US$1.65 per repetition. Reservations are never released, even for completed jobs, so the remaining capacity is 4 repetitions.
-- Programme: ceiling A$50. This is a limit, never an authorization. The recorded known-spend subtotal is partial (see `collaboration/budget/programme-ledger.json` and the archive). The 2026-11-02 production trial (US$1.126097) is appended as `hosted-live-2`, making the subtotal US$10.566163. Research planner requests add US$0.024452 calculated from usage (`research-taskplan-2`) plus US$0.029054, an UNCONFIRMED conservative upper bound for a rejected request (`research-taskplan-1`). The isolated Larkspur research pilot (`research-pilot-larkspur-1`) adds US$1.228813, calculated from usage. The current subtotal is **US$11.848482 / A$17.7727**. Calculated cost is not a bill.
+- Programme: ceiling A$50. This is a limit, never an authorization. The recorded known-spend subtotal is partial (see `collaboration/budget/programme-ledger.json` and the archive). The 2026-11-02 production trial (US$1.126097) is appended as `hosted-live-2`, making the subtotal US$10.566163. Research planner requests add US$0.024452 calculated from usage (`research-taskplan-2`) plus US$0.029054, an UNCONFIRMED conservative upper bound for a rejected request (`research-taskplan-1`). The isolated Larkspur research pilot (`research-pilot-larkspur-1`) adds US$1.228813, calculated from usage. M6 Stage A (`research-stage-a-m6-1`) adds US$0.049804 calculated. The current subtotal is **US$11.898286 / A$17.8474**. Calculated cost is not a bill.
 
 ## Deadlines
 
