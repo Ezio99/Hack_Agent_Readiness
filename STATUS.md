@@ -55,6 +55,14 @@ Future product architecture (not implemented): [docs/FUTURE_ARCHITECTURE.md](doc
 
 **Next:** feature freeze. Demo and submission preparation for Wednesday 2026-11-04 (submission deadline 2026-11-05 13:00 Sydney).
 
+**Research branch `research/llm-task-planning` (local, isolated, not deployed):**
+- LLM task planner: two paid planner runs.
+- taskeval-1 and selection-1.
+- Isolated Larkspur pilot: 8 paid jailed trials.
+- **Two-stage evaluation lifecycle:** proposal approved with eight decisions; **M1 implemented** (immutable records, write-once store, Stage A/B boundary; 26 tests).
+
+M2 onward is owned by the next agent. Handoff: [collaboration/LIFECYCLE_HANDOFF.md](collaboration/LIFECYCLE_HANDOFF.md).
+
 ## Budget
 
 - Hosted admission: US$10 ceiling, US$3.30 reserved, US$1.65 per repetition. Reservations are never released, even for completed jobs, so the remaining capacity is 4 repetitions.

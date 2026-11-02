@@ -4,7 +4,11 @@
 >
 > Read this before proposing changes, writing code, or making architectural decisions. This document provides orientation, not a complete specification. Always inspect the current repository and relevant task documents.
 
-## Latest handoff — 2026-11-02
+## Latest handoff — 2026-11-02 (research: two-stage evaluation lifecycle)
+
+**Research agents start with [collaboration/LIFECYCLE_HANDOFF.md](collaboration/LIFECYCLE_HANDOFF.md)** ("NEW AGENT START HERE"). It covers branch `research/llm-task-planning`, the approved two-stage lifecycle decisions, completed M1, and M2–M5 next. The research work is isolated from production and the release candidate.
+
+## Production handoff — 2026-11-02
 
 Production (operator-only) runs `product-experience-redesign` (hosted Ironbark evaluator + redesigned frontend) at https://209-38-84-72.sslip.io. Start with [STATUS.md](STATUS.md) and [deploy/DEPLOY.md](deploy/DEPLOY.md); the sections below are older handoffs kept for context.
 
