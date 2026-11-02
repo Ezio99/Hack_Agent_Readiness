@@ -99,7 +99,7 @@ def test_paid_execution_is_refused_and_the_manifest_does_not_change(tmp_path, pr
     site, store, msha, m, _, _ = prepared
     runs = RN.prepare(store, msha, tmp_path / "paid", mode="paid", label="paid")
     assert all(r.state["config"]["manifest_sha256"] == msha for r in runs.values())             # the same manifest hash as the rehearsal
-    with pytest.raises(PermissionError, match="M6"):
+    with pytest.raises(PermissionError, match="authorisation"):
         RN.execute(runs["natural"], store)
     assert store.get("manifest", msha).budget["paid_execution_approval"] is None
 

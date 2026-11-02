@@ -196,48 +196,96 @@ def _jail(run: InvestigationRun) -> tuple[dict, callable]:
     return result, restore
 
 
-def execute(run: InvestigationRun, store: WriteOnceStore, *, extra_snapshots: dict[str, Snapshot] | None = None) -> dict:
+def _trial_gate_id(cond: str, name: str) -> str:
+    return f"{cond}-{name}"
+
+
+def attempted_trials(ledger, experiment_prefix: str = "") -> set[str]:
+    """Trial gate ids with at least one reservation in the durable ledger (a trial that ever reserved counts as attempted, even if interrupted)."""
+    return {e["id"].split(":req")[0] for e in ledger.entries() if e["kind"] == "reserve" and ":req" in e["id"]}
+
+
+def execute(run: InvestigationRun, store: WriteOnceStore, *, extra_snapshots: dict[str, Snapshot] | None = None, authorization: Path | None = None) -> dict:
+    """Rehearsal: the loopback dev provider (NOT a model). Paid: ONLY with a matching write-once `PaidAuthorization` (authorization.verify): the
+    pinned agent configuration, the experiment's FIXED durable ledger (hard cap = the authorised cap), a scope cap across every trial of the
+    experiment, the authorised maximum number of trials counted from that ledger (restart-safe), and no retry of any trial that ever reserved."""
     cfg = run.state["config"]
-    if cfg["mode"] == "paid":
-        raise PermissionError("paid Stage B execution needs a separate, explicit owner approval (M6); this runner refuses it")
-    manifest = store.get("manifest", cfg["manifest_sha256"])
+    manifest_sha = cfg["manifest_sha256"]
+    manifest = store.get("manifest", manifest_sha)
     site = get(cfg["site"])
     snaps = resolve_variants(site, manifest, extra_snapshots, run.dir)
     per_variant = run.private("variant-criteria")
-    manifest_tm, _ = freezer.load(run)
+    freezer.load(run)
     plan = steps(run, manifest)
     budget = manifest.budget
-    # rehearsal: the dev provider moves no money, so its ledger ceiling is the worst case (the per-request and per-trial caps are the rehearsed bounds);
-    # a paid run (refused above until M6) would use the manifest's hard cap and must be within it
-    ledger = run.ledger(max(budget["hard_cap_usd"], budget["worst_case_reservation_usd"]))
+    paid = cfg["mode"] == "paid"
+    auth = None
+    if paid:
+        from ..ledger import Ledger, preflight
+        from . import authorization as AU
+        if authorization is None:
+            raise PermissionError("paid Stage B execution needs a matching owner authorisation record; none was given")
+        auth = AU.load(authorization)
+        problems = AU.verify(auth, store, manifest_sha, planned_trials=len(plan))
+        if problems:
+            raise PermissionError("authorisation mismatch; nothing sent: " + "; ".join(problems))
+        ledger = Ledger(AU.ledger_dir(auth.experiment_id), auth.cap_usd)
+        run.write_artifact(f"authorization-check-{len(list((run.dir / 'artifacts').glob('authorization-check-*.json'))) + 1}",
+                           {"authorization_sha256": auth.sha256, "experiment_id": auth.experiment_id, "planned_trials": len(plan), "verified": True,
+                            "ledger_dir": str(AU.ledger_dir(auth.experiment_id))})
+        model_config = ModelConfig()
+        if (model_config.model, model_config.base_url) != (manifest.agent.model, manifest.agent.endpoint):
+            raise PermissionError("the runtime model configuration is not the manifest's pinned agent")
+        api_key = preflight(model_config, True)
+    else:
+        # rehearsal: the dev provider moves no money; its ledger ceiling is the worst case (the per-request and per-trial caps are the rehearsed bounds)
+        ledger = run.ledger(max(budget["hard_cap_usd"], budget["worst_case_reservation_usd"]))
+    scope = frozenset(_trial_gate_id(cfg["condition"], f"{s['variant']}-{s['task']['task_id']}-r{s['rep']}") for s in plan)
     executed, stopped = [], None
     selftest, restore = _jail(run)
     try:
-        with FE.dev_provider(run) as (_, url):
+        def go(model_cfg: ModelConfig, key: str):
+            nonlocal stopped
             for st in plan:
                 t, v, rep = st["task"], st["variant"], st["rep"]
                 name = f"{v}-{t['task_id']}-r{rep}"
+                gid = _trial_gate_id(cfg["condition"], name)
                 if run.has_artifact(f"trials/{name}"):
                     continue
+                if paid:
+                    done = attempted_trials(ledger)
+                    if gid in done:
+                        stopped = f"{name}: reserved before an interruption but has no record; it is never re-run (no retries)"
+                        return
+                    if len(done) + 1 > auth.max_trials:
+                        stopped = f"{name}: the authorised maximum of {auth.max_trials} trials is reached (counted from the durable ledger)"
+                        return
                 inst = freezer.instance(t, per_variant[v][t["task_id"]], snaps[v].sha256)
                 lim = inst.spec.limits
-                gate = RequestGate(ledger, name, run_cap=round(lim.max_model_requests * budget["per_request_cap_usd"], 6), per_request_cap=budget["per_request_cap_usd"],
-                                   max_requests=lim.max_model_requests)
-                rec = asyncio.run(run_trial(inst, snaps[v], provider="live", output=run.dir / "trial-data" / name, model_config=ModelConfig(base_url=FE._loopback(url)),
-                                            api_key=FE.DEV_KEY, request_gate=gate, label=v, profile_id=manifest.agent.profile))
+                gate = RequestGate(ledger, gid, run_cap=round(lim.max_model_requests * budget["per_request_cap_usd"], 6), per_request_cap=budget["per_request_cap_usd"],
+                                   max_requests=lim.max_model_requests, **({"scope_run_ids": scope, "scope_cap": auth.cap_usd} if paid else {}))
+                rec = asyncio.run(run_trial(inst, snaps[v], provider="live", output=run.dir / "trial-data" / name, model_config=model_cfg,
+                                            api_key=key, request_gate=gate, label=v, profile_id=manifest.agent.profile))
                 trial_dir = str(Path(rec.pop("artifact_path")).relative_to(run.dir))
                 run.write_artifact(f"trials/{name}", {**rec, "task_id": t["task_id"], "partition": t["partition"], "repeat": rep, "trial_id": f"{t['task_id']}-r{rep}",
-                                                      "trial_dir": trial_dir, "arm": v, "variant": v, "variant_sha256": snaps[v].sha256, "condition": cfg["condition"]})
+                                                      "trial_dir": trial_dir, "arm": v, "variant": v, "variant_sha256": snaps[v].sha256, "condition": cfg["condition"],
+                                                      "gate_id": gid})
                 executed.append(name)
                 if rec["outcome"]["run_status"] in VOID_STATUSES:
                     stopped = f"{name}: void ({rec['outcome']['run_status']}); remaining trials not run (no retries)"
-                    break
+                    return
                 if gate.violation:
                     stopped = f"{name}: spend-gate bound violation; remaining trials not run"
-                    break
+                    return
+        if paid:
+            go(model_config, api_key)
+        else:
+            with FE.dev_provider(run) as (_, url):
+                go(ModelConfig(base_url=FE._loopback(url)), FE.DEV_KEY)
     finally:
         restore()
-    out = {"executed": executed, "planned": len(plan), "stopped": stopped, "jail_selftest": selftest, "order": [f"{s['variant']}-{s['task']['task_id']}-r{s['rep']}" for s in plan]}
+    out = {"mode": cfg["mode"], "executed": executed, "planned": len(plan), "stopped": stopped, "jail_selftest": selftest,
+           "order": [f"{s['variant']}-{s['task']['task_id']}-r{s['rep']}" for s in plan], **({"authorization_sha256": auth.sha256} if auth else {})}
     run.write_artifact(f"execution-{len(list((run.dir / 'artifacts').glob('execution-*.json'))) + 1}", out)
     return out
 

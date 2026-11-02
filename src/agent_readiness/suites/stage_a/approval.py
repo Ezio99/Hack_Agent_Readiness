@@ -104,14 +104,17 @@ def _coverage(store: WriteOnceStore, task_shas, context: dict) -> dict:
     return {k: cov[k] for k in ("targets", "matrix", "per_persona", "per_journey", "capabilities", "multi_condition_share", "natural_share", "deterministic", "rubric", "status")}, cov["gaps"]
 
 
-def revise(store: WriteOnceStore, suite_sha: str, context: dict, *, add: tuple[str, ...] = (), remove: tuple[str, ...] = (), at: str, notes: str) -> str:
-    """A substantive edit: a new version with a new hash; coverage and gaps are recomputed; the previous version is referenced (kind 'suite')."""
+def revise(store: WriteOnceStore, suite_sha: str, context: dict, *, add: tuple[str, ...] = (), remove: tuple[str, ...] = (), at: str, notes: str,
+           by: str = "system") -> str:
+    """A substantive edit: a new version with a new hash; coverage and gaps are recomputed; the previous version is referenced (kind 'suite').
+    `by` is the role that PREPARED the revision ('system' for an agent-prepared proposal): a revision is only a proposal, never an approval, and it
+    must not claim owner authorship unless the owner made it."""
     old = store.get("suite", suite_sha)
     shas = tuple(t for t in old.task_sha256s if t not in set(remove)) + tuple(t for t in add if t not in old.task_sha256s)
     if shas == old.task_sha256s:
         raise ValueError("no substantive change")
     cov, gaps = _coverage(store, shas, context)
-    prov = Provenance(created_at=at, created_by="owner", tool="agent_readiness.suites.stage_a.approval.revise", tool_version=VERSION,
+    prov = Provenance(created_at=at, created_by=by, tool="agent_readiness.suites.stage_a.approval.revise", tool_version=VERSION,
                       config_fingerprint=old.provenance.config_fingerprint, inputs=tuple(old.provenance.inputs) + (InputRef(kind="suite", name=f"{old.suite_name}@v{old.version}", sha256=suite_sha),),
                       notes=f"revision of v{old.version}: {notes}")
     return store.put(SuiteRecord(suite_name=old.suite_name, version=old.version + 1, site=old.site, task_sha256s=shas, selection_rule=old.selection_rule + "+owner-revision",
