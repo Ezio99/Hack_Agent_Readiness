@@ -20,7 +20,7 @@ def env(tmp_path, monkeypatch):
     (source / 'run.json').write_text('{}')
     (source / 'private' / 'criteria.json').write_text('{}')
     monkeypatch.setattr(serve.ironbark_runner, 'SOURCE', source)
-    monkeypatch.setattr(jail, 'selftest', lambda: {'ok': True})
+    monkeypatch.setattr(jail, 'selftest', lambda timeout=30: {'ok': True})
     monkeypatch.setattr(jail, '_REQUIRED', False)
     policy = tmp_path / 'jail.json'
     policy.write_text(json.dumps({'hide': [str(tmp_path / 'hidden')], 'dir': '/tmp/arj-test'}))
@@ -62,7 +62,7 @@ def test_all_preconditions_enable_operator_only_evaluations(env, capsys):
     (lambda e: (e['source'] / 'private' / 'criteria.json').chmod(0), 'source_run_unreadable'),
     (lambda e: os.environ.update(AR_HOSTED_CEILING_USD=''), 'ceiling_not_configured'),
     (lambda e: os.environ.update(AR_HOSTED_CEILING_USD='1.00'), 'ceiling_invalid'),          # below one repetition
-    (lambda e: setattr(jail, 'selftest', lambda: {'ok': False, 'reason': 'jailed browser did not start'}), 'isolation_check_failed'),
+    (lambda e: setattr(jail, 'selftest', lambda timeout=30: {'ok': False, 'escapes_blocked': False}), 'isolation_check_failed'),
     (lambda e: os.environ.update({jail.ENV: '/nonexistent.json'}), 'isolation_policy_invalid'),
 ])
 def test_failed_preconditions_keep_the_site_up_with_evaluations_disabled(env, capsys, breakage, reason):
@@ -192,3 +192,60 @@ def test_insights_separate_observations_from_suggestions():
     f = insights.trial_features([{'path': '/hire', 'actions': [{'name': 'Find elements'}]}, {'path': '/hire/lift', 'actions': []}, {'path': '/hire', 'actions': []},
                                  {'path': '/hire/sort/price-desc', 'actions': [{'name': 'Scroll'}]}], 4)
     assert (f['detail_views'], f['listing_returns'], f['revisits'], f['step_limit']) == (1, 2, 1, True)
+
+
+def test_worker_state_duration_estimate_and_busy_feedback(tmp_path):
+    import threading
+    entered, release = threading.Event(), threading.Event()
+    class Blocked:
+        available, mode = True, 'live'
+        def run(self, job_id):
+            entered.set()
+            release.wait(5)
+            raise RuntimeError('stop')
+    budget = Admission(tmp_path / 'b.db', ceiling_microusd=CAP * 6, job_cap_microusd=CAP, min_interval_seconds=1)
+    client = TestClient(api.create_app(tmp_path, budget, client_key=b'k' * 32, executor=Blocked(), mode='live'))
+    idle = client.get('/api/ironbark/config').json()
+    assert idle['worker'] == {'state': 'idle', 'job': None}
+    assert idle['repetition_duration'] == {'seconds': 560, 'basis': 'first genuine run', 'samples': 0}
+    try:
+        job_id = client.post('/api/ironbark/jobs', json={'repetitions': 3}).json()['id']
+        assert entered.wait(2)
+        busy = client.get('/api/ironbark/config').json()['worker']
+        assert busy['state'] == 'busy' and busy['job'] == job_id and busy['total_runs'] == 24 and busy['finished_runs'] == 0
+        assert 60 <= busy['estimated_remaining_seconds'] <= 3 * 560
+        other = TestClient(client.app, client=('203.0.113.9', 1))
+        refused = other.post('/api/ironbark/jobs', json={'repetitions': 1})
+        assert refused.status_code == 429 and refused.json()['detail'].startswith('Another evaluation is already running')
+        assert other.get('/api/ironbark/jobs').status_code == 200                       # history stays browsable while busy
+    finally:
+        release.set()
+    # A completed evaluation becomes the measured basis.
+    job = paired.load_job(tmp_path, job_id)
+    for _ in range(100):
+        if budget.get(job_id)['state'] == 'failed':
+            break
+        time.sleep(.02)
+    done = 'eval-' + 'f' * 32
+    budget.reserve(done, 'c' * 64, units=1)
+    budget.transition(done, 'reserved', 'running')
+    budget.transition(done, 'running', 'completed')
+    paired.new_job(tmp_path, done, 1, 'live')
+    data = paired.load_job(tmp_path, done)
+    data.update(started_at=1000.0, finished_at=1480.0)
+    paired.ironbark_runner.write(paired.job_path(tmp_path, done), data)
+    fresh = TestClient(api.create_app(tmp_path, budget, client_key=b'k' * 32, executor=Blocked(), mode='live'))
+    assert fresh.get('/api/ironbark/config').json()['repetition_duration'] == {'seconds': 480, 'basis': 'measured', 'samples': 1}
+
+
+def test_isolation_check_retries_only_a_browser_that_did_not_start(monkeypatch, capsys):
+    calls = []
+    def flaky(timeout=30):
+        calls.append(timeout)
+        return {'ok': False, 'reason': 'jailed browser did not start'} if len(calls) == 1 else {'ok': True}
+    monkeypatch.setattr(jail, 'selftest', flaky)
+    monkeypatch.setattr('time.sleep', lambda s: None)
+    assert serve.verify_isolation() == {'ok': True} and calls == [60, 30]
+    calls.clear()
+    monkeypatch.setattr(jail, 'selftest', lambda timeout=30: calls.append(timeout) or {'ok': False, 'escapes_blocked': False, 'mirror_reachable': True})
+    assert serve.verify_isolation()['ok'] is False and len(calls) == 1                 # a real boundary failure is final

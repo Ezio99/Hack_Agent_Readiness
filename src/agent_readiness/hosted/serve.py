@@ -107,6 +107,20 @@ def open_admission(root: Path, ceiling: str | None, per_rep: int) -> tuple[Admis
     return Admission(Path(tempfile.mkdtemp()) / 'empty.sqlite', ceiling_microusd=per_rep, job_cap_microusd=per_rep), reason
 
 
+def verify_isolation(attempts: int = 3) -> dict:
+    """The first Chromium start in a fresh container can be slow (cold caches); retry before giving up.
+    A failed *boundary* (escape possible) is never retried into success: only a browser that did not start is."""
+    import time
+    result: dict = {}
+    for attempt in range(1, attempts + 1):
+        result = jail.selftest(timeout=60 if attempt == 1 else 30)
+        if result.get('ok') or result.get('reason') not in ('jailed browser did not start', 'TimeoutError', 'Error'):
+            return result
+        log(f'isolation self-test attempt {attempt} did not complete ({result.get("reason")}); retrying')
+        time.sleep(3)
+    return result
+
+
 def build():
     mode = os.environ.get('AR_HOSTED_MODE', 'disabled')
     access = os.environ.get('AR_HOSTED_ACCESS', 'operator')
@@ -152,7 +166,7 @@ def build():
                 jail.policy()
             except Exception as exc:
                 raise Unavailable('isolation_policy_invalid', str(exc)) from None
-            result = jail.selftest()
+            result = verify_isolation()
             if not result.get('ok'):
                 raise Unavailable('isolation_check_failed', f'browser isolation self-test failed: {result}')
             executor = paired.WorkerExecutor(root, admission, mode=mode)

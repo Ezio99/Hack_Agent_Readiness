@@ -65,9 +65,23 @@ it('shows server metrics and labels rehearsal results as not model results', asy
 });
 
 it('offers to watch another visitor’s running evaluation instead of starting a second one', async () => {
-  server(url => url.endsWith('/config') ? config({ active: 'eval-' + 'b'.repeat(32) }) : url.endsWith('/jobs') ? [] : job({ id: 'eval-' + 'b'.repeat(32) }));
+  const other = 'eval-' + 'b'.repeat(32);
+  server(url => url.endsWith('/config') ? config({ active: other, worker: { state: 'busy', job: other, finished_runs: 5, total_runs: 24, estimated_remaining_seconds: 1500 } }) : url.endsWith('/jobs') ? [] : url.endsWith('/live') ? { active: true, trial: null } : job({ id: other }));
   const { host } = await mount();
   expect(button(host, 'Run evaluation').disabled).toBe(true);
-  await act(async () => { button(host, 'Watch the running evaluation').click(); });
+  expect(host.textContent).toContain('Worker busy');
+  expect(host.textContent).toContain('5 of 24 agent runs finished, about 25 min left (estimate)');
+  expect(host.textContent).toContain('Completed evaluations below remain available');
+  await act(async () => { button(host, 'Watch it live').click(); });
   expect(host.textContent).toContain('Running');
+});
+
+it('shows an available worker and duration estimates from the measured basis', async () => {
+  server(url => url.endsWith('/config') ? config({ worker: { state: 'idle', job: null }, repetition_duration: { seconds: 558, basis: 'first genuine run', samples: 0 } }) : []);
+  const { host } = await mount();
+  expect(host.textContent).toContain('Worker available');
+  expect(host.textContent).toContain('about 9 min per repetition (based on the first genuine Muse Spark run)');
+  expect(host.textContent).toContain('40 agent runs');
+  expect(host.textContent).toContain('about 47 min');
+  expect(button(host, 'Run evaluation').disabled).toBe(false);
 });

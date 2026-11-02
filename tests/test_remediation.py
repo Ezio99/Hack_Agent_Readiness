@@ -184,14 +184,17 @@ def test_budget_is_tracked_in_aud_with_original_usd_records_and_a_documented_rat
     assert s["usd_to_aud"] == 1.50 and ledger["assumptions"]["basis"] and ledger["programme_ceiling_aud"] == 50.0 and ledger["ceiling_is_authorization"] is False
     original = [e for e in ledger["entries"] if e["id"].startswith("task")]
     assert sum(e["usd"] for e in original) == pytest.approx(4.13783)
-    assert s["spent_usd"] == pytest.approx(8.349098)
+    assert s["spent_usd"] == pytest.approx(9.440066)
     forks = [e for e in ledger["entries"] if e["id"] in ("exp-c", "exp-c-r1", "exp-c-s1")]
     assert len(forks) == 3 and sum(e["usd"] for e in forks) == pytest.approx(3.346443)
     assert all(e["usd"] == pytest.approx(e["run_total_usd"] - e["imported_history_excluded_usd"]) for e in forks)
+    hosted = [e for e in ledger["entries"] if e["id"].startswith("hosted-live")]
+    assert [e["usd"] for e in hosted] == [pytest.approx(1.090968)]                                       # hosted run: increment only, reservation hold not spend
+    assert all(e["usd"] == pytest.approx(e["run_total_usd"] - e["imported_history_excluded_usd"]) for e in hosted)
     assert ledger["reconciliation"]["complete"] is False
-    assert s["spent_aud"] == pytest.approx(12.5236, abs=1e-4)
-    assert budget.check_stage(8.0)["remaining_after_cap_aud"] == pytest.approx(29.4764, abs=1e-4)
+    assert s["spent_aud"] == pytest.approx(14.1601, abs=1e-4)
+    assert budget.check_stage(8.0)["remaining_after_cap_aud"] == pytest.approx(27.8399, abs=1e-4)
     with pytest.raises(ValueError):
         budget.check_stage(45.0)
     monkeypatch.setenv(budget.RATE_ENV, "1.60")
-    assert budget.summary(ledger)["spent_aud"] == pytest.approx(8.349098 * 1.6, abs=1e-4)
+    assert budget.summary(ledger)["spent_aud"] == pytest.approx(9.440066 * 1.6, abs=1e-4)

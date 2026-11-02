@@ -20,6 +20,7 @@ import secrets
 import signal
 import subprocess
 import threading
+import time
 from pathlib import Path
 from typing import Literal, Protocol
 
@@ -147,6 +148,9 @@ def recover(root: Path, admission: Admission) -> list[str]:
 
 
 ARM_KEYS = {'original': 'placebo', 'modified': 'patched'}
+FRIENDLY = {'evaluation capacity is occupied': 'Another evaluation is already running. You can watch it live and start a new one when it finishes.',
+            'rate limit exceeded': 'You started an evaluation a moment ago. Please wait a couple of minutes before starting another.',
+            'hosted budget exhausted': 'The budget for new evaluations has been used up. Completed evaluations remain available.'}
 
 
 def create_app(root: Path, admission: Admission, *, client_key: bytes, executor: Executor | None = None, trusted_proxies=(), static_dir: Path | None = None,
@@ -210,6 +214,7 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
             for rep in job['reps']:
                 verified_export(root, rep['run_id'])       # complete only if every repetition is exportable
             admission.transition(job_id, 'running', 'completed')
+            cache.get('_', {}).pop('durations', None)          # refresh the measured duration estimate
         except (TimeoutError, subprocess.TimeoutExpired):
             job = admission.get(job_id)
             if job and job['state'] in ('reserved', 'running'):
@@ -231,12 +236,55 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
         return {'status': 'ok', 'mode': mode, 'evaluations': 'enabled' if enabled() else 'disabled', 'reason': None if enabled() else (unavailable_reason or 'disabled'),
                 'access': 'public' if public_start else 'operator', 'active': bool(admission.active())}
 
+    FALLBACK_REPETITION_SECONDS = {'live': 560, 'rehearsal': 150}   # live: first genuine hosted run took 9 min 18 s
+
+    def repetition_seconds():
+        """Typical wall time of one paired repetition, measured from completed evaluations of this deployment."""
+        key = 'durations'
+        if key not in cache.get('_', {}):
+            samples = []
+            for j in admission.recent(50):
+                if j['state'] != 'completed':
+                    continue
+                try:
+                    data = paired.load_job(root, j['id'])
+                    if data.get('started_at') and data.get('finished_at') and data.get('repetitions'):
+                        samples.append((data['finished_at'] - data['started_at']) / data['repetitions'])
+                except (OSError, ValueError):
+                    continue
+            cache.setdefault('_', {})[key] = samples
+        samples = cache['_'][key]
+        current_mode = getattr(executor, 'mode', None) or mode or 'live'
+        if samples:
+            return {'seconds': round(sum(samples) / len(samples)), 'basis': 'measured', 'samples': len(samples)}
+        return {'seconds': FALLBACK_REPETITION_SECONDS.get(current_mode, 560), 'basis': 'first genuine run' if current_mode == 'live' else 'default', 'samples': 0}
+
+    def worker_state():
+        active = admission.active()
+        if not enabled():
+            return {'state': 'unavailable', 'job': None}
+        if not active:
+            return {'state': 'idle', 'job': None}
+        job_id = active[0]
+        try:
+            data = paired.load_job(root, job_id)
+        except (OSError, ValueError):
+            return {'state': 'busy', 'job': job_id, 'started_at': None, 'finished_runs': 0, 'total_runs': None, 'estimated_remaining_seconds': None}
+        reps = [repetition_status(root, r) for r in data['reps']]
+        finished = sum(t['state'] in ('completed', 'failed') for r in reps for t in r['tasks'])
+        total = 8 * data['repetitions']
+        estimate = repetition_seconds()['seconds'] * data['repetitions']
+        started = data.get('started_at')
+        remaining = max(60, round(estimate - (time.time() - started))) if started else estimate
+        return {'state': 'busy', 'job': job_id, 'started_at': started, 'repetitions': data['repetitions'], 'finished_runs': finished, 'total_runs': total,
+                'estimated_remaining_seconds': remaining}
+
     @app.get('/api/ironbark/config')
     def config():
         totals = admission.totals()
         active = admission.active()
         from ..agent import ModelConfig
-        return {'available': enabled(), 'mode': getattr(executor, 'mode', None) if enabled() else None, 'access': 'public' if public_start else 'operator',
+        return {'worker': worker_state(), 'repetition_duration': repetition_seconds(), 'available': enabled(), 'mode': getattr(executor, 'mode', None) if enabled() else None, 'access': 'public' if public_start else 'operator',
                 'reason': None if enabled() else (unavailable_reason or 'disabled'),
                 'repetitions': list(paired.REPETITIONS), 'model': ModelConfig().model, 'agent_profile': 'suite-v2-compat2',
                 'tasks': tasks, 'remaining_repetitions': max(0, (totals['ceiling_microusd'] - totals['reserved_microusd']) // totals['per_repetition_microusd']),
@@ -269,7 +317,7 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
         try:
             admission.reserve(job_id, client, units=body.repetitions)
         except Refused as exc:
-            raise HTTPException(429, str(exc)) from exc
+            raise HTTPException(429, FRIENDLY.get(str(exc), str(exc))) from exc
         try:
             paired.new_job(root, job_id, body.repetitions, executor.mode)
             with inflight_lock:

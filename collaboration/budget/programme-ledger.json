@@ -90,6 +90,20 @@
       "imported_history_excluded_usd": 0.864825,
       "shared_source_run": "live-2d58a80e14",
       "basis": "provider-reported tokens at published prices; calculated, not billed"
+    },
+    {
+      "id": "hosted-live-1",
+      "label": "First hosted Ironbark evaluation (eval-9aaac35c..., 1 paired repetition, 8 trials, muse-spark-1.3); additional paid stage only",
+      "usd": 1.090968,
+      "source": "hosted data volume /data/hosted/live/paired-60c6a26199b44190a4bc751a45eda7da/spend/ledger.jsonl (76 reservations, 76 settled, 0 open)",
+      "run_total_usd": 1.955793,
+      "imported_history_excluded_usd": 0.864825,
+      "shared_source_run": "live-2d58a80e14",
+      "hosted_reservation_usd": 1.65,
+      "hosted_reservation_note": "Admission hold against the US$10 hosted ceiling; a budget hold, not spend, and not counted here.",
+      "basis": "provider-reported tokens at published prices; calculated, not billed",
+      "recorded_on": "2026-11-02",
+      "authorized_by": "owner (explicit instruction to reconcile before further paid runs)"
     }
   ],
   "recorded_runtime_stages": [
@@ -103,6 +117,14 @@
     "three_experiment_incremental_usd": 3.346443,
     "source_plus_three_experiments_usd": 4.211268,
     "complete": false,
-    "unreconciled": "Earlier L0/L1a/EXP-B, EXP-2, live taskgen smoke/exposure and investigator replay spending remain outside these entries; verify individually before a final whole-programme claim. Recorded total is a known-spend subtotal, not total billed or fully reconciled programme spend."
+    "unreconciled": "Earlier L0/L1a/EXP-B, EXP-2, live taskgen smoke/exposure and investigator replay spending remain outside these entries; verify individually before a final whole-programme claim. Recorded total is a known-spend subtotal, not total billed or fully reconciled programme spend.",
+    "hosted_addendum": {
+      "as_of": "2026-11-02",
+      "added_entry": "hosted-live-1",
+      "added_usd": 1.090968,
+      "known_spend_subtotal_before_usd": 8.349098,
+      "known_spend_subtotal_after_usd": 9.440066,
+      "note": "Appended only; earlier entries unchanged. The run's imported US$0.864825 is already recorded once as ironbark-source. The hosted admission reservation (US$1.65) is not spend. Still a known-spend subtotal; the earlier unreconciled items remain unreconciled."
+    }
   }
 }

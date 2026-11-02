@@ -12,7 +12,8 @@ export interface TaskRow { arm: 'Original' | 'Modified'; task: number; state: st
 export interface Rep { index: number; state: string; tasks: TaskRow[]; assessment: { frozen_rule: string | null; exploratory: string | null; evidence_origin: string | null } | null }
 interface ArmSummary { planned: number; completed: number; failed: number; evidence_supported_passes: number; strict_passes: number; requests_total: number; requests_mean: number | null; page_views_mean: number | null; steps_mean: number | null; elapsed_mean: number | null }
 export interface Job { id: string; state: string; mode: 'live' | 'rehearsal' | null; repetitions: number | null; recovery_required?: boolean; created_at: number; started_at: number | null; finished_at: number | null; reps: Rep[]; summary: Record<'Original' | 'Modified', ArmSummary> }
-interface Config { available: boolean; mode: 'live' | 'rehearsal' | null; access?: 'public' | 'operator'; reason?: string | null; repetitions: number[]; model: string; agent_profile: string; tasks: { task: number; question: string; limits?: { max_steps?: number; timeout_seconds?: number } }[]; remaining_repetitions: number; active: string | null }
+interface Worker { state: 'idle' | 'busy' | 'unavailable'; job: string | null; started_at?: number | null; repetitions?: number; finished_runs?: number; total_runs?: number | null; estimated_remaining_seconds?: number | null }
+interface Config { worker?: Worker; repetition_duration?: { seconds: number; basis: 'measured' | 'first genuine run' | 'default'; samples: number }; available: boolean; mode: 'live' | 'rehearsal' | null; access?: 'public' | 'operator'; reason?: string | null; repetitions: number[]; model: string; agent_profile: string; tasks: { task: number; question: string; limits?: { max_steps?: number; timeout_seconds?: number } }[]; remaining_repetitions: number; active: string | null }
 
 const ACTIVE = ['reserved', 'running'];
 const STORE = 'ironbark-hosted-job';
@@ -21,6 +22,7 @@ const MODE_LABEL = { live: 'Live · Meta Muse Spark', rehearsal: 'Rehearsal · s
 const STATE_LABEL: Record<string, string> = { reserved: 'Queued', running: 'Running', completed: 'Completed', failed: 'Failed', timed_out: 'Timed out', interrupted: 'Interrupted', pending: 'Pending', preparing: 'Preparing snapshots', incomplete: 'Incomplete', unverified: 'Unverified' };
 const label = (s: string) => STATE_LABEL[s] ?? s.replaceAll('_', ' ');
 const pct = (n: number, d: number) => d ? Math.round(100 * n / d) : null;
+const minutes = (s: number) => s < 90 ? 'about 1 min' : `about ${Math.round(s / 60)} min`;
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 async function getJSON<T>(url: string, init?: RequestInit): Promise<T> {
@@ -111,11 +113,11 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
     const tick = setInterval(() => setNow(Date.now() / 1000), 1000);
     return () => { clearInterval(poll); clearInterval(tick); };
   }, [job?.id, job?.state]);
-  useEffect(() => { // someone else's evaluation finishes: re-enable the Run button
-    if (!config?.active || config.active === job?.id) return;
-    const t = setInterval(() => void refreshConfig(), 10000);
+  useEffect(() => { // keep the worker status fresh; re-enables Run when another evaluation finishes
+    const busy = config?.worker?.state === 'busy';
+    const t = setInterval(() => { void refreshConfig(); if (busy) void refreshList(); }, busy ? 10000 : 30000);
     return () => clearInterval(t);
-  }, [config?.active, job?.id]);
+  }, [config?.worker?.state, config?.worker?.job]);
 
   async function start() {
     setBusy(true); setMessage('');
@@ -146,28 +148,38 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
   const elapsed = job?.started_at ? (job.finished_at ?? now) - job.started_at : 0;
   const mode = job?.mode ?? config?.mode;
   const canRun = !!config?.available && !busy && !running && !othersRunning && config.remaining_repetitions >= reps && (!operatorOnly || token.length >= 24);
+  const perRep = config?.repetition_duration?.seconds ?? 560;
+  const worker = config?.worker;
+  const basis = config?.repetition_duration?.basis === 'measured' ? `measured over ${config.repetition_duration.samples} completed evaluation${config.repetition_duration.samples > 1 ? 's' : ''}` : 'based on the first genuine Muse Spark run';
   const note = !config ? 'Connecting to the evaluation service…'
     : !config.available ? 'New evaluations are currently unavailable. Recorded and previous evaluations remain available.'
-    : othersRunning ? 'Another evaluation is running. Watch it live below.'
+    : othersRunning ? 'Another evaluation is running. Start yours when the worker is available again.'
     : config.remaining_repetitions < reps ? 'The hosted budget for new evaluations is exhausted.'
     : operatorOnly && token.length < 24 ? 'New evaluations are not open to the public yet. You can watch and inspect existing evaluations.'
-    : `One evaluation at a time · ${reps * 8} fresh agent runs`;
+    : `${reps * 8} fresh agent runs · ${minutes(perRep * reps)}, varies with the agent`;
 
   return <section className="hosted" aria-label="New evaluation">
     <div className="studio-title"><div><p className="studio-kicker">NEW EVALUATION</p><h1>Run real agents on a website.</h1></div>
       {mode && <span className={`hosted-mode ${mode}`}>{MODE_LABEL[mode]}</span>}</div>
     <p className="hosted-intro">Each repetition gives four frozen tasks to fresh browser agents on the <strong>Original</strong> and the <strong>Modified</strong> site: eight new agent runs, graded independently of what the agent claims.</p>
 
+    {config && <div className={`hosted-worker ${worker?.state ?? 'unavailable'}`} role="status">
+      <span className="hosted-dot" aria-hidden="true" />
+      {worker?.state === 'idle' ? <><strong>Worker available</strong><span>Ready to start a new evaluation · one evaluation runs at a time · {minutes(perRep)} per repetition ({basis})</span></>
+      : worker?.state === 'busy' ? <><strong>Worker busy</strong><span>{worker.job === job?.id ? 'Running your selected evaluation' : 'Another evaluation is running'}: {worker.finished_runs ?? 0} of {worker.total_runs ?? '–'} agent runs finished{worker.estimated_remaining_seconds ? `, ${minutes(worker.estimated_remaining_seconds)} left (estimate)` : ''}. Completed evaluations below remain available.</span>
+          {worker.job && worker.job !== job?.id && <button className="hosted-link" onClick={() => select(worker.job!)}>Watch it live →</button>}</>
+      : <><strong>Evaluations unavailable</strong><span>New evaluations are paused. Recorded and completed evaluations remain available.</span></>}
+    </div>}
     <ol className="hosted-steps">
       <li><span className="hosted-step">1 · Website</span>
         <div className="hosted-choice selected" aria-label="Selected website"><strong>Ironbark Hire Co.</strong><small>Controlled rental-equipment site · Original vs Modified listing cards</small></div></li>
       <li><span className="hosted-step">2 · Repetitions</span>
         <div className="hosted-reps" role="radiogroup" aria-label="Paired repetitions">{(config?.repetitions ?? [1, 3, 5]).map(n =>
-          <button key={n} role="radio" aria-checked={reps === n} disabled={running} onClick={() => setReps(n)}><strong>{n}</strong><small>{n * 8} agent runs</small></button>)}</div></li>
+          <button key={n} role="radio" aria-checked={reps === n} disabled={running} onClick={() => setReps(n)}><strong>{n}</strong><small>{n * 8} agent runs</small><small>{minutes(perRep * n)}</small></button>)}</div></li>
       <li><span className="hosted-step">3 · Run</span>
         <button className="hosted-run" disabled={!canRun} onClick={() => void start()}>{busy ? 'Starting…' : running ? 'Evaluation running' : 'Run evaluation'}</button>
         <small className="hosted-note">{note}</small>
-        {othersRunning && config?.active && <button className="hosted-link" onClick={() => select(config.active!)}>Watch the running evaluation →</button>}
+
         {operatorOnly && config?.available && <details className="hosted-operator"><summary>Operator access</summary>
           <input type="password" aria-label="Operator token" autoComplete="off" value={token} placeholder="Operator token" onChange={e => { setToken(e.target.value); sessionStorage.setItem(TOKEN, e.target.value); }} /></details>}</li>
     </ol>

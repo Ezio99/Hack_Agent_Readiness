@@ -1,87 +1,100 @@
 # Deploying the hosted Ironbark evaluation
 
-One Linux host (Docker Engine + Compose v2). Caddy terminates TLS; one app container holds the API, the job worker and the jailed Chromium. **Status (2026-11-02): the image builds, and steps 3–5 passed in Docker Desktop (WSL2) with the private override: the in-container self-test passed, a rehearsal completed 8/8, a restart marked the run interrupted, and the first private live run was made. The cloud host still needs steps 3–4 repeated, because its kernel and AppArmor settings differ.** Owner authorization is required for the public deployment (step 6), for live mode (step 5) and for the ceiling value.
+One Linux VM runs everything: Caddy (automatic HTTPS) in front of a single app container (API, job worker, jailed Chromium). Status: the image builds and, in Docker Desktop (WSL2), passed the in-container isolation self-test, a rehearsal and restart recovery, and completed the first genuine Muse Spark evaluation. **The cloud VM must repeat step 4 because its kernel and AppArmor settings differ.** Public deployment, public paid execution and any ceiling change need explicit owner approval.
 
-## 1. Host (once)
+## VM requirements
+
+| | Minimum | Recommended |
+|---|---|---|
+| OS | Ubuntu 22.04 LTS, amd64 | **Ubuntu 24.04 LTS, amd64 (x86_64)**; arm64 is untested |
+| CPU / RAM | 2 vCPU / 4 GB | 2 vCPU / 8 GB (headroom for Chromium + build) |
+| Disk | 30 GB SSD | 50 GB SSD (image 2.2 GB, build cache ~3 GB, about 60 MB per live repetition) |
+| Kernel | ≥ 5.15 with user namespaces (`CONFIG_USER_NS`, `user.max_user_namespaces` > 0), the stock Ubuntu kernel | same |
+| AppArmor | Ubuntu 24.04: `kernel.apparmor_restrict_unprivileged_userns=0`. 22.04 needs no change. The bootstrap script sets it. | same |
+| Docker | Docker Engine ≥ 24 + Compose v2 (`get.docker.com`) | same |
+| Inbound | TCP 22 (SSH), 80 (certificate challenge, redirect), 443 | same; restrict 22 to your IP |
+| Outbound | 443 to `api.meta.ai` (live runs), plus registries during build (Docker Hub, PyPI, npm, Playwright CDN), Let's Encrypt | same |
+| DNS | An A record for your hostname → VM public IPv4. Without a domain, `<ip-with-dashes>.sslip.io` works with Let's Encrypt. | your own subdomain |
+
+Any provider with these specifications works (e.g. a 2 vCPU / 4–8 GB VM from DigitalOcean, Hetzner, Lightsail, EC2 or GCE). No GPU and no managed services are needed. Only one evaluation runs at a time, so the VM size does not change with traffic.
+
+## What you need to do
+
+1. Create the VM (Ubuntu 24.04 amd64, specifications above) and point the DNS name at it. Tell me the hostname.
+2. Either give me SSH access, or run the commands below yourself (about 20 minutes, mostly the image build).
+3. Approve **public access** after step 4 passes on the VM (the US$10 ceiling and the operator token stay as they are).
+
+## Commands
+
+**A. On this machine: package the private inputs** (they never go into Git; transfer them only with `scp`/`rsync`):
 
 ```sh
-# Ubuntu 22.04/24.04 or Debian 12 · 2+ vCPU · 4+ GB RAM · DNS A record → host · ports 80/443 open
-curl -fsSL https://get.docker.com | sh
-# The jail needs unprivileged user namespaces (the container runs apparmor=unconfined):
-echo 'kernel.apparmor_restrict_unprivileged_userns=0' | sudo tee /etc/sysctl.d/60-userns.conf   # Ubuntu 23.10+
-echo 'kernel.unprivileged_userns_clone=1'             | sudo tee -a /etc/sysctl.d/60-userns.conf # Debian
-sudo sysctl --system
+cd ~/Projects/Hack_Agent_Readiness
+tar czf /tmp/live-2d58a80e14.tgz -C scanner-data/live live-2d58a80e14
+# Live history and the persisted US$10 admission policy (first live run already reserved).
+# Stop the local container first; it must stay stopped, so the two hosts never spend against two copies of the ceiling.
+docker stop agent-readiness-app-1
+docker run --rm -v agent-readiness_data:/data -v /tmp:/out alpine tar czf /out/hosted-live.tgz -C /data hosted/live
+scp /tmp/live-2d58a80e14.tgz /tmp/hosted-live.tgz deploy/secrets/operator_token <user>@<host>:/tmp/
 ```
 
-## 2. Code, private data, secrets
+**B. On the VM:**
 
 ```sh
-git clone https://github.com/<owner>/Hack_Agent_Readiness.git && cd Hack_Agent_Readiness && git checkout hosted-ironbark-evaluation
-# Private source run (26 MB, never in Git), copied from the operator machine:
-#   rsync -a scanner-data/live/live-2d58a80e14/ host:/srv/agent-readiness/live-2d58a80e14/
-sudo chown -R 10001:10001 /srv/agent-readiness/live-2d58a80e14       # container user; the preflight refuses unreadable files
+git clone https://github.com/<owner>/Hack_Agent_Readiness.git ~/agent-readiness && cd ~/agent-readiness
+git checkout hosted-ironbark-evaluation
+bash deploy/bootstrap-host.sh && exit                 # installs Docker, sets the userns sysctl, firewall; log in again
+
+cd ~/agent-readiness
+sudo tar xzf /tmp/live-2d58a80e14.tgz -C /srv/agent-readiness && sudo chown -R 10001:10001 /srv/agent-readiness/live-2d58a80e14
+docker volume create agent-readiness_data
+docker run --rm -v agent-readiness_data:/data -v /tmp:/in alpine sh -c 'tar xzf /in/hosted-live.tgz -C /data && chown -R 10001:10001 /data'
 mkdir -p deploy/secrets
-openssl rand -base64 32 > deploy/secrets/operator_token               # keep a copy: it starts evaluations
-: > deploy/secrets/meta_model_api_key                                 # stays EMPTY until live is authorized
-sudo chown 10001:10001 deploy/secrets/* && sudo chmod 400 deploy/secrets/*
+sudo install -o 10001 -g 10001 -m 400 /tmp/operator_token deploy/secrets/operator_token
+read -rsp 'Meta model API key: ' K && printf %s "$K" | sudo tee deploy/secrets/meta_model_api_key >/dev/null && unset K && echo
+sudo chown 10001:10001 deploy/secrets/meta_model_api_key && sudo chmod 400 deploy/secrets/meta_model_api_key
 cat > deploy/.env <<'ENV'
 SITE_ADDRESS=readiness.example.com
 AR_SOURCE_RUN=/srv/agent-readiness/live-2d58a80e14
-AR_HOSTED_MODE=rehearsal
+AR_HOSTED_MODE=live
 AR_HOSTED_ACCESS=operator
-AR_HOSTED_CEILING_USD=<owner-approved value>
+AR_HOSTED_CEILING_USD=10
 ENV
+cd deploy && docker compose up -d --build
 ```
 
-`AR_HOSTED_CEILING_USD` is a hard global limit. Every evaluation reserves **US$1.65 per repetition** (the US$1.60 arm caps plus one US$0.05 request bound), and reservations are never released. The value is persisted at first start; a different value later disables evaluations (`budget_policy_mismatch`) until the owner reconciles deliberately.
+`AR_HOSTED_CEILING_USD=10` must match the persisted policy in the migrated volume; any other value disables evaluations (`budget_policy_mismatch`) rather than changing the ceiling.
 
-Rehearsal and live keep separate data (`/data/hosted/rehearsal` and `/data/hosted/live`, each with its own admission database), so rehearsals never consume the live ceiling or appear in the live history.
-
-To operate privately (no Caddy, nothing public): `docker compose -f compose.yaml -f compose.private.yaml up -d app`, then `ssh -L 8080:127.0.0.1:8080 <host>` and open `http://127.0.0.1:8080/#/run`.
-
-## 3. Build and start (rehearsal, operator-only)
+**C. Verify on the VM (required before public access):**
 
 ```sh
-cd deploy
-docker compose build
-docker compose up -d
-docker compose logs app | grep 'hosted service'        # expect: mode=rehearsal access=operator evaluations=enabled jail=verified
-docker compose exec app python -m agent_readiness.hosted.admin health
-```
-
-If `evaluations=disabled`, the log line gives the reason code: `isolation_check_failed` / `isolation_policy_invalid` (namespaces blocked: re-check step 1 and the `security_opt` lines), `source_run_missing` / `source_run_unreadable` (mount path or ownership), `missing_operator_token`, `missing_provider_key` (live only), `ceiling_not_configured` / `ceiling_invalid` / `budget_policy_mismatch`. The site and past results stay up in every case.
-
-## 4. Verify the boundary inside the container (required before live)
-
-```sh
-docker compose exec app python -c "from agent_readiness.hosted import jail; print(jail.selftest())"
-#   expect {'ok': True, 'mirror_reachable': True, 'escapes_blocked': True, 'filesystem_hidden': True}
-docker compose exec app python -m agent_readiness.hosted.admin start --repetitions 1 --watch   # scripted rehearsal, no provider
-curl -s -o /dev/null -w '%{http_code}\n' -XPOST https://$SITE_ADDRESS/api/ironbark/jobs -H 'content-type: application/json' -d '{}'               # 403 (operator-only)
-curl -s -o /dev/null -w '%{http_code}\n' -XPOST https://$SITE_ADDRESS/api/ironbark/jobs -H 'content-type: application/json' -d '{"url":"x"}'      # 422
-```
-
-Open `https://$SITE_ADDRESS/#/run`: the rehearsal is labelled as scripted, Watch shows the jailed browser's screenshots, and the run is listed in history after a reload. `docker compose restart app` during a run marks it `interrupted` and keeps its reservation.
-
-## 5. First genuine Muse Spark run (private; needs owner authorization)
-
-```sh
-sudo sh -c 'printf %s "<key>" > deploy/secrets/meta_model_api_key' && sudo chown 10001:10001 deploy/secrets/meta_model_api_key && sudo chmod 400 deploy/secrets/meta_model_api_key
-sed -i 's/^AR_HOSTED_MODE=.*/AR_HOSTED_MODE=live/' .env && docker compose up -d
 docker compose logs app | grep 'hosted service'        # mode=live access=operator evaluations=enabled jail=verified
-docker compose exec app python -m agent_readiness.hosted.admin start --repetitions 1 --watch
+docker compose exec app python -c "from agent_readiness.hosted import jail; print(jail.selftest())"
+#   {'ok': True, 'mirror_reachable': True, 'escapes_blocked': True, 'filesystem_hidden': True}
+curl -s https://$SITE/api/health                       # "evaluations":"enabled","access":"operator"
+curl -s -o /dev/null -w '%{http_code}\n' -XPOST https://$SITE/api/ironbark/jobs -H 'content-type: application/json' -d '{}'           # 403
+curl -s -o /dev/null -w '%{http_code}\n' -XPOST https://$SITE/api/ironbark/jobs -H 'content-type: application/json' -d '{"url":"x"}'  # 422
 ```
 
-Expected: 8 runs, about 10–30 minutes; at most US$1.65 reserved. Check the result at `#/run/<id>` (badge “Live · Meta Muse Spark”, evidence `real model`). The operator can also start runs from the web UI under *Operator access*.
+Open `https://$SITE/#/run`. History shows the first Muse Spark evaluation, and the worker banner reads "Worker available". Optional private live check (US$1.65 reserved, about 9 minutes): `docker compose exec app python -m agent_readiness.hosted.admin start --repetitions 1 --watch`.
 
-## 6. Open to judges (needs owner authorization)
+**D. Open to judges (only after owner approval):**
 
 ```sh
 sed -i 's/^AR_HOSTED_ACCESS=.*/AR_HOSTED_ACCESS=public/' .env && docker compose up -d
 ```
 
-Public starts are limited to one evaluation at a time, one start per client every `AR_HOSTED_MIN_INTERVAL` seconds (default 120), and the ceiling. To stop new runs immediately: set `AR_HOSTED_ACCESS=operator` (or `AR_HOSTED_MODE=disabled`) and `docker compose up -d`.
+Public starts are limited to one evaluation at a time (others see "Worker busy" and can watch it or browse completed results), one start per client every 120 s, and the US$10 ceiling: 5 more repetitions at US$1.65 each, never released. To stop new runs at once: set `AR_HOSTED_ACCESS=operator` (or `AR_HOSTED_MODE=disabled`), then `docker compose up -d`. History stays visible.
 
-## Operations
+## Troubleshooting
 
-`docker compose exec app python -m agent_readiness.hosted.admin list` · `... watch <id>` · logs: `docker compose logs -f app` · data: volume `agent-readiness_data` (`/data/hosted`: admission DB, job files, per-repetition runs). Back it up before changing the ceiling.
+`docker compose logs app | grep 'evaluations disabled'` gives a reason code:
+
+| Code | Fix |
+|---|---|
+| `isolation_check_failed`, `isolation_policy_invalid` | Namespaces blocked: run `unshare -Urn true` on the host; re-run the bootstrap; check the `security_opt` lines in compose.yaml. |
+| `source_run_missing`, `source_run_unreadable` | Path in `.env` or ownership: `sudo chown -R 10001:10001 /srv/agent-readiness/live-2d58a80e14`. |
+| `missing_provider_key`, `missing_operator_token` | Secret file empty, or not owned/readable by 10001. |
+| `budget_policy_mismatch`, `ceiling_*` | `.env` ceiling differs from the persisted policy. Restore `10`; never edit the database. |
+
+The site and history stay up in every case. Private operation without Caddy: `docker compose -f compose.yaml -f compose.private.yaml up -d app` and `ssh -L 8080:127.0.0.1:8080 <host>`. Operations: `docker compose exec app python -m agent_readiness.hosted.admin list|watch <id>|health`.
