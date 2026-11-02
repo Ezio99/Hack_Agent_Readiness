@@ -18,6 +18,8 @@ RUN pip install -r requirements.lock && python -m playwright install --with-deps
 COPY pyproject.toml README.md ./
 COPY src ./src
 RUN pip install --no-deps . && python -c "import agent_readiness.hosted.serve"
+# Sanitized, versioned lifecycle datasets (M8): the preloaded M7 evaluation; validated at startup (a dataset that fails is not served).
+COPY datasets ./datasets
 COPY --from=studio /dashboard/dist /srv/studio
 COPY deploy/jail-policy.json /etc/agent-readiness/jail.json
 # Defence in depth only (the network namespace is the boundary): no local-file pages in Chromium.
@@ -25,7 +27,7 @@ COPY deploy/chromium-policy.json /etc/chromium/policies/managed/agent-readiness.
 RUN useradd --uid 10001 --create-home --home-dir /home/agent agent \
     && mkdir -p /data /app/scanner-data/live && chown -R agent:agent /data /app
 USER agent
-ENV AR_HOSTED_DATA=/data/hosted AR_STATIC_DIR=/srv/studio AR_HOST=0.0.0.0 AR_PORT=8080 \
+ENV AR_HOSTED_DATA=/data/hosted AR_STATIC_DIR=/srv/studio AR_HOST=0.0.0.0 AR_PORT=8080 AR_LIFECYCLE_DATASETS=/app/datasets/lifecycle \
     AGENT_READINESS_BROWSER_JAIL=/etc/agent-readiness/jail.json
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=90s CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=5)"]

@@ -35,6 +35,14 @@ cd /root/agent-readiness && git checkout -q --detach b3121a8 \
 
 **First deployed (operator-only) on 2026-11-02 at https://209-38-84-72.sslip.io (DigitalOcean, Ubuntu 24.04, 2 vCPU/4 GB + 2 GB swap); steps A–C passed on the VM.** One Linux VM runs everything: Caddy (automatic HTTPS) in front of a single app container (API, job worker, jailed Chromium). Status: the image builds and, in Docker Desktop (WSL2), passed the in-container isolation self-test, a rehearsal and restart recovery, and completed the first genuine Muse Spark evaluation. **The cloud VM must repeat step 4 because its kernel and AppArmor settings differ.** Public deployment, public paid execution and any ceiling change need explicit owner approval.
 
+## M8 release candidate (branch `m8-product-integration`; NOT deployed)
+
+M8 adds the evaluation lifecycle to the same image: `/api/lifecycle/*`, the `#/lifecycle` and `#/reports/<id>` pages, and the sanitized M7 dataset
+(`/app/datasets/lifecycle`, validated at startup). No `.env`, secret, ceiling or access change. Without a lifecycle store on the volume the lifecycle is
+view-only (`lifecycle: … store=no launch=disabled paid=disabled web-approval=disabled` in the log). Web approval and paid lifecycle launch are refused
+server-side in this release. Procedure, smoke checks and rollback: [collaboration/reports/lifecycle-m8-product-integration.md §10](../collaboration/reports/lifecycle-m8-product-integration.md).
+Optional, later: operator rehearsals need the store at `/data/hosted/lifecycle/store` (uid 10001; `private/` 0700, files 0400) and a restart.
+
 ## VM requirements
 
 | | Minimum | Recommended |

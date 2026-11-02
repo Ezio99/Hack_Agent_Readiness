@@ -71,6 +71,7 @@ export function Home({ section }: { section?: string }) {
               <a className="btn btn-signal" href="#/run">Run an evaluation <span className="arr" aria-hidden="true">→</span></a>
               <a className="btn btn-ghost" href="#/demo">Watch the demo</a>
             </div>
+            <p className="hero-lifecycle" data-reveal><a className="link" href="#/lifecycle">The full evaluation lifecycle</a> — from business context and AI-generated tasks to an owner-approved frozen suite, real browser agents and a six-dimension <a className="link" href="#/reports/m7-larkspur-browser-1">readiness report</a>.</p>
             <div className="hero-note" data-reveal><HeroNote /></div>
           </div>
           <div className="hero-visual" data-reveal><HeroFigure /></div>

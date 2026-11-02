@@ -84,7 +84,15 @@ Future product architecture (not implemented): [docs/FUTURE_ARCHITECTURE.md](doc
 
 Handoff: [collaboration/LIFECYCLE_HANDOFF.md](collaboration/LIFECYCLE_HANDOFF.md).
 
-**Next: M8, integrating the lifecycle into the live product** (not started; instructions come separately). Handoff: [collaboration/handoffs/m8-product-integration.md](collaboration/handoffs/m8-product-integration.md) (2026-11-03).
+**M8** (below) followed the handoff [collaboration/handoffs/m8-product-integration.md](collaboration/handoffs/m8-product-integration.md).
+
+**M8: lifecycle integrated into the product (branch `m8-product-integration`, release candidate; not merged, not deployed; zero cost):**
+- One evaluation model for recorded and new evaluations: `src/agent_readiness/lifecycle/` (projection, leak audit, Stage A views, datasets, service, jobs, API).
+- Web: `#/lifecycle` (website → tasks → review → evaluate → report → re-evaluate), `#/reports/<id>` (six dimensions, no composite score), side-by-side traces.
+- Preloaded M7: sanitized dataset `datasets/lifecycle/m7-larkspur-browser-1/v1`, re-derived byte-for-byte from the local source artefacts.
+- Enabled: viewing everything; operator-only zero-cost rehearsal launch and re-evaluation (needs the store on the server). Disabled, refused server-side: web approval (owner authentication undecided), paid launch, paid generation, URL onboarding.
+- Prospective, versioned: grader v2.1-contrast, evidence-ranked-subset-2; diagnostics hypotheses-2 / behavioral-2 (either_of fix, v1 format rejections separated, observed vs hypothesis).
+- Report, owner decisions (authentication options), deployment and rollback: [collaboration/reports/lifecycle-m8-product-integration.md](collaboration/reports/lifecycle-m8-product-integration.md).
 
 ## Budget
 

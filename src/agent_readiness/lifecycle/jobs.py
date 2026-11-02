@@ -150,7 +150,8 @@ def harden_jail(runs_root: Path, store_root: Path) -> list[str]:
     """The manifest declares the evalruns jail policy (hidden: ~/Projects, ~/.ssh, ~/.claude, /root), which on a workstation hides the checkout.
     In the product container the application, data and secret directories live elsewhere, so this worker process hides, IN ADDITION, the
     deployment jail policy's own hidden paths (AGENT_READINESS_BROWSER_JAIL: /app, /data, /run/secrets, ...) and the lifecycle store and runs
-    roots. Hiding more never weakens the declared boundary; the extra paths are recorded on the job."""
+    roots. Hiding more never weakens the declared boundary; the extra paths are recorded on the job. (The jail self-test checks that no entry of a
+    hidden directory appears in the browser's listing of it, so a hidden directory must not contain an entry named like itself, e.g. runs/runs.)"""
     from ..evalruns import manifest as MF
     extra = [str(Path(store_root).resolve()), str(Path(runs_root).resolve())]
     pol = os.environ.get("AGENT_READINESS_BROWSER_JAIL")
@@ -174,7 +175,7 @@ def run_job(runs_root: Path, store_root: Path, job_id: str, admission) -> dict:
     from ..hosted import paired
     paired._loopback_only_sockets()                                         # no provider can be contacted from this process
     store = WriteOnceStore(store_root)
-    runs = RN.prepare(store, job["manifest_sha256"], Path(runs_root) / "runs", mode="rehearsal", label=job_id[3:13])
+    runs = RN.prepare(store, job["manifest_sha256"], Path(runs_root) / "evalruns", mode="rehearsal", label=job_id[3:13])     # not "runs": see harden_jail
     manifest = store.get("manifest", job["manifest_sha256"])
     update_job(runs_root, job_id, runs={c: str(r.dir.relative_to(Path(runs_root))) for c, r in runs.items()},
                planned=sum(len(RN.steps(r, manifest)) for r in runs.values()), state="running")

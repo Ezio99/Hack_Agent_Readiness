@@ -115,3 +115,14 @@ reduced-motion render and keyboard paths. Screenshots: `dashboard/review/redesig
 Deployed `b3121a8` (after two pre-deploy fixes: inline timeline action chips, and narrow-screen overflow) to
 https://209-38-84-72.sslip.io. Production verification screenshots: `review/redesign/production/`. Full checks,
 data-integrity evidence and the rollback command are in `STATUS.md` and `deploy/DEPLOY.md`.
+
+## M8: lifecycle pages (branch `m8-product-integration`, not deployed)
+
+| URL | Experience |
+|---|---|
+| `#/lifecycle`, `#/lifecycle/<step>` | The lifecycle workflow: `website`, `tasks`, `review`, `evaluate`, `report`, `reevaluate` |
+| `#/lifecycle/suites/<sha>` · `#/lifecycle/jobs/lc-<32 hex>` | A suite's review packet and state · a launched evaluation's progress |
+| `#/reports/<id>` · `#/reports/<id>/tasks/<n>` | Readiness report (six dimensions) · side-by-side trace comparison |
+
+Same identity (paper and ink, rust = Original, blue = Modified for identity only, status with glyph and word). Everything is read from
+`/api/lifecycle/*`; disabled actions show the server's reason. Details: `collaboration/reports/lifecycle-m8-product-integration.md`.
