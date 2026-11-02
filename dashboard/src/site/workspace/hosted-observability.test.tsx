@@ -39,6 +39,34 @@ it('operator-only access: watching works, running needs a token sent as a bearer
   expect((post[1]!.headers as Record<string, string>).Authorization).toBe('Bearer ' + 'x'.repeat(32));
 });
 
+it('operator token: visible without expanding, held in memory only, legacy storage removed, rejected token cleared', async () => {
+  sessionStorage.setItem('ironbark-operator-token', 'legacy-token-value-legacy-token');
+  const f = vi.fn(async (url: string, init?: RequestInit) => init?.method === 'POST' ? new Response(JSON.stringify({ detail: 'New evaluations are not open to the public yet' }), { status: 403, headers: { 'Content-Type': 'application/json' } }) :
+    url.endsWith('/config') ? json({ available: true, mode: 'live', access: 'operator', repetitions: [1, 3, 5], model: 'm', agent_profile: 'p', tasks: [], remaining_repetitions: 9, active: null }) :
+    url.endsWith('/jobs') ? json([]) : json(job()));
+  vi.stubGlobal('fetch', f);
+  const host = await mount(<HostedEvaluation onOpen={() => {}} />);
+  expect(sessionStorage.getItem('ironbark-operator-token')).toBeNull();
+  const input = host.querySelector('input[aria-label="Operator token"]') as HTMLInputElement;
+  expect(input.type).toBe('password');
+  expect(input.value).toBe('');
+  expect(input.closest('details')).toBeNull();
+  expect(host.querySelector('label[for="ws-operator-token"]')!.textContent).toContain('Operator token');
+  const run = [...host.querySelectorAll('button')].find(b => b.textContent === 'Run evaluation') as HTMLButtonElement;
+  expect(run.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();   // the field comes before the button it unlocks
+  expect(run.getAttribute('aria-describedby')).toBe('ws-run-note');
+  expect(host.querySelector('#ws-run-note')!.textContent).toContain('needs the operator token');
+  const secret = 'w'.repeat(40);
+  await act(async () => { const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!; set.call(input, secret); input.dispatchEvent(new Event('input', { bubbles: true })); });
+  const stored = [...Array(sessionStorage.length).keys()].map(i => sessionStorage.getItem(sessionStorage.key(i)!)).concat([...Array(localStorage.length).keys()].map(i => localStorage.getItem(localStorage.key(i)!)));
+  expect(stored.some(v => v?.includes(secret))).toBe(false);
+  expect(run.disabled).toBe(false);
+  await act(async () => { run.click(); });
+  expect(host.textContent).toContain('The operator token was not accepted');
+  expect((host.querySelector('input[aria-label="Operator token"]') as HTMLInputElement).value).toBe('');
+  expect(run.disabled).toBe(true);
+});
+
 it('renders real telemetry: screenshot URL, actions, goals, errors and the final answer', async () => {
   const trial: Trial = { repetition: 1, arm: 'modified', task: 2, state: 'completed', question: 'Which machine?', steps: [
     { step: 1, path: '/hire', title: null, screenshot: 'step-001.png', assessment: 'Start', memory: 'Need deposits', goal: 'Open the list', actions: [{ name: 'Click', target: '“Hire equipment” · /hire' }], error: null, done: false },

@@ -18,7 +18,7 @@ interface Config { worker?: Worker; repetition_duration?: { seconds: number; bas
 
 const ACTIVE = ['reserved', 'running'];
 const STORE = 'ironbark-hosted-job';
-const TOKEN = 'ironbark-operator-token';
+const LEGACY_TOKEN = 'ironbark-operator-token';   // earlier builds kept the token in sessionStorage; it is now held in memory only and this key is removed
 const FOCUS = 'ar-ws-focus';
 const MODE_LABEL = { live: 'Live · Meta Muse Spark', rehearsal: 'Rehearsal · scripted agent, no model' } as const;
 const STATE_LABEL: Record<string, string> = { reserved: 'Queued', running: 'Running', completed: 'Completed', failed: 'Failed', timed_out: 'Timed out', interrupted: 'Interrupted', pending: 'Pending', preparing: 'Preparing snapshots', incomplete: 'Incomplete', unverified: 'Unverified' };
@@ -31,7 +31,7 @@ const when = (t: number) => new Date(t * 1000).toLocaleString([], { day: 'numeri
 async function getJSON<T>(url: string, init?: RequestInit): Promise<T> {
   const r = await fetch(url, { cache: 'no-store', ...init });
   const body = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(typeof body?.detail === 'string' ? body.detail : 'The evaluation service is unavailable.');
+  if (!r.ok) throw Object.assign(new Error(typeof body?.detail === 'string' ? body.detail : 'The evaluation service is unavailable.'), { status: r.status });
   return body as T;
 }
 
@@ -89,7 +89,8 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
   const [now, setNow] = useState(Date.now() / 1000);
   const [tab, setTab] = useState<'watch' | 'results' | 'insights'>('watch');
   const [selection, setSelection] = useState<Selection | null>(null);
-  const [token, setToken] = useState(() => sessionStorage.getItem(TOKEN) ?? '');
+  const [token, setToken] = useState('');   // memory only: never written to browser storage; re-entered after a reload
+  useEffect(() => { sessionStorage.removeItem(LEGACY_TOKEN); }, []);
   const current = useRef<string | null>(null);
   const top = useRef<HTMLDivElement>(null);
   const agent = useRef<HTMLDivElement>(null);
@@ -141,7 +142,11 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
       localStorage.setItem(STORE, data.id);
       history.replaceState(null, '', `#/run/${data.id}`);
       await load(data.id); setTab('watch'); void refreshConfig(); void refreshList();
-    } catch (e) { setMessage(e instanceof Error ? e.message : 'Evaluation unavailable.'); void refreshConfig(); }
+    } catch (e) {
+      if (operatorOnly && (e as { status?: number }).status === 403) { setToken(''); setMessage('The operator token was not accepted. Re-enter it to start an evaluation.'); }
+      else setMessage(e instanceof Error ? e.message : 'Evaluation unavailable.');
+      void refreshConfig();
+    }
     finally { setBusy(false); }
   }
   async function open(rep: Rep) {
@@ -170,7 +175,7 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
     : !config.available ? 'New evaluations are currently unavailable. Recorded and previous evaluations remain available.'
     : othersRunning ? 'Another evaluation is running. Start yours when the worker is available again.'
     : config.remaining_repetitions < reps ? 'The hosted budget for new evaluations is exhausted.'
-    : operatorOnly && token.length < 24 ? 'New evaluations are not open to the public yet. You can watch and inspect existing evaluations.'
+    : operatorOnly && token.length < 24 ? 'New evaluations are not open to the public yet: starting one needs the operator token (above). Anyone can watch and inspect existing evaluations.'
     : `${reps * 8} fresh agent runs · ${minutes(perRep * reps)}, varies with the agent`;
   const latest = recent.find(r => r.id !== job?.id && r.summary);
 
@@ -202,10 +207,17 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
             <div className="ws-reps" role="radiogroup" aria-label="Paired repetitions">{(config?.repetitions ?? [1, 3, 5]).map(n =>
               <button key={n} role="radio" aria-checked={reps === n} disabled={running} onClick={() => setReps(n)}><strong>{n}</strong><small>{n * 8} agent runs</small><small>{minutes(perRep * n)}</small></button>)}</div></li>
           <li><span className="ws-step">03 · Run</span>
-            <button className="btn btn-signal ws-run" disabled={!canRun} onClick={() => void start()}>{busy ? 'Starting…' : running ? 'Evaluation running' : 'Run evaluation'}</button>
-            <p className="ws-note">{note}</p>
-            {operatorOnly && config?.available && <details className="ws-operator"><summary>Operator access</summary>
-              <input type="password" aria-label="Operator token" autoComplete="off" value={token} placeholder="Operator token" onChange={e => { setToken(e.target.value); sessionStorage.setItem(TOKEN, e.target.value); }} /></details>}</li>
+            {operatorOnly && config?.available && <div className="ws-operator">
+              <label htmlFor="ws-operator-token">Operator token <span className="ws-operator-badge">operators only</span></label>
+              <div className="ws-operator-row">
+                <input id="ws-operator-token" type="password" aria-label="Operator token" aria-describedby="ws-operator-help" autoComplete="off" spellCheck={false} value={token}
+                  placeholder="Paste the operator token" onChange={e => setToken(e.target.value.trim())} />
+                {token && <button type="button" className="ws-link" onClick={() => setToken('')}>Clear</button>}
+              </div>
+              <p id="ws-operator-help" className="ws-operator-help">Held in this page's memory only (never saved; re-enter it after a reload) and sent only as an authorization header when you start. The server checks it.</p>
+            </div>}
+            <button className="btn btn-signal ws-run" disabled={!canRun} aria-describedby="ws-run-note" onClick={() => void start()}>{busy ? 'Starting…' : running ? 'Evaluation running' : 'Run evaluation'}</button>
+            <p className="ws-note" id="ws-run-note">{note}</p></li>
         </ol>
         <details className="ws-method"><summary>Methodology &amp; provenance</summary>
           <p><strong>Agent.</strong> Browser Use agent driven by <code>{config?.model ?? 'muse-spark-1.3'}</code> with profile <code>{config?.agent_profile ?? 'suite-v2-compat2'}</code>; each task is limited to {config?.tasks[0]?.limits?.max_steps ?? 14} steps and {config?.tasks[0]?.limits?.timeout_seconds ?? 240} seconds; no retries.</p>
