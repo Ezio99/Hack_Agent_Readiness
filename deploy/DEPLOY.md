@@ -1,6 +1,6 @@
 # Deploying the hosted Ironbark evaluation
 
-One Linux host (Docker Engine + Compose v2). Caddy terminates TLS; one app container holds the API, the job worker and the jailed Chromium. **Status: the image has not yet been built and the isolation self-test has not yet run inside a container. Do not call the deployment validated until steps 3–4 pass on the real host.** Owner authorization is required for the public deployment (step 6), for live mode (step 5) and for the ceiling value.
+One Linux host (Docker Engine + Compose v2). Caddy terminates TLS; one app container holds the API, the job worker and the jailed Chromium. **Status (2026-11-02): the image builds, and steps 3–5 passed in Docker Desktop (WSL2) with the private override: the in-container self-test passed, a rehearsal completed 8/8, a restart marked the run interrupted, and the first private live run was made. The cloud host still needs steps 3–4 repeated, because its kernel and AppArmor settings differ.** Owner authorization is required for the public deployment (step 6), for live mode (step 5) and for the ceiling value.
 
 ## 1. Host (once)
 
@@ -34,6 +34,10 @@ ENV
 ```
 
 `AR_HOSTED_CEILING_USD` is a hard global limit. Every evaluation reserves **US$1.65 per repetition** (the US$1.60 arm caps plus one US$0.05 request bound), and reservations are never released. The value is persisted at first start; a different value later disables evaluations (`budget_policy_mismatch`) until the owner reconciles deliberately.
+
+Rehearsal and live keep separate data (`/data/hosted/rehearsal` and `/data/hosted/live`, each with its own admission database), so rehearsals never consume the live ceiling or appear in the live history.
+
+To operate privately (no Caddy, nothing public): `docker compose -f compose.yaml -f compose.private.yaml up -d app`, then `ssh -L 8080:127.0.0.1:8080 <host>` and open `http://127.0.0.1:8080/#/run`.
 
 ## 3. Build and start (rehearsal, operator-only)
 
