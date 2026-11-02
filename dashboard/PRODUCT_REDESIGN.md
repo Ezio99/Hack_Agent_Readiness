@@ -82,3 +82,30 @@ cd .. && AR_HOSTED_MODE=disabled AR_HOSTED_ROOT=/path/to/copy/of/hosted/live \
 # open http://127.0.0.1:8765/  ·  /#/demo  ·  /#/run
 ```
 `npm run dev` also works for the homepage and demo (they need no API); the workspace needs the API.
+
+## Refinement pass (2026-11-02, owner-approved direction)
+
+**Workspace.** Root cause of the faint/clipped "Agent runs / Results / Insights" row: the site header was 86 %
+translucent, so tabs scrolled underneath it showed through as ghost UI (and scrolled out of reach while a run
+was inspected). The workspace header is now opaque, and the job status, progress and tabs form a sticky job bar
+(static on phones). Selecting a run scrolls the agent view into place below it. The agent view now leads with a
+larger browser frame (≈1.85:1 against the timeline; ≈2.2:1 in focus mode) and a step bar (previous / next,
+current step and action). The timeline has a connecting rail, numbered badges, an ink bar plus filled badge for the
+selected step, wrapped (not truncated) targets, ↑/↓/Home/End keyboard navigation and a Details/Compact toggle.
+**Focus evidence** hides the evaluation controls (Esc restores them); both preferences persist per tab.
+
+**Demo.** The change scene is now three scroll-linked phases built on the same card in both recordings
+(hedge trimmer; Original task 1 step 3, Modified task 2 step 3): a ~2× close-up of the Modified card's fields with
+the three field names labelled one by one beside the image; the close-up then glides onto the Modified card and
+dissolves into the highlighted rows as the full Original-vs-Modified pair appears at ~1.1× (previously ~0.55×),
+with the Original's absence marked. Chapter navigation: the header shows "05 / 09 · The change" with an in-chapter
+progress line; the rail marks done / active / upcoming chapters and labels the active one.
+
+**Homepage.** The hero is now headline + a two-column row: copy, actions and the agent-memory note on the left, the
+recorded Original listing screenshot on the right, so the real product evidence is inside the first desktop
+viewport. Blue now has exactly two meanings across the site: a primary action, or Modified-site data (rust is
+Original). Status indicators (live mode, running) are neutral; the evidence numbers use the series colours.
+
+Checks: `npm run build` incl. `check:dist`; 185 vitest (4 new refinement tests); 72 hosted/deployment-safety
+pytest; critical suite 214 passed (17 deselected); rendered desktop 1440×900 and mobile 390×844 review of every changed screen,
+reduced-motion render and keyboard paths. Screenshots: `dashboard/review/redesign/` (refreshed).

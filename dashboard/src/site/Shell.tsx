@@ -40,7 +40,7 @@ export function SiteHeader({ active, cta = true }: { active?: Active; cta?: bool
       <nav id="site-nav" className={`site-nav${open ? ' open' : ''}`} aria-label="Primary">
         {NAV.map(n => <a key={n.id} href={n.href} aria-current={active === n.id ? 'page' : undefined}>{n.label}</a>)}
       </nav>
-      {cta && <a className="btn btn-sm" href="#/run">Run evaluation <span className="arr" aria-hidden="true">→</span></a>}
+      {cta && <a className="btn btn-sm btn-signal" href="#/run">Run evaluation <span className="arr" aria-hidden="true">→</span></a>}
     </div>
   </header>;
 }

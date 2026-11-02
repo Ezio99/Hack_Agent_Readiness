@@ -19,6 +19,7 @@ interface Config { worker?: Worker; repetition_duration?: { seconds: number; bas
 const ACTIVE = ['reserved', 'running'];
 const STORE = 'ironbark-hosted-job';
 const TOKEN = 'ironbark-operator-token';
+const FOCUS = 'ar-ws-focus';
 const MODE_LABEL = { live: 'Live · Meta Muse Spark', rehearsal: 'Rehearsal · scripted agent, no model' } as const;
 const STATE_LABEL: Record<string, string> = { reserved: 'Queued', running: 'Running', completed: 'Completed', failed: 'Failed', timed_out: 'Timed out', interrupted: 'Interrupted', pending: 'Pending', preparing: 'Preparing snapshots', incomplete: 'Incomplete', unverified: 'Unverified' };
 export const label = (s: string) => STATE_LABEL[s] ?? s.replaceAll('_', ' ');
@@ -91,6 +92,9 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
   const [token, setToken] = useState(() => sessionStorage.getItem(TOKEN) ?? '');
   const current = useRef<string | null>(null);
   const top = useRef<HTMLDivElement>(null);
+  const agent = useRef<HTMLDivElement>(null);
+  const [focus, setFocus] = useState(() => sessionStorage.getItem(FOCUS) === '1');
+  const toggleFocus = () => setFocus(f => { sessionStorage.setItem(FOCUS, f ? '0' : '1'); return !f; });
 
   async function load(id: string) {
     const changed = current.current !== id;
@@ -122,6 +126,12 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
     return () => clearInterval(t);
   }, [config?.worker?.state, config?.worker?.job]);
 
+  useEffect(() => { // Esc leaves evidence focus
+    if (!focus) return;
+    const on = (e: KeyboardEvent) => { if (e.key === 'Escape') { sessionStorage.setItem(FOCUS, '0'); setFocus(false); } };
+    window.addEventListener('keydown', on); return () => window.removeEventListener('keydown', on);
+  }, [focus]);
+
   async function start() {
     setBusy(true); setMessage('');
     try {
@@ -140,7 +150,9 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
     catch (e) { setMessage(e instanceof Error ? e.message : 'Sanitized results are unavailable.'); }
   }
   const select = (id: string) => { localStorage.setItem(STORE, id); history.replaceState(null, '', `#/run/${id}`); setMessage(''); load(id).catch(e => setMessage(e.message)); top.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }); };
-  const watch = (s: Selection) => { setSelection(s); setTab('watch'); };
+  const reduce = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  // Selecting a run brings the agent view (below the sticky job bar) into view.
+  const watch = (s: Selection) => { setSelection(s); setTab('watch'); requestAnimationFrame(() => agent.current?.scrollIntoView?.({ behavior: reduce() ? 'auto' : 'smooth', block: 'start' })); };
 
   const questions = Object.fromEntries((config?.tasks ?? []).map(t => [t.task, t.question]));
   const operatorOnly = config?.access === 'operator';
@@ -180,7 +192,7 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
       </div>}
     </div>
 
-    <div className={`ws-layout${job ? ' has-job' : ''}`}>
+    <div className={`ws-layout${job ? ' has-job' : ''}${focus && job && tab === 'watch' ? ' focus' : ''}`}>
       <aside className="ws-compose" aria-label="New evaluation">
         <div className="ws-compose-head"><h2>New evaluation</h2>{mode && <span className={`ws-mode ${mode}`}>{MODE_LABEL[mode]}</span>}</div>
         <ol className="ws-steps">
@@ -217,21 +229,22 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
         </div>}
 
         {job && <section className="ws-job" aria-label={`Evaluation ${job.id.slice(0, 13)}`}>
+          <div className="ws-jobbar">
           <header className="ws-job-head">
             <div className="ws-status" aria-live="polite"><span className={`ws-dot ${job.state}`} aria-hidden="true" /><strong>{label(job.state)}</strong>
               <span>{done} / {total || '–'} agent runs finished</span>{job.started_at && <span>{clock(elapsed)} elapsed</span>}</div>
             <div className="ws-job-meta"><span>{job.repetitions} repetition{job.repetitions === 1 ? '' : 's'} · started {when(job.created_at)}</span><code title={job.id}>{job.id.slice(0, 13)}</code></div>
           </header>
           <div className="ws-bar" role="progressbar" aria-label="Agent runs finished" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}><i style={{ width: `${total ? 100 * done / total : 0}%` }} /></div>
+          <div className="ws-tabs" role="tablist" aria-label="Evaluation views">{([['watch', running ? 'Watch live' : 'Agent runs'], ['results', 'Results'], ['insights', 'Insights']] as const).map(([k, l]) =>
+            <button key={k} role="tab" id={`ws-tab-${k}`} aria-controls={`ws-panel-${k}`} aria-selected={tab === k} onClick={() => setTab(k)}>{k === 'watch' && running && <span className="ws-live" aria-hidden="true" />}{l}</button>)}</div>
+          </div>
           {job.recovery_required && <p className="ws-alert">This evaluation lost its worker and will be marked interrupted.</p>}
           {job.state === 'interrupted' && <p className="ws-alert">This evaluation was interrupted by a service restart. Finished repetitions remain available.</p>}
           {job.mode === 'rehearsal' && <p className="ws-alert">Rehearsal: real browsers and grading, but a scripted agent instead of a model. These are not Muse Spark results.</p>}
 
-          <div className="ws-tabs" role="tablist" aria-label="Evaluation views">{([['watch', running ? 'Watch live' : 'Agent runs'], ['results', 'Results'], ['insights', 'Insights']] as const).map(([k, l]) =>
-            <button key={k} role="tab" id={`ws-tab-${k}`} aria-controls={`ws-panel-${k}`} aria-selected={tab === k} onClick={() => setTab(k)}>{k === 'watch' && running && <span className="ws-live" aria-hidden="true" />}{l}</button>)}</div>
-
           {tab === 'watch' && <div className="ws-watch" role="tabpanel" id="ws-panel-watch" aria-labelledby="ws-tab-watch">
-            <AgentPanel jobId={job.id} active={running} selection={selection} scripted={job.mode === 'rehearsal'} onClear={() => setSelection(null)} />
+            <div ref={agent} className="ws-agent-anchor"><AgentPanel jobId={job.id} active={running} selection={selection} scripted={job.mode === 'rehearsal'} onClear={() => setSelection(null)} focus={focus} onFocus={toggleFocus} /></div>
             {(() => {
               const focus = selection?.repetition ?? (job.reps.find(r => ['preparing', 'running'].includes(r.state)) ?? job.reps[job.reps.length - 1])?.index;
               const grid = (rep: Rep) => <article key={rep.index} className="ws-rep">

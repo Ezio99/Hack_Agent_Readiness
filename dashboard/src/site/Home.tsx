@@ -24,25 +24,26 @@ function StepTicks({ steps, label }: { steps: typeof original.steps; label: stri
   return <ol className="ticks" aria-label={label}>{steps.map(s => <li key={s.step} className={isItemPage(s.path) ? 'item' : s.done ? 'done' : ''} title={`Step ${s.step}: ${s.path}`} />)}</ol>;
 }
 
-function HeroPlate() {
-  return <figure className="plate" data-reveal>
-    <div className="plate-stage">
-      <div className="plate-front frame">
-        <div className="frame-bar"><span className="frame-dots"><i /><i /><i /></span><span className="frame-url">ironbark-hire{guess.path} · Original</span></div>
-        <div className="frame-shot"><img src={frame(guess.frame)} alt="Recorded screenshot: the Original Ironbark listing page, where cards show prices but no refundable deposit." /></div>
-      </div>
-      <aside className="plate-note" aria-label="Recorded agent memory">
-        <p className="eyebrow">Muse Spark · Original · step {guess.step} of {original.steps.length}</p>
-        <blockquote>“{guess.memory}”</blockquote>
-        <StepTicks steps={original.steps} label="Original journey: listing, item pages and answer" />
-        <p className="plate-legend"><span><i className="t-list" />Listing</span><span><i className="t-item" />Item page</span><span><i className="t-done" />Answer</span></p>
-        <div className="plate-verdicts">
-          <div><span className="tag tag-fail">✕ Not passed</span><small>Original · {row('Original', 1).requests} requests</small></div>
-          <div><span className="tag tag-pass">✓ Evidence-supported</span><small>Modified · {row('Modified', 1).requests} requests</small></div>
-        </div>
-      </aside>
+function HeroNote() {
+  return <aside className="plate-note" aria-label="Recorded agent memory">
+    <p className="eyebrow">Muse Spark · Original · step {guess.step} of {original.steps.length}</p>
+    <blockquote>“{guess.memory}”</blockquote>
+    <StepTicks steps={original.steps} label="Original journey: listing, item pages and answer" />
+    <p className="plate-legend"><span><i className="t-list" />Listing</span><span><i className="t-item" />Item page</span><span><i className="t-done" />Answer</span></p>
+    <div className="plate-verdicts">
+      <div><span className="tag tag-fail">✕ Not passed</span><small><span className="swatch o" aria-hidden="true" />Original · {row('Original', 1).requests} requests</small></div>
+      <div><span className="tag tag-pass">✓ Evidence-supported</span><small><span className="swatch m" aria-hidden="true" />Modified · {row('Modified', 1).requests} requests</small></div>
     </div>
-    <figcaption className="figcap"><b>Fig. 1</b><span>Recorded evaluation {shortId}, {recordedOn}. Task: “{original.question}” The Original listing hides deposits one click deep; the agent guessed which of {ITEMS} machines to open. Screenshots and memory are unedited.</span></figcaption>
+  </aside>;
+}
+
+function HeroFigure() {
+  return <figure className="hero-fig">
+    <div className="frame">
+      <div className="frame-bar"><span className="frame-dots"><i /><i /><i /></span><span className="frame-url">ironbark-hire{guess.path}</span><span className="hero-fig-arm">Original · step {guess.step}</span></div>
+      <div className="frame-shot"><img src={frame(guess.frame)} alt="Recorded screenshot: the Original Ironbark listing page, where cards show prices but no refundable deposit." fetchPriority="high" /></div>
+    </div>
+    <figcaption className="figcap"><b>Fig. 1</b><span>Recorded evaluation {shortId}, {recordedOn}. Task: “{original.question}” The Original listing hides deposits one click deep; the agent guessed which of {ITEMS} machines to open. Screenshot and memory are unedited.</span></figcaption>
   </figure>;
 }
 
@@ -63,14 +64,17 @@ export function Home({ section }: { section?: string }) {
       <section className="hero wrap">
         <p className="eyebrow hero-eyebrow" data-reveal>Usability testing for AI agents</p>
         <h1 className="display hero-title" data-reveal>See your website <em>the way an agent does.</em></h1>
-        <div className="hero-sub" data-reveal>
-          <p className="lede">Agent Readiness sends real Meta Muse Spark browser agents to complete tasks on your site, grades every answer against ground truth the agent never sees, and shows exactly where navigation breaks down. Then it measures whether your fix works.</p>
-          <div className="hero-cta">
-            <a className="btn btn-signal" href="#/run">Run an evaluation <span className="arr" aria-hidden="true">→</span></a>
-            <a className="btn btn-ghost" href="#/demo">Watch the recorded demo</a>
+        <div className="hero-grid">
+          <div className="hero-side">
+            <p className="lede" data-reveal>Agent Readiness sends real Meta Muse Spark browser agents to complete tasks on your site, grades every answer against ground truth the agent never sees, and shows exactly where navigation breaks down. Then it measures whether your fix works.</p>
+            <div className="hero-cta" data-reveal>
+              <a className="btn btn-signal" href="#/run">Run an evaluation <span className="arr" aria-hidden="true">→</span></a>
+              <a className="btn btn-ghost" href="#/demo">Watch the demo</a>
+            </div>
+            <div className="hero-note" data-reveal><HeroNote /></div>
           </div>
+          <div className="hero-visual" data-reveal><HeroFigure /></div>
         </div>
-        <HeroPlate />
       </section>
 
       <section id="problem" className="problem wrap" aria-labelledby="problem-h">

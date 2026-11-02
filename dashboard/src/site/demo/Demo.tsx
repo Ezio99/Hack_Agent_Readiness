@@ -156,10 +156,20 @@ function Crop({ k, x, y, w, h, alt }: { k: string | null; x: number; y: number; 
   </div>;
 }
 
+/* The hedge-trimmer card appears in both recordings: Original task 1 step 3 and Modified task 2 step 3.
+   Crops are in capture pixels (1280×960) and aligned on the card's category tags. */
+const CARD = { x: 450, w: 365 };
+const FIELDS = [
+  { label: 'Refundable deposit', y: 50 },        // row centres, % of the close-up crop height
+  { label: 'Minimum hire', y: 68.75 },
+  { label: 'Delivery and collection', y: 87.5 },
+];
+
 function Change({ reduce }: { reduce: boolean }) {
   const before = O.steps[2], after = trial('modified', 2).steps[2];
-  return <Track id="change" vh={260} reduce={reduce} label="The change" className="change"
-    vars={p => ({ a: easeOut(seg(p, 0, .18)), b: easeOut(seg(p, .2, .42)), c: easeOut(seg(p, .46, .64)), d: easeOut(seg(p, .66, .82)) })}>
+  return <Track id="change" vh={380} reduce={reduce} label="The change" className="change"
+    vars={p => ({ a: easeOut(seg(p, 0, .08)), z: easeOut(seg(p, .06, .16)), l1: easeOut(seg(p, .18, .26)), l2: easeOut(seg(p, .26, .34)), l3: easeOut(seg(p, .34, .42)),
+      x: easeInOut(seg(p, .48, .64)), h: easeOut(seg(p, .64, .74)), f: easeOut(seg(p, .76, .88)) })}>
     <div className="wrap ch-grid">
       <div className="ch-copy">
         <p className="eyebrow">The change</p>
@@ -167,19 +177,30 @@ function Change({ reduce }: { reduce: boolean }) {
         <p>The Modified site copies three fields from every product page onto its listing card: refundable deposit, minimum hire, and delivery and collection. Nothing else changes.</p>
         <p className="ch-fine">An owner-selected change, tested here as an experiment. It was not proposed by an automatic finding.</p>
       </div>
-      <div className="ch-cards">
-        <figure className="ch-card ch-before">
-          <figcaption><span className="swatch o" aria-hidden="true" />Original listing cards</figcaption>
-          <Crop k={before.frame} x={64} y={352} w={1138} h={222} alt="Recorded crop of three Original listing cards: chainsaw, hedge trimmer and lawn scarifier, showing category, name, description, power, weight and daily price only." />
-        </figure>
-        <figure className="ch-card ch-after">
-          <figcaption><span className="swatch m" aria-hidden="true" />Modified listing cards</figcaption>
-          <div className="ch-after-shot">
-            <Crop k={after.frame} x={64} y={16} w={1138} h={292} alt="Recorded crop of the same three Modified listing cards, now also showing refundable deposit, minimum hire and delivery and collection." />
-            <span className="ch-mark" aria-hidden="true" />
+      <div className="ch-stage">
+        <figure className="ch-close" aria-label="Close-up of the three fields on a Modified listing card">
+          <div className="ch-close-shot">
+            <Crop k={after.frame} x={CARD.x} y={182} w={250} h={128} alt="Recorded close-up of a Modified listing card: from $35 per day, Refundable deposit: $100, Minimum hire: 1 day, Delivery and collection: Optional." />
+            <ol className="ch-labels">{FIELDS.map((f, i) => <li key={f.label} style={{ top: `${f.y}%`, ['--k' as string]: `var(--l${i + 1})` }}><i aria-hidden="true" /><span>{f.label}</span></li>)}</ol>
           </div>
-          <ul className="ch-added" aria-label="Fields added to each card"><li>+ Refundable deposit</li><li>+ Minimum hire</li><li>+ Delivery and collection</li></ul>
+          <figcaption className="figcap"><b>Close-up</b><span>Modified site · recorded screenshot · the cordless hedge trimmer card</span></figcaption>
         </figure>
+        <div className="ch-compare">
+          <figure className="ch-card ch-before">
+            <figcaption><span className="swatch o" aria-hidden="true" />Original card</figcaption>
+            <Crop k={before.frame} x={CARD.x} y={362} w={CARD.w} h={210} alt="Recorded crop of the Original hedge trimmer listing card: category, name, description, power, weight and daily price only." />
+            <p className="ch-absent">Deposit, minimum hire and delivery: on the product page only</p>
+          </figure>
+          <figure className="ch-card ch-after">
+            <figcaption><span className="swatch m" aria-hidden="true" />Modified card</figcaption>
+            <div className="ch-after-shot">
+              <Crop k={after.frame} x={CARD.x} y={28} w={CARD.w} h={280} alt="Recorded crop of the same card on the Modified site, now also listing refundable deposit, minimum hire and delivery and collection." />
+              <span className="ch-mark" aria-hidden="true" />
+            </div>
+            <p className="ch-plus">+ 3 lines per card</p>
+          </figure>
+          <p className="ch-source figcap"><b>Recorded</b><span>Original: task 1, step 3 · Modified: task 2, step 3 · same evaluation, unedited pixels</span></p>
+        </div>
       </div>
     </div>
   </Track>;
@@ -250,8 +271,9 @@ function Finale() {
 }
 
 function Rail({ active, jump }: { active: string; jump: (id: string) => void }) {
+  const at = CHAPTERS.findIndex(c => c.id === active);
   return <nav className="rail" aria-label="Demo chapters">
-    <ol>{CHAPTERS.map((c, i) => <li key={c.id}><a href={`#/demo/${c.id}`} aria-current={active === c.id ? 'true' : undefined} onClick={e => { e.preventDefault(); jump(c.id); }}>
+    <ol>{CHAPTERS.map((c, i) => <li key={c.id} className={i < at ? 'done' : i === at ? 'active' : undefined}><a href={`#/demo/${c.id}`} aria-current={active === c.id ? 'true' : undefined} onClick={e => { e.preventDefault(); jump(c.id); }}>
       <span className="rail-n">{String(i + 1).padStart(2, '0')}</span><span className="rail-label">{c.label}</span></a></li>)}</ol>
   </nav>;
 }
@@ -260,6 +282,7 @@ export function Demo({ scene }: { scene?: string }) {
   const reduce = useReducedMotion();
   const [active, setActive] = useState<string>(scene && CHAPTERS.some(c => c.id === scene) ? scene : 'intro');
   const bar = useRef<HTMLDivElement>(null);
+  const chapterBar = useRef<HTMLSpanElement>(null);
   const ids = useMemo(() => CHAPTERS.map(c => c.id), []);
 
   // Chapter tracking + reading progress, on the shared scroll loop.
@@ -269,6 +292,14 @@ export function Demo({ scene }: { scene?: string }) {
     bar.current?.style.setProperty('transform', `scaleX(${Math.min(1, Math.max(0, p))})`);
     let current: string = ids[0];
     for (const id of ids) { const el = document.getElementById(id); if (el && el.getBoundingClientRect().top <= innerHeight * .45) current = id; }
+    // Progress within the current chapter (tracks: scroll progress; flow sections: how far they have passed).
+    const el = document.getElementById(current);
+    if (el && chapterBar.current) {
+      const r = el.getBoundingClientRect();
+      const span = el.classList.contains('track') ? r.height - innerHeight : r.height;
+      const cp = span > 0 ? Math.min(1, Math.max(0, -r.top / span)) : 1;
+      chapterBar.current.style.transform = `scaleX(${cp.toFixed(3)})`;
+    }
     setActive(a => {
       if (a !== current) history.replaceState(null, '', `#/demo${current === 'intro' ? '' : `/${current}`}`);
       return current;
@@ -290,8 +321,10 @@ export function Demo({ scene }: { scene?: string }) {
     <a className="ar-skip" href="#/demo/outcome" onClick={e => { e.preventDefault(); jump('outcome'); }}>Skip to the result</a>
     <div className="demo-progress" aria-hidden="true"><div ref={bar} /></div>
     <header className="demo-head">
-      <div className="wrap"><Brand /><span className="demo-head-tag mono">Recorded demo · {shortId}</span>
-        <a className="btn btn-sm btn-ghost" href="#/">Exit</a><a className="btn btn-sm btn-signal" href="#/run">Run evaluation</a></div>
+      <div className="wrap">
+        <div className="demo-head-l"><Brand /><span className="demo-head-tag mono">Recorded demo · {shortId}</span></div>
+        <p className="demo-chapter"><span className="mono">{String(CHAPTERS.findIndex(c => c.id === active) + 1).padStart(2, '0')}<small> / {String(CHAPTERS.length).padStart(2, '0')}</small></span><strong>{CHAPTERS.find(c => c.id === active)?.label}</strong><i aria-hidden="true"><span ref={chapterBar} /></i></p>
+        <div className="demo-head-r"><a className="btn btn-sm btn-ghost" href="#/">Exit</a><a className="btn btn-sm btn-signal" href="#/run">Run evaluation</a></div></div>
     </header>
     <Rail active={active} jump={id => jump(id)} />
     <main id="demo-main">
