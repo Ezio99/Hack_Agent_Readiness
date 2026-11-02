@@ -8,6 +8,8 @@ Nothing in this document authorises spending, deployment, merging or modifying e
 
 ---
 
+> **2026-11-03:** M2–M7 are complete. The current handoff for the next agent (M8, product integration) is [`handoffs/m8-product-integration.md`](handoffs/m8-product-integration.md). This file is kept as the lifecycle history.
+
 ## UPDATE 2026-11-02 (later): M2–M5 implemented. Read this block first
 
 **[fact]** M2 (`c721c47`), M2b (`5bc7892`), M3 (`11e1a59`), M4 (`258ec96`) and M5 (the final commit of the report) are implemented on `research/llm-task-planning`. The owner authorised them as one continuous zero-cost run and authorised pushing this branch; it is pushed, not merged. Full report: [`collaboration/reports/lifecycle-m2-m5.md`](reports/lifecycle-m2-m5.md).

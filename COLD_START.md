@@ -4,7 +4,11 @@
 >
 > Read this before proposing changes, writing code, or making architectural decisions. This document provides orientation, not a complete specification. Always inspect the current repository and relevant task documents.
 
-## Latest handoff — 2026-11-02 (research: two-stage evaluation lifecycle)
+## Latest handoff — 2026-11-03 (M8: product integration of the lifecycle)
+
+**The M8 agent starts with [collaboration/handoffs/m8-product-integration.md](collaboration/handoffs/m8-product-integration.md)**. It is self-contained: branches, the live product, the M2–M7 lifecycle, the M6/M7 results and artefacts, integration readiness, safeguards, constraints and open decisions. The branch is `research/llm-task-planning`; production is unchanged (`evaluation-v2` @ `140a4e8`).
+
+## Earlier handoff — 2026-11-02 (research: two-stage evaluation lifecycle)
 
 **Research agents start with [collaboration/LIFECYCLE_HANDOFF.md](collaboration/LIFECYCLE_HANDOFF.md)** ("NEW AGENT START HERE"). It covers branch `research/llm-task-planning`, the approved two-stage lifecycle decisions and the completed milestones M1–M5 (report: [collaboration/reports/lifecycle-m2-m5.md](collaboration/reports/lifecycle-m2-m5.md)). M6 (paid validation) is next and needs separate owner approval. The research work is isolated from production and the release candidate.
 
