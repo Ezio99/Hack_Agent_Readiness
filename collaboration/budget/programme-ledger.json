@@ -104,6 +104,23 @@
       "basis": "provider-reported tokens at published prices; calculated, not billed",
       "recorded_on": "2026-11-02",
       "authorized_by": "owner (explicit instruction to reconcile before further paid runs)"
+    },
+    {
+      "id": "hosted-live-2",
+      "label": "Paid production end-to-end trial (eval-aa23e33012717c4a30ca21be1239e85f, 1 paired repetition, 8 trials, muse-spark-1.3, production https://209-38-84-72.sslip.io); additional paid stage only",
+      "usd": 1.126097,
+      "by_arm_usd": {"placebo": 0.766724, "patched": 0.359373},
+      "source": "production data volume /data/hosted/live/paired-86a646169296419eb8fffbb59a31dcab/spend/ledger.jsonl (141 reservations, 141 settled, 0 open, 0 settled above reservation; 78 new items = 52 Original + 26 Modified model requests)",
+      "run_total_usd": 1.990922,
+      "imported_history_excluded_usd": 0.864825,
+      "shared_source_run": "live-2d58a80e14",
+      "post_trials_manifest_sha256": "99f493d1558db5d925069e5ae8ea66fc21e2927e1364a69ddb45ec9ae3a550f8",
+      "hosted_reservation_usd": 1.65,
+      "hosted_reservation_note": "Admission hold against the US$10 hosted ceiling (now US$3.30 reserved, 4 repetitions remain); a budget hold, not spend, and not counted here.",
+      "report": "collaboration/reports/hosted-production-trial-2026-11-02.md",
+      "basis": "provider-reported tokens at published prices; calculated, not billed",
+      "recorded_on": "2026-11-02",
+      "authorized_by": "owner (explicit instruction to append the accepted production trial with its run identifier and reconciliation)"
     }
   ],
   "recorded_runtime_stages": [
@@ -125,6 +142,14 @@
       "known_spend_subtotal_before_usd": 8.349098,
       "known_spend_subtotal_after_usd": 9.440066,
       "note": "Appended only; earlier entries unchanged. The run's imported US$0.864825 is already recorded once as ironbark-source. The hosted admission reservation (US$1.65) is not spend. Still a known-spend subtotal; the earlier unreconciled items remain unreconciled."
+    },
+    "hosted_addendum_2": {
+      "as_of": "2026-11-02",
+      "added_entry": "hosted-live-2",
+      "added_usd": 1.126097,
+      "known_spend_subtotal_before_usd": 9.440066,
+      "known_spend_subtotal_after_usd": 10.566163,
+      "note": "Appended only; earlier entries and hosted_addendum unchanged. Imported US$0.864825 excluded (recorded once as ironbark-source). Hosted reservation is not spend. Still a known-spend subtotal; earlier unreconciled items remain unreconciled."
     }
   }
 }
