@@ -365,3 +365,108 @@ On the VM in `/root/backups/`:
 **Next (needs your separate approval):** the paid launch.
 - Immediately before it, run pre-flight D: the jail self-test and `arming status`.
 - Do not deploy, restart or disarm while it runs.
+
+## 12. Addendum: the authorised single paid launch (2026-11-02 23:38–23:54 UTC = 2026-11-03 Sydney)
+
+**Owner approval:** exactly one paid launch of `larkspur-live-1`, conditional on the pre-launch checks. Nothing else (no retry, migration, ledger change, deploy, merge or access change) was done.
+
+### 12.1 Pre-launch checks (all passed)
+- **App:** healthy, live, operator; 0 restarts; image `cc97e004…`.
+- **Jail self-test:** `{'ok': True, 'mirror_reachable': True, 'escapes_blocked': True, 'filesystem_hidden': True}`.
+- **Arming:** `larkspur-live-1` paid, sha256 `3e1606cf…` (file `ac441093…` unchanged), `problems: []`, launches 1/0/1, no prior paid claim, authorisation or ledger.
+- **Admission:** US$10.736 / US$3.30 / US$7.436 remaining / 0 active.
+- **Configuration:**
+  - suite `0816af7f…`, manifest `64a55c5f…`, variants original/modified;
+  - model muse-spark-1.3 at `https://api.meta.ai/v1`, reasoning low, 4096 completion tokens, profile `suite-v2-compat2`;
+  - the runtime `ModelConfig` matches;
+  - prices 1.25/4.25 (verified);
+  - the provider key file is present and not in the service's environment.
+- **Nothing pending:** `.env` = the backup except the approved ceiling; no build or compose operation running.
+
+### 12.2 Launch and execution
+- **Launch:** `docker compose exec -T app python -m agent_readiness.hosted.admin start --repetitions 1`, i.e. `POST /api/ironbark/jobs {"repetitions": 1}` with the operator token, **once**. Job `eval-e529db2aafecbfddd21e5c571eb85243`, accepted at 2026-11-02T23:38:55Z.
+- **Enforcement observed at launch:**
+  - admission reserved **US$7.436** (total US$10.736 = ceiling, remaining US$0);
+  - launch claim `larkspur-live-1-l1` and its write-once PaidAuthorization;
+  - launches 1/1/0;
+  - the first request was reserved in the durable ledger at 23:39:12 before it was sent.
+- **Execution:** 23:38:55 → 23:53:41 UTC (14 min 46 s).
+  - **12/12 trials completed: 0 failed, 0 void, 0 limit stops**; every trial ended `agent_done`;
+  - **112 model requests, 112 reserved and 112 settled, 0 unsettled, 0 above their bound** (ledger: 224 lines, 23:39:12–23:53:40);
+  - no retries; no provider, browser or infrastructure errors in the logs.
+- **Worker:** job state `completed`, `audit_clean: true` (the runner's public leak audit), 2 RunResult records, public report written.
+
+### 12.3 Why the product shows `failed`, and why it is a false positive
+- After the worker, `api.work` builds the lifecycle projection, the readiness report. Its leak audit (`lifecycle/audit.py`) found exactly one problem: `evaluation.trials[6].answer[3]: loopback address with port`.
+- In trial `original-gen-ae6c23b20b-n-r1`, the **agent's own answer** cites the page it read as `http://127.0.0.1:34723/…`. That is the jailed snapshot mirror's temporary local port.
+- It is run evidence, not a secret and not oracle data. The expected-answer checks exempt agent fields, but the pattern checks do not.
+- Consequences:
+  - the projection is withheld (`/api/lifecycle/evaluations/<id>` and the export return 409);
+  - the admission row moved `running → failed`;
+  - the status, live, trial and screenshot routes still serve (224 PNG screenshots, 27 MB of evidence);
+  - `recovery_required` is false.
+- **The money and evidence are unaffected.** The reservation stays held, as designed.
+- Recorded in `deploy/DEPLOYED.txt` on the VM. Not fixed in production: that needs a code change and a deploy, which were outside this authorisation.
+
+### 12.4 Spend
+| | USD |
+|---|---|
+| **Settled spend, from the durable ledger** (`/data/hosted/lifecycle/stage-b/ledgers/larkspur-live-1-l1/ledger.jsonl`) | **1.546226** (Original 0.958230, Modified 0.587999, projection rounding 0.000003) |
+| Sum of the per-request upper bounds reserved | 3.937388 (bounds, not spend) |
+| Hosted reservation (held, never released) | 7.436000; hosted ceiling now fully reserved (US$10.736 / US$10.736, remaining 0) |
+| Programme known spend: 17.240080 + 1.546226 | **18.786306 = A$28.18** at the 1.50 planning rate. **A$21.82 left** of A$50 (US$14.55). Not yet appended to the programme ledger (owner) |
+
+### 12.5 Results (exploratory: 6 tasks × 1 repetition; paired exact sign-flip p = 1.0; no claim)
+
+| Dimension | Original | Modified |
+|---|---|---|
+| Task success, **official grader v1** (evidence-backed) | **1/6** (1) | **2/6** (2) |
+| Task success, post-hoc grader v2 (evidence-backed) | 2/6 (2) | 4/6 (3) |
+| Model requests: total / mean | 68 / 11.33 | 44 / 7.33 |
+| Steps, page views (mean) | 12.33, 11.33 | 8.33, 7.33 |
+| Agent time: total / mean | 543 s / 90.5 s | 329 s / 54.8 s |
+| Calculated cost | US$0.958 | US$0.588 |
+| Evidence satisfied / required pages missing | 2/6 / 10 | 4/6 / 4 |
+| Reliability: dead ends (recovered) / near request limit / void | 3 (3) / 5 / 0 | 3 (3) / 1 / 0 |
+| Information accessibility | facts only on item pages (level on 3 listing cards) | per the modified snapshot (facts placed on the listing cards) |
+| Coverage | the frozen suite's SYNTHETIC personas and journeys (identical) | same |
+
+**Per task** (v1 / v2, requests):
+- Task 1 (multi-condition filter): Original ✗/✗, 13 requests; Modified ✗/✓, 3 requests.
+- Task 2 (lookup): Original ✓/✓, 3; Modified ✗/✓ (v2 not evidence-backed), 2.
+- Task 3 (either_of): ✗/✗ on both (missing items), 13 and 13.
+- Task 4 (multi-condition filter): Original ✗/✗, 13; Modified ✓/✓, 12.
+- Task 5 (ranked_subset): Original ✗/✓, 13; Modified ✗/✗ (multiple candidates), 11.
+- Task 6 (multi-condition filter): Original ✗/✗ (missing items), 13; Modified ✓/✓, 3.
+
+**Grading disagreements** (v1 strict, v2 post-hoc):
+- Task 1 Modified named all 5 expected items in 3 requests and passes v2 ("consistent detail"). This is the known v1 answer-format false negative.
+- Task 2 Modified is correct but not evidence-backed under v2.
+- Task 5 Original passes v2 only.
+- No v2 pass contradicts a v1 pass.
+
+**Compared with M7** (same manifest):
+- v1 2/6 → 1/6 and v2 3/6 → 4/6 in M7; here v1 1/6 → 2/6 and v2 2/6 → 4/6.
+- Again, where listing cards carry the facts, Modified needed far fewer requests (3 vs 13 on tasks 1 and 6).
+- Single repetition: descriptive only.
+
+### 12.6 Enforcement after the run
+- Admission: US$10.736 held by 3 jobs (2 completed, 1 failed at US$7.436), remaining **US$0**, 0 active.
+- Arming `larkspur-live-1`: launches **1/1/0**, option unavailable, problems [].
+- `/api/ironbark/config`: repetitions [] (Run disabled).
+- No relaunch request was sent: the run was authorised as exactly one launch.
+
+### 12.7 Evidence (on the VM data volume; not in Git)
+- Run: `/data/hosted/live/stageb/evalruns/evalrun-l-e529db2a-64a55c5f3a-natural/` (trial records, traces, 224 screenshots, the authorisation check, execution record).
+- Job: `/data/hosted/live/stageb/jobs/eval-e529db2aafecbfddd21e5c571eb85243.json`.
+- Runner public report: `/data/hosted/live/stageb/reports/eval-e529db2aafecbfddd21e5c571eb85243.public.json`.
+- Ledger and authorisation: `/data/hosted/lifecycle/stage-b/{ledgers,authorizations}/larkspur-live-1-l1*`.
+- UI: `https://209-38-84-72.sslip.io/#/run/eval-e529db2aafecbfddd21e5c571eb85243` (progress, live agent view, trials, screenshots). The readiness report tab will show as unavailable until the fix below.
+
+### 12.8 Recommended fixes before submission (each needs owner approval; zero cost)
+1. **Report-audit false positive (needed to show this run's report).** In `lifecycle/projection.py`, rewrite the jailed mirror's origin (`http://127.0.0.1:<port>`) in agent fields to a neutral site-relative form, e.g. `/courses/…`. Keep the pattern check everywhere else, and add a regression test. Then deploy.
+   - The report then re-derives from the preserved evidence at zero cost; nothing is re-run.
+   - The admission row stays `failed`: transitions are one-way by design. Display it, or annotate it, as "completed; report initially withheld".
+2. **Align the two audits:** the runner's public audit passed what the projection's audit rejected. Run the projection audit in the worker, so a withheld report is caught before the job is called complete.
+3. **Programme ledger:** append the reconciliation entry US$3.820762, the +US$0.000336 correction and this run's US$1.546226 (owner).
+4. **Cosmetic:** the workspace intro's old Ironbark wording; `config.available` stays true after the launches are used.

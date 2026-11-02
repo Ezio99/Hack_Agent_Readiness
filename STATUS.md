@@ -11,8 +11,14 @@ Authoritative current handoff. Check it against the repository and production be
 - Ironbark history intact: all 1 398 authoritative files are byte-identical to the pre-deploy backup.
 - **Zero-cost VM rehearsal:** `eval-e8ccbacff02bb0cc4a467b441fc99bc5`, `larkspur-core@v2`, 12/12 trials in 3 min 16 s, US$0. The rehearsal arming was used up and then disarmed.
 - Rollback image `agent-readiness-app:rollback-140a4e8` (the previous production image), plus `rollback-b3121a8` and `rollback-60fcbc6`. Backup: `/root/backups/predeploy-m9-20261102T224342Z.tgz`.
-- **Paid arming `larkspur-live-1` is ACTIVE** (owner-approved, 2026-11-02 23:36:11 UTC): `larkspur-core@v2`, manifest `64a55c5f…`, 12 trials, reserves US$7.436, cap US$8.00, 1 launch left, problems []. Arming made no reservation, authorisation, ledger or model call. The workspace's Run button now works for operator-token holders.
-- **Awaiting separate owner approval:** the paid launch. Nothing has been spent.
+- Paid arming `larkspur-live-1` (now used up) (owner-approved, 2026-11-02 23:36:11 UTC): `larkspur-core@v2`, manifest `64a55c5f…`, 12 trials, reserves US$7.436, cap US$8.00, 1 launch left, problems []. Arming made no reservation, authorisation, ledger or model call. The workspace's Run button now works for operator-token holders.
+- **Paid launch done (owner-approved, exactly once):** `eval-e529db2aafecbfddd21e5c571eb85243`, 23:38:55–23:53:41 UTC.
+  - 12/12 trials completed, 0 void; 112 requests, all settled; **US$1.546226 calculated** from the durable ledger.
+  - Official v1: Original 1/6, Modified 2/6. Post-hoc v2: 2/6 and 4/6. Requests 68 vs 44. Exploratory, no claim.
+  - The product shows `failed`: the readiness-report audit withheld the projection because the agent's answer cites the jailed mirror URL `127.0.0.1:<port>` (a false positive; evidence intact; fix needs approval).
+  - Ceiling fully reserved (US$0 left); launches 1/1 used.
+  - Programme known spend US$18.786306 = A$28.18; A$21.82 left (not yet appended to the ledger).
+  - Details: [M9 report §12](collaboration/reports/m9-release-readiness.md).
 
 **Previous production (2026-11-02 07:12 UTC – ~23:00 UTC):** `evaluation-v2` @ `140a4e8`, which was itself the redesigned frontend plus the grader_v2 post-hoc view, the enforced-ceiling export fix and the operator-token UX.
 
