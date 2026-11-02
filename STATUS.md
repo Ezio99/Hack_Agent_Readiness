@@ -1,6 +1,6 @@
 # Agent Readiness — status
 
-## Redesigned frontend deployed to production (2026-11-02 05:12 UTC)
+## Redesigned frontend deployed to production (2026-11-02 05:10 UTC)
 
 **https://209-38-84-72.sslip.io** now serves `product-experience-redesign` @ `b3121a8` (homepage, cinematic demo, evidence workspace) on the unchanged backend (API, jail and policies byte-identical to `60fcbc6`). Owner-approved deployment. Pre-deploy fixes: inline timeline action chips ("Find elements a"), and three narrow-screen overflows found by a 64-combination width sweep. Checks: 185 dashboard tests; 74 hosted API/admission/service/paired/jail + deployment-safety/export tests; critical suite 214 passed (17 deselected); distribution guard; candidate image smoke-tested disabled on loopback with a data copy (46/46). Post-deploy: jail self-test ok; worker healthy; ledger logically identical; 697 data + 308 source-run files byte-identical; remaining repetitions 5, ceiling US$10, access operator; POST without/with wrong token 403, invalid bodies 422, no job created; HTTPS 308 redirect, TLS 1.3, HSTS/CSP/nosniff/no-referrer; 46/46 production browser checks (routes, demo scroll and reduced motion, desktop/mobile, genuine eval-9aaac35c with screenshots, no console/CSP errors, no non-GET requests). No paid call. Rollback image `agent-readiness-app:rollback-60fcbc6` kept; command in [deploy/DEPLOY.md](deploy/DEPLOY.md). Public starts remain disabled.
 
