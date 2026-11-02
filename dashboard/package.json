@@ -2,7 +2,7 @@
   "name": "agent-readiness-dashboard",
   "private": true,
   "version": "0.1.0",
-  "description": "Standalone Agent Readiness diagnostic dashboard (Task 008, Stage A): static, recorded Task 007 data only.",
+  "description": "Agent Readiness frontend: product homepage, recorded-evidence demo and hosted evaluation workspace (plus archived dashboards).",
   "type": "module",
   "scripts": {
     "dev": "vite",

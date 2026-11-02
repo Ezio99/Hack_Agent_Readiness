@@ -72,3 +72,15 @@ General-purpose **scan diagnostics** (replace the variant-label rules in `scanne
 
 ## 10. Fast development workflow vs full CI
 Development: `scripts/dev-tests.sh` (= `pytest -m "not browser and not slow"`) runs 531 fast logic-level tests in about 35 seconds (the full suite is ≈14 minutes); add `--lf -x` while iterating. Before opening or updating a PR, run the full suite (`python -m pytest -q`) — CI always runs everything (`not browser` then `browser`), so the markers only select, never skip. `slow` marks tests that start Chromium, serve whole pipelines or exceed a few seconds; `browser` marks real-Chromium information-boundary checks.
+
+## 11. Hosted evaluation layer (added 2026-11-02; production)
+The deployed product is a thin hosting layer over the existing Ironbark paired experiment. It reuses the experiment and does not replace it:
+```
+dashboard/src/site (homepage, demo, workspace)  →  hosted/api.py (FastAPI: health/config/jobs/live/insights/export; operator bearer token)
+hosted/admission.py (SQLite: one active job, per-client interval, ceiling; reservations never released)
+hosted/paired.py (worker: per repetition → live/ironbark_runner.prepare/validate_manifest → paired driver; caps bound to the reservation)
+hosted/jail.py (Chromium in a loopback-only network namespace bridging only the mirror + CDP; self-test at startup, fails closed)
+hosted/telemetry.py, insights.py (live view, analytics, evidence-derived friction notes)   ·   hosted/serve.py (preflight → disabled-with-reason, never crash-loop)
+sites/ironbark (storefront, variants, independent grading)   ·   deploy/ (Dockerfile, compose, Caddy, bootstrap)
+```
+Site specifics (four fixed tasks, Original/Modified variants, grading) currently enter through `live/ironbark_runner` and `sites/ironbark`. Generalising them behind a site-definition interface is planned as a separate, isolated module; the hosted path stays on Ironbark until that module is validated.

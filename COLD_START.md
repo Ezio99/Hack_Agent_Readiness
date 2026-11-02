@@ -4,7 +4,11 @@
 >
 > Read this before proposing changes, writing code, or making architectural decisions. This document provides orientation, not a complete specification. Always inspect the current repository and relevant task documents.
 
-## Latest branch handoff — 2026-11-01
+## Latest handoff — 2026-11-02
+
+Production (operator-only) runs `product-experience-redesign` (hosted Ironbark evaluator + redesigned frontend) at https://209-38-84-72.sslip.io. Start with [STATUS.md](STATUS.md) and [deploy/DEPLOY.md](deploy/DEPLOY.md); the sections below are older handoffs kept for context.
+
+## Earlier branch handoff — 2026-11-01
 
 On `live-m1-llm-evaluation` / draft PR #60: see [STATUS.md](STATUS.md), [CODEX_HANDOFF](collaboration/CODEX_HANDOFF.md) (historical takeover context), and [Report 016n](collaboration/reports/016n-scroll-tolerance-and-exp-c-s1.md). The single authorized EXP-C-S1 stage is complete; see [Report 016o](collaboration/reports/016o-exp-c-s1-results.md). No further paid run, merge, push or deployment is authorized. Older Task 015/016 "next" statements below predate the live investigation pipeline.
 

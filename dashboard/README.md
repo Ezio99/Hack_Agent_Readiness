@@ -1,4 +1,8 @@
-# Agent Readiness diagnostic dashboard (Task 008, Stage A)
+# Agent Readiness dashboard
+
+> **Current app (2026-11-02):** the hosted product frontend — homepage `#/`, recorded-evidence demo `#/demo`, evaluation workspace `#/run`. Design, routes, evidence provenance and local preview: [PRODUCT_REDESIGN.md](PRODUCT_REDESIGN.md). The Task 008 description below documents the classic pages, which remain available as archive routes.
+
+## Task 008, Stage A (historical description)
 
 A standalone, static React + TypeScript + Vite app that explains **what a Meta Muse Spark shopping agent did on a controlled storefront, why, and what a site owner could change**, using the reconciled Task 007 evidence. It has **no backend, no API key and no live model calls**; every number is computed in the browser from the committed per-run data and is labelled as *recorded experiment data*. Costs are *calculated estimates* from provider-reported tokens at published prices, not bills.
 

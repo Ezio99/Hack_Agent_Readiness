@@ -1,5 +1,7 @@
 # Agent Readiness — Meta Global Hackathon
 
+Live (operator-only starts; history and demo are public): https://209-38-84-72.sslip.io
+
 A diagnostic platform for **how well AI agents can use a website**: *scan → find friction → recommend a change → modify the site → rescan → measure whether it helped.* Outcomes are always graded by an independent oracle, not by the agent's own claim, and evidence stays separated into **observed website properties**, **agent execution**, **proposed interventions** and **measured effects**.
 
 Current state, budget and what is (not) authorized: [STATUS.md](STATUS.md). Architecture, execution paths, frozen artifacts and technical debt: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Orientation for contributors/agents: [COLD_START.md](COLD_START.md), [AGENTS.md](AGENTS.md).
@@ -13,7 +15,8 @@ Current state, budget and what is (not) authorized: [STATUS.md](STATUS.md). Arch
 | Protected scanner service | `scanner/` | invitation-gated FastAPI/SQLite service: scans, comparisons and site audits of *registered* targets; live inference off by default |
 | Experiments | `experiments/` (Task 012), `remediation/experiment.py` (Task 015), `webarena/` (Task 014) | frozen, hash-approved, budget-gated drivers (see ARCHITECTURE) |
 | Safety primitives | `ledger.py`, `spend_gate.py`, `budget.py` | durable reserve-before-send ledger, per-request spend gate, A$ programme budget |
-| Dashboard | `dashboard/` | static React app over committed data + the scanner/site-audit client |
+| **Hosted evaluation (production)** | `hosted/`, `sites/ironbark/`, `deploy/` | operator-gated FastAPI service: durable SQLite admission/budget, jailed Chromium (loopback-only network namespace), paired Original-vs-Modified Ironbark runs with Muse Spark, independent grading, live progress, history, sanitized export — see [deploy/DEPLOY.md](deploy/DEPLOY.md) |
+| Dashboard | `dashboard/` | React app: product homepage `#/`, recorded-evidence demo `#/demo`, evaluation workspace `#/run` (plus archived Replay Studio and classic pages) — see [dashboard/PRODUCT_REDESIGN.md](dashboard/PRODUCT_REDESIGN.md) |
 | Historical single-site experiment (Tasks 003–007) | `storefront.py`, `runner.py`, `pilot.py`, … | byte-pinned for reproducibility — documented in [docs/archive/README-legacy-runner-through-2026-10-29.md](docs/archive/README-legacy-runner-through-2026-10-29.md) |
 
 ## Install

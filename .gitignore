@@ -21,3 +21,8 @@ scanner-data/
 uv.lock
 
 investigations/
+
+
+# SSH deployment keys
+readiness_key
+readiness_key.pub
