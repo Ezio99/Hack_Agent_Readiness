@@ -117,14 +117,18 @@ v2 stays conservative in some cases, and these still fail with `review` set:
 - Free-text claims without numbers ("…, the newest machine") are not checked unless they contain a hedge, a negation or an opposite superlative.
 - v2 covers the generated-criteria grader. The EXP-2 grader (`exp2/answers.py`) is separate and untouched.
 
-## Deployment (requires owner approval)
+## Deployment (approved 2026-11-02)
 
-**What deploying `evaluation-v2` would change in production:**
+**What changes in production:**
 - the job-status API gains `grading_v2` and `summary_v2`;
 - the workspace shows the v2 line and markers;
-- the export reports the enforced ceiling;
-- the operator-token field becomes visible and is held in memory only.
+- the export reports the enforced ceiling with its basis;
+- the operator-token field is visible and held in memory only.
 
-**What it would not change:** the executor, admission, jail, grading of record, budgets, stored evidence and access mode.
+**What does not change:** the executor, admission, jail, grading of record (v1), budgets, access mode and stored evidence.
 
-**Side effects on the data volume:** first views write `<run>.grader-v2.json` caches beside the job files. Already-cached `<run>.public.json` exports keep the old ceiling value until regenerated; regenerating them is a separate decision. The rollback image and frontend-only update procedure in `deploy/DEPLOY.md` apply.
+**Derived caches** live in a separate, versioned namespace under the hosted root, never inside a run:
+- `derived/grader-v2/<run>.<derivation_id>.json`. The derivation id hashes the rescore schema and the grading sources, so any grader change gives new cache names.
+- `derived/public-export/<run>.export-v2.json`.
+
+Both are disposable: deleting them only causes regeneration from the run. The pre-fix export caches (`<run>.public.json`) are no longer read, and they are left in place untouched.

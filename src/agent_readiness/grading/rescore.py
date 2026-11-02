@@ -36,6 +36,16 @@ LABEL = ("POST-HOC RESCORE: grader_v2 applied to answers recorded earlier. Not p
          "grades and verdicts, reproduced here unchanged; v2 statistics apply the same rules to v2 grades and must not be read as the original verdicts.")
 
 
+def derivation_id() -> str:
+    """Identifies everything a v2 view is derived from in code: the rescore schema and the grading package sources. A change to any of them gives
+    cached views a new name, so stale ones are never read (they are disposable and can be rebuilt from the run at any time)."""
+    import hashlib
+    h = hashlib.sha256(SCHEMA.encode())
+    for name in ("v2.py", "key.py", "rescore.py"):
+        h.update((Path(__file__).parent / name).read_bytes())
+    return h.hexdigest()[:16]
+
+
 def _answer(trial: dict, style: str):
     ans = (trial.get("outcome") or {}).get("answer")
     if not isinstance(ans, dict):

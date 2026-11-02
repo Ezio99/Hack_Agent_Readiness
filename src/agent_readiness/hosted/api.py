@@ -96,9 +96,21 @@ def summarize(reps: list[dict]) -> dict:
     return out
 
 
+DERIVED = 'derived'                 # disposable caches derived from run evidence; never authoritative, safe to delete (rebuilt on demand)
+EXPORT_CACHE_VERSION = 'export-v2'  # v2 (2026-11-02): spend.ceiling_usd is the ENFORCED ledger ceiling with its basis; v1 caches (<run>.public.json) are no longer read
+
+
+def derived_path(root: Path, namespace: str, name: str) -> Path:
+    if not re.fullmatch(r'[a-z0-9-]+', namespace) or not re.fullmatch(r'[A-Za-z0-9._-]+', name) or '..' in name:
+        raise ValueError('invalid derived cache name')
+    d = root / DERIVED / namespace
+    d.mkdir(parents=True, exist_ok=True)
+    return d / name
+
+
 def verified_export(root: Path, run_id: str) -> dict:
-    """The sanitized public export of a finished repetition. Cached on disk once verified (the run is final)."""
-    cached = root / (run_id + '.public.json')
+    """The sanitized public export of a finished repetition, regenerated from the run and cached in the versioned derived namespace."""
+    cached = derived_path(root, 'public-export', f'{run_id}.{EXPORT_CACHE_VERSION}.json')
     if cached.is_file():
         try:
             return json.loads(cached.read_text())
@@ -116,17 +128,18 @@ GRADING_V2_LABEL = ('Post-hoc rescore with grader v2 (accepts correct answers th
 
 
 def grading_v2(root: Path, run_id: str) -> dict:
-    """Labelled grader_v2 view of a finished repetition, derived read-only from its stored answers and cached beside the job files (never inside
-    the run). Shown only when the rescore reproduces every stored v1 grade and verdict; otherwise it is withheld, never approximated."""
-    cached = root / (run_id + '.grader-v2.json')
+    """Labelled grader_v2 view of a finished repetition, derived read-only from its stored answers and cached under derived/grader-v2/ with the
+    grading code's derivation id in the name (never inside the run; disposable and rebuildable). Shown only when the rescore reproduces every
+    stored v1 grade and verdict; otherwise it is withheld, never approximated."""
+    from ..grading import rescore as _r
+    cached = derived_path(root, 'grader-v2', f'{run_id}.{_r.derivation_id()}.json')
     if cached.is_file():
         try:
             return json.loads(cached.read_text())
         except ValueError:
             pass
-    from ..grading import rescore
-    doc = rescore.rescore_run(root / run_id)
-    view = {'label': GRADING_V2_LABEL, 'grader': doc['graders']['v2'], 'faithful': doc['faithful'], 'tasks': [], 'assessment': None}
+    doc = _r.rescore_run(root / run_id)
+    view = {'label': GRADING_V2_LABEL, 'grader': doc['graders']['v2'], 'derivation_id': _r.derivation_id(), 'faithful': doc['faithful'], 'tasks': [], 'assessment': None}
     if doc['faithful']:
         aliases = {tid: i + 1 for i, tid in enumerate(sorted({r['task_id'] for r in doc['trials']}))}
         for r in doc['trials']:

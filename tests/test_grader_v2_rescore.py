@@ -119,7 +119,10 @@ def test_hosted_view_is_labelled_cached_beside_the_run_and_withheld_when_unfaith
     run, _ = evaluated_run(tmp_path)
     before = fingerprint(run.dir)
     view = api.grading_v2(run.dir.parent, run.dir.name)
-    assert fingerprint(run.dir) == before and (run.dir.parent / f"{run.dir.name}.grader-v2.json").is_file()
+    caches = list((run.dir.parent / "derived" / "grader-v2").glob(f"{run.dir.name}.*.json"))
+    assert fingerprint(run.dir) == before and len(caches) == 1 and rescore.derivation_id() in caches[0].name
+    caches[0].unlink()                                                                # disposable: rebuilt identically on demand
+    assert api.grading_v2(run.dir.parent, run.dir.name) == view
     assert view["faithful"] and "Not pre-registered" in view["label"] and view["grader"]["version"] == "2"
     assert view["tasks"] and all(t["arm"] == "Modified" and t["outcome"] == "evidence_supported_pass" for t in view["tasks"])   # this run has no placebo arm
     s = api.summarize_v2([{"grading_v2": view}])
