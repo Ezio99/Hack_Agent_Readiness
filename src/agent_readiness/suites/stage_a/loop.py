@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from collections import Counter
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -74,7 +75,15 @@ def run(site, view: dict, context: dict, generator, *, config: LoopConfig, creat
         if stop:
             rounds.append({"round": k, "sent": False, "reservation_usd": reservation, "spent_usd": round(spent, 6), "stop": stop})
             break
-        resp = generator.complete(request)                                          # exactly one call per round; never retried
+        t0 = time.monotonic()
+        try:
+            resp = generator.complete(request)                                      # exactly one call per round; never retried
+        except Exception as exc:                                                    # provider error, schema rejection or a gate refusal: preserved, loop stops
+            rounds.append({"round": k, "sent": True, "request": PV2.request_record(request), "reservation_usd": reservation, "error": f"{type(exc).__name__}: {str(exc)[:400]}",
+                           "latency_seconds": round(time.monotonic() - t0, 2), "feedback_in": feedback, "stop": "generator_error"})
+            stop = "generator_error"
+            break
+        latency = round(time.monotonic() - t0, 2)
         spent += float(resp.cost_usd or 0.0)
         items, batch_error = PV2.parse_batch(resp.text)
         new = []
@@ -100,6 +109,7 @@ def run(site, view: dict, context: dict, generator, *, config: LoopConfig, creat
         nxt = None if stop else FB.synthesise(records, cov, chosen, context, round_no=k + 1)
         rounds.append({"round": k, "sent": True, "request": PV2.request_record(request), "reservation_usd": reservation, "cost_usd": float(resp.cost_usd or 0.0),
                        "usage": resp.usage, "response_mode": resp.mode, "response_model": resp.model, "response_text": resp.text, "batch_error": batch_error,
+                       "latency_seconds": latency, "finish_reason": getattr(resp, "finish_reason", None), "reasoning_tokens": getattr(resp, "reasoning_tokens", None),
                        "candidates": [c["candidate_id"] for c in new], "admissions": dict(Counter(r["admission"] for r in records if (r.get("derived_from") or r["candidate_id"]) in ids)),
                        "useful_additions": useful, "selection_after": [r["candidate_id"] for r in chosen + rub], "targets_met": cov["targets_met"], "gaps_after": cov["gaps"],
                        "feedback_in": feedback, "feedback_out": nxt, "stop": stop})

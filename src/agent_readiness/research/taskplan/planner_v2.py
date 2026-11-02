@@ -60,26 +60,36 @@ def parse_batch(text: str) -> tuple[list[dict], str | None]:
 
 
 class MetaGenerator:
-    """PAID. Muse Spark behind the spend gate. Construction refuses without an explicit owner approval note; the loop's budget cap is separate."""
+    """PAID. Muse Spark behind the durable reserve-before-send spend gate. Construction refuses without an explicit owner approval note.
+
+    Enforcement lives in the gate and its fsync'd ledger (`spend_gate.RequestGate`, `ledger.Ledger`), not in this process: the request count,
+    the run cap and any bound violation are re-read from the ledger, so a restart that reuses `ledger_dir` and `run_id` can never exceed them.
+    Use one FIXED ledger directory per authorisation. `MetaClient.complete` sends exactly one POST per call (no retries, no redirects); a failed
+    request keeps its full reservation counted. `client` may be injected (a MetaClient over a mock transport) for zero-cost rehearsals."""
     mode = "live"
 
-    def __init__(self, ledger_dir: Path, *, approval_note: str, run_cap_usd: float, max_requests: int = 3):
+    def __init__(self, ledger_dir: Path, *, approval_note: str, run_cap_usd: float, max_requests: int = 3, per_request_cap_usd: float | None = None,
+                 run_id: str = "research-stage-a", client=None):
         if not approval_note.strip():
             raise PermissionError("a paid Stage A generation needs the owner's explicit approval note (and a cap)")
         from ...agent import ModelConfig
         from ...investigate.llm.meta import DEFAULT_REASONING_EFFORT, MetaClient
         from ...ledger import Ledger
-        self.client = MetaClient.live(ModelConfig(), Ledger(Path(ledger_dir), run_cap_usd), "research-stage-a", allow_model_calls=True, run_cap_usd=run_cap_usd,
-                                      per_request_cap_usd=run_cap_usd, max_requests=max_requests)
-        self.model, self.reasoning_effort, self.approval_note, self.cap = self.client.model, DEFAULT_REASONING_EFFORT, approval_note, run_cap_usd
+        self.ledger = Ledger(Path(ledger_dir), run_cap_usd)
+        self.per_request_cap = per_request_cap_usd if per_request_cap_usd is not None else run_cap_usd
+        self.client = client or MetaClient.live(ModelConfig(), self.ledger, run_id, allow_model_calls=True, run_cap_usd=run_cap_usd,
+                                                per_request_cap_usd=self.per_request_cap, max_requests=max_requests)
+        self.model, self.reasoning_effort, self.approval_note, self.cap = self.client.model, getattr(self.client, "reasoning_effort", DEFAULT_REASONING_EFFORT), approval_note, run_cap_usd
+        self.run_id, self.max_requests, self.ledger_dir = run_id, max_requests, str(ledger_dir)
 
     @property
     def identity(self) -> dict:
-        return {"kind": "meta", "model": self.model, "reasoning_effort": self.reasoning_effort, "approval_note": self.approval_note, "run_cap_usd": self.cap}
+        return {"kind": "meta", "model": self.model, "reasoning_effort": self.reasoning_effort, "approval_note": self.approval_note, "run_cap_usd": self.cap,
+                "per_request_cap_usd": self.per_request_cap, "max_requests": self.max_requests, "gate_run_id": self.run_id, "ledger_dir": self.ledger_dir}
 
     def reservation_usd(self, request: LLMRequest) -> float:
         from ...investigate.llm.meta import reservation_bound_usd
-        return reservation_bound_usd(request)
+        return reservation_bound_usd(request, self.reasoning_effort)
 
     def complete(self, request: LLMRequest) -> LLMResponse:
         return self.client.complete(request)
