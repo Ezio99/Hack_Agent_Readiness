@@ -106,3 +106,35 @@ def test_the_experiment_is_isolated():
     root = Path(__file__).resolve().parents[1] / "src" / "agent_readiness"
     for pkg in ("hosted", "framework", "diagnostics", "grading", "investigate", "live"):
         assert not any("research" in p.read_text() for p in (root / pkg).rglob("*.py")), pkg
+
+
+def test_schema_v2_is_strict_uses_only_proven_keywords_and_keeps_v1_intact():
+    from agent_readiness.research.taskplan import preflight as PF
+    from agent_readiness.research.taskplan.schema import PROVEN_KEYWORDS, json_schema, json_schema_v2
+    v2 = json_schema_v2()
+    assert all(set(o["required"]) == set(o["properties"]) and o["additionalProperties"] is False for _, o in PF._objects(v2))
+    assert PF._keywords(v2) <= PROVEN_KEYWORDS
+    v1 = json_schema()
+    item = v1["properties"]["tasks"]["items"]
+    assert "attribute" not in item.get("required", v1["$defs"].get("Proposal", {}).get("required", []))          # v1 itself is unchanged (it is what run 1 sent)
+
+
+def test_parser_treats_v2_nulls_and_empties_exactly_like_absent_fields(batch):
+    from agent_readiness.research.taskplan.preflight import _v2_shape
+    _, items = batch
+    for it in items:
+        if it["proposal"] is not None:
+            p2, _, errs = parse_item(_v2_shape({k: v for k, v in it["raw"].items()}))
+            assert not errs and p2 == it["proposal"]
+    p, _, errs = parse_item(_v2_shape({"intent_id": "x", "persona": "budget_learner", "journey": "find_affordable", "scenario": "short", "task_type": "best", "answer_form": "single"}))
+    assert p is None and any("scenario" in e for e in errs)                                                       # constraints are still enforced by the parser
+
+
+def test_paid_v2_run_refuses_when_preflight_fails(tmp_path, monkeypatch):
+    from agent_readiness.research.taskplan import experiment, preflight
+    monkeypatch.setattr(preflight, "run_checks", lambda **kw: {"passed": False, "checks": {"x": {"ok": False, "detail": "forced"}}})
+    called = []
+    monkeypatch.setattr(P, "meta_client", lambda *a, **k: called.append(1))
+    with pytest.raises(PermissionError, match="Meta was NOT called"):
+        experiment.run(client="meta", out=tmp_path, approval_note="x", schema_version="taskplan-schema-v2")
+    assert called == [] and not any(tmp_path.iterdir())

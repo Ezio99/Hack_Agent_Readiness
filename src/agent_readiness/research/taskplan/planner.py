@@ -7,7 +7,7 @@ from pathlib import Path
 
 from ...investigate.llm.client import LLMRequest, request_sha256
 from . import context as C
-from .schema import json_schema, parse_item
+from .schema import SCHEMA_V1, SCHEMAS, parse_item
 
 PROMPT_VERSION = "taskplan-v1"
 SYSTEM = ("You plan evaluation tasks for a browsing agent on a website. You propose task INTENTS for realistic customers. "
@@ -16,7 +16,7 @@ SYSTEM = ("You plan evaluation tasks for a browsing agent on a website. You prop
           "an open question (task_type 'open', answer_form 'explanation') is allowed only for policies. Return JSON matching the schema.")
 
 
-def build_request(catalogue_view: dict, n: int, *, max_tokens: int = 6000) -> LLMRequest:
+def build_request(catalogue_view: dict, n: int, *, max_tokens: int = 6000, schema_version: str = SCHEMA_V1) -> LLMRequest:
     personas = [{k: p[k] for k in ("id", "name", "needs", "constraints")} for p in C.CONTEXT["personas"]]
     journeys = [{k: j[k] for k in ("id", "name", "weight")} for j in C.CONTEXT["journeys"]]
     user = (f"Business context ({C.LABEL}):\n{json.dumps({'business': C.CONTEXT['business'], 'goals': C.CONTEXT['goals'], 'personas': personas, 'journeys': journeys}, indent=1)}\n\n"
@@ -26,7 +26,7 @@ def build_request(catalogue_view: dict, n: int, *, max_tokens: int = 6000) -> LL
             f"journey (id), scenario (what the customer asks the agent to find out, in their own words), task_type, entity and attribute (lookup only), constraints, ranking (best only), "
             f"answer_form, rationale.")
     return LLMRequest(messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}], purpose="research-taskplan", max_tokens=max_tokens,
-                      response_schema=json_schema())
+                      response_schema=SCHEMAS[schema_version]())
 
 
 def parse_batch(text: str) -> tuple[list[dict], str | None]:
@@ -66,5 +66,11 @@ def meta_client(ledger_dir: Path, *, approval_note: str, run_cap_usd: float, max
                            per_request_cap_usd=run_cap_usd, max_requests=max_requests)
 
 
-def request_record(request: LLMRequest) -> dict:
-    return {"prompt_version": PROMPT_VERSION, "request_sha256": request_sha256(request), "max_tokens": request.max_tokens, "purpose": request.purpose}
+def messages_sha256(request: LLMRequest) -> str:
+    import hashlib
+    return hashlib.sha256(json.dumps(request.messages, sort_keys=True).encode()).hexdigest()
+
+
+def request_record(request: LLMRequest, schema_version: str = SCHEMA_V1) -> dict:
+    return {"prompt_version": PROMPT_VERSION, "schema_version": schema_version, "messages_sha256": messages_sha256(request), "request_sha256": request_sha256(request),
+            "max_tokens": request.max_tokens, "purpose": request.purpose}

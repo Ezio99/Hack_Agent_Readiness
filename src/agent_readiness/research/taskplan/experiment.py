@@ -75,23 +75,32 @@ def rule_based(site) -> list[dict]:
     return rows
 
 
-def run(*, client: str = "fixture", n: int = 20, out: Path | None = None, approval_note: str = "", cap_usd: float = 0.20) -> dict:
+def run(*, client: str = "fixture", n: int = 20, out: Path | None = None, approval_note: str = "", cap_usd: float = 0.20, schema_version: str = "taskplan-schema-v1",
+        preflight_run1: Path | None = None, budget_note: str = "") -> dict:
     site = get("larkspur")
     view = K.view(site)
-    request = P.build_request(view, n)
+    request = P.build_request(view, n, schema_version=schema_version)
+    preflight = None
+    if client == "meta" and schema_version == "taskplan-schema-v2":
+        from .preflight import run_checks
+        preflight = run_checks(run1_request=preflight_run1)
+        if not preflight["passed"]:
+            raise PermissionError("taskplan-schema-v2 preflight failed; Meta was NOT called: " + json.dumps({k: v for k, v in preflight["checks"].items() if not v["ok"]})[:400])
     run_id = f"taskplan-{time.strftime('%Y%m%dT%H%M%S')}-{client}-{uuid.uuid4().hex[:6]}"
     out = Path(out or Path("scanner-data/research/taskplan")) / run_id
     out.mkdir(parents=True, exist_ok=False)
+    if preflight is not None:
+        (out / "preflight.json").write_text(json.dumps(preflight, indent=1))
     if client == "fixture":
         llm = P.fixture_client()
         model = {"provider": "fixture", "model": "scripted-fixture (NOT a model)", "note": "proposals written by the developer"}
     elif client == "meta":
         llm = P.meta_client(out / "ledger", approval_note=approval_note, run_cap_usd=cap_usd, max_requests=1)
         model = {"provider": "meta", "model": llm.model, "reasoning_effort": llm.reasoning_effort, "max_completion_tokens": request.max_tokens, "approval_note": approval_note,
-                 "research_ledger_cap_usd": cap_usd}
+                 "research_ledger_cap_usd": cap_usd, "budget_note": budget_note}
     else:
         raise ValueError("client must be fixture or meta")
-    (out / "request.json").write_text(json.dumps({"schema": SCHEMA, **P.request_record(request), "model": model, "messages": request.messages,
+    (out / "request.json").write_text(json.dumps({"schema": SCHEMA, **P.request_record(request, schema_version), "model": model, "messages": request.messages, "response_schema": request.response_schema,
                                                   "catalogue_fingerprint": K.fingerprint(view), "site_versions": view["versions"], "context_fingerprint": X.fingerprint(),
                                                   "context_label": X.LABEL, "n_requested": n}, indent=1))
     started = time.time()
@@ -125,7 +134,7 @@ def run(*, client: str = "fixture", n: int = 20, out: Path | None = None, approv
         m["overlap_with_rule_based"] = len(set(m.pop("_criterion_shas")) & rule_shas)
         by_framing[framing] = m
     decisions = all_decisions["raw"]
-    doc = {"schema": SCHEMA, "run": run_id, "client": client, "model": model, "prompt_version": P.PROMPT_VERSION, "catalogue_fingerprint": K.fingerprint(view),
+    doc = {"schema": SCHEMA, "run": run_id, "client": client, "model": model, "prompt_version": P.PROMPT_VERSION, "schema_version": schema_version, "catalogue_fingerprint": K.fingerprint(view),
            "context_fingerprint": X.fingerprint(), "context_label": X.LABEL, "site_versions": view["versions"], "batch_error": batch_error,
            "cost": {"usage": resp.usage, "calculated_usd": resp.cost_usd, "basis": "calculated at published prices; not a bill" if client == "meta" else "fixture: no model call",
                     "latency_seconds": latency},
@@ -150,6 +159,9 @@ def main(argv=None) -> int:
     ap.add_argument("--approval-note", default="")
     ap.add_argument("--cap-usd", type=float, default=0.20)
     ap.add_argument("--estimate", action="store_true", help="print the request's reservation bound and exit (no call)")
+    ap.add_argument("--schema-version", default="taskplan-schema-v1", choices=("taskplan-schema-v1", "taskplan-schema-v2"))
+    ap.add_argument("--preflight-run1", type=Path, help="request.json of paid run 1 (the prompt must be byte-identical)")
+    ap.add_argument("--budget-note", default="")
     a = ap.parse_args(argv)
     if a.estimate:
         from ...investigate.llm.meta import reservation_bound_usd
@@ -157,7 +169,8 @@ def main(argv=None) -> int:
         print(json.dumps({"prompt_version": P.PROMPT_VERSION, "max_completion_tokens": req.max_tokens, "reservation_bound_usd": reservation_bound_usd(req),
                           "prompt_chars": sum(len(m["content"]) for m in req.messages)}))
         return 0
-    r = run(client=a.client, n=a.n, out=a.out, approval_note=a.approval_note, cap_usd=a.cap_usd)
+    r = run(client=a.client, n=a.n, out=a.out, approval_note=a.approval_note, cap_usd=a.cap_usd, schema_version=a.schema_version, preflight_run1=a.preflight_run1,
+            budget_note=a.budget_note)
     print(json.dumps({k: r[k] for k in ("dir", "llm", "rule_based", "cost")}, indent=1))
     return 0
 

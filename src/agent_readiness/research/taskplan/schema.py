@@ -55,3 +55,32 @@ def parse_item(raw) -> tuple[Proposal | None, dict, list[str]]:
         return Proposal.model_validate(clean), stripped, []
     except ValidationError as exc:
         return None, stripped, [f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors()][:6]
+
+
+# --------------------------------------------------------------------------------------------------- taskplan-schema-v2 (wire format only)
+SCHEMA_V1, SCHEMA_V2 = "taskplan-schema-v1", "taskplan-schema-v2"
+PROVEN_KEYWORDS = {"$ref", "additionalProperties", "anyOf", "description", "enum", "items", "required", "title", "type"}   # used by schemas Meta has accepted live
+WIRE_ONLY_DROP = ("default", "minLength", "maxLength", "minItems", "maxItems")   # still enforced by the pydantic parser on our side
+
+
+def _strict(node):
+    if isinstance(node, list):
+        return [_strict(x) for x in node]
+    if not isinstance(node, dict):
+        return node
+    out = {k: _strict(v) for k, v in node.items() if k not in WIRE_ONLY_DROP}
+    if "properties" in out:
+        out["required"] = list(out["properties"].keys())        # Meta strict mode: every property listed; optional ones are nullable or may be empty
+        out["additionalProperties"] = False
+        out.setdefault("type", "object")
+    return out
+
+
+def json_schema_v2() -> dict:
+    """taskplan-schema-v2: the v1 schema made strict-compatible for Meta. Every object lists ALL its properties in `required` with
+    additionalProperties false; optional values stay representable (entity/attribute/ranking are `anyOf [..., null]`, constraints may be [] and
+    rationale may be ""); only keywords already accepted live are used. Parsing and validation (`parse_item`, the pydantic model) are unchanged."""
+    return _strict(json_schema())
+
+
+SCHEMAS = {SCHEMA_V1: json_schema, SCHEMA_V2: json_schema_v2}
