@@ -214,9 +214,65 @@ def rehearse(manifest_sha: str, label: str) -> dict:
             "audit": {k: audit[k] for k in ("checked", "answers_checked", "clean")}, "runs": {c: str(r.dir) for c, r in runs.items()}}
 
 
+INSTRUCTION = ("Conditional paid authorization: After the owner has personally approved and frozen the real suite at an interactive terminal, you may run one "
+               "Stage B experiment [...]. Amend M7 to use 6 natural-verifiable tasks x 2 Larkspur website variants x 1 repetition = 12 browser-agent trials [...]. "
+               "Proposed Stage B spending cap: US$8.00, replacing the previous US$5.00 cap. Calculate the exact worst-case reservation before paid execution. "
+               "If it exceeds US$8.00, stop and report the required cap or a smaller feasible design. Do not automatically increase spending. "
+               "(Owner, 2026-11-02; the owner approved and froze larkspur-core v2 at an interactive terminal and sent the frozen suite hash.)")
+
+
+def paid(manifest_sha: str) -> dict:
+    """The one authorised paid Stage B experiment. Refuses unless the ledger is fresh and every authorisation check passes (runner.execute)."""
+    from ..ledger import Ledger, preflight
+    from ..agent import ModelConfig
+    from . import authorization as AU
+    from . import runner as RN
+    store = WriteOnceStore(STORE)
+    m = store.get("manifest", manifest_sha)
+    led_dir = AU.ledger_dir(EXPERIMENT_ID)
+    if (led_dir / "ledger.jsonl").exists() and Ledger(led_dir, CAP_USD).entries():
+        raise PermissionError(f"the ledger of {EXPERIMENT_ID} is not fresh: this experiment was already started (no second run, no retries)")
+    preflight(ModelConfig(), True)                                       # verified prices, https endpoint, key present (never printed)
+    a = AU.PaidAuthorization(experiment_id=EXPERIMENT_ID, frozen_suite_sha256=m.frozen_suite_sha256, manifest_sha256=manifest_sha, max_trials=MAX_TRIALS,
+                             cap_usd=CAP_USD, instruction=INSTRUCTION, recorded_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                             recorded_by="agent (Claude Code), from the owner's chat instruction")
+    auth_path = AU.STAGE_B / "authorizations" / f"{EXPERIMENT_ID}.json"
+    if not auth_path.exists():
+        AU.write(a, AU.STAGE_B / "authorizations")
+    a = AU.load(auth_path)
+    root = STAGE_B / "paid"
+    runs = RN.prepare(store, manifest_sha, root, mode="paid", label="paid", resume=True)
+    planned = sum(len(RN.steps(r, m)) for r in runs.values())
+    problems = AU.verify(a, store, manifest_sha, planned_trials=planned)
+    if problems:
+        raise PermissionError("authorisation mismatch; nothing sent: " + "; ".join(problems))
+    ex = {c: RN.execute(r, store, authorization=auth_path) for c, r in runs.items()}
+    at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    doc = RN.report(store, manifest_sha, runs, created_at=at)
+    led = Ledger(led_dir, CAP_USD)
+    entries = led.entries()
+    reserved = {e["id"]: e["usd"] for e in entries if e["kind"] == "reserve"}
+    settled = {e["id"]: e["usd"] for e in entries if e["kind"] == "settle"}
+    over = [i for i in settled if settled[i] > reserved.get(i, 0) + 1e-9]
+    doc["cost"] = {"requests": len(reserved), "reserved_usd": round(sum(reserved.values()), 6), "settled_calculated_usd": round(sum(settled.values()), 6),
+                   "committed_usd": led.committed(), "unsettled": sorted(set(reserved) - set(settled)), "settled_above_reservation": over, "cap_usd": CAP_USD,
+                   "basis": "calculated from provider-reported usage at published prices; not a bill; an unsettled request counts its full reservation"}
+    doc["authorization"] = {"sha256": a.sha256, "experiment_id": a.experiment_id, "path": str(auth_path)}
+    doc["executions"] = ex
+    (root / f"report-paid-{manifest_sha[:10]}.private.json").write_text(json.dumps(doc, indent=1, default=str))
+    pub = root / f"report-paid-{manifest_sha[:10]}.public.json"
+    pub.write_text(json.dumps(RN.public_report(doc), indent=1, default=str))
+    audit = RN.audit_public(store, manifest_sha, runs, [pub])
+    (root / f"audit-paid-{manifest_sha[:10]}.json").write_text(json.dumps(audit, indent=1))
+    return {"cost": doc["cost"], "executions": {c: {k: e[k] for k in ("executed", "planned", "stopped")} for c, e in ex.items()},
+            "tallies": {c: d["tallies"] for c, d in doc["exploratory"].items()}, "invalidated": {c: d["invalidated"] for c, d in doc["exploratory"].items()},
+            "faithful": {c: d["rescore_faithful"] for c, d in doc["exploratory"].items()}, "audit": {k: audit[k] for k in ("checked", "answers_checked", "clean")},
+            "runs": {c: str(r.dir) for c, r in runs.items()}}
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="agent_readiness.evalruns.m7_larkspur")
-    ap.add_argument("cmd", choices=("revise", "packet", "rehearse-synthetic", "manifest", "rehearse"))
+    ap.add_argument("cmd", choices=("revise", "packet", "rehearse-synthetic", "manifest", "rehearse", "paid"))
     ap.add_argument("sha", nargs="?")
     a = ap.parse_args(argv)
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -235,6 +291,8 @@ def main(argv=None) -> int:
         print(json.dumps({"manifest": msha, "design": detail}, indent=1))
     elif a.cmd == "rehearse":
         print(json.dumps(rehearse(a.sha, "exact"), indent=1, default=str))
+    elif a.cmd == "paid":
+        print(json.dumps(paid(a.sha), indent=1, default=str))
     return 0
 
 
