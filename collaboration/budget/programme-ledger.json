@@ -121,6 +121,16 @@
       "basis": "provider-reported tokens at published prices; calculated, not billed",
       "recorded_on": "2026-11-02",
       "authorized_by": "owner (explicit instruction to append the accepted production trial with its run identifier and reconciliation)"
+    },
+    {
+      "id": "research-taskplan-1",
+      "label": "Research: ONE approved muse-spark-1.3 task-generation request (Larkspur, 20 candidates, prompt taskplan-v1, reasoning_effort low, max_completion_tokens 6000); rejected by the provider with HTTP 400 before generation",
+      "usd": 0.029054,
+      "basis": "CONSERVATIVE upper bound: the full spend-gate reservation, kept counted because the provider returned HTTP 400 (invalid_request_error: strict response schema must list every property as required) with no usage report; the actual charge is most likely zero",
+      "source": "research-local ledger scanner-data/research/taskplan/taskplan-20261102T202955-meta-5610c2/ledger/ledger.jsonl (1 reservation, 0 settled); the hosted ledger was not used",
+      "provider_usage": null,
+      "recorded_on": "2026-11-02",
+      "authorized_by": "owner (explicit approval of exactly one request, max reserve US$0.029, experiment ceiling US$0.05, no retries)"
     }
   ],
   "recorded_runtime_stages": [
@@ -150,6 +160,14 @@
       "known_spend_subtotal_before_usd": 9.440066,
       "known_spend_subtotal_after_usd": 10.566163,
       "note": "Appended only; earlier entries and hosted_addendum unchanged. Imported US$0.864825 excluded (recorded once as ironbark-source). Hosted reservation is not spend. Still a known-spend subtotal; earlier unreconciled items remain unreconciled."
+    },
+    "research_addendum_1": {
+      "as_of": "2026-11-02",
+      "added_entry": "research-taskplan-1",
+      "added_usd": 0.029054,
+      "known_spend_subtotal_before_usd": 10.566163,
+      "known_spend_subtotal_after_usd": 10.595217,
+      "note": "Appended only. Conservative: a rejected request's reservation is counted in full until provider billing shows otherwise."
     }
   }
 }
