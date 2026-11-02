@@ -342,3 +342,26 @@ On the VM in `/root/backups/`:
 - Do not restore the pre-migration DB copy after a paid launch.
 
 **Next, each needing your separate approval:** the paid arming (§7 step 5), then the paid launch immediately after pre-flight D (step 6).
+
+## 11. Addendum: authorised paid arming (2026-11-02 23:33–23:38 UTC = 2026-11-03 Sydney)
+
+**Owner approval:** the interactive paid arming of `larkspur-live-1` only. **Not authorised, and not done:** the launch, model calls, the ceiling, a second arming, the programme ledger, deploys, merges, access changes.
+
+| Step | Result |
+|---|---|
+| Pre-flight (read-only) | admission: ceiling US$10.736, US$3.30 reserved by 2 completed jobs, remaining US$7.436, 0 active, migration #1. App healthy, live, operator, image `cc97e004…`. ACTIVE arming null; no `larkspur-live-1` arming; no `authorizations/` or `ledgers/` |
+| `prepare --arming larkspur-live-1 --mode paid --frozen larkspur-core@v2 --variants original modified --repetitions 1 --launches 1` | frozen suite `0816af7f7440…` (owner approval `31f1e3aaca7e`, 2026-11-02T12:40:29Z). Variants original `2f9fd2ce…` and modified `edb9a5d2…`. muse-spark-1.3 at `https://api.meta.ai/v1`, reasoning low, 4096 tokens, `suite-v2-compat2` `d18a2b7e2666`. Manifest `64a55c5f…` (existing; nothing written: still 2 manifests), 12 trials, worst case US$7.392, reserves US$7.436000, 1 launch, "fits for repetitions [1]" |
+| Manifest on the VM | hard cap **US$8.00**, US$0.044 per request, 6 natural tasks per variant (14 requests max each), 1 repetition, seed 7. Agent identical to the pinned `agent_config()` (including the jail-policy hash `daf167a4…`). The file is byte-identical to the workstation copy (sha256 = its name) |
+| **Arm** | `docker compose exec -it app python -m agent_readiness.lifecycle.arming arm …same…` through a real pseudo-terminal, with the attestation typed exactly as `prepare` showed it → "armed and active: larkspur-live-1.json (write-once)" |
+| `arming status` | active `larkspur-live-1`, mode paid, armed_at 2026-11-02T23:36:11Z, arming sha256 `3e1606cf12269dea768602dab22ec9350fd52cb8a55ff3bd071dcb466fcbf835`, **launches max 1 / used 0 / left 1**, option 1 repetition = 12 trials, US$7.436, available, fits the ceiling. **problems: []** |
+| No side effects | The admission DB is unchanged: US$3.30 reserved, 2 jobs, 0 active, US$7.436 remaining. No launch claim (only the rehearsal's `vm-rehearsal-1-l1`). No `authorizations/` or `ledgers/` directory. No Stage B job. No worker process. No provider host or traceback in the logs. The arming file is 0444 (sha256 `ac441093…`). ACTIVE = `larkspur-live-1` |
+| Product view | `/api/ironbark/config`: engine stage-b, **available true**, mode live, repetitions [1], 6 tasks, launches left 1 |
+
+**State now:**
+- The workspace's Run button is **enabled for anyone holding the operator token**. Public starts still get 403.
+- Pressing Run reserves US$7.436 and starts the paid run, which is never retried.
+- To cancel before the launch: `docker compose exec app python -m agent_readiness.lifecycle.arming disarm`. That leaves no reservation; the arming file stays as a record.
+
+**Next (needs your separate approval):** the paid launch.
+- Immediately before it, run pre-flight D: the jail self-test and `arming status`.
+- Do not deploy, restart or disarm while it runs.
