@@ -306,3 +306,39 @@ On the VM in `/root/backups/`:
   - the programme-ledger entries;
   - the merge strategy.
 - **Rollback:** `docker tag agent-readiness-app:rollback-140a4e8 agent-readiness-app:latest && docker compose up -d --no-build --no-deps app`, keeping `AR_HOSTED_CEILING_USD=10`.
+
+## 10. Addendum: authorised hosted ceiling migration (2026-11-02 23:25–23:30 UTC = 2026-11-03 Sydney)
+
+**Owner approval:** the migration from US$10.000 to US$10.736 only. **Not authorised, and not done:** paid arming, any launch, paid calls, the programme ledger, merges, access changes.
+
+| Step | Result |
+|---|---|
+| Read-only recheck (live DB, running app) | policy (1, 10 000 000, 1 650 000, 120); 2 completed jobs × 1 650 000 = US$3.30; 0 active; tables `jobs` and `policy` only (no prior migration); jobs fingerprint `da314a2b…`. Health live/enabled/operator; arming active null |
+| Backups available | `predeploy-m9-20261102T224342Z.tgz` (sha256 `62a78504…`, gzip intact) + `.env` copy; rollback image `rollback-140a4e8` = `de3edfefc6aa` present |
+| Stop | `docker compose stop app` (exited; the public site returned 502 for a few minutes while it was stopped) |
+| Pre-migration copies | `/root/backups/admission-premigration-20261102T232630Z.sqlite` (sha256 `34c07648…`, identical to the pre-deploy backup's copy) and `env-premigration-20261102T232630Z` |
+| Read-only plan | 10 000 000 → 10 736 000; reserved 3 300 000; 2 jobs; 0 active; not yet applied; fingerprint `da314a2b…` |
+| **Migration** | `docker compose run --rm --no-deps -it app python -m agent_readiness.hosted.ceiling migrate --db /data/hosted/live/admission.sqlite --to 10.736 --expect-ceiling 10 --expect-reserved 3.3 --reason "one full six-task Original-vs-Modified paid evaluation of larkspur-core@v2"`, through a real pseudo-terminal with the exact typed confirmation → "migrated: ceiling US$10.000000 -> US$10.736000; reserved US$3.300000 by 2 job(s) (unchanged); audit row #1" |
+| Offline verification | policy now (1, 10 736 000, 1 650 000, 120): one value changed. Jobs table row-for-row identical to the pre-migration copy (fingerprint unchanged). Tables now include `policy_migrations` (+ `sqlite_sequence`) |
+| `.env` | `AR_HOSTED_CEILING_USD=10` → `10.736` (the only difference from the pre-migration copy) |
+| Restart and verification | healthy; `mode=live access=operator evaluations=enabled jail=verified engine=stage-b armed=none (not_armed)`. `ceiling status`: **ceiling US$10.736000, reserved US$3.300000 by 2 completed jobs, remaining US$7.436000, 0 active**, migration #1 listed. `/api/ironbark/config`: ceiling 10.736 / reserved 3.3, `not_armed`. Ironbark history smoke checks PASS. The 1 397 other authoritative files are byte-identical to the pre-deploy manifest. Jail self-test ok |
+| No paid activity | ACTIVE arming null. No `authorizations/` or `ledgers/` under the Stage B root. The admission DB still holds exactly the 2 old jobs. No traceback or provider host in the logs. No model was called |
+
+**Audit row #1 (`policy_migrations`):**
+
+```json
+{"seq": 1, "at": 1793662009.9808877, "schema": "hosted-ceiling-migration-v1", "from_ceiling": 10000000, "to_ceiling": 10736000, "cap": 1650000,
+ "interval": 120, "reserved": 3300000, "jobs": 2, "jobs_fingerprint": "da314a2bc19f6cc5661003f956675f6d044b8cd3fcfe6fec0c876ebe550b3b77",
+ "reason": "one full six-task Original-vs-Modified paid evaluation of larkspur-core@v2",
+ "confirmation": "I am the owner and I change the hosted ceiling of /data/hosted/live/admission.sqlite from US$10.000000 to US$10.736000 with US$3.300000 reserved by 2 job(s), because: one full six-task Original-vs-Modified paid evaluation of larkspur-core@v2",
+ "actor": "owner terminal (uid 10001)", "host": "46ee1c30b430"}
+```
+(`at` = 2026-11-02 23:26:49 UTC; `host` is the one-off `docker compose run` container.)
+
+**Rollback after this migration:**
+- Roll back the image with `AR_HOSTED_CEILING_USD=10`. Evaluations then stay disabled (`budget_policy_mismatch`) and history stays viewable.
+- With 10.736 the retired engine could reserve 4 × US$1.65 before a Stage B launch (§2 D4).
+- Lowering the ceiling is another `ceiling migrate`.
+- Do not restore the pre-migration DB copy after a paid launch.
+
+**Next, each needing your separate approval:** the paid arming (§7 step 5), then the paid launch immediately after pre-flight D (step 6).

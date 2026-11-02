@@ -7,11 +7,11 @@ Authoritative current handoff. Check it against the repository and production be
 **Production:** https://209-38-84-72.sslip.io (DigitalOcean, Sydney). It serves **`m9-release-readiness` @ `b563a33`** (image `m9-b563a33` = `cc97e0049042`), deployed with owner approval on 2026-11-02 ~23:00 UTC (= 2026-11-03 Sydney). The hosted evaluation engine is now the lifecycle Stage B runner. Record: [M9 report §9](collaboration/reports/m9-release-readiness.md).
 
 - Mode live, access **operator-only**. **Nothing is armed** (`not_armed`), so no evaluation can start until the owner arms one.
-- Hosted ceiling **US$10, unchanged**; US$3.30 reserved by the two completed Ironbark jobs; no migration.
+- Hosted ceiling **US$10.736** (owner-approved migration, audit row #1, 2026-11-02 23:26:49 UTC = 2026-11-03 Sydney). US$3.30 is still reserved by the two completed Ironbark jobs (unchanged); **US$7.436 remaining**, exactly one full `larkspur-core@v2` launch. `.env` `AR_HOSTED_CEILING_USD=10.736`. Rollback image: keep `AR_HOSTED_CEILING_USD=10` (fail-closed).
 - Ironbark history intact: all 1 398 authoritative files are byte-identical to the pre-deploy backup.
 - **Zero-cost VM rehearsal:** `eval-e8ccbacff02bb0cc4a467b441fc99bc5`, `larkspur-core@v2`, 12/12 trials in 3 min 16 s, US$0. The rehearsal arming was used up and then disarmed.
 - Rollback image `agent-readiness-app:rollback-140a4e8` (the previous production image), plus `rollback-b3121a8` and `rollback-60fcbc6`. Backup: `/root/backups/predeploy-m9-20261102T224342Z.tgz`.
-- **Awaiting separate owner approval:** the ceiling migration to US$10.736, paid arming, the paid launch.
+- **Awaiting separate owner approval:** paid arming, then the paid launch. No paid evaluation is armed and nothing has been spent.
 
 **Previous production (2026-11-02 07:12 UTC – ~23:00 UTC):** `evaluation-v2` @ `140a4e8`, which was itself the redesigned frontend plus the grader_v2 post-hoc view, the enforced-ceiling export fix and the operator-token UX.
 

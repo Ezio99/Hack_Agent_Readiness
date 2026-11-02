@@ -3,7 +3,7 @@
 **Currently deployed (2026-11-02 ~23:00 UTC = 2026-11-03 Sydney, owner-approved): `m9-release-readiness` @ `b563a33`** at https://209-38-84-72.sslip.io.
 
 Image `agent-readiness-app:latest` = `m9-b563a33` (`cc97e0049042`). The engine is the lifecycle Stage B runner. Mode live, access **operator-only**,
-US$10 ceiling (US$3.30 reserved), **nothing armed** (`not_armed`), so no evaluation can start. Lifecycle store at `/data/hosted/lifecycle/store`.
+**US$10.736 ceiling** (owner-approved migration 2026-11-02 23:26:49 UTC, audit row #1; US$3.30 reserved, US$7.436 remaining; `.env` `AR_HOSTED_CEILING_USD=10.736`), **nothing armed** (`not_armed`), so no evaluation can start. Lifecycle store at `/data/hosted/lifecycle/store`.
 Verified: pre-flights A/B, a candidate smoke test on a volume copy, production health/history/lifecycle/browser checks, all 1 398 authoritative
 files byte-identical, and a zero-cost VM rehearsal (12/12, US$0; rehearsal arming used up and disarmed). Pre-deploy backup
 `/root/backups/predeploy-m9-20261102T224342Z.tgz` (+ `.sha256`, `env-predeploy-m9-…`).
