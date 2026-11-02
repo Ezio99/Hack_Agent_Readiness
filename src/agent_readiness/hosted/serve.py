@@ -4,27 +4,45 @@ Configuration (environment; nothing is accepted from requests):
 
 * ``AR_HOSTED_MODE``: ``disabled`` (default), ``rehearsal`` (jailed browser, scripted
   model, no provider) or ``live`` (Meta Muse Spark; requires owner authorization).
+* ``AR_HOSTED_ACCESS``: ``operator`` (default: only a holder of the operator token can
+  start evaluations; everyone can watch) or ``public`` (anyone, subject to admission).
 * ``AR_HOSTED_CEILING_USD``: global hosted spending ceiling, required unless disabled.
-  Every evaluation reserves US$1.60 per repetition against it, permanently.
+  Every evaluation reserves US$1.65 per repetition against it, permanently.
+* ``AR_OPERATOR_TOKEN_FILE`` (default ``/run/secrets/operator_token``),
+  ``META_MODEL_API_KEY_FILE`` (provider key, read only by the worker; live only).
 * ``AR_HOSTED_ROOT`` (default ``/data/hosted``), ``AR_STATIC_DIR`` (dashboard build),
   ``AR_TRUSTED_PROXIES`` (comma-separated reverse-proxy addresses allowed to set
   X-Forwarded-For), ``AR_HOSTED_MIN_INTERVAL`` (seconds per client, default 120),
   ``AR_HOST``/``AR_PORT``.
 * ``AGENT_READINESS_BROWSER_JAIL``: jail policy JSON (required unless disabled).
-* ``META_MODEL_API_KEY_FILE``: provider key file, read only by the worker (live).
+
+Startup never crash-loops on an evaluation problem: if any precondition fails the
+site and past results stay up, evaluations are disabled, ``/api/health`` reports a
+reason code and the log states the cause. Only an unusable data directory exits.
 """
 from __future__ import annotations
 
 import fcntl
 import os
 import secrets
-from decimal import Decimal
+import sys
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from . import jail, paired
 from .admission import Admission
 from .api import create_app, recover
 from ..live import ironbark_runner
+
+
+class Unavailable(Exception):
+    def __init__(self, code: str, detail: str):
+        super().__init__(detail)
+        self.code = code
+
+
+def log(message: str):
+    print(f'hosted service: {message}', flush=True)
 
 
 def _client_key(root: Path) -> bytes:
@@ -36,47 +54,117 @@ def _client_key(root: Path) -> bytes:
     return path.read_bytes()
 
 
+def _secret(path: str | None, name: str, *, min_length: int) -> bytes:
+    if not path:
+        raise Unavailable(f'missing_{name}', f'{name} file is not configured')
+    try:
+        value = Path(path).read_bytes().strip()
+    except OSError as exc:
+        raise Unavailable(f'missing_{name}', f'{name} file {path} is not readable ({exc.strerror})') from None
+    if len(value) < min_length:
+        raise Unavailable(f'missing_{name}', f'{name} file {path} is empty or too short')
+    return value
+
+
+def check_source(source: Path | None = None):
+    """Every file of the private source run must be readable by this user (fork copies it)."""
+    source = Path(source or ironbark_runner.SOURCE)
+    if not (source / 'run.json').is_file():
+        raise Unavailable('source_run_missing', f'source run {source} is missing')
+    unreadable = [str(p.relative_to(source)) for p in source.rglob('*') if p.is_file() and not os.access(p, os.R_OK)]
+    unreadable += [str(p.relative_to(source)) for p in source.rglob('*') if p.is_dir() and not os.access(p, os.R_OK | os.X_OK)]
+    if unreadable:
+        raise Unavailable('source_run_unreadable', f'{len(unreadable)} source-run paths are not readable by uid {os.getuid()}, e.g. {unreadable[0]}')
+
+
+def ceiling_microusd(value: str | None) -> int:
+    if not value:
+        raise Unavailable('ceiling_not_configured', 'AR_HOSTED_CEILING_USD is required to enable evaluations')
+    try:
+        micro = Decimal(value) * 1_000_000
+    except InvalidOperation:
+        raise Unavailable('ceiling_invalid', 'AR_HOSTED_CEILING_USD is not a number') from None
+    if micro != micro.to_integral_value() or micro <= 0:
+        raise Unavailable('ceiling_invalid', 'AR_HOSTED_CEILING_USD must be positive with at most 6 decimals')
+    return int(micro)
+
+
+def open_admission(root: Path, ceiling: str | None, per_rep: int) -> tuple[Admission, str | None]:
+    db = root / 'admission.sqlite'
+    interval = int(os.environ.get('AR_HOSTED_MIN_INTERVAL', '120'))
+    try:
+        micro = ceiling_microusd(ceiling)
+        return Admission(db, ceiling_microusd=micro, job_cap_microusd=per_rep, min_interval_seconds=interval), None
+    except Unavailable as exc:
+        reason = exc.code
+    except ValueError as exc:
+        reason = 'budget_policy_mismatch' if 'durable policy' in str(exc) else 'ceiling_invalid'
+        log(f'evaluations disabled: {exc}')
+    if db.exists():
+        return Admission.open_existing(db), reason             # history stays viewable
+    import tempfile
+    return Admission(Path(tempfile.mkdtemp()) / 'empty.sqlite', ceiling_microusd=per_rep, job_cap_microusd=per_rep), reason
+
+
 def build():
     mode = os.environ.get('AR_HOSTED_MODE', 'disabled')
-    if mode not in ('disabled', *paired.MODES):
-        raise SystemExit('AR_HOSTED_MODE must be disabled, rehearsal or live')
+    access = os.environ.get('AR_HOSTED_ACCESS', 'operator')
+    if mode not in ('disabled', *paired.MODES) or access not in ('operator', 'public'):
+        raise SystemExit('AR_HOSTED_MODE must be disabled|rehearsal|live and AR_HOSTED_ACCESS operator|public')
     root = Path(os.environ.get('AR_HOSTED_ROOT', '/data/hosted')).resolve()
-    root.mkdir(parents=True, exist_ok=True)
+    try:
+        root.mkdir(parents=True, exist_ok=True)
+        probe = root / '.write-test'
+        probe.write_text('ok')
+        probe.unlink()
+    except OSError as exc:
+        raise SystemExit(f'hosted data directory {root} is not writable: {exc.strerror}')
     lock = (root / '.service.lock').open('a')
     try:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError:
         raise SystemExit('another hosted service is using this data directory')
+
     per_rep = paired.per_repetition_microusd(paired.ARM_CAPS)
-    ceiling = os.environ.get('AR_HOSTED_CEILING_USD')
-    if mode != 'disabled' and not ceiling:
-        raise SystemExit('AR_HOSTED_CEILING_USD is required to enable evaluations')
-    db = root / 'admission.sqlite'
-    if ceiling:
-        admission = Admission(db, ceiling_microusd=int(Decimal(ceiling) * 1_000_000), job_cap_microusd=per_rep,
-                              min_interval_seconds=int(os.environ.get('AR_HOSTED_MIN_INTERVAL', '120')))
-    elif db.exists():
-        admission = Admission.open_existing(db)              # disabled: past results stay viewable
-    else:
-        import tempfile
-        admission = Admission(Path(tempfile.mkdtemp()) / 'empty.sqlite', ceiling_microusd=per_rep, job_cap_microusd=per_rep)
+    admission, reason = open_admission(root, os.environ.get('AR_HOSTED_CEILING_USD'), per_rep)
     interrupted = recover(root, admission)
-    executor = None
-    if mode != 'disabled':
-        if not ironbark_runner.SOURCE.exists():
-            raise SystemExit(f'source run {ironbark_runner.SOURCE} is missing')
-        jail.require()
-        jail.policy()
-        probe = jail.selftest()
-        if not probe.get('ok'):
-            raise SystemExit(f'browser isolation self-test failed: {probe}')
-        executor = paired.WorkerExecutor(root, admission, mode=mode)
+    if interrupted:
+        log(f'marked {len(interrupted)} unfinished evaluation(s) interrupted; their reservations are kept')
+
+    executor, operator_token = None, None
+    if mode == 'disabled':
+        reason = 'disabled'
+    else:
+        try:
+            if reason:
+                raise Unavailable(reason, 'budget admission is not configured')
+            if access == 'operator':
+                operator_token = _secret(os.environ.get('AR_OPERATOR_TOKEN_FILE', '/run/secrets/operator_token'), 'operator_token', min_length=24)
+            if mode == 'live':
+                _secret(os.environ.get('META_MODEL_API_KEY_FILE'), 'provider_key', min_length=8)   # read again by the worker; never logged
+            check_source()
+            jail.require()
+            try:
+                jail.policy()
+            except Exception as exc:
+                raise Unavailable('isolation_policy_invalid', str(exc)) from None
+            result = jail.selftest()
+            if not result.get('ok'):
+                raise Unavailable('isolation_check_failed', f'browser isolation self-test failed: {result}')
+            executor = paired.WorkerExecutor(root, admission, mode=mode)
+            reason = None
+        except Unavailable as exc:
+            reason = exc.code
+            log(f'evaluations disabled [{exc.code}]: {exc}')
+
     static = os.environ.get('AR_STATIC_DIR')
     proxies = [p for p in os.environ.get('AR_TRUSTED_PROXIES', '').split(',') if p.strip()]
     app = create_app(root, admission, client_key=_client_key(root), executor=executor, trusted_proxies=proxies,
-                     static_dir=Path(static) if static else None)
+                     static_dir=Path(static) if static else None, operator_token=operator_token,
+                     public_start=(access == 'public'), unavailable_reason=reason, mode=mode)
     app.state.lock = lock
-    print(f'hosted service: mode={mode} interrupted={len(interrupted)} jail={"verified" if executor else "unused"}', flush=True)
+    log(f'mode={mode} access={access} evaluations={"enabled" if executor else "disabled"}'
+        f'{" reason=" + reason if reason else ""} jail={"verified" if executor else "unused"}')
     return app
 
 
@@ -84,8 +172,8 @@ def main():
     import uvicorn
     app = build()
     uvicorn.run(app, host=os.environ.get('AR_HOST', '127.0.0.1'), port=int(os.environ.get('AR_PORT', '8080')), workers=1,
-                proxy_headers=False, server_header=False, date_header=False, access_log=False)
+                proxy_headers=False, server_header=False, date_header=False, access_log=False, timeout_graceful_shutdown=5)
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

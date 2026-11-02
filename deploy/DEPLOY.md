@@ -1,45 +1,83 @@
 # Deploying the hosted Ironbark evaluation
 
-One Linux host with Docker Engine and Compose v2. Caddy terminates TLS and proxies to a single app container that holds the API, the job worker and the jailed Chromium. **A public deployment, and the `live` mode in particular, need explicit owner authorization.**
+One Linux host (Docker Engine + Compose v2). Caddy terminates TLS; one app container holds the API, the job worker and the jailed Chromium. **Status: the image has not yet been built and the isolation self-test has not yet run inside a container. Do not call the deployment validated until steps 3–4 pass on the real host.** Owner authorization is required for the public deployment (step 6), for live mode (step 5) and for the ceiling value.
 
-## What runs where
-
-| Component | Boundary |
-|---|---|
-| Caddy (`caddy`) | Only published service (80/443). Overwrites `X-Forwarded-For`; caps request bodies at 4 KB. |
-| API (`agent_readiness.hosted.serve`) | Fixed target; the only request field is `repetitions` ∈ {1, 3, 5}. Durable SQLite admission: one evaluation at a time, a per-client interval, and a global ceiling reserved before any work (US$1.60 per repetition, never released). |
-| Worker (`agent_readiness.hosted.paired`, one per evaluation) | Runs the unchanged paired driver once per repetition: fresh fork, the frozen tasks, the snapshots, the profile and the caps checked against the reservation, the existing spend gate and ledger, the independent grader, and the sanitized export. Dies with the service (parent-death signal); a restarted service marks unfinished jobs `interrupted` and keeps their reservations. |
-| Chromium (`agent_readiness.hosted.jail`) | Own user/network/PID/mount namespaces. The network namespace has loopback only; only the snapshot mirror port and the CDP port are bridged, over Unix sockets. Fresh `/proc` (the worker's environment is not visible); `/app`, `/data`, `/run/secrets` and `/home` are hidden. The service refuses to start evaluations unless its isolation self-test passes at boot. |
-| Provider key | Docker secret file, read by the worker after exec (not in any process environment block) and scrubbed from the browser's environment. |
-
-## Prerequisites
-
-* A Linux host (Ubuntu 22.04/24.04 or Debian 12) with 2+ vCPU, 4+ GB RAM and a DNS name pointing at it, with ports 80/443 open.
-* Unprivileged user namespaces: `sysctl kernel.unprivileged_userns_clone` (Debian) must be 1. On Ubuntu 23.10+, `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0` (persist it in `/etc/sysctl.d/`) because the container runs with `apparmor=unconfined`.
-* The private source run `scanner-data/live/live-2d58a80e14` (about 26 MB, not in Git) copied to the host, e.g. `/srv/agent-readiness/live-2d58a80e14`. It is mounted read-only.
-
-## Steps
+## 1. Host (once)
 
 ```sh
-git clone … && cd Hack_Agent_Readiness && git checkout hosted-ironbark-evaluation
-mkdir -p deploy/secrets && install -m 600 /dev/null deploy/secrets/meta_model_api_key   # empty unless live is authorized
-export SITE_ADDRESS=readiness.example.com AR_SOURCE_RUN=/srv/agent-readiness/live-2d58a80e14
-docker compose -f deploy/compose.yaml build
-
-# 1. Disabled: Replay Studio only, the Run button explains that evaluations are unavailable.
-docker compose -f deploy/compose.yaml up -d
-# 2. Rehearsal: real jailed browsers and grading, scripted agent, no provider, labelled in the UI.
-AR_HOSTED_MODE=rehearsal AR_HOSTED_CEILING_USD=<owner value> docker compose -f deploy/compose.yaml up -d
-docker compose -f deploy/compose.yaml logs app | grep 'hosted service'   # expect jail=verified
-# 3. Live (only after owner approval of the ceiling and spending): put the key in deploy/secrets/meta_model_api_key, then
-AR_HOSTED_MODE=live AR_HOSTED_CEILING_USD=<owner value> docker compose -f deploy/compose.yaml up -d
+# Ubuntu 22.04/24.04 or Debian 12 · 2+ vCPU · 4+ GB RAM · DNS A record → host · ports 80/443 open
+curl -fsSL https://get.docker.com | sh
+# The jail needs unprivileged user namespaces (the container runs apparmor=unconfined):
+echo 'kernel.apparmor_restrict_unprivileged_userns=0' | sudo tee /etc/sysctl.d/60-userns.conf   # Ubuntu 23.10+
+echo 'kernel.unprivileged_userns_clone=1'             | sudo tee -a /etc/sysctl.d/60-userns.conf # Debian
+sudo sysctl --system
 ```
 
-`AR_HOSTED_CEILING_USD` is persisted at first use in `/data/hosted/admission.sqlite`. Starting with a different value is refused until the owner reconciles it deliberately. The ceiling is a hard global limit: every evaluation reserves 1.60 × repetitions against it.
+## 2. Code, private data, secrets
 
-## Checks after deploy
+```sh
+git clone https://github.com/<owner>/Hack_Agent_Readiness.git && cd Hack_Agent_Readiness && git checkout hosted-ironbark-evaluation
+# Private source run (26 MB, never in Git), copied from the operator machine:
+#   rsync -a scanner-data/live/live-2d58a80e14/ host:/srv/agent-readiness/live-2d58a80e14/
+sudo chown -R 10001:10001 /srv/agent-readiness/live-2d58a80e14       # container user; the preflight refuses unreadable files
+mkdir -p deploy/secrets
+openssl rand -base64 32 > deploy/secrets/operator_token               # keep a copy: it starts evaluations
+: > deploy/secrets/meta_model_api_key                                 # stays EMPTY until live is authorized
+sudo chown 10001:10001 deploy/secrets/* && sudo chmod 400 deploy/secrets/*
+cat > deploy/.env <<'ENV'
+SITE_ADDRESS=readiness.example.com
+AR_SOURCE_RUN=/srv/agent-readiness/live-2d58a80e14
+AR_HOSTED_MODE=rehearsal
+AR_HOSTED_ACCESS=operator
+AR_HOSTED_CEILING_USD=<owner-approved value>
+ENV
+```
 
-* `curl https://$SITE_ADDRESS/api/ironbark/config` returns `available` and the mode.
-* `curl -XPOST https://$SITE_ADDRESS/api/ironbark/jobs -d '{"url":"x"}' -H 'content-type: application/json'` returns 422.
-* Start one rehearsal repetition from the browser and watch the progress until it completes; reload the page and it comes back (`#/run/<id>`).
-* `docker compose restart app` during a run: the job shows `Interrupted` and its reservation remains.
+`AR_HOSTED_CEILING_USD` is a hard global limit. Every evaluation reserves **US$1.65 per repetition** (the US$1.60 arm caps plus one US$0.05 request bound), and reservations are never released. The value is persisted at first start; a different value later disables evaluations (`budget_policy_mismatch`) until the owner reconciles deliberately.
+
+## 3. Build and start (rehearsal, operator-only)
+
+```sh
+cd deploy
+docker compose build
+docker compose up -d
+docker compose logs app | grep 'hosted service'        # expect: mode=rehearsal access=operator evaluations=enabled jail=verified
+docker compose exec app python -m agent_readiness.hosted.admin health
+```
+
+If `evaluations=disabled`, the log line gives the reason code: `isolation_check_failed` / `isolation_policy_invalid` (namespaces blocked: re-check step 1 and the `security_opt` lines), `source_run_missing` / `source_run_unreadable` (mount path or ownership), `missing_operator_token`, `missing_provider_key` (live only), `ceiling_not_configured` / `ceiling_invalid` / `budget_policy_mismatch`. The site and past results stay up in every case.
+
+## 4. Verify the boundary inside the container (required before live)
+
+```sh
+docker compose exec app python -c "from agent_readiness.hosted import jail; print(jail.selftest())"
+#   expect {'ok': True, 'mirror_reachable': True, 'escapes_blocked': True, 'filesystem_hidden': True}
+docker compose exec app python -m agent_readiness.hosted.admin start --repetitions 1 --watch   # scripted rehearsal, no provider
+curl -s -o /dev/null -w '%{http_code}\n' -XPOST https://$SITE_ADDRESS/api/ironbark/jobs -H 'content-type: application/json' -d '{}'               # 403 (operator-only)
+curl -s -o /dev/null -w '%{http_code}\n' -XPOST https://$SITE_ADDRESS/api/ironbark/jobs -H 'content-type: application/json' -d '{"url":"x"}'      # 422
+```
+
+Open `https://$SITE_ADDRESS/#/run`: the rehearsal is labelled as scripted, Watch shows the jailed browser's screenshots, and the run is listed in history after a reload. `docker compose restart app` during a run marks it `interrupted` and keeps its reservation.
+
+## 5. First genuine Muse Spark run (private; needs owner authorization)
+
+```sh
+sudo sh -c 'printf %s "<key>" > deploy/secrets/meta_model_api_key' && sudo chown 10001:10001 deploy/secrets/meta_model_api_key && sudo chmod 400 deploy/secrets/meta_model_api_key
+sed -i 's/^AR_HOSTED_MODE=.*/AR_HOSTED_MODE=live/' .env && docker compose up -d
+docker compose logs app | grep 'hosted service'        # mode=live access=operator evaluations=enabled jail=verified
+docker compose exec app python -m agent_readiness.hosted.admin start --repetitions 1 --watch
+```
+
+Expected: 8 runs, about 10–30 minutes; at most US$1.65 reserved. Check the result at `#/run/<id>` (badge “Live · Meta Muse Spark”, evidence `real model`). The operator can also start runs from the web UI under *Operator access*.
+
+## 6. Open to judges (needs owner authorization)
+
+```sh
+sed -i 's/^AR_HOSTED_ACCESS=.*/AR_HOSTED_ACCESS=public/' .env && docker compose up -d
+```
+
+Public starts are limited to one evaluation at a time, one start per client every `AR_HOSTED_MIN_INTERVAL` seconds (default 120), and the ceiling. To stop new runs immediately: set `AR_HOSTED_ACCESS=operator` (or `AR_HOSTED_MODE=disabled`) and `docker compose up -d`.
+
+## Operations
+
+`docker compose exec app python -m agent_readiness.hosted.admin list` · `... watch <id>` · logs: `docker compose logs -f app` · data: volume `agent-readiness_data` (`/data/hosted`: admission DB, job files, per-repetition runs). Back it up before changing the ceiling.

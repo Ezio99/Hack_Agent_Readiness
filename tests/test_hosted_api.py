@@ -11,7 +11,7 @@ from agent_readiness.hosted import paired
 from agent_readiness.hosted.admission import Admission
 from agent_readiness.hosted.api import create_app, recover
 
-CAP = 1600000
+CAP = 1650000                     # US$1.60 caps + one US$0.05 request bound
 
 
 def setup(tmp_path, executor=None, ceiling=CAP * 6, **kw):

@@ -38,15 +38,23 @@ from ..suite.core import canonical_hash
 
 REPETITIONS = (1, 3, 5)
 MODES = ('live', 'rehearsal')
-ARM_CAPS = {'placebo_arm': 0.80, 'patched_arm': 0.80}      # the reviewed local proposal; one repetition reserves US$1.60
+ARM_CAPS = {'placebo_arm': 0.80, 'patched_arm': 0.80}      # the reviewed local proposal; one repetition reserves US$1.65 (caps + one request bound)
 REP_TIMEOUT = ironbark_runner.TIMEOUT
 
 
-def per_repetition_microusd(caps: dict) -> int:
+def caps_microusd(caps: dict) -> int:
+    """Combined arm caps of one repetition: what the manifest and the spend gate enforce on reserved amounts."""
     total = sum(Decimal(str(v)) for v in ironbark_runner.caps_checked(caps).values()) * 1_000_000
     if total != total.to_integral_value():
         raise ValueError('arm caps must be whole microdollars')
     return int(total)
+
+
+def per_repetition_microusd(caps: dict) -> int:
+    """Hosted reservation per repetition: the combined caps plus one per-request bound, because the
+    spend gate lets at most one request settle above its (estimated) reservation before it closes."""
+    from ..spend_gate import PER_REQUEST_CAP_USD
+    return caps_microusd(caps) + int(Decimal(str(PER_REQUEST_CAP_USD)) * 1_000_000)
 
 
 def job_path(root: Path, job_id: str) -> Path:
@@ -154,7 +162,7 @@ def run_job(root: Path, job_id: str, admission: Admission, *, mode: str, caps: d
             manifest = prepared['manifest']
             ironbark_runner.validate_manifest(manifest, caps)
             combined = Decimal(str(manifest['caps_usd']['post_trials_combined'])) * 1_000_000
-            if combined != per_repetition_microusd(caps) or canonical_hash(manifest) != prepared['manifest_sha256']:
+            if combined != caps_microusd(caps) or canonical_hash(manifest) != prepared['manifest_sha256']:
                 raise ValueError('prepared manifest does not match the reservation')
             prepared.update(state='running', started_at=time.time(), hosted_job=job_id, hosted_mode=mode)
             ironbark_runner.write(root / (rep['run_id'] + '.json'), prepared)
@@ -210,6 +218,8 @@ class WorkerExecutor:
             raise ValueError('unsupported executor mode')
         self.root, self.admission, self.mode, self.caps = Path(root), admission, mode, dict(caps)
         self.per_rep = per_repetition_microusd(self.caps)
+        if admission.cap != self.per_rep:
+            raise ValueError('admission policy per-repetition reservation does not match the executor caps')
         self.command = command or (lambda root, job_id, db, mode: [sys.executable, '-m', 'agent_readiness.hosted.paired', str(root), job_id, str(os.getpid()), str(db), mode])
         self.rep_timeout = rep_timeout
         self.processes: dict[str, subprocess.Popen] = {}

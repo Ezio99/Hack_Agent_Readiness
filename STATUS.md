@@ -1,5 +1,9 @@
 # Agent Readiness — status
 
+## Hosted production readiness and observability (2026-11-02)
+
+Startup preflight never crash-loops: missing key/token, unreadable source run, ceiling problems or a failed jail check disable evaluations with a reason code (`/api/health`) while the site and history stay up. Operator-only access (default) for the first private live run (`hosted.admin start --watch`), then `AR_HOSTED_ACCESS=public`. Reservation is US$1.65/repetition (caps + one request bound) and must equal the executor's; the jail self-test now also checks the filesystem and is shown to fail without the jail. New: live agent view (real screenshots, pages, actions, the model's stated goals), per-task analytics with variation across repetitions, evidence-derived friction insights (suggestions labelled unmeasured), history comparison. Local operator-mode 3-repetition rehearsal: 24/24 trials. **Docker image not yet built; no paid call; no deployment.** [Checklist](deploy/DEPLOY.md).
+
 ## Hosted vertical slice: jailed browser, batch executor, public run UI, deploy config (2026-11-02)
 
 Branch `hosted-ironbark-evaluation`. Judges' flow at `#/run`: choose 1/3/5 paired repetitions → run → live per-task grid → metrics → sanitized evidence/replay; results survive reload. Chromium runs in a loopback-only network namespace bridging only the mirror and CDP (verified at service start; fails closed). Worker runs the unchanged paired driver per repetition with reservation/manifest cap binding; restart marks jobs interrupted. A local **rehearsal** (real jailed browsers and grading, scripted agent, no provider; labelled scripted, unmeasured) completed 8/8 trials end-to-end over HTTP. Docker/Compose/Caddy written but **not built** (no Docker here). **No paid call, no deployment.** Live mode, the hosted ceiling and the public deployment need owner authorization. [Report](collaboration/reports/hosted-ironbark-wip.md), [deploy guide](deploy/DEPLOY.md).

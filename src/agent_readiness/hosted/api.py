@@ -24,9 +24,10 @@ from pathlib import Path
 from typing import Literal, Protocol
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict
 
-from . import paired
+from . import insights as insight_rules, paired, telemetry
 from .admission import Admission, Refused
 from ..investigate import export as exporter
 from ..live import ironbark_runner
@@ -95,9 +96,17 @@ def summarize(reps: list[dict]) -> dict:
 
 
 def verified_export(root: Path, run_id: str) -> dict:
+    """The sanitized public export of a finished repetition. Cached on disk once verified (the run is final)."""
+    cached = root / (run_id + '.public.json')
+    if cached.is_file():
+        try:
+            return json.loads(cached.read_text())
+        except ValueError:
+            pass
     data = exporter.public_demo(exporter.export_run(root / run_id))
     if not data['run']['complete'] or data['evaluation']['state'] != 'evaluated':
         raise ValueError('evaluation is incomplete')
+    ironbark_runner.write(cached, data)
     return data
 
 
@@ -137,7 +146,11 @@ def recover(root: Path, admission: Admission) -> list[str]:
     return recovered
 
 
-def create_app(root: Path, admission: Admission, *, client_key: bytes, executor: Executor | None = None, trusted_proxies=(), static_dir: Path | None = None) -> FastAPI:
+ARM_KEYS = {'original': 'placebo', 'modified': 'patched'}
+
+
+def create_app(root: Path, admission: Admission, *, client_key: bytes, executor: Executor | None = None, trusted_proxies=(), static_dir: Path | None = None,
+               operator_token: bytes | None = None, public_start: bool = True, unavailable_reason: str | None = None, mode: str | None = None) -> FastAPI:
     if len(client_key) < 32:
         raise ValueError('client identity key must be at least 32 bytes')
     root = Path(root)
@@ -146,6 +159,10 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
     inflight: set[str] = set()
     inflight_lock = threading.Lock()
     tasks = public_tasks()
+    cache: dict[str, dict] = {}                           # terminal-job derived views (immutable once terminal)
+    if not public_start and not operator_token:
+        executor = None                                   # operator-only access without a token: nobody can start
+        unavailable_reason = unavailable_reason or 'missing_operator_token'
 
     def enabled():
         return executor is not None and getattr(executor, 'available', False) is True
@@ -205,12 +222,22 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
             with inflight_lock:
                 inflight.discard(job_id)
 
+    def is_operator(request: Request) -> bool:
+        given = request.headers.get('authorization', '')
+        return bool(operator_token) and given.startswith('Bearer ') and hmac.compare_digest(given[7:].strip().encode(), operator_token)
+
+    @app.get('/api/health')
+    def health():
+        return {'status': 'ok', 'mode': mode, 'evaluations': 'enabled' if enabled() else 'disabled', 'reason': None if enabled() else (unavailable_reason or 'disabled'),
+                'access': 'public' if public_start else 'operator', 'active': bool(admission.active())}
+
     @app.get('/api/ironbark/config')
     def config():
         totals = admission.totals()
         active = admission.active()
         from ..agent import ModelConfig
-        return {'available': enabled(), 'mode': getattr(executor, 'mode', None) if enabled() else None,
+        return {'available': enabled(), 'mode': getattr(executor, 'mode', None) if enabled() else None, 'access': 'public' if public_start else 'operator',
+                'reason': None if enabled() else (unavailable_reason or 'disabled'),
                 'repetitions': list(paired.REPETITIONS), 'model': ModelConfig().model, 'agent_profile': 'suite-v2-compat2',
                 'tasks': tasks, 'remaining_repetitions': max(0, (totals['ceiling_microusd'] - totals['reserved_microusd']) // totals['per_repetition_microusd']),
                 'active': active[0] if active else None}
@@ -218,19 +245,26 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
     @app.get('/api/ironbark/jobs')
     def recent():
         out = []
-        for j in admission.recent(20):
+        for j in admission.recent(30):
             try:
                 data = paired.load_job(root, j['id'])
             except (OSError, ValueError):
                 continue
-            out.append({'id': j['id'], 'state': j['state'], 'repetitions': data['repetitions'], 'mode': data['mode'], 'created_at': data['created_at']})
+            summary = None
+            if j['state'] in TERMINAL:
+                summary = status(j['id'])['summary']
+            out.append({'id': j['id'], 'state': j['state'], 'repetitions': data['repetitions'], 'mode': data['mode'], 'created_at': data['created_at'],
+                        'finished_at': data.get('finished_at'), 'completed_repetitions': sum(r['state'] == 'completed' for r in data['reps']), 'summary': summary})
         return out
 
     @app.post('/api/ironbark/jobs', status_code=202)
     def start(body: StartRequest, request: Request):
         if not enabled():
             raise HTTPException(503, 'Evaluations are currently unavailable')
-        client = client_identity(request)
+        operator = is_operator(request)
+        if not public_start and not operator:
+            raise HTTPException(403, 'New evaluations are not open to the public yet')
+        client = hmac.new(client_key, b'operator', hashlib.sha256).hexdigest() if operator else client_identity(request)
         job_id = 'eval-' + secrets.token_hex(16)
         try:
             admission.reserve(job_id, client, units=body.repetitions)
@@ -251,6 +285,8 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
     @app.get('/api/ironbark/jobs/{job_id}')
     def status(job_id: str):
         held = checked_job(job_id)
+        if job_id in cache and 'status' in cache[job_id]:
+            return cache[job_id]['status']
         with inflight_lock:
             recovery_required = held['state'] in ('reserved', 'running') and job_id not in inflight
         try:
@@ -265,9 +301,89 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
                         out['assessment'] = _assessment(verified_export(root, rep['run_id']))
                     except Exception:
                         out['state'] = 'unverified'
-        return {'id': job_id, 'state': held['state'], 'recovery_required': recovery_required, 'mode': job['mode'], 'repetitions': job['repetitions'],
-                'created_at': job['created_at'], 'started_at': job.get('started_at'), 'finished_at': job.get('finished_at'),
-                'reps': reps, 'summary': summarize(reps)}
+        out = {'id': job_id, 'state': held['state'], 'recovery_required': recovery_required, 'mode': job['mode'], 'repetitions': job['repetitions'],
+               'created_at': job['created_at'], 'started_at': job.get('started_at'), 'finished_at': job.get('finished_at'),
+               'reps': reps, 'summary': summarize(reps)}
+        if held['state'] in TERMINAL:
+            cache.setdefault(job_id, {})['status'] = out
+        return out
+
+    def trial_location(job_id: str, index: int, arm: str, task: int):
+        checked_job(job_id)
+        if arm not in ARM_KEYS or task not in (1, 2, 3, 4):
+            raise HTTPException(404, 'Trial not found')
+        try:
+            rep = paired.load_job(root, job_id)['reps'][index - 1]
+            if index < 1:
+                raise IndexError
+            operator = json.loads((root / (rep['run_id'] + '.json')).read_text())
+            task_id = sorted(t['task_id'] for t in operator['tasks'])[task - 1]
+        except (OSError, ValueError, IndexError, KeyError):
+            raise HTTPException(404, 'Trial not found') from None
+        return rep, operator, task_id, telemetry.attempt_dir(root / rep['run_id'], ARM_KEYS[arm], task_id)
+
+    @app.get('/api/ironbark/jobs/{job_id}/repetitions/{index}/trials/{arm}/{task}')
+    def trial(job_id: str, index: int, arm: str, task: int):
+        rep, operator, task_id, attempt = trial_location(job_id, index, arm, task)
+        state = next((r['state'] for r in ironbark_runner.progress(root, operator) if r['task_id'] == task_id and r['arm'].lower() == arm), 'pending')
+        base = {'repetition': index, 'arm': arm, 'task': task, 'state': state, 'mode': paired.load_job(root, job_id)['mode'],
+                'question': next((t['question'] for t in tasks if t['task'] == task), None)}
+        if attempt is None:
+            return {**base, 'steps': [], 'current': None, 'errors': []}
+        return {**base, **telemetry.timeline(attempt)}
+
+    @app.get('/api/ironbark/jobs/{job_id}/repetitions/{index}/trials/{arm}/{task}/screenshots/{name}')
+    def screenshot(job_id: str, index: int, arm: str, task: int, name: str):
+        if not telemetry.SCREENSHOT.fullmatch(name):
+            raise HTTPException(404, 'Screenshot not found')
+        attempt = trial_location(job_id, index, arm, task)[3]
+        if attempt is None or not (attempt / name).is_file():
+            raise HTTPException(404, 'Screenshot not found')
+        return FileResponse(attempt / name, media_type='image/png', headers={'Cache-Control': 'public, max-age=86400, immutable'})
+
+    @app.get('/api/ironbark/jobs/{job_id}/live')
+    def live(job_id: str):
+        """The trial the agent is executing right now (or the most recently finished one)."""
+        held = checked_job(job_id)
+        try:
+            job = paired.load_job(root, job_id)
+        except (OSError, ValueError):
+            return {'active': False, 'trial': None}
+        latest = None
+        for rep in job['reps']:
+            try:
+                operator = json.loads((root / (rep['run_id'] + '.json')).read_text())
+            except (OSError, ValueError):
+                continue
+            order = sorted(t['task_id'] for t in operator['tasks'])
+            for row in ironbark_runner.progress(root, operator):
+                arm = row['arm'].lower()
+                attempt = telemetry.attempt_dir(root / rep['run_id'], ARM_KEYS[arm], row['task_id'])
+                if attempt is None:
+                    continue
+                stamp = (attempt / 'trace.jsonl').stat().st_mtime
+                if latest is None or stamp > latest[0]:
+                    latest = (stamp, rep['index'], arm, order.index(row['task_id']) + 1, row['state'], attempt)
+        if latest is None:
+            return {'active': held['state'] in ('reserved', 'running'), 'trial': None}
+        _, index, arm, task, state, attempt = latest
+        return {'active': held['state'] in ('reserved', 'running'),
+                'trial': {'repetition': index, 'arm': arm, 'task': task, 'state': state, 'question': next((t['question'] for t in tasks if t['task'] == task), None),
+                          **telemetry.timeline(attempt)}}
+
+    @app.get('/api/ironbark/jobs/{job_id}/insights')
+    def job_insights(job_id: str):
+        held = checked_job(job_id)
+        if job_id in cache and 'insights' in cache[job_id]:
+            return cache[job_id]['insights']
+        try:
+            job = paired.load_job(root, job_id)
+        except (OSError, ValueError):
+            raise HTTPException(404, 'Evaluation not found') from None
+        result = {**insight_rules.build(insight_rules.collect(root, job['reps'])), 'mode': job['mode'], 'final': held['state'] in TERMINAL}
+        if held['state'] in TERMINAL:
+            cache.setdefault(job_id, {})['insights'] = result
+        return result
 
     @app.get('/api/ironbark/jobs/{job_id}/repetitions/{index}/export')
     def export(job_id: str, index: int):

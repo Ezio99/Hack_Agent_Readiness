@@ -1,27 +1,37 @@
-# Single Linux host. Prerequisites and checks: deploy/DEPLOY.md
+# Single Linux host. Checklist and exact commands: deploy/DEPLOY.md
 name: agent-readiness
 services:
   app:
     build: {context: .., dockerfile: deploy/Dockerfile}
     restart: unless-stopped
+    init: true                                                # reaps orphaned browser processes
     environment:
       AR_HOSTED_MODE: ${AR_HOSTED_MODE:-disabled}             # disabled | rehearsal | live (live needs owner authorization)
+      AR_HOSTED_ACCESS: ${AR_HOSTED_ACCESS:-operator}         # operator (token holders start runs) | public (anyone, subject to admission)
       AR_HOSTED_CEILING_USD: ${AR_HOSTED_CEILING_USD:-}       # owner-set global ceiling; required unless disabled
       AR_HOSTED_MIN_INTERVAL: ${AR_HOSTED_MIN_INTERVAL:-120}
       AR_TRUSTED_PROXIES: 172.30.0.2                          # only Caddy may set X-Forwarded-For
       META_MODEL_API_KEY_FILE: /run/secrets/meta_model_api_key
-    secrets: [meta_model_api_key]
+      AR_OPERATOR_TOKEN_FILE: /run/secrets/operator_token
+    secrets: [meta_model_api_key, operator_token]
     volumes:
       - data:/data
       - ${AR_SOURCE_RUN:?path to the private live-2d58a80e14 source run}:/app/scanner-data/live/live-2d58a80e14:ro
     # The browser jail needs unprivileged user/net/pid/mount namespaces and a fresh /proc.
-    # No capabilities are added and the process is not root; the service refuses to start
-    # evaluations unless its isolation self-test passes.
+    # No capabilities are added and the process is not root; evaluations stay disabled
+    # unless the isolation self-test passes inside this container at startup.
     security_opt: ["seccomp=unconfined", "apparmor=unconfined", "systempaths=unconfined", "no-new-privileges:true"]
     cap_drop: [ALL]
     shm_size: 1gb
     mem_limit: 4g
     pids_limit: 1024
+    stop_grace_period: 10s
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+    logging: {driver: json-file, options: {max-size: 10m, max-file: "5"}}
     networks: {edge: {ipv4_address: 172.30.0.3}}
   caddy:
     image: caddy:2.10
@@ -29,10 +39,12 @@ services:
     ports: ["80:80", "443:443"]
     environment: {SITE_ADDRESS: "${SITE_ADDRESS:?public hostname, e.g. readiness.example.com}"}
     volumes: [./Caddyfile:/etc/caddy/Caddyfile:ro, caddy:/data]
+    logging: {driver: json-file, options: {max-size: 10m, max-file: "3"}}
     networks: {edge: {ipv4_address: 172.30.0.2}}
     depends_on: [app]
 secrets:
   meta_model_api_key: {file: ./secrets/meta_model_api_key}
+  operator_token: {file: ./secrets/operator_token}
 volumes: {data: {}, caddy: {}}
 networks:
   edge: {ipam: {config: [{subnet: 172.30.0.0/24}]}}

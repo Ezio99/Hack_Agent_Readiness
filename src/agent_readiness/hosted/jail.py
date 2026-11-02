@@ -207,6 +207,7 @@ def inner(cfg_path: str, cdp: int, args: list[str]) -> int:
                 _mount('tmpfs', path, 'tmpfs', MS_NOSUID | MS_NODEV | MS_NOEXEC | MS_RDONLY, 'size=4k,mode=0555')
             elif os.path.exists(path):
                 _mount('/dev/null', path, None, MS_BIND)
+        os.chdir('/')                              # do not keep a handle on a now-hidden working directory
         d = Path(cfg['dir'])
         mirror_sock, cdp_sock = str(d / 'mirror.sock'), str(d / 'cdp.sock')
 
@@ -280,8 +281,23 @@ def selftest(timeout: float = 30) -> dict:
                         blocked.append(False)
                     except Exception:
                         blocked.append(True)
+                # Filesystem side: the service's processes and the hidden paths must not be visible.
+                async def listing(url):
+                    try:
+                        await page.goto(url, timeout=5000)
+                        return await page.inner_text('body')
+                    except Exception:
+                        return ''                      # refused (e.g. a file:// blocklist policy): nothing visible
+                procs = (await listing('file:///proc/')).split()
+                hidden_ok = True
+                for path in policy()['hide']:
+                    if os.path.isdir(path) and os.listdir(path):
+                        shown = await listing('file://' + path + '/')
+                        hidden_ok &= not any(name in shown for name in os.listdir(path)[:20])
                 await browser.close()
-                return {'ok': reached and all(blocked) and not any(t == 'OTHER' for t, _ in hits), 'mirror_reachable': reached, 'escapes_blocked': all(blocked)}
+                fs_ok = str(os.getpid()) not in procs and hidden_ok
+                return {'ok': reached and all(blocked) and fs_ok and not any(t == 'OTHER' for t, _ in hits),
+                        'mirror_reachable': reached, 'escapes_blocked': all(blocked), 'filesystem_hidden': fs_ok}
             finally:
                 proc.terminate()
                 try:

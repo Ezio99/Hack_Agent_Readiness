@@ -153,3 +153,11 @@ def test_real_agent_stack_runs_a_graded_trial_inside_the_jail(tmp_path, policy):
     assert rec['evaluation']['passed'] is True and rec['evaluation']['evidence_backed'] is True
     events = [json.loads(l) for l in (Path(rec['artifact_path']) / 'trace.jsonl').read_text().splitlines()]
     assert any(e['kind'] == 'browser_isolation' and e['mode'] == 'netns-loopback-mirror-only' for e in events)
+
+
+@pytest.mark.browser
+def test_selftest_passes_with_the_jail_and_fails_without_it(policy, monkeypatch):
+    assert jail.selftest() == {'ok': True, 'mirror_reachable': True, 'escapes_blocked': True, 'filesystem_hidden': True}
+    monkeypatch.setattr(jail, 'wrapper', lambda chromium, url, pol: chromium)       # an unjailed browser
+    result = jail.selftest()
+    assert result['ok'] is False and result['escapes_blocked'] is False
