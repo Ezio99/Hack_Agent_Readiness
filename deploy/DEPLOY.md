@@ -1,16 +1,37 @@
 # Deploying the hosted Ironbark evaluation
 
-**Currently deployed (2026-11-02 05:10 UTC): `product-experience-redesign` @ `b3121a8`** at https://209-38-84-72.sslip.io: the redesigned frontend (homepage `#/`, demo `#/demo`, workspace `#/run`) on the unchanged backend (API, jail and policies byte-identical to `60fcbc6`). Image `agent-readiness-app:latest` = `redesign-b3121a8` (`sha256:8e0e2378…`); mode live, access **operator-only**, US$10 ceiling, 5 repetitions remaining. Verified after deploy: jail self-test ok, ledger logically identical, all 697 data files and 308 source-run files byte-identical, 403/422 refusals, HTTPS/HSTS/CSP, 46/46 browser checks. Pre-deploy backup (config, read-only data-volume archive, fingerprints, `DEPLOYED.txt`) in `/root/backups/predeploy-20261102T045813Z` on the VM.
+**Currently deployed (2026-11-02 07:12 UTC): `evaluation-v2` @ `140a4e8`** at https://209-38-84-72.sslip.io.
 
-**Rollback** (previous image kept as `agent-readiness-app:rollback-60fcbc6` = `9052053090b9`; volumes, `.env` and secrets are not touched by either direction):
+Image `agent-readiness-app:latest` = `evalv2-140a4e8d0bf8` (`sha256:de3edfef…`). Mode live, access **operator-only**, US$10 ceiling, 4 repetitions remaining.
+
+Changes from `b3121a8`:
+- a grader_v2 post-hoc view beside the official grader_v1 results;
+- the export reports the enforced ledger ceiling with its basis;
+- the operator-token field is visible and held in memory only;
+- derived caches live under `/data/hosted/live/derived/` (versioned, disposable, rebuilt from runs).
+
+Executor, admission, jail, budgets and access are unchanged.
+
+Verified:
+- candidate smoke test, disabled, on loopback with a data copy: 23/23 browser checks;
+- after deploy: jail self-test ok; admission policy and jobs unchanged; all 1399 authoritative data files and 308 source-run files byte-identical (the only new files are the four derived caches; the pre-fix `<run>.public.json` caches are untouched and no longer read);
+- 403/403/422/422/405 refusals, no job created;
+- HTTPS 308 redirect, TLS 1.3, HSTS/CSP/nosniff/no-referrer;
+- served frontend hashes equal the reviewed build;
+- uid 10001 with CapEff 0; no secrets in logs;
+- 29/29 production browser checks (homepage, demo, workspace v1/v2 on desktop and mobile, token UX, reload recovery, exports at US$2.50, no console errors, no failed or non-GET requests).
+
+Pre-deploy backup: `/root/backups/predeploy-evalv2-20261102T070923Z` on the VM. Build worktree: `/root/agent-readiness-build-evalv2`.
+
+**Rollback** to the previous production image `agent-readiness-app:rollback-b3121a8` (= `8e0e2378`). Volumes, `.env` and secrets are not touched by either direction. The older `rollback-60fcbc6` is also kept. The `derived/` caches are ignored by the older image.
 
 ```sh
-cd /root/agent-readiness && git checkout -q hosted-ironbark-evaluation \
-  && docker tag agent-readiness-app:rollback-60fcbc6 agent-readiness-app:latest \
+cd /root/agent-readiness && git checkout -q --detach b3121a8 \
+  && docker tag agent-readiness-app:rollback-b3121a8 agent-readiness-app:latest \
   && cd deploy && docker compose up -d --no-build --no-deps app
 ```
 
-**Frontend-only updates** (how this one was done): build a tagged candidate from a separate worktree (`git worktree add --detach /root/agent-readiness-build <sha>`; `docker build -f deploy/Dockerfile -t agent-readiness-app:redesign-<sha> .`), smoke-test it disabled on loopback against a copy of the data volume, tag it `latest`, then `docker compose up -d --no-build --no-deps app`. Caddy and the volumes are not recreated.
+**App-image updates** (how the last two deployments were done): build a tagged candidate from a separate worktree (`git worktree add --detach /root/agent-readiness-build <sha>`; `docker build -f deploy/Dockerfile -t agent-readiness-app:redesign-<sha> .`), smoke-test it disabled on loopback against a copy of the data volume, tag it `latest`, then `docker compose up -d --no-build --no-deps app`. Caddy and the volumes are not recreated.
 
 **First deployed (operator-only) on 2026-11-02 at https://209-38-84-72.sslip.io (DigitalOcean, Ubuntu 24.04, 2 vCPU/4 GB + 2 GB swap); steps A–C passed on the VM.** One Linux VM runs everything: Caddy (automatic HTTPS) in front of a single app container (API, job worker, jailed Chromium). Status: the image builds and, in Docker Desktop (WSL2), passed the in-container isolation self-test, a rehearsal and restart recovery, and completed the first genuine Muse Spark evaluation. **The cloud VM must repeat step 4 because its kernel and AppArmor settings differ.** Public deployment, public paid execution and any ceiling change need explicit owner approval.
 

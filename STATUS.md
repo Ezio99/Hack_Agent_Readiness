@@ -4,11 +4,11 @@ Authoritative current handoff. Check it against the repository and production be
 
 ## Current state (2026-11-02)
 
-**Production:** https://209-38-84-72.sslip.io (DigitalOcean, Sydney). It serves the redesigned frontend from `product-experience-redesign` @ `b3121a8` (homepage `#/`, cinematic demo `#/demo`, workspace `#/run`) on the hosted backend, which is unchanged since `hosted-ironbark-evaluation` @ `60fcbc6`.
+**Production:** https://209-38-84-72.sslip.io (DigitalOcean, Sydney). It serves `evaluation-v2` @ `140a4e8`, deployed 2026-11-02 07:12 UTC with owner approval: the redesigned frontend, plus the grader_v2 post-hoc view (grader_v1 stays official), the enforced-ceiling export fix, and the operator-token UX. Executor, admission, jail and budgets are unchanged.
 
 - Mode live, access **operator-only**: public starts get 403.
 - Hosted ceiling US$10. US$3.30 is reserved by two completed jobs, and **4 repetitions remain**.
-- Rollback image `agent-readiness-app:rollback-60fcbc6` is kept; the command is in [deploy/DEPLOY.md](deploy/DEPLOY.md).
+- Rollback image `agent-readiness-app:rollback-b3121a8` is kept (plus `rollback-60fcbc6`). Commands and the full verification record are in [deploy/DEPLOY.md](deploy/DEPLOY.md).
 
 **Verified independently on 2026-11-02 (fresh session, public endpoints only):**
 - `index.html`, the entry JS/CSS and the lazy Demo/Classic chunks served by production are byte-identical (SHA-256) to a local build of the dashboard source at `b3121a8`. The dashboard source is unchanged from `b3121a8` to HEAD.
@@ -21,7 +21,7 @@ Authoritative current handoff. Check it against the repository and production be
 
 **Paid production trial completed (owner-approved, exactly one repetition):** `eval-aa23e330`, 8/8 in 9 min 01 s, real model. Original 0/4 (52 requests) → Modified 3/4 (26 requests). Frozen rule inconclusive; exploratory rule consistent_with_h1. **New calculated spend US$1.126097**, fully reconciled (0 open reservations, none settled above its reservation). Every production surface worked, including refresh recovery. Findings: an answer-length grading false negative on task 1; a tight Original-arm cap margin; a stale ceiling in the export; operator-token UX. Full details: [report](collaboration/reports/hosted-production-trial-2026-11-02.md). **No further paid call is authorized.**
 
-**Branch `evaluation-v2` (not deployed; owner review requested):**
+**Branch `evaluation-v2` (deployed; see Production):**
 - grader_v2 with adversarial tests, and a labelled post-hoc rescore with exact v1 reproduction checks ([design and historical results](collaboration/reports/grader-v2.md)). All 12 recorded runs rescore faithfully; 13 trials newly pass, none newly fail, and no verdict category changes.
 - Hosted v2 view beside the official v1 grades.
 - Export now reports the enforced ceiling.
