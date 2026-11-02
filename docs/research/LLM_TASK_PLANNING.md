@@ -2,7 +2,7 @@
 
 **Status:** isolated research on branch `research/llm-task-planning`. It is not a release feature and is not deployed.
 
-**So far:** only the offline pipeline has been run, with a developer-written fixture. No LLM call has been made. The comparison that actually answers the research question needs one owner-approved Muse Spark request (see the end of this report).
+**So far:** the offline pipeline has run with a developer-written fixture. The single owner-approved Muse Spark request (2026-11-02) was **rejected by the provider before generation** (see Paid run 1). The research question is therefore still unanswered.
 
 ## What was built (`src/agent_readiness/research/taskplan/`)
 
@@ -117,3 +117,20 @@ What the offline experiment does establish:
   - the spend is appended to the programme ledger afterwards.
 
   Command: `python -m agent_readiness.research.taskplan.experiment --client meta --cap-usd 0.05 --approval-note "<owner approval>"`.
+
+## Paid run 1 (2026-11-02, owner-approved; run `taskplan-20261102T202955-meta-5610c2`)
+
+**Outcome:** the provider rejected the request before generating anything.
+- HTTP 400 `invalid_request_error`: *"'required' is required to be supplied and to be an array including every key in properties. Missing 'attribute'."*
+- Latency 0.95 s. No proposals were produced, so no validation or comparison results exist.
+
+**Cause:** Meta's strict structured-output mode requires every property of every object to be listed in `required`. The `Proposal` schema has optional properties (`entity`, `attribute`, `constraints`, `ranking`, `rationale`) that pydantic leaves out of `required`. The live-proven proposer schemas happen to have no optional properties. The local JSON-Schema check passed because the rule is provider-specific.
+
+**Cost:**
+- No usage was reported. The research-local ledger holds one reservation of US$0.029054, not settled.
+- It is counted in full, conservatively, in the programme ledger as `research-taskplan-1` (subtotal US$10.595217).
+- The actual charge is most likely zero.
+
+**Preserved:** request.json (prompt `taskplan-v1`, model settings, catalogue fingerprint `d1b87bbc…`, context fingerprint `a54ee5a3…`, site versions), response.json (provider error and latency) and the ledger.
+
+**Fix (not applied; needs owner approval, because it changes the wire schema of this experiment):** emit a strict-compatible schema. Every property is listed in `required`, and optional ones are typed nullable (`anyOf [..., null]`; empty arrays allowed). Parsing and validation are unchanged, since pydantic already accepts null and empty values for these fields. A new run would be labelled schema `taskplan-schema-v2` with the same prompt. It needs a separately approved request with the same reservation bound (US$0.029054).
