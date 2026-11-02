@@ -16,10 +16,11 @@ Configuration (environment; nothing is accepted from requests):
   X-Forwarded-For), ``AR_HOSTED_MIN_INTERVAL`` (seconds per client, default 120),
   ``AR_HOST``/``AR_PORT``.
 * ``AGENT_READINESS_BROWSER_JAIL``: jail policy JSON (required unless disabled).
-* Lifecycle (M8): ``AR_LIFECYCLE_DATASETS`` (sanitized datasets; default ``/app/datasets/lifecycle`` or the checkout's
-  ``datasets/lifecycle``), ``AR_LIFECYCLE_STORE`` (the write-once lifecycle store; default ``<AR_HOSTED_DATA>/lifecycle/store``, used
-  only if it exists) and ``AR_LIFECYCLE_RUNS`` (launched evaluations; default ``<AR_HOSTED_DATA>/lifecycle/runs``). Launching (operator-only,
-  zero-cost rehearsals) needs the same preconditions as hosted evaluations plus the store; paid lifecycle launch and web approval are disabled.
+* Engine (M8 follow-up): evaluations run the lifecycle Stage B runner (``hosted/stageb.py``) on the frozen suite the owner ARMED at a terminal
+  (``python -m agent_readiness.lifecycle.arming arm``; live mode needs a paid arming, rehearsal mode a rehearsal arming). ``AR_LIFECYCLE_STORE``
+  (default ``<AR_HOSTED_DATA>/lifecycle/store``; required to enable evaluations) holds the owner-approved frozen suites; ``AR_STAGE_B_ROOT``
+  (default ``<AR_HOSTED_DATA>/lifecycle/stage-b``) holds armings, launch claims, per-launch authorisations and ledgers; ``AR_LIFECYCLE_DATASETS``
+  the sanitized datasets. The retired paired Ironbark engine is never constructed; its historical jobs stay viewable. Web approval is disabled.
 
 Startup never crash-loops on an evaluation problem: if any precondition fails the
 site and past results stay up, evaluations are disabled, ``/api/health`` reports a
@@ -125,31 +126,33 @@ def verify_isolation(attempts: int = 3) -> dict:
     return result
 
 
-def build_lifecycle(base: Path, admission: Admission, hosted_executor, client_key: bytes):
-    """The lifecycle service (M8). Never prevents the site from starting: any problem only disables lifecycle launches."""
+def lifecycle_paths(base: Path) -> dict:
+    repo = Path(__file__).resolve().parents[3] / 'datasets' / 'lifecycle'
+    return {'datasets': Path(os.environ.get('AR_LIFECYCLE_DATASETS') or ('/app/datasets/lifecycle' if Path('/app/datasets/lifecycle').is_dir() else repo)),
+            'store': Path(os.environ.get('AR_LIFECYCLE_STORE') or base / 'lifecycle' / 'store'),
+            'stage_b': Path(os.environ.get('AR_STAGE_B_ROOT') or base / 'lifecycle' / 'stage-b')}
+
+
+def build_lifecycle(paths: dict, root: Path, admission: Admission, executor, client_key: bytes):
+    """The lifecycle views (M8): datasets, the store and the hosted Stage B jobs under <root>/stageb. Never prevents the site from starting."""
     try:
-        from ..lifecycle.jobs import LifecycleExecutor, load_job, update_job
         from ..lifecycle.service import LifecycleService
-        repo = Path(__file__).resolve().parents[3] / 'datasets' / 'lifecycle'
-        datasets = Path(os.environ.get('AR_LIFECYCLE_DATASETS') or ('/app/datasets/lifecycle' if Path('/app/datasets/lifecycle').is_dir() else repo))
-        store = Path(os.environ.get('AR_LIFECYCLE_STORE') or base / 'lifecycle' / 'store')
-        runs = Path(os.environ.get('AR_LIFECYCLE_RUNS') or base / 'lifecycle' / 'runs')
-        executor = None
-        if hosted_executor is not None and (store / 'objects').is_dir():
-            runs.mkdir(parents=True, exist_ok=True)
-            executor = LifecycleExecutor(runs, store, admission)
-            for p in sorted((runs / 'jobs').glob('lc-*.json')) if (runs / 'jobs').is_dir() else []:
-                job = load_job(runs, p.stem)
-                if job['state'] in ('reserved', 'running'):
-                    update_job(runs, p.stem, state='interrupted', error='the service restarted while this evaluation was running; it is never re-run automatically')
-        service = LifecycleService(datasets=datasets, store_root=store, runs_root=runs if runs.is_dir() else None, executor=executor, admission=admission,
-                                   client_key=client_key, log=log)
-        log(f'lifecycle: datasets={",".join(sorted(service.datasets)) or "none"} store={"yes" if service.store_root else "no"} '
-            f'launch={"rehearsal (operator)" if executor else "disabled"} paid=disabled web-approval=disabled')
+        runs = root / 'stageb'
+        service = LifecycleService(datasets=paths['datasets'], store_root=paths['store'], runs_root=runs if runs.is_dir() else None, executor=executor,
+                                   admission=admission, client_key=client_key, log=log)
+        log(f'lifecycle: datasets={",".join(sorted(service.datasets)) or "none"} store={"yes" if service.store_root else "no"} web-approval=disabled')
         return service
     except Exception as exc:                                              # the site and the hosted evaluation stay up
         log(f'lifecycle: unavailable ({type(exc).__name__}: {str(exc)[:160]})')
         return None
+
+
+def arming_state(executor) -> str:
+    if executor is None:
+        return 'unused'
+    cfg = executor.configuration()
+    ev = cfg.get('evaluation') or {}
+    return f"{ev.get('arming_id')} ({ev.get('mode')}, {ev.get('suite')}, launches left {(ev.get('launches') or {}).get('left')})" if cfg['armed'] else f"none ({cfg['reason']})"
 
 
 def build():
@@ -174,7 +177,11 @@ def build():
     except BlockingIOError:
         raise SystemExit('another hosted service is using this data directory')
 
-    per_rep = paired.per_repetition_microusd(paired.ARM_CAPS)
+    # The Stage B root (owner armings, launch claims, per-launch authorisations and ledgers) lives on the data volume; the worker inherits it.
+    paths = lifecycle_paths(base)
+    from ..lifecycle import arming
+    arming.set_stage_b_root(paths['stage_b'])
+    per_rep = paired.per_repetition_microusd(paired.ARM_CAPS)          # the persisted admission policy row stays as it was (rollback-compatible)
     admission, reason = open_admission(root, os.environ.get('AR_HOSTED_CEILING_USD'), per_rep)
     interrupted = recover(root, admission)
     if interrupted:
@@ -191,7 +198,8 @@ def build():
                 operator_token = _secret(os.environ.get('AR_OPERATOR_TOKEN_FILE', '/run/secrets/operator_token'), 'operator_token', min_length=24)
             if mode == 'live':
                 _secret(os.environ.get('META_MODEL_API_KEY_FILE'), 'provider_key', min_length=8)   # read again by the worker; never logged
-            check_source()
+            if not (paths['store'] / 'objects').is_dir():
+                raise Unavailable('lifecycle_store_missing', f"the lifecycle store {paths['store']} is missing; it holds the owner-approved frozen suites")
             jail.require()
             try:
                 jail.policy()
@@ -200,13 +208,14 @@ def build():
             result = verify_isolation()
             if not result.get('ok'):
                 raise Unavailable('isolation_check_failed', f'browser isolation self-test failed: {result}')
-            executor = paired.WorkerExecutor(root, admission, mode=mode)
+            from .stageb import StageBExecutor
+            executor = StageBExecutor(root, paths['store'], admission, mode=mode)        # the hosted engine: the lifecycle Stage B runner
             reason = None
         except Unavailable as exc:
             reason = exc.code
             log(f'evaluations disabled [{exc.code}]: {exc}')
 
-    lifecycle = build_lifecycle(base, admission, executor, _client_key(root))
+    lifecycle = build_lifecycle(paths, root, admission, executor, _client_key(root))
     static = os.environ.get('AR_STATIC_DIR')
     proxies = [p for p in os.environ.get('AR_TRUSTED_PROXIES', '').split(',') if p.strip()]
     app = create_app(root, admission, client_key=_client_key(root), executor=executor, trusted_proxies=proxies,
@@ -214,7 +223,7 @@ def build():
                      public_start=(access == 'public'), unavailable_reason=reason, mode=mode, lifecycle=lifecycle)
     app.state.lock = lock
     log(f'mode={mode} access={access} evaluations={"enabled" if executor else "disabled"}'
-        f'{" reason=" + reason if reason else ""} jail={"verified" if executor else "unused"}')
+        f'{" reason=" + reason if reason else ""} jail={"verified" if executor else "unused"} engine={"stage-b" if executor else "none"} armed={arming_state(executor)}')
     return app
 
 

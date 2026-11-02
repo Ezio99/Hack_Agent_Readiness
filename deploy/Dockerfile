@@ -27,7 +27,10 @@ COPY deploy/chromium-policy.json /etc/chromium/policies/managed/agent-readiness.
 RUN useradd --uid 10001 --create-home --home-dir /home/agent agent \
     && mkdir -p /data /app/scanner-data/live && chown -R agent:agent /data /app
 USER agent
+# Lifecycle (M8): the owner-approved frozen suites (store) and the Stage B root (owner armings, launch claims, per-launch authorisations and
+# ledgers) live on the data volume; the serve process AND the owner's `docker compose exec app python -m agent_readiness.lifecycle.arming` use them.
 ENV AR_HOSTED_DATA=/data/hosted AR_STATIC_DIR=/srv/studio AR_HOST=0.0.0.0 AR_PORT=8080 AR_LIFECYCLE_DATASETS=/app/datasets/lifecycle \
+    AR_LIFECYCLE_STORE=/data/hosted/lifecycle/store AR_STAGE_B_ROOT=/data/hosted/lifecycle/stage-b \
     AGENT_READINESS_BROWSER_JAIL=/etc/agent-readiness/jail.json
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=90s CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=5)"]

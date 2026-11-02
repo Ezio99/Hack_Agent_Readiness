@@ -1,62 +1,82 @@
-"""M8 end-to-end integration rehearsal (zero cost; run ALONE: real Chromium in the network jail, the loopback dev provider standing in for the model).
+"""M8 end-to-end integration rehearsal through the HOSTED launch path (zero cost; run ALONE: real Chromium in the network jail, the loopback dev
+provider standing in for the model).
 
-Through the product API: an operator launches a rehearsal of a frozen suite -> the lifecycle service reserves US$0 in the hosted admission slot ->
-the real worker subprocess (`lifecycle.jobs`) runs the Stage B runner (prepare, jailed execute, report, public leak audit) -> the completed job is
-projected by the SAME projection as the preloaded M7 dataset -> the report, a trial timeline and a recorded screenshot are served, with the scripted
-stand-in's replies withheld (they are derived from the private expected outcomes) and the evaluation labelled a rehearsal."""
+The owner arms a frozen suite (terminal attestation) -> the operator launches `POST /api/ironbark/jobs {"repetitions": 1}` with the operator token,
+exactly as before -> the Stage B executor reserves in the hosted admission and claims the launch -> the real worker subprocess re-checks the claim
+and runs the Stage B runner (prepare, jailed execute, report, public leak audit) -> the hosted progress, trial, screenshot, live and export routes
+read the Stage B records -> the readiness report is the SAME lifecycle projection as the preloaded M7 dataset, with the stand-in's replies
+withheld and the evaluation labelled a rehearsal."""
+import importlib.util
 import time
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
+from agent_readiness.evalruns import authorization as AU
 from agent_readiness.hosted.admission import Admission
 from agent_readiness.hosted.api import create_app
+from agent_readiness.hosted.stageb import StageBExecutor
+from agent_readiness.lifecycle import arming as AR
 from agent_readiness.lifecycle import audit
-from agent_readiness.lifecycle.jobs import LifecycleExecutor
 from agent_readiness.lifecycle.service import LifecycleService
 
 TOKEN = b"t" * 32
+OP = {"authorization": "Bearer " + TOKEN.decode()}
 
 
 @pytest.mark.browser
-def test_operator_rehearsal_runs_end_to_end_through_the_product_api(tmp_path):
-    import importlib.util
-    from pathlib import Path
+def test_an_operator_launch_runs_the_stage_b_pipeline_and_reports_through_the_lifecycle(tmp_path, monkeypatch):
+    monkeypatch.setenv("AR_STAGE_B_ROOT", str(tmp_path / "stage-b"))                 # the worker subprocess inherits it
+    monkeypatch.setattr(AU, "STAGE_B", tmp_path / "stage-b")
     spec = importlib.util.spec_from_file_location("m7_paid_guard_fixture", Path(__file__).parent / "test_m7_paid_guard.py")
     T = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(T)
     store, f, msha, _ = T.build(tmp_path, real_name="synthetic-larkspur-m8-e2e")
     store.ref("frozen_suite", "synthetic-larkspur-m8-e2e@v1", f)
-    runs = tmp_path / "runs"
-    runs.mkdir()
+    kw = dict(arming_id="e2e-rehearsal-1", mode="rehearsal", frozen_ref="synthetic-larkspur-m8-e2e@v1", variants=["original", "modified"], repetitions=[1], launches=1)
+    p = AR.plan(store, **kw)
+    AR.arm(store, typed=p["attestation"], at="2026-11-04T03:00:00+00:00", interactive=True, **kw)
+
+    root = tmp_path / "hosted"
     a = Admission(tmp_path / "a.sqlite", ceiling_microusd=10_000_000, job_cap_microusd=1_650_000, min_interval_seconds=60)
-    svc = LifecycleService(datasets=None, store_root=store.root, runs_root=runs, executor=LifecycleExecutor(runs, store.root, a, timeout=1800),
-                           admission=a, client_key=b"k" * 32, log=lambda *_: None)
-    c = TestClient(create_app(tmp_path / "hosted", a, client_key=b"k" * 32, operator_token=TOKEN, public_start=False, mode="disabled", lifecycle=svc))
-    r = c.post("/api/lifecycle/evaluations", json={"frozen_suite": "synthetic-larkspur-m8-e2e@v1", "variants": ["original", "modified"], "mode": "rehearsal"},
-               headers={"authorization": "Bearer " + TOKEN.decode()})
+    ex = StageBExecutor(root, store.root, a, mode="rehearsal", timeout=1800)
+    svc = LifecycleService(datasets=None, store_root=store.root, runs_root=root / "stageb", executor=ex, admission=a, log=lambda *_: None)
+    c = TestClient(create_app(root, a, client_key=b"k" * 32, executor=ex, operator_token=TOKEN, public_start=False, mode="rehearsal", lifecycle=svc))
+
+    cfg = c.get("/api/ironbark/config").json()
+    assert cfg["available"] and cfg["engine"] == "stage-b" and cfg["repetitions"] == [1] and len(cfg["tasks"]) == 3
+    r = c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers=OP)
     assert r.status_code == 202, r.text
     job = r.json()["id"]
-    assert r.json()["manifest_sha256"] == msha
+    seen_live = False
     deadline = time.time() + 1500
     while time.time() < deadline:
-        st = c.get(f"/api/lifecycle/jobs/{job}").json()
+        st = c.get(f"/api/ironbark/jobs/{job}").json()
         if st["state"] not in ("reserved", "running"):
             break
-        time.sleep(5)
+        live = c.get(f"/api/ironbark/jobs/{job}/live").json()
+        seen_live |= bool(live.get("trial"))
+        time.sleep(3)
     assert st["state"] == "completed", (st.get("error"), st.get("stopped"))
-    assert st["completed_trials"] == st["planned"] == 6 and a.get(job)["state"] == "completed" and a.get(job)["reserved_microusd"] == 0
-    ev = c.get(f"/api/lifecycle/evaluations/{job}").json()
-    assert ev["mode"] == "rehearsal" and "not from a model" in ev["notice"] and ev["cost"]["total_usd"] == 0.0 and ev["source"]["kind"] == "launched"
-    assert len(ev["trials"]) == 6 and all(t["answer"] is None and t["answer_withheld"] for t in ev["trials"])
+    assert st["engine"] == "stage-b" and st["report"] == job and st["mode"] == "rehearsal"
+    rows = st["reps"][0]["tasks"]
+    assert len(rows) == 6 and all(t["state"] == "completed" for t in rows) and {t["arm"] for t in rows} == {"Original", "Modified"}
+    assert st["summary"]["Original"]["completed"] == st["summary"]["Modified"]["completed"] == 3
+    assert a.get(job)["state"] == "completed" and a.get(job)["reserved_microusd"] == 0
+    assert seen_live
+
+    tr = c.get(f"/api/ironbark/jobs/{job}/repetitions/1/trials/original/1").json()           # the workspace's agent panel
+    assert tr["steps"] and all(s["memory"] is None for s in tr["steps"])                      # stand-in replies withheld
+    shot = c.get(f"/api/ironbark/jobs/{job}/repetitions/1/trials/original/1/screenshots/{tr['steps'][0]['screenshot']}")
+    assert shot.status_code == 200 and shot.headers["content-type"] == "image/png"
+
+    ev = c.get(f"/api/lifecycle/evaluations/{job}").json()                                    # the readiness report: the lifecycle projection
+    assert ev["mode"] == "rehearsal" and "not from a model" in ev["notice"] and ev["manifest"]["sha256"] == msha and len(ev["trials"]) == 6
     assert set(ev["dimensions"]) == {"task_success", "navigation_efficiency", "evidence_quality", "information_accessibility", "agent_reliability", "coverage"}
-    assert all(x["jail_selftest_ok"] for x in ev["execution"].values())
-    assert ev["diagnostics"]["natural"].get("evidence_origin") in (None, "dev_fixture")                       # fixture behaviour never supports a hypothesis
+    assert all(t["answer"] is None for t in ev["trials"]) and all(x["jail_selftest_ok"] for x in ev["execution"].values())
     from agent_readiness.evalruns import runner as RN
     assert audit.check_evaluation(ev, RN._answers(store, f)) == []
-    tid = ev["trials"][0]["id"]
-    tl = c.get(f"/api/lifecycle/evaluations/{job}/trials/{tid}").json()
-    assert tl["steps"] and all(s["memory"] is None for s in tl["steps"])
-    shot = c.get(f"/api/lifecycle/evaluations/{job}/trials/{tid}/screenshots/{tl['screenshots'][0]}")
-    assert shot.status_code == 200 and shot.headers["content-type"] == "image/png"
-    assert any(e["id"] == job and e["state"] == "completed" for e in c.get("/api/lifecycle/evaluations").json())
+    assert c.get(f"/api/ironbark/jobs/{job}/repetitions/1/export").json()["id"] == job        # the export is the same audited document
+    assert c.get(f"/api/lifecycle/evaluations/{job}/trials/{ev['trials'][0]['id']}").json()["steps"]
+    assert c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers=OP).status_code in (409, 429)   # the single armed launch is used

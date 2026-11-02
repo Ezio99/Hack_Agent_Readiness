@@ -115,6 +115,8 @@ def test_leak_audit_is_clean_and_catches_an_injected_leak(tmp_path, prepared):
 
 
 def test_stage_b_is_isolated():
+    # M8 follow-up: the hosted service reaches the Stage B runner only through `agent_readiness.lifecycle` (hosted/stageb.py imports the
+    # lifecycle product layer, never evalruns directly); the research packages themselves stay free of evalruns.
     assert B.forbidden_imports(ROOT / "src/agent_readiness/suites") == []
     for pkg in ("hosted", "suites", "taskeval", "research", "framework", "investigate"):
         for f in (ROOT / "src/agent_readiness" / pkg).rglob("*.py"):

@@ -2,13 +2,10 @@
 
   datasets     sanitized, versioned, immutable projections of recorded evaluations (the preloaded M7 experiment); integrity-checked at startup
   store        the lifecycle write-once store (suites, approvals, frozen suites, manifests, run results), when deployed with the server
-  jobs         evaluations launched in the product (operator-only rehearsals in this release), projected with `projection.project` once complete,
-               audited with the store's private outcomes, and cached under runs/derived/
+  jobs         evaluations launched from the hosted workspace (`POST /api/ironbark/jobs`, engine hosted/stageb.py), projected with
+               `projection.project` once complete, audited with the store's private outcomes, and cached under <runs>/derived/
 
-Server-side selection only: a launch names a frozen suite reference and two registered variants of its site; the server finds or builds the
-manifest (existing manifest of that exact frozen suite and variants; otherwise a regression manifest of the suite's base manifest, which may differ
-only in its variants; otherwise a new exploratory manifest with the server's defaults). No task, URL, model, limit or spending field is accepted.
-Web approval and paid launch are disabled (no authenticated owner identity has been chosen); the API refuses them before anything is reserved."""
+This service launches nothing itself: the hosted evaluation is the product's one launch path. Web approval is refused (owner terminal only)."""
 from __future__ import annotations
 
 import hashlib
@@ -21,17 +18,14 @@ from pathlib import Path
 
 from . import audit, dataset as DS, jobs as J, projection as P, sites as S, stage_a as SA
 
-EVAL_ID = re.compile(r"^(?:[a-z0-9][a-z0-9-]{2,60}|lc-[0-9a-f]{32})$")
+EVAL_ID = re.compile(r"^(?:[a-z0-9][a-z0-9-]{2,60}|eval-[0-9a-f]{32})$")
 TRIAL_ID = re.compile(r"^[a-z0-9]{1,24}-[A-Za-z0-9._-]{1,80}-r\d{1,2}$")
 SHOT = re.compile(r"^step-\d{3}\.(?:png|webp)$")
 SHA = re.compile(r"^[0-9a-f]{64}$")
 APPROVAL_UNAVAILABLE = {"available": False, "reason": "owner_authentication_not_configured",
                         "detail": "Approving or freezing a suite from the web needs a verified owner identity; no authentication model has been chosen yet. "
                                   "Approval stays at an owner terminal (exact suite hash, typed attestation, interactive terminal)."}
-PAID_UNAVAILABLE = {"available": False, "reason": "paid_launch_not_authorized",
-                    "detail": "Paid evaluations need an authenticated owner authorisation bound to the exact frozen suite and manifest, and explicit "
-                              "spending approval. Neither is available from the web in this release; no paid call is made."}
-DEFAULTS = {"repetitions": 1, "seed": 7, "hard_cap_usd": 8.0}
+EVALUATE = "Live evaluations are launched from the evaluation workspace (operator token), on the frozen suite the owner armed at the server terminal."
 
 
 class NotFound(LookupError):
@@ -91,22 +85,19 @@ class LifecycleService:
 
     # ------------------------------------------------------------------------------------------------ capabilities
     def overview(self) -> dict:
-        rehearsal = bool(self.executor and getattr(self.executor, "available", False) and self.store_root and self.runs_root)
-        return {"schema": "lifecycle-overview-v1",
+        cfg = self.executor.configuration() if self.executor is not None and hasattr(self.executor, "configuration") else None
+        armed = bool(cfg and cfg["armed"])
+        return {"schema": "lifecycle-overview-v2",
                 "steps": [
                     {"id": "website", "label": "Website", "available": True, "detail": "Registered website contexts with business context and personas (synthetic, labelled)."},
                     {"id": "tasks", "label": "Task generation", "available": True, "action_available": False,
-                     "detail": "Recorded AI generation and validation runs are shown. A new paid generation needs owner authorisation and is not launchable from the web."},
+                     "detail": "Recorded AI generation and validation runs are shown. New generation runs at the server terminal (paid, owner-authorised)."},
                     {"id": "review", "label": "Review and approval", "available": True, "action_available": False, "detail": APPROVAL_UNAVAILABLE["detail"]},
-                    {"id": "evaluate", "label": "Browser-agent evaluation", "available": True, "action_available": rehearsal,
-                     "detail": "Zero-cost rehearsals of a frozen suite can be launched by the operator; paid evaluations are disabled." if rehearsal
-                               else "Launching needs the lifecycle store, the browser jail and an operator; recorded evaluations remain available."},
+                    {"id": "evaluate", "label": "Browser-agent evaluation", "available": True, "action_available": armed, "detail": EVALUATE},
                     {"id": "report", "label": "Readiness report", "available": True, "detail": "Six measured dimensions with evidence; no composite score."},
-                    {"id": "reevaluate", "label": "Re-evaluation", "available": True, "action_available": rehearsal,
-                     "detail": "Re-run the same frozen suite (same manifest, or a regression manifest that differs only in its website variants)."}],
-                "onboarding": S.onboarding(), "approval": APPROVAL_UNAVAILABLE, "paid": PAID_UNAVAILABLE,
-                "rehearsal": {"available": rehearsal, "operator_only": True, "cost_usd": 0.0,
-                              "reason": None if rehearsal else ("no_store" if not self.store_root else "no_executor")},
+                    {"id": "reevaluate", "label": "Re-evaluation", "available": True, "action_available": armed,
+                     "detail": "The owner arms the same frozen suite on other registered website variants (a regression manifest); the operator launches it."}],
+                "onboarding": S.onboarding(), "approval": APPROVAL_UNAVAILABLE, "evaluation": cfg,
                 "sources": {"datasets": sorted(self.datasets), "store": bool(self.store_root), "jobs": bool(self.runs_root)}, "problems": len(self.problems)}
 
     # ------------------------------------------------------------------------------------------------ sites and Stage A
@@ -192,7 +183,7 @@ class LifecycleService:
         if not self.runs_root or not (self.runs_root / "jobs").is_dir():
             return []
         out = []
-        for p in sorted((self.runs_root / "jobs").glob("lc-*.json")):
+        for p in sorted((self.runs_root / "jobs").glob("eval-*.json")):
             try:
                 out.append(J.load_job(self.runs_root, p.stem))
             except (OSError, ValueError):
@@ -262,7 +253,7 @@ class LifecycleService:
             meta = json.loads((self.datasets[eid] / "DATASET.json").read_text())
             return {**ev, "source": {"kind": "dataset", "id": meta["id"], "version": meta["version"], "built_at": meta["built_at"],
                                      "description": meta["description"], "runs": meta["source"]["runs"], "run_results": meta["source"]["run_results"]}}
-        if eid.startswith("lc-") and self.runs_root:
+        if eid.startswith("eval-") and self.runs_root:
             try:
                 job = J.load_job(self.runs_root, eid)
             except (OSError, ValueError):
@@ -288,7 +279,7 @@ class LifecycleService:
         return tl
 
     def _job_run_for(self, eid: str, trial: str):
-        if not (eid.startswith("lc-") and self.runs_root):
+        if not (eid.startswith("eval-") and self.runs_root):
             raise NotFound(eid)
         try:
             job = J.load_job(self.runs_root, eid)
@@ -309,132 +300,22 @@ class LifecycleService:
             if p.is_file() and p.resolve().is_relative_to(self.datasets[eid].resolve()):
                 return p, "image/webp"
             raise NotFound(name)
-        run = self._job_run_for(eid, trial)
-        p = P.trial_dir(run, trial) / name
-        if name.endswith(".png") and p.is_file():
+        d = self._attempt_dir(eid, trial)
+        p = d / name
+        if name.endswith(".png") and p.is_file() and p.resolve().is_relative_to(self.runs_root.resolve()):
             return p, "image/png"
         raise NotFound(name)
 
-    # ------------------------------------------------------------------------------------------------ launch
-    def frozen_suites(self) -> list[dict]:
-        st = self.store()
-        if st is None:
-            return []
-        out = []
-        rd = st.root / "refs" / "frozen_suite"
-        for p in sorted(rd.glob("*.json")) if rd.is_dir() else []:
-            r = json.loads(p.read_text())
-            try:
-                fz = st.get("frozen_suite", r["sha256"])
-                s = st.get("suite", fz.suite_sha256)
-            except Exception:
-                continue
-            if s.site not in S.registered():
-                continue
-            out.append({"ref": r["name"], "sha256": r["sha256"], "suite_sha256": fz.suite_sha256, "site": s.site, "synthetic": s.suite_name.startswith("synthetic-"),
-                        "tasks": len(s.task_sha256s), "variants": [v["name"] for v in S.site_view(s.site, with_hashes=False)["variants"]]})
-        return out
-
-    def _manifest_for(self, st, frozen_sha: str, variants: list[tuple[str, str]]) -> tuple[str, str]:
-        from ..evalruns import manifest as MF
-        from ..framework.site import get
-        from ..suites import plan as PL
-        same, base = [], []
-        md = st.root / "objects" / "manifest"
-        for p in sorted(md.glob("*.json")) if md.is_dir() else []:
-            m = st.get("manifest", p.stem)
-            if m.frozen_suite_sha256 != frozen_sha:
-                continue
-            (same if [tuple(v) for v in m.variants] == variants else base).append((m.provenance.created_at, p.stem, m))
-        if same:
-            return sorted(same)[0][1], "existing manifest for this frozen suite and these website variants"
-        at = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime())
-        if base:
-            _, bsha, _ = sorted(base)[0]
-            m, _diff = MF.regression(st, bsha, variants=variants, created_at=at, notes=f"re-evaluation of manifest {bsha} launched in the product")
-            return st.put(m), f"regression manifest of {bsha[:12]}: the same frozen suite, plan, agent, repetitions and seed; only the website variants differ"
-        _, suite, tasks = MF.suite_tasks(st, frozen_sha)
-        det = [t for t in tasks if t.spec.verifiability == "deterministic"]
-        primary = "natural" if any(t.condition == "natural" for t in det) else "assisted"
-        plan = PL.make_plan(n_tasks=sum(t.condition == primary for t in det), repetitions=DEFAULTS["repetitions"], requested="confirmatory",
-                            allow_exploratory_fallback=True, sims=500, primary_outcome=f"evidence-supported pass (official grader v1), {primary}-wording condition")
-        site = get(suite.site)
-        m = MF.build(st, frozen_sha, variants=variants, oracle=site.oracle().label, plan=plan, repetitions=DEFAULTS["repetitions"], seed=DEFAULTS["seed"],
-                     created_at=at, hard_cap_usd=DEFAULTS["hard_cap_usd"], notes="built by the product for a launched evaluation")
-        return st.put(m), "new manifest with the server's defaults (1 repetition, seed 7, exploratory unless a confirmatory design is feasible)"
-
-    def launch(self, *, frozen_suite: str, variants: list[str], mode: str, operator: bool, start) -> dict:
-        if mode == "paid":
-            raise Refused(PAID_UNAVAILABLE["reason"], PAID_UNAVAILABLE["detail"])
-        if mode != "rehearsal":
-            raise Refused("invalid_mode", "unknown evaluation mode", 422)
-        if not operator:
-            raise Refused("operator_only", "Launching evaluations is limited to the operator in this release.")
-        if not (self.executor and getattr(self.executor, "available", False) and self.store_root and self.runs_root and self.admission is not None):
-            raise Refused("unavailable", "Launching evaluations is unavailable on this server (store, browser jail or worker not configured).", 503)
-        st = self.store()
-        match = next((f for f in self.frozen_suites() if f["ref"] == frozen_suite), None)
-        if match is None:
-            raise Refused("unknown_suite", "No frozen suite with that reference exists on this server.", 404)
-        allowed = {v["name"]: v["snapshot_sha256"] for v in S.site_view(match["site"])["variants"]}
-        if len(variants) != 2 or len(set(variants)) != 2 or any(v not in allowed for v in variants):
-            raise Refused("invalid_variants", f"Choose two different registered website variants of {match['site']}: {', '.join(allowed)}.", 422)
-        manifest_sha, basis = self._manifest_for(st, match["sha256"], [(v, allowed[v]) for v in variants])
-        job_id = J.new_id()
-        client = hmac.new(self.client_key or b"lifecycle", b"operator-lifecycle", hashlib.sha256).hexdigest()
-        from ..hosted.admission import Refused as AdmissionRefused
+    def _attempt_dir(self, eid: str, trial: str) -> Path:
+        """The trial's evidence directory: from its record once finished, else (live view) its latest attempt directory under trial-data/."""
         try:
-            self.admission.reserve_amount(job_id, client, 0)
-        except AdmissionRefused as exc:
-            raise Refused("busy", {"evaluation capacity is occupied": "Another evaluation is running. Wait for it to finish, then launch.",
-                                   "rate limit exceeded": "An evaluation was launched a moment ago. Please wait a couple of minutes."}.get(str(exc), str(exc)), 429) from exc
-        label = f"Rehearsal of {frozen_suite} · {variants[0]} vs {variants[1]}"
-        J.new_job(self.runs_root, job_id, manifest_sha=manifest_sha, mode="rehearsal", request={"frozen_suite": frozen_suite, "variants": variants, "mode": mode,
-                                                                                             "manifest_basis": basis}, label=label)
-        with self._lock:
-            self.inflight.add(job_id)
-        start(job_id)
-        return {"id": job_id, "state": "reserved", "mode": "rehearsal", "manifest_sha256": manifest_sha, "manifest_basis": basis, "label": label}
-
-    def work(self, job_id: str) -> None:
-        try:
-            self.admission.transition(job_id, "reserved", "running")
-            self.executor.run(job_id)
-            self.admission.transition(job_id, "running", "completed")
-        except Exception:
-            held = self.admission.get(job_id)
-            if held and held["state"] in ("reserved", "running"):
-                state = "timed_out" if held["state"] == "running" and J.load_job(self.runs_root, job_id).get("state") == "timed_out" else "failed"
-                self.admission.transition(job_id, held["state"], state)
-        finally:
-            with self._lock:
-                self.inflight.discard(job_id)
-
-    def job(self, job_id: str) -> dict:
-        if not J.JOB_ID.fullmatch(job_id) or not self.runs_root:
-            raise NotFound(job_id)
-        try:
-            job = J.load_job(self.runs_root, job_id)
-        except (OSError, ValueError):
-            raise NotFound(job_id) from None
-        done, latest = 0, None
-        from ..investigate.run import InvestigationRun
-        for rel in (job.get("runs") or {}).values():
-            run = InvestigationRun(self.runs_root / rel)
-            done += len(list((run.dir / "artifacts" / "trials").glob("*.json")))
-            for tr in (run.dir / "trial-data").glob("*/*/trace.jsonl"):
-                m = tr.stat().st_mtime
-                if latest is None or m > latest[0]:
-                    latest = (m, tr.parent.parent.name, tr.parent, run.state["config"].get("mode"))
-        live = None
-        if latest and job["state"] in ("reserved", "running"):
-            from ..hosted import telemetry
-            tl = telemetry.timeline(latest[2])
-            steps = tl["steps"][-6:] if latest[3] == "paid" else P._redact_stand_in(tl["steps"][-6:])
-            live = {"trial": latest[1], "steps": steps, "current": tl["current"]}
-        with self._lock:
-            orphan = job["state"] in ("reserved", "running") and job_id not in self.inflight
-        return {"id": job_id, "state": "interrupted" if orphan else job["state"], "mode": job["mode"], "label": job.get("label"), "request": job.get("request"),
-                "manifest_sha256": job["manifest_sha256"], "created_at": job["created_at"], "started_at": job.get("started_at"), "finished_at": job.get("finished_at"),
-                "planned": job.get("planned"), "completed_trials": done, "stopped": job.get("stopped"), "error": job.get("error"), "live": live,
-                "notice": P.MODES["rehearsal"]["notice"] if job["mode"] == "rehearsal" else None}
+            return P.trial_dir(self._job_run_for(eid, trial), trial)
+        except NotFound:
+            pass
+        job = J.load_job(self.runs_root, eid) if (eid.startswith("eval-") and self.runs_root) else None
+        for rel in ((job or {}).get("runs") or {}).values():
+            base = self.runs_root / rel / "trial-data" / trial
+            attempts = sorted(x for x in base.iterdir() if x.is_dir()) if base.is_dir() else []
+            if attempts:
+                return attempts[-1]
+        raise NotFound(trial)

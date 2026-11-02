@@ -15,9 +15,9 @@ const DS = resolve(__dirname, '../../../../datasets/lifecycle/m7-larkspur-browse
 const read = (p: string) => JSON.parse(readFileSync(resolve(DS, p), 'utf8'));
 const EV = { ...read('evaluation.json'), source: { kind: 'dataset', id: 'm7-larkspur-browser-1', version: 1, built_at: 'x', description: 'd', runs: ['r'] } };
 const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body });
-const overview = { steps: [{ id: 'evaluate', label: 'E', available: true, action_available: false, detail: 'Launching needs the lifecycle store.' }],
+const overview = { steps: [{ id: 'evaluate', label: 'E', available: true, action_available: false, detail: 'Launch from the workspace.' }],
   onboarding: { available: false, reason: 'x', detail: 'Onboarding from a URL is not available.' }, approval: { available: false, reason: 'owner_authentication_not_configured', detail: 'Approval needs a verified owner identity.' },
-  paid: { available: false, reason: 'paid_launch_not_authorized', detail: 'Paid evaluations need owner authorisation.' }, rehearsal: { available: false, operator_only: true, cost_usd: 0, reason: 'no_store' }, sources: { datasets: [], store: false, jobs: false } };
+  sources: { datasets: [], store: false, jobs: false }, evaluation: null as unknown };
 
 function server(routes: Record<string, unknown>) {
   const f = vi.fn(async (url: string, init?: RequestInit) => {
@@ -35,11 +35,11 @@ async function mount(node: React.ReactNode) {
   return host;
 }
 
-it('routes the lifecycle steps, suites, jobs and reports', () => {
+it('routes the lifecycle steps, suites and reports (hosted evaluations keep #/run/eval-…)', () => {
   expect(parse('#/lifecycle')).toEqual({ name: 'lifecycle', step: undefined });
   expect(parse('#/lifecycle/review')).toEqual({ name: 'lifecycle', step: 'review' });
   expect(parse('#/lifecycle/suites/' + 'a'.repeat(64))).toEqual({ name: 'lifecycle', step: 'review', suite: 'a'.repeat(64) });
-  expect(parse('#/lifecycle/jobs/lc-' + 'b'.repeat(32))).toEqual({ name: 'lifecycle', step: 'evaluate', job: 'lc-' + 'b'.repeat(32) });
+  expect(parse('#/reports/eval-' + 'b'.repeat(32))).toEqual({ name: 'report', id: 'eval-' + 'b'.repeat(32), task: undefined });
   expect(parse('#/reports/m7-larkspur-browser-1/tasks/1')).toEqual({ name: 'report', id: 'm7-larkspur-browser-1', task: 1 });
   expect(parse('#/lifecycle/nope').name).toBe('home');
   expect(parse('#/run').name).toBe('run');                                      // the hosted workspace URLs are unchanged
@@ -89,14 +89,20 @@ it('shows suite review with the exact hash and keeps web approval disabled', asy
   expect(f.mock.calls.some(c => (c[1] as RequestInit | undefined)?.method === 'POST')).toBe(false);
 });
 
-it('never offers a paid launch and disables rehearsal launch when the server cannot run it', async () => {
-  server({ '/api/lifecycle/overview': overview, '/api/lifecycle/sites': [], '/api/lifecycle/frozen': [], '/api/lifecycle/evaluations': [] });
+it('sends launches to the one launch path (the workspace) and shows the armed evaluation, or why none is armed', async () => {
+  server({ '/api/lifecycle/overview': overview, '/api/lifecycle/sites': [], '/api/lifecycle/evaluations': [] });
   const host = await mount(<Lifecycle step="evaluate" />);
-  const btn = (s: string) => [...host.querySelectorAll('button')].find(b => b.textContent?.includes(s)) as HTMLButtonElement;
-  expect(btn('Launch paid evaluation').disabled).toBe(true);
-  expect(btn('Launch zero-cost rehearsal').disabled).toBe(true);
-  expect(host.textContent).toContain('Paid evaluations need owner authorisation.');
-  expect(host.textContent).toContain('Launching needs the lifecycle store.');
+  expect(host.textContent).toContain('This server does not run evaluations');
+  expect(host.querySelector('a[href="#/run"]')).not.toBeNull();
+  expect([...host.querySelectorAll('button')].some(b => /launch/i.test(b.textContent ?? ''))).toBe(false);      // no second launch control
+  document.body.innerHTML = '';
+  const armed = { ...overview, evaluation: { engine: 'stage-b', armed: true, reason: null, repetitions: [1], evaluation: { arming_id: 'larkspur-live-1', arming_sha256: 'a'.repeat(64), mode: 'paid', site: 'larkspur',
+    suite: 'larkspur-core v2', frozen_suite: 'larkspur-core@v2', frozen_suite_sha256: 'b'.repeat(64), variants: ['original', 'modified'], armed_at: '2026-11-04T00:00:00+00:00',
+    launches: { max: 1, used: 0, left: 1 }, options: [{ repetitions: 1, trials: 12, reservation_usd: 7.436, manifest_sha256: 'c'.repeat(64), available: false, fits_hosted_ceiling: false }],
+    agent: { model: 'muse-spark-1.3', reasoning_effort: 'low', max_completion_tokens: 4096, profile: 'suite-v2-compat2' } } } };
+  server({ '/api/lifecycle/overview': armed, '/api/lifecycle/sites': [], '/api/lifecycle/evaluations': [] });
+  const h2 = await mount(<Lifecycle step="evaluate" />);
+  expect(h2.textContent).toContain('larkspur-live-1'); expect(h2.textContent).toContain('1 of 1 left'); expect(h2.textContent).toContain('does not fit the hosted budget');
 });
 
 it('shows the recorded Stage A generation with its admissions and the disabled generate action', async () => {

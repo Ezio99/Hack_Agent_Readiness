@@ -7,11 +7,11 @@ Modes:
   rehearsal   the Stage B runner end to end (prepare -> execute -> report) on the approved, frozen suite's manifest: real Chromium in the network
               jail, the loopback dev provider standing in for the model (NOT a model), every non-loopback socket refused in the worker. Reserves
               US$0 against the hosted ceiling (it still holds the single evaluation slot).
-  paid        NOT launchable from the product in this release (`PAID_WEB_LAUNCH = False`; the API refuses it before anything is reserved). The
-              coordination a paid run would use is implemented and tested: `admit_paid` verifies the owner's write-once PaidAuthorization against
-              the store (exact frozen suite with a real owner approval, exact manifest, trial count, cap, pinned agent), refuses a used experiment
-              ledger, and reserves the manifest's worst case against the hosted ceiling before the runner's own per-request reserve-before-send
-              gate and per-experiment ledger take over. Nothing in this module sends a model request."""
+  paid        (M8 follow-up) an owner-authorised experiment (lifecycle.paid), launched by the operator: the API checks and claims it and reserves
+              its worst case against the hosted ceiling; this worker re-checks everything (`paid.check(for_job=...)`, the reservation equals the
+              worst case), loads the provider key from its secret file, and runs the unchanged Stage B runner WITH the authorisation, which
+              verifies it once more and enforces reserve-before-send, the per-trial and experiment caps and ledger-counted trials (no retries).
+              Only the agent process reaches the provider; the browser stays in the jail. Enabled only in live mode with AR_LIFECYCLE_PAID=enabled."""
 from __future__ import annotations
 
 import json
@@ -22,18 +22,16 @@ import signal
 import subprocess
 import sys
 import time
-from decimal import Decimal
 from pathlib import Path
 
-JOB_ID = re.compile(r"lc-[0-9a-f]{32}")
+JOB_ID = re.compile(r"eval-[0-9a-f]{32}")              # hosted evaluation ids (the workspace URLs #/run/eval-<32 hex>)
 MODES = ("rehearsal", "paid")
-PAID_WEB_LAUNCH = False
 TIMEOUT_SECONDS = 3 * 3600
 TERMINAL = ("completed", "failed", "timed_out", "interrupted")
 
 
 def new_id() -> str:
-    return "lc-" + secrets.token_hex(16)
+    return "eval-" + secrets.token_hex(16)
 
 
 def _write(path: Path, obj) -> None:
@@ -72,46 +70,13 @@ def update_job(runs_root: Path, job_id: str, **fields) -> dict:
     return job
 
 
-# ------------------------------------------------------------------------------------------------------------------------------- paid coordination
-def admit_paid(admission, store, manifest_sha: str, authorization_path: Path, *, job_id: str, client: str, ledger_root: Path | None = None) -> dict:
-    """Coordinate the two durable spend systems for ONE paid lifecycle run (never called by the product in this release; tested with fixtures):
-      1. the owner's PaidAuthorization must verify against the store and this manifest (evalruns.authorization.verify; nothing relaxed);
-      2. the experiment's fixed ledger must be unused (a used ledger means trials may have been attempted: never re-run, never reset);
-      3. the manifest's worst-case reservation is reserved against the hosted admission ceiling, atomically with the single evaluation slot.
-    The runner then enforces reserve-before-send per request, the per-trial cap, the scope cap and the trial count from the experiment ledger."""
-    from ..evalruns import authorization as AU
-    from ..evalruns import runner as RN
-    auth = AU.load(authorization_path)
-    manifest = store.get("manifest", manifest_sha)
-    planned = sum(1 for _ in _planned_trials(store, manifest))
-    problems = AU.verify(auth, store, manifest_sha, planned_trials=planned)
-    if problems:
-        raise PermissionError("authorisation mismatch; nothing reserved: " + "; ".join(problems))
-    ledger = Path(ledger_root) / auth.experiment_id if ledger_root else AU.ledger_dir(auth.experiment_id)
-    if (ledger / "ledger.jsonl").exists() and (ledger / "ledger.jsonl").stat().st_size > 0:
-        raise PermissionError("the experiment ledger has entries: a paid experiment id is used once; trials that ever reserved are never re-run")
-    worst = Decimal(str(manifest.budget["worst_case_reservation_usd"])) * 1_000_000
-    admission.reserve_amount(job_id, client, int(worst.to_integral_value(rounding="ROUND_CEILING")))
-    return {"authorization_sha256": auth.sha256, "experiment_id": auth.experiment_id, "planned_trials": planned, "reserved_microusd": int(worst.to_integral_value(rounding="ROUND_CEILING")),
-            "per_request_cap_usd": manifest.budget["per_request_cap_usd"], "cap_usd": auth.cap_usd, "runner": RN.SCHEMA}
-
-
-def _planned_trials(store, manifest):
-    from ..evalruns.manifest import suite_tasks
-    _, _, tasks = suite_tasks(store, manifest.frozen_suite_sha256)
-    det = [t for t in tasks if t.spec.verifiability == "deterministic" and t.condition in manifest.conditions]
-    for _ in range(manifest.repetitions):
-        for _t in det:
-            for _v in manifest.variants:
-                yield 1
-
-
 # ------------------------------------------------------------------------------------------------------------------------------- executor
 class LifecycleExecutor:
     """Launches the worker for one job and waits for it (call from the job's own thread)."""
 
-    def __init__(self, runs_root: Path, store_root: Path, admission, *, command=None, timeout: int = TIMEOUT_SECONDS):
+    def __init__(self, runs_root: Path, store_root: Path, admission, *, command=None, timeout: int = TIMEOUT_SECONDS, mode: str = "rehearsal"):
         self.runs_root, self.store_root, self.admission = Path(runs_root), Path(store_root), admission
+        self.mode = mode                                                      # the hosted service mode: paid launches need "live"
         self.command = command or (lambda job_id: [sys.executable, "-m", "agent_readiness.lifecycle.jobs", str(self.runs_root), str(self.store_root), job_id,
                                                    str(os.getpid()), str(admission.path)])
         self.timeout = timeout
@@ -153,7 +118,8 @@ def harden_jail(runs_root: Path, store_root: Path) -> list[str]:
     roots. Hiding more never weakens the declared boundary; the extra paths are recorded on the job. (The jail self-test checks that no entry of a
     hidden directory appears in the browser's listing of it, so a hidden directory must not contain an entry named like itself, e.g. runs/runs.)"""
     from ..evalruns import manifest as MF
-    extra = [str(Path(store_root).resolve()), str(Path(runs_root).resolve())]
+    from ..evalruns import authorization as AU
+    extra = [str(Path(store_root).resolve()), str(Path(runs_root).resolve()), str(Path(AU.STAGE_B).resolve())]
     pol = os.environ.get("AGENT_READINESS_BROWSER_JAIL")
     if pol and Path(pol).is_file():
         extra = list(json.loads(Path(pol).read_text()).get("hide") or []) + extra
@@ -168,14 +134,22 @@ def run_job(runs_root: Path, store_root: Path, job_id: str, admission) -> dict:
     held = admission.get(job_id)
     if not held or held["state"] != "running":
         raise PermissionError("the job does not hold a running admission")
-    if job["mode"] != "rehearsal":
-        raise PermissionError("paid lifecycle execution is not launchable from the product in this release")
-    if held["reserved_microusd"] != 0:
-        raise PermissionError("a rehearsal reserves exactly US$0")
     from ..hosted import paired
-    paired._loopback_only_sockets()                                         # no provider can be contacted from this process
+    from . import arming as AR
     store = WriteOnceStore(store_root)
-    runs = RN.prepare(store, job["manifest_sha256"], Path(runs_root) / "evalruns", mode="rehearsal", label=job_id[3:13])     # not "runs": see harden_jail
+    claim = AR.check_launch(store, job)                                     # independent re-check: claim names this job; arming, manifest, (paid) authorisation, unused ledger
+    if held["reserved_microusd"] != (claim["reservation_microusd"] if job["mode"] == "paid" else 0):
+        raise PermissionError("the hosted reservation does not equal the armed launch's reservation")
+    auth_path = None
+    if job["mode"] == "rehearsal":
+        paired._loopback_only_sockets()                                     # no provider can be contacted from this process
+    elif job["mode"] == "paid":
+        auth_path = Path(claim["authorization"])
+        paired._load_key_file()                                             # the provider key, read from its secret file after exec; never logged
+    else:
+        raise PermissionError("unknown job mode")
+    mode = job["mode"]
+    runs = RN.prepare(store, job["manifest_sha256"], Path(runs_root) / "evalruns", mode=mode, label=job_id[3:13])     # not "runs": see harden_jail
     manifest = store.get("manifest", job["manifest_sha256"])
     update_job(runs_root, job_id, runs={c: str(r.dir.relative_to(Path(runs_root))) for c, r in runs.items()},
                planned=sum(len(RN.steps(r, manifest)) for r in runs.values()), state="running")
@@ -183,7 +157,7 @@ def run_job(runs_root: Path, store_root: Path, job_id: str, admission) -> dict:
     update_job(runs_root, job_id, runtime_jail_hides=hidden)
     stopped = []
     for c, r in runs.items():
-        out = RN.execute(r, store)
+        out = RN.execute(r, store, authorization=auth_path)                 # paid: the runner verifies the authorisation again and enforces its ledger
         if out.get("stopped"):
             stopped.append(f"{c}: {out['stopped']}")
     at = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime())

@@ -1,9 +1,12 @@
-"""Fixed-target hosted evaluation API (Ironbark only).
+"""Hosted evaluation API.
 
 The public request body is ``{"repetitions": 1 | 3 | 5}`` and nothing else: no
 URL, task, model, browser command or spending field exists. The executor is
-installed by the deployment (``hosted.serve``); without one the API refuses to
-start evaluations before reserving budget.
+installed by the deployment (``hosted.serve``): the Stage B engine
+(``hosted/stageb.py``), which evaluates the owner-ARMED frozen suite (selected
+server-side) with the lifecycle runner. Without an executor, or without an
+armed evaluation, the API refuses to start before reserving budget. Historical
+jobs of the retired paired Ironbark engine stay viewable read-only.
 
 Public responses contain only job states, per-task progress, aggregate
 metrics and the existing sanitized ``public_demo`` export.
@@ -28,7 +31,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict
 
-from . import insights as insight_rules, paired, telemetry
+from . import insights as insight_rules, paired, stageb, telemetry
 from .admission import Admission, Refused
 from ..investigate import export as exporter
 from ..live import ironbark_runner
@@ -217,8 +220,13 @@ def recover(root: Path, admission: Admission) -> list[str]:
                     pass
         job = admission.get(job_id)
         admission.transition(job_id, job['state'], 'interrupted')
-        if job_id.startswith('lc-'):
-            recovered.append(job_id)                      # a lifecycle job (M8): its job file is marked by the lifecycle service
+        if stageb.is_job(root / 'stageb', job_id):         # a Stage B evaluation: interrupted for good (never re-run; its launch number is used)
+            from ..lifecycle import jobs as LJ
+            try:
+                LJ.update_job(root / 'stageb', job_id, state='interrupted', error='the service restarted while this evaluation was running; it is never re-run')
+            except (OSError, ValueError):
+                pass
+            recovered.append(job_id)
             continue
         try:
             data = paired.load_job(root, job_id)
@@ -256,6 +264,20 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
 
     def enabled():
         return executor is not None and getattr(executor, 'available', False) is True
+
+    sb_root = root / 'stageb'
+    stage_b = getattr(executor, 'engine', None) == stageb.ENGINE
+
+    def is_sb(job_id: str) -> bool:
+        return stageb.is_job(sb_root, job_id)
+
+    def current_tasks():
+        if stage_b:
+            try:
+                return executor.configuration()['tasks']
+            except Exception:
+                return []
+        return tasks
 
     @app.middleware('http')
     async def headers(request: Request, call_next):
@@ -296,9 +318,14 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
         try:
             admission.transition(job_id, 'reserved', 'running')
             executor.run(job_id)
-            job = paired.load_job(root, job_id)
-            for rep in job['reps']:
-                verified_export(root, rep['run_id'])       # complete only if every repetition is exportable
+            if is_sb(job_id):
+                if lifecycle is None:
+                    raise RuntimeError('the lifecycle service is required to project a Stage B evaluation')
+                lifecycle.evaluation(job_id)               # complete only if the public projection builds and passes the leak audit
+            else:
+                job = paired.load_job(root, job_id)
+                for rep in job['reps']:
+                    verified_export(root, rep['run_id'])   # complete only if every repetition is exportable
             admission.transition(job_id, 'running', 'completed')
             cache.get('_', {}).pop('durations', None)          # refresh the measured duration estimate
         except (TimeoutError, subprocess.TimeoutExpired):
@@ -352,8 +379,16 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
         if not active:
             return {'state': 'idle', 'job': None}
         job_id = active[0]
-        if job_id.startswith('lc-'):                      # the single evaluation slot is held by a lifecycle evaluation (M8)
-            return {'state': 'busy', 'job': None, 'kind': 'lifecycle', 'started_at': None, 'finished_runs': 0, 'total_runs': None, 'estimated_remaining_seconds': None}
+        if is_sb(job_id):
+            try:
+                st = stageb.job_status(sb_root, job_id, 'running', recovery_required=False)
+                finished = sum(t['state'] in ('completed', 'failed') for r in st['reps'] for t in r['tasks'])
+                total = sum(len(r['tasks']) for r in st['reps']) or None
+                per_trial = 50                                                    # M7: mean 52 s of agent time per trial
+                return {'state': 'busy', 'job': job_id, 'started_at': st['started_at'], 'repetitions': st['repetitions'], 'finished_runs': finished,
+                        'total_runs': total, 'estimated_remaining_seconds': max(60, per_trial * ((total or 0) - finished)) if total else None}
+            except (OSError, ValueError, KeyError):
+                return {'state': 'busy', 'job': job_id, 'started_at': None, 'finished_runs': 0, 'total_runs': None, 'estimated_remaining_seconds': None}
         try:
             data = paired.load_job(root, job_id)
         except (OSError, ValueError):
@@ -382,6 +417,17 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
         totals = admission.totals()
         active = admission.active()
         from ..agent import ModelConfig
+        if stage_b:
+            cfg = executor.configuration()
+            ev = cfg.get('evaluation') or {}
+            left = (ev.get('launches') or {}).get('left', 0)
+            return {'engine': stageb.ENGINE, 'worker': worker_state(), 'repetition_duration': {'seconds': 50 * max(1, len(cfg['tasks']) * 2), 'basis': 'M7 mean agent time per trial', 'samples': 0},
+                    'available': enabled() and cfg['armed'], 'mode': getattr(executor, 'mode', None) if enabled() else None, 'access': 'public' if public_start else 'operator',
+                    'reason': None if enabled() and cfg['armed'] else (unavailable_reason or cfg.get('reason') or 'disabled'),
+                    'repetitions': cfg['repetitions'], 'model': (ev.get('agent') or {}).get('model') or ModelConfig().model, 'agent_profile': (ev.get('agent') or {}).get('profile') or AGENT_PROFILE,
+                    'agent_settings': ev.get('agent'), 'tasks': cfg['tasks'], 'evaluation': ev or None, 'remaining_repetitions': left,
+                    'ceiling': {'ceiling_usd': totals['ceiling_microusd'] / 1e6, 'reserved_usd': totals['reserved_microusd'] / 1e6},
+                    'active': active[0] if active else None}
         return {'worker': worker_state(), 'repetition_duration': repetition_seconds(), 'available': enabled(), 'mode': getattr(executor, 'mode', None) if enabled() else None, 'access': 'public' if public_start else 'operator',
                 'reason': None if enabled() else (unavailable_reason or 'disabled'),
                 'repetitions': list(paired.REPETITIONS), 'model': ModelConfig().model, 'agent_profile': AGENT_PROFILE, 'agent_settings': agent_settings(),
@@ -392,6 +438,15 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
     def recent():
         out = []
         for j in admission.recent(30):
+            if is_sb(j['id']):
+                try:
+                    st = status(j['id'])
+                except Exception:
+                    continue
+                out.append({'id': j['id'], 'engine': stageb.ENGINE, 'state': j['state'], 'repetitions': st['repetitions'], 'mode': st['mode'], 'created_at': st['created_at'],
+                            'finished_at': st.get('finished_at'), 'completed_repetitions': sum(r['state'] == 'completed' for r in st['reps']),
+                            'summary': st['summary'] if j['state'] in TERMINAL else None})
+                continue
             try:
                 data = paired.load_job(root, j['id'])
             except (OSError, ValueError):
@@ -412,12 +467,18 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
             raise HTTPException(403, 'New evaluations are not open to the public yet')
         client = hmac.new(client_key, b'operator', hashlib.sha256).hexdigest() if operator else client_identity(request)
         job_id = 'eval-' + secrets.token_hex(16)
+        if not stage_b:                                    # the paired Ironbark engine is retired; only the Stage B executor can launch
+            raise HTTPException(503, 'Evaluations are currently unavailable')
+        from ..lifecycle.arming import ArmingRefused
         try:
-            admission.reserve(job_id, client, units=body.repetitions)
+            out = executor.admit(job_id, client, body.repetitions)
         except Refused as exc:
             raise HTTPException(429, FRIENDLY.get(str(exc), str(exc))) from exc
+        except ArmingRefused as exc:
+            raise HTTPException(exc.status, exc.detail) from exc
+        except ValueError as exc:
+            raise HTTPException(503, 'Unable to start evaluation') from exc
         try:
-            paired.new_job(root, job_id, body.repetitions, executor.mode)
             with inflight_lock:
                 inflight.add(job_id)
             threading.Thread(target=work, args=(job_id,), daemon=True, name=job_id).start()
@@ -426,7 +487,7 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
                 inflight.discard(job_id)
             admission.transition(job_id, 'reserved', 'failed')
             raise HTTPException(503, 'Unable to start evaluation') from exc
-        return {'id': job_id, 'state': 'reserved', 'repetitions': body.repetitions}
+        return out
 
     @app.get('/api/ironbark/jobs/{job_id}')
     def status(job_id: str):
@@ -435,6 +496,21 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
             return cache[job_id]['status']
         with inflight_lock:
             recovery_required = held['state'] in ('reserved', 'running') and job_id not in inflight
+        if is_sb(job_id):
+            v2 = None
+            if held['state'] == 'completed' and lifecycle is not None:
+                try:
+                    ts = lifecycle.evaluation(job_id)['dimensions']['task_success']['variants']
+                    names = list(ts)
+                    lab = {names[0]: 'Original', names[1]: 'Modified'} if len(names) == 2 else {}
+                    v2 = {'label': GRADING_V2_LABEL, 'repetitions': None,
+                          **{lab[v]: {'completed': x['trials'], 'evidence_supported_passes': x['v2_evidence_backed'], 'strict_passes': x['v2_passed']} for v, x in ts.items() if v in lab}}
+                except Exception:
+                    v2 = None
+            out = stageb.job_status(sb_root, job_id, held['state'], recovery_required=recovery_required, v2=v2)
+            if held['state'] in TERMINAL:
+                cache.setdefault(job_id, {})['status'] = out
+            return out
         try:
             job = paired.load_job(root, job_id)
         except (OSError, ValueError):
@@ -465,6 +541,11 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
 
     def trial_location(job_id: str, index: int, arm: str, task: int):
         checked_job(job_id)
+        if is_sb(job_id):
+            name = stageb.trial_name(sb_root, job_id, index, arm, task) if arm in ARM_KEYS else None
+            if name is None:
+                raise HTTPException(404, 'Trial not found')
+            return None, None, name, stageb.attempt_dir(sb_root, job_id, name)
         if arm not in ARM_KEYS or task not in (1, 2, 3, 4):
             raise HTTPException(404, 'Trial not found')
         try:
@@ -480,6 +561,14 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
     @app.get('/api/ironbark/jobs/{job_id}/repetitions/{index}/trials/{arm}/{task}')
     def trial(job_id: str, index: int, arm: str, task: int):
         rep, operator, task_id, attempt = trial_location(job_id, index, arm, task)
+        if is_sb(job_id):
+            st = stageb.job_status(sb_root, job_id, checked_job(job_id)['state'], recovery_required=False)
+            row = next((t for r in st['reps'] if r['index'] == index for t in r['tasks'] if t['arm'].lower() == arm and t['task'] == task), None)
+            base = {'repetition': index, 'arm': arm, 'task': task, 'state': row['state'] if row else 'pending', 'mode': st['mode'], 'trial': task_id,
+                    'question': next((t['question'] for t in current_tasks() if t['task'] == task), None)}
+            if attempt is None:
+                return {**base, 'steps': [], 'current': None, 'errors': []}
+            return {**base, **stageb.timeline(sb_root, job_id, attempt)}
         state = next((r['state'] for r in ironbark_runner.progress(root, operator) if r['task_id'] == task_id and r['arm'].lower() == arm), 'pending')
         base = {'repetition': index, 'arm': arm, 'task': task, 'state': state, 'mode': paired.load_job(root, job_id)['mode'],
                 'question': next((t['question'] for t in tasks if t['task'] == task), None)}
@@ -500,6 +589,8 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
     def live(job_id: str):
         """The trial the agent is executing right now (or the most recently finished one)."""
         held = checked_job(job_id)
+        if is_sb(job_id):
+            return stageb.live(sb_root, job_id, held['state'], current_tasks())
         try:
             job = paired.load_job(root, job_id)
         except (OSError, ValueError):
@@ -529,6 +620,8 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
     @app.get('/api/ironbark/jobs/{job_id}/insights')
     def job_insights(job_id: str):
         held = checked_job(job_id)
+        if is_sb(job_id):
+            raise HTTPException(409, 'Stage B evaluations report their diagnostics in the readiness report')
         if job_id in cache and 'insights' in cache[job_id]:
             return cache[job_id]['insights']
         try:
@@ -544,6 +637,11 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
     def export(job_id: str, index: int):
         if checked_job(job_id)['state'] not in TERMINAL:
             raise HTTPException(409, 'Evaluation results are not available yet')
+        if is_sb(job_id):
+            try:
+                return lifecycle.evaluation(job_id)                   # the audited public evaluation document (same as the report)
+            except Exception as exc:
+                raise HTTPException(409, 'Sanitized results are unavailable') from exc
         try:
             rep = paired.load_job(root, job_id)['reps'][index - 1]
             if index < 1 or rep['state'] != 'completed':

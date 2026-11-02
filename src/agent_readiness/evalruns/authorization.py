@@ -24,7 +24,10 @@ from ..suite.core import canonical_hash
 from ..suites.store import WriteOnceStore
 
 ROOT = Path(__file__).resolve().parents[3]
-STAGE_B = ROOT / "scanner-data" / "research" / "stage-b"
+# The durable Stage B root (authorisations and per-experiment ledgers). Default: the checkout's git-ignored scanner-data (as for M7). The product
+# container sets AR_STAGE_B_ROOT to a directory on the data volume (M8 follow-up): an installed package has no checkout, and ledgers must survive
+# image updates and restarts.
+STAGE_B = Path(os.environ["AR_STAGE_B_ROOT"]) if os.environ.get("AR_STAGE_B_ROOT") else ROOT / "scanner-data" / "research" / "stage-b"
 EXPERIMENT_ID = re.compile(r"^[a-z0-9][a-z0-9-]{2,60}$")
 
 

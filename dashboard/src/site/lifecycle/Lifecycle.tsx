@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { SiteFooter, SiteHeader } from '../Shell';
-import { api, ApiError, fmtUsd, short, words, type EvaluationSummary, type FrozenRef, type Generation, type JobStatus, type Overview, type Site, type Suite } from '../../lib/lifecycleApi';
+import { api, fmtUsd, short, words, type EvaluationSummary, type Generation, type Overview, type Site, type Suite } from '../../lib/lifecycleApi';
 import { Disabled, Failed, Hash, Loading, ModeBadge, useLoad, VariantName } from './parts';
 import './lifecycle.css';
 
@@ -15,7 +15,7 @@ const STEPS = [
 
 /** `#/lifecycle[/<step>]`: the evaluation lifecycle as one workflow. Every step reads the server; actions that are not safely available are shown
  *  disabled with the server's reason, never simulated. */
-export function Lifecycle({ step, suite, job }: { step?: string; suite?: string; job?: string }) {
+export function Lifecycle({ step, suite }: { step?: string; suite?: string }) {
   const ov = useLoad(() => api.overview(), 'overview');
   const sites = useLoad(() => api.sites(), 'sites');
   const [siteId, setSiteId] = useState('larkspur');
@@ -41,7 +41,7 @@ export function Lifecycle({ step, suite, job }: { step?: string; suite?: string;
         {current === 'website' && <WebsitePanel sites={sites.data} error={sites.error} siteId={siteId} setSiteId={setSiteId} ov={ov.data} />}
         {current === 'tasks' && <TasksPanel site={site} />}
         {current === 'review' && <ReviewPanel site={site} selected={suite} ov={ov.data} />}
-        {current === 'evaluate' && <EvaluatePanel ov={ov.data} job={job} />}
+        {current === 'evaluate' && <EvaluatePanel ov={ov.data} />}
         {current === 'report' && <ReportsPanel />}
         {current === 'reevaluate' && <ReevaluatePanel ov={ov.data} />}
       </div>
@@ -174,76 +174,41 @@ function SuiteView({ s, ov }: { s: Suite; ov: Overview | null }) {
 }
 
 // --------------------------------------------------------------------------------------------------------------- 4 evaluate
-function LaunchForm({ ov, preset, title }: { ov: Overview | null; preset?: [string, string]; title: string }) {
-  const frozen = useLoad(() => api.frozen(), 'frozen');
-  const [ref, setRef] = useState('');
-  const [pair, setPair] = useState<[string, string]>(preset ?? ['original', 'modified']);
-  const [token, setToken] = useState('');
-  const [msg, setMsg] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const available = !!ov?.rehearsal.available;
-  const f: FrozenRef | undefined = frozen.data?.find(x => x.ref === ref) ?? frozen.data?.[0];
-  const launch = async () => {
-    if (!f) return;
-    setBusy(true); setMsg(null);
-    try { const r = await api.launch({ frozen_suite: f.ref, variants: pair, mode: 'rehearsal' }, token.trim()); window.location.hash = `/lifecycle/jobs/${r.id}`; }
-    catch (e) { setMsg(e instanceof ApiError ? e.message : 'The evaluation could not be launched.'); }
-    finally { setBusy(false); }
-  };
+const ARM_STEPS = [
+  'ssh <vm> && cd ~/agent-readiness/deploy',
+  'docker compose exec app python -m agent_readiness.lifecycle.arming prepare --arming larkspur-live-1 --mode paid --frozen larkspur-core@v2 --variants original modified --repetitions 1 --launches 1',
+  'docker compose exec -it app python -m agent_readiness.lifecycle.arming arm      …the same arguments…   (the owner types the attestation shown)',
+];
+
+/** The armed evaluation (server-side selection) and the one launch path: the evaluation workspace. */
+function ArmedEvaluation({ ov, reevaluate = false }: { ov: Overview | null; reevaluate?: boolean }) {
+  const cfg = ov?.evaluation;
+  const ev = cfg?.evaluation;
   return <div className="lc-launch">
-    <h3>{title}</h3>
-    {!available && <Disabled title="Launching is unavailable on this server" detail={ov?.steps.find(s => s.id === 'evaluate')?.detail ?? 'The lifecycle service is not configured for launches.'} />}
-    {available && frozen.data && <>
-      <label>Frozen suite<select value={f?.ref ?? ''} onChange={e => setRef(e.target.value)}>{frozen.data.map(x => <option key={x.ref} value={x.ref}>{x.ref}{x.synthetic ? ' (synthetic)' : ''} · {x.tasks} tasks</option>)}</select></label>
-      {f && <div className="lc-pair"><label>Baseline<select value={pair[0]} onChange={e => setPair([e.target.value, pair[1]])}>{f.variants.map(v => <option key={v}>{v}</option>)}</select></label>
-        <label>Compared with<select value={pair[1]} onChange={e => setPair([pair[0], e.target.value])}>{f.variants.map(v => <option key={v}>{v}</option>)}</select></label></div>}
-      <label>Operator token <small>(held in memory only)</small><input type="password" autoComplete="off" value={token} onChange={e => setToken(e.target.value)} /></label>
-    </>}
-    <div className="lc-modes">
-      <button type="button" className="btn btn-signal" disabled={!available || busy || !f || pair[0] === pair[1] || !token.trim()} onClick={launch}>Launch zero-cost rehearsal <span className="arr" aria-hidden="true">→</span></button>
-      <button type="button" className="btn btn-ghost" disabled aria-describedby="paid-why">Launch paid evaluation</button>
-    </div>
-    <p className="lc-note">A rehearsal runs the real pipeline (frozen manifest, jailed Chromium, graders, diagnostics) with a scripted stand-in instead of a model: it proves the pipeline, not agent performance, and is always labelled.</p>
-    <p className="lc-note" id="paid-why"><b>Paid evaluation disabled.</b> {ov?.paid.detail}</p>
-    {msg && <p className="lc-error" role="alert">{msg}</p>}
+    <h3>{reevaluate ? 'Re-evaluate' : 'Launch'} from the evaluation workspace</h3>
+    {ev ? <dl className="lc-facts">
+      <div><dt>Armed</dt><dd><code>{ev.arming_id}</code> · <ModeBadge mode={ev.mode} /> · armed {ev.armed_at}</dd></div>
+      <div><dt>Frozen suite</dt><dd>{ev.suite} · <Hash sha={ev.frozen_suite_sha256} /></dd></div>
+      <div><dt>Website</dt><dd>{ev.site}: {ev.variants.map(v => <VariantName key={v} v={v} />)}</dd></div>
+      <div><dt>Model</dt><dd>{ev.agent.model} · reasoning {ev.agent.reasoning_effort} · {ev.agent.max_completion_tokens} completion tokens · profile {ev.agent.profile}</dd></div>
+      <div><dt>Launches</dt><dd>{ev.launches.left} of {ev.launches.max} left · {ev.options.map(o => <span key={o.repetitions} className="lc-inline">{o.repetitions} repetition(s): {o.trials} trials, reserves {fmtUsd(o.reservation_usd, 3)}{o.fits_hosted_ceiling === false ? ' (does not fit the hosted budget)' : ''}</span>)}</dd></div>
+    </dl> : <Disabled title="No evaluation is armed on this server" detail={cfg ? `Reason: ${words(cfg.reason ?? 'not armed')}. The owner arms a frozen suite at the server terminal.` : 'This server does not run evaluations (view-only).'} />}
+    <a className="btn btn-signal" href="#/run">Open the evaluation workspace <span className="arr" aria-hidden="true">→</span></a>
+    <details className="lc-ssh"><summary>How the owner arms an evaluation (over SSH)</summary>
+      <ol>{ARM_STEPS.map(c => <li key={c}><code>{c}</code></li>)}</ol>
+      <p>The owner reads exactly what would run — the frozen suite, the website snapshots, the manifest per repetition count, the model, the reservation per launch and
+        the hosted budget left — and types the attestation shown. {reevaluate ? 'A re-evaluation arms the same frozen suite with other registered website variants; the server prepares a regression manifest that differs only in its variants. ' : ''}
+        The operator token can launch an armed evaluation but can never arm one; each launch runs once and is never retried.</p></details>
   </div>;
 }
 
-function JobView({ id }: { id: string }) {
-  const [j, setJ] = useState<JobStatus | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  useEffect(() => {
-    let live = true, timer = 0;
-    const tick = async () => {
-      try { const x = await api.job(id); if (!live) return; setJ(x); setErr(null); if (['reserved', 'running'].includes(x.state)) timer = window.setTimeout(tick, 4000); }
-      catch (e) { if (live) setErr(e instanceof Error ? e.message : 'unavailable'); }
-    };
-    tick();
-    return () => { live = false; window.clearTimeout(timer); };
-  }, [id]);
-  if (err) return <Failed error={err} what="This evaluation" />;
-  if (!j) return <Loading what="the evaluation" />;
-  const pct = j.planned ? Math.round(100 * j.completed_trials / j.planned) : null;
-  return <div className="lc-job" aria-live="polite">
-    <div className="lc-job-head"><span className={`ws-dot ${j.state}`} aria-hidden="true" /><strong>{j.label}</strong><ModeBadge mode={j.mode} /><span className="tag tag-neutral">{words(j.state)}</span></div>
-    {j.notice && <p className="lc-notice">{j.notice}</p>}
-    <p>{j.completed_trials} of {j.planned ?? '…'} trials recorded{pct != null ? ` (${pct}%)` : ''} · manifest <Hash sha={j.manifest_sha256} />{j.request?.manifest_basis ? ` — ${j.request.manifest_basis}` : ''}</p>
-    {j.planned ? <div className="lc-progress" role="progressbar" aria-valuemin={0} aria-valuemax={j.planned} aria-valuenow={j.completed_trials}><i style={{ width: `${pct}%` }} /></div> : null}
-    {j.live && <div className="lc-live"><span className="eyebrow">Now: {j.live.trial}</span><ul>{j.live.steps.map(s => <li key={s.step}><span className="mono">{s.step}</span> {s.actions.map(a => a.name).join(', ')} <code>{s.path}</code></li>)}</ul></div>}
-    {j.error && <p className="lc-error" role="alert">{j.error}</p>}
-    {j.stopped && <p className="lc-note">Stopped: {j.stopped}</p>}
-    {j.state === 'completed' && <a className="btn btn-signal" href={`#/reports/${j.id}`}>Open the report <span className="arr" aria-hidden="true">→</span></a>}
-  </div>;
-}
-
-function EvaluatePanel({ ov, job }: { ov: Overview | null; job?: string }) {
+function EvaluatePanel({ ov }: { ov: Overview | null }) {
   return <section aria-labelledby="e-h">
     <h2 id="e-h" className="lc-h2">4 · Browser-agent evaluation of the approved suite</h2>
-    <p className="lede sm">Only a frozen, owner-approved suite can be evaluated. The server picks the manifest (website variants, agent, limits, seed, budget); the browser runs in a
-      network jail that can reach only the frozen website copy, and every model request is reserved against a durable ledger before it is sent.</p>
-    {job && <JobView id={job} />}
-    <LaunchForm ov={ov} title="Launch an evaluation" />
-    <RecordedList title="Recorded evaluations" />
+    <p className="lede sm">Only a frozen, owner-approved suite can be evaluated. The owner arms it at the server terminal; the operator launches it in the evaluation workspace,
+      as before. The browser runs in a network jail that can reach only the frozen website copy, and every model request is reserved against a durable ledger before it is sent.</p>
+    <ArmedEvaluation ov={ov} />
+    <RecordedList title="Evaluations" />
   </section>;
 }
 
@@ -254,7 +219,7 @@ function RecordedList({ title, filter }: { title: string; filter?: (e: Evaluatio
   return <div className="lc-recorded"><h3>{title}</h3>
     {evs.error && <Failed error={evs.error} what="Evaluations" />}
     {evs.data && !list.length && <p className="muted">None yet.</p>}
-    <ul className="lc-evals">{list.map(e => <li key={e.id}><a href={e.state === 'completed' ? `#/reports/${e.id}` : `#/lifecycle/jobs/${e.id}`}>
+    <ul className="lc-evals">{list.map(e => <li key={e.id}><a href={e.state === 'completed' ? `#/reports/${e.id}` : `#/run/${e.id}`}>
       <div className="lc-eval-top"><ModeBadge mode={e.mode} /><span className="tag tag-neutral">{words(e.state)}</span>{e.source === 'dataset' && <span className="tag tag-neutral">dataset v{e.dataset_version}</span>}</div>
       <strong>{e.title ?? e.id}</strong>
       <small>{[e.site, e.suite, e.variants?.join(' vs '), e.tasks != null ? `${e.tasks} tasks, ${e.trials} trials` : null].filter(Boolean).join(' · ')}</small>
@@ -276,7 +241,7 @@ function ReevaluatePanel({ ov }: { ov: Overview | null }) {
     <h2 id="re-h" className="lc-h2">6 · Re-evaluation against the same frozen suite</h2>
     <p className="lede sm">After a website change, the same frozen suite runs again. The server creates a regression manifest that may differ from the original only in its website
       variants — same tasks, agent, plan, seed and limits — and re-checks every task on the new snapshot: a task whose answer changed is invalidated for that variant, with the reason.</p>
-    <LaunchForm ov={ov} preset={['modified', 'original']} title="Re-evaluate a frozen suite" />
+    <ArmedEvaluation ov={ov} reevaluate />
     <RecordedList title="Evaluations of frozen suites" />
   </section>;
 }

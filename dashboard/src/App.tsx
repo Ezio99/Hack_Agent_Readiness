@@ -32,7 +32,7 @@ export default function App() {
   switch (route.name) {
     case 'home': return <Home section={route.section} />;
     case 'run': return <Workspace job={route.job} />;
-    case 'lifecycle': return <Lifecycle step={route.step} suite={route.suite} job={route.job} />;
+    case 'lifecycle': return <Lifecycle step={route.step} suite={route.suite} />;
     case 'report': return <ReportPage id={route.id} task={route.task} />;
     case 'demo': return <Suspense fallback={<div className="ar ar-night route-loading" aria-busy="true"><p className="sr-only">Loading the demo…</p></div>}><Demo scene={route.scene} /></Suspense>;
     default: return <Suspense fallback={fallback}><Classic /></Suspense>;

@@ -13,13 +13,34 @@ from agent_readiness.hosted.admission import Admission
 CAP = paired.per_repetition_microusd(paired.ARM_CAPS)
 
 
+class StageB:
+    """A Stage B executor stand-in for API-level tests: real admission reservation and job record; the run is the test's."""
+    engine, available = 'stage-b', True
+
+    def __init__(self, root, admission, mode='rehearsal', run=None):
+        self.root, self.admission, self.mode, self._run = Path(root), admission, mode, run or (lambda job_id: None)
+
+    def configuration(self):
+        return {'engine': 'stage-b', 'armed': True, 'reason': None, 'tasks': [], 'repetitions': [1, 3, 5],
+                'evaluation': {'launches': {'left': 9, 'max': 9, 'used': 0}, 'agent': {'model': 'muse-spark-1.3', 'profile': 'suite-v2-compat2'}, 'options': []}}
+
+    def admit(self, job_id, client, repetitions):
+        from agent_readiness.lifecycle import jobs as J
+        self.admission.reserve_amount(job_id, client, CAP * repetitions)
+        J.new_job(self.root / 'stageb', job_id, manifest_sha='a' * 64, mode='rehearsal', request={'repetitions': repetitions}, label='test')
+        J.update_job(self.root / 'stageb', job_id, repetitions=repetitions)
+        return {'id': job_id, 'state': 'reserved', 'repetitions': repetitions}
+
+    def run(self, job_id):
+        self._run(job_id)
+
+
 @pytest.fixture
 def env(tmp_path, monkeypatch):
-    source = tmp_path / 'source'
-    (source / 'private').mkdir(parents=True)
-    (source / 'run.json').write_text('{}')
-    (source / 'private' / 'criteria.json').write_text('{}')
-    monkeypatch.setattr(serve.ironbark_runner, 'SOURCE', source)
+    store = tmp_path / 'lifecycle-store'
+    (store / 'objects').mkdir(parents=True)                  # an (empty) lifecycle store: the service starts, nothing is armed
+    monkeypatch.setenv('AR_LIFECYCLE_STORE', str(store))
+    monkeypatch.setenv('AR_STAGE_B_ROOT', str(tmp_path / 'stage-b'))
     monkeypatch.setattr(jail, 'selftest', lambda timeout=30: {'ok': True})
     monkeypatch.setattr(jail, '_REQUIRED', False)
     policy = tmp_path / 'jail.json'
@@ -31,7 +52,7 @@ def env(tmp_path, monkeypatch):
                  'META_MODEL_API_KEY_FILE': str(key), jail.ENV: str(policy), 'AR_HOSTED_ACCESS': 'operator'}.items():
         monkeypatch.setenv(k, v)
     monkeypatch.delenv('AR_STATIC_DIR', raising=False)
-    yield {'source': source, 'token': token, 'key': key, 'root': tmp_path / 'data'}
+    yield {'store': store, 'token': token, 'key': key, 'root': tmp_path / 'data'}
 
 
 def health(app):
@@ -48,6 +69,7 @@ def test_all_preconditions_enable_operator_only_evaluations(env, capsys):
     app, out = built(capsys)
     assert health(app) == {'status': 'ok', 'mode': 'live', 'evaluations': 'enabled', 'reason': None, 'access': 'operator', 'active': False}
     assert 'provider-key-value' not in out and 't' * 32 not in out
+    assert 'engine=stage-b' in out and 'armed=none (not_armed)' in out
     client = TestClient(app)
     assert client.get('/api/ironbark/config').json()['access'] == 'operator'
     assert client.post('/api/ironbark/jobs', json={}).status_code == 403
@@ -58,21 +80,15 @@ def test_all_preconditions_enable_operator_only_evaluations(env, capsys):
     (lambda e: e['key'].write_text(''), 'missing_provider_key'),
     (lambda e: e['key'].unlink(), 'missing_provider_key'),
     (lambda e: e['token'].write_text('short'), 'missing_operator_token'),
-    (lambda e: (e['source'] / 'run.json').unlink(), 'source_run_missing'),
-    (lambda e: (e['source'] / 'private' / 'criteria.json').chmod(0), 'source_run_unreadable'),
+    (lambda e: (e['store'] / 'objects').rmdir(), 'lifecycle_store_missing'),
     (lambda e: os.environ.update(AR_HOSTED_CEILING_USD=''), 'ceiling_not_configured'),
     (lambda e: os.environ.update(AR_HOSTED_CEILING_USD='1.00'), 'ceiling_invalid'),          # below one repetition
     (lambda e: setattr(jail, 'selftest', lambda timeout=30: {'ok': False, 'escapes_blocked': False}), 'isolation_check_failed'),
     (lambda e: os.environ.update({jail.ENV: '/nonexistent.json'}), 'isolation_policy_invalid'),
 ])
 def test_failed_preconditions_keep_the_site_up_with_evaluations_disabled(env, capsys, breakage, reason):
-    if os.getuid() == 0 and reason == 'source_run_unreadable':
-        pytest.skip('root can read anything')
     breakage(env)
-    try:
-        app, out = built(capsys)
-    finally:
-        (env['source'] / 'private' / 'criteria.json').chmod(0o600) if (env['source'] / 'private' / 'criteria.json').exists() else None
+    app, out = built(capsys)
     h = health(app)
     assert h['evaluations'] == 'disabled' and h['reason'] == reason, (h, out)
     assert f'[{reason}]' in out
@@ -90,17 +106,11 @@ def test_changed_ceiling_is_refused_but_history_stays_viewable(env, capsys):
 def test_public_access_and_operator_bearer(env, capsys, monkeypatch):
     monkeypatch.setenv('AR_HOSTED_MODE', 'rehearsal')
     app, _ = built(capsys)
-    started = []
-    class Exec:
-        available, mode = True, 'rehearsal'
-        def run(self, job_id):
-            started.append(job_id)
-            raise RuntimeError('stop')
     budget = Admission.open_existing(env['root'] / 'admission.sqlite')
-    gated = TestClient(api.create_app(env['root'], budget, client_key=b'k' * 32, executor=Exec(), public_start=False, operator_token=b't' * 32))
+    gated = TestClient(api.create_app(env['root'], budget, client_key=b'k' * 32, executor=StageB(env['root'], budget), public_start=False, operator_token=b't' * 32))
     assert gated.post('/api/ironbark/jobs', json={}).status_code == 403
     assert gated.post('/api/ironbark/jobs', json={}, headers={'Authorization': 'Bearer ' + 't' * 32}).status_code == 202
-    nobody = TestClient(api.create_app(env['root'] / 'x', budget, client_key=b'k' * 32, executor=Exec(), public_start=False, operator_token=None))
+    nobody = TestClient(api.create_app(env['root'] / 'x', budget, client_key=b'k' * 32, executor=StageB(env['root'] / 'x', budget), public_start=False, operator_token=None))
     assert nobody.get('/api/health').json()['reason'] == 'missing_operator_token'
 
 
@@ -108,11 +118,6 @@ def test_reservation_covers_caps_plus_one_request_bound():
     from agent_readiness.spend_gate import PER_REQUEST_CAP_USD
     assert paired.caps_microusd(paired.ARM_CAPS) == 1_600_000
     assert CAP == 1_600_000 + int(PER_REQUEST_CAP_USD * 1_000_000)
-
-
-def test_executor_refuses_an_admission_policy_with_a_different_reservation(tmp_path):
-    with pytest.raises(ValueError, match='does not match'):
-        paired.WorkerExecutor(tmp_path, Admission(tmp_path / 'a.db', ceiling_microusd=10_000_000, job_cap_microusd=1_600_000), mode='rehearsal')
 
 
 # --- telemetry -------------------------------------------------------------------------------------------------
@@ -194,48 +199,27 @@ def test_insights_separate_observations_from_suggestions():
     assert (f['detail_views'], f['listing_returns'], f['revisits'], f['step_limit']) == (1, 2, 1, True)
 
 
-def test_worker_state_duration_estimate_and_busy_feedback(tmp_path):
+def test_worker_state_and_busy_feedback(tmp_path):
     import threading
     entered, release = threading.Event(), threading.Event()
-    class Blocked:
-        available, mode = True, 'live'
-        def run(self, job_id):
-            entered.set()
-            release.wait(5)
-            raise RuntimeError('stop')
+    def blocked(job_id):
+        entered.set()
+        release.wait(5)
+        raise RuntimeError('stop')
     budget = Admission(tmp_path / 'b.db', ceiling_microusd=CAP * 6, job_cap_microusd=CAP, min_interval_seconds=1)
-    client = TestClient(api.create_app(tmp_path, budget, client_key=b'k' * 32, executor=Blocked(), mode='live'))
-    idle = client.get('/api/ironbark/config').json()
-    assert idle['worker'] == {'state': 'idle', 'job': None}
-    assert idle['repetition_duration'] == {'seconds': 560, 'basis': 'first genuine run', 'samples': 0}
+    client = TestClient(api.create_app(tmp_path, budget, client_key=b'k' * 32, executor=StageB(tmp_path, budget, 'live', blocked), mode='live'))
+    assert client.get('/api/ironbark/config').json()['worker'] == {'state': 'idle', 'job': None}
     try:
         job_id = client.post('/api/ironbark/jobs', json={'repetitions': 3}).json()['id']
         assert entered.wait(2)
         busy = client.get('/api/ironbark/config').json()['worker']
-        assert busy['state'] == 'busy' and busy['job'] == job_id and busy['total_runs'] == 24 and busy['finished_runs'] == 0
-        assert 60 <= busy['estimated_remaining_seconds'] <= 3 * 560
+        assert busy['state'] == 'busy' and busy['job'] == job_id and busy['finished_runs'] == 0
         other = TestClient(client.app, client=('203.0.113.9', 1))
         refused = other.post('/api/ironbark/jobs', json={'repetitions': 1})
         assert refused.status_code == 429 and refused.json()['detail'].startswith('Another evaluation is already running')
         assert other.get('/api/ironbark/jobs').status_code == 200                       # history stays browsable while busy
     finally:
         release.set()
-    # A completed evaluation becomes the measured basis.
-    job = paired.load_job(tmp_path, job_id)
-    for _ in range(100):
-        if budget.get(job_id)['state'] == 'failed':
-            break
-        time.sleep(.02)
-    done = 'eval-' + 'f' * 32
-    budget.reserve(done, 'c' * 64, units=1)
-    budget.transition(done, 'reserved', 'running')
-    budget.transition(done, 'running', 'completed')
-    paired.new_job(tmp_path, done, 1, 'live')
-    data = paired.load_job(tmp_path, done)
-    data.update(started_at=1000.0, finished_at=1480.0)
-    paired.ironbark_runner.write(paired.job_path(tmp_path, done), data)
-    fresh = TestClient(api.create_app(tmp_path, budget, client_key=b'k' * 32, executor=Blocked(), mode='live'))
-    assert fresh.get('/api/ironbark/config').json()['repetition_duration'] == {'seconds': 480, 'basis': 'measured', 'samples': 1}
 
 
 def test_isolation_check_retries_only_a_browser_that_did_not_start(monkeypatch, capsys):

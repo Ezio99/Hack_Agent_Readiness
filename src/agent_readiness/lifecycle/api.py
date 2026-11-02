@@ -5,18 +5,14 @@
   GET  /api/lifecycle/generations, /api/lifecycle/generations/{id}   Stage A generation and validation runs
   GET  /api/lifecycle/suites, /api/lifecycle/suites/{sha}            suites with their review packet and approval / freeze state
   POST /api/lifecycle/suites/{sha}/decision                          refused (403): web approval needs an authenticated owner (not configured)
-  GET  /api/lifecycle/frozen                                         frozen suites a launch may name (server store only)
-  GET  /api/lifecycle/evaluations, /api/lifecycle/evaluations/{id}   evaluation summaries; the full public evaluation document
+  GET  /api/lifecycle/evaluations, /api/lifecycle/evaluations/{id}   evaluation summaries; the full public evaluation document (datasets and hosted jobs)
   GET  /api/lifecycle/evaluations/{id}/trials/{trial}                one trial's public timeline
   GET  /api/lifecycle/evaluations/{id}/trials/{trial}/screenshots/{name}
-  POST /api/lifecycle/evaluations                                    launch: {"frozen_suite": ref, "variants": [a, b], "mode": "rehearsal" | "paid"}
-                                                                     operator-only; rehearsal only (paid is refused before anything is reserved)
-  GET  /api/lifecycle/jobs/{id}                                      progress of a launched evaluation (live steps redacted for rehearsals)
 
+Nothing here launches an evaluation: the hosted evaluation (`POST /api/ironbark/jobs {"repetitions"}`) is the product's one launch path.
 Every request body forbids unknown fields; there is no task, URL, model, limit or spending field."""
 from __future__ import annotations
 
-import threading
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Request
@@ -24,13 +20,6 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from .service import LifecycleService, NotFound, Refused
-
-
-class LaunchRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    frozen_suite: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]{0,80}@v\d{1,4}$")
-    variants: list[str] = Field(min_length=2, max_length=2)
-    mode: Literal["rehearsal", "paid"] = "rehearsal"
 
 
 class DecisionRequest(BaseModel):
@@ -80,10 +69,6 @@ def register(app: FastAPI, service: LifecycleService, *, is_operator) -> None:
     def decide(sha: str, body: DecisionRequest, request: Request):
         return call(service.decide, sha, body.model_dump())          # always refused in this release (server-side), operator token or not
 
-    @app.get("/api/lifecycle/frozen")
-    def frozen():
-        return service.frozen_suites()
-
     @app.get("/api/lifecycle/evaluations")
     def evaluations():
         return service.evaluations()
@@ -100,13 +85,3 @@ def register(app: FastAPI, service: LifecycleService, *, is_operator) -> None:
     def screenshot(eid: str, trial: str, name: str):
         path, media = call(service.screenshot, eid, trial, name)
         return FileResponse(path, media_type=media, headers={"Cache-Control": "public, max-age=86400, immutable"})
-
-    @app.post("/api/lifecycle/evaluations", status_code=202)
-    def launch(body: LaunchRequest, request: Request):
-        def start(job_id: str):
-            threading.Thread(target=service.work, args=(job_id,), daemon=True, name=job_id).start()
-        return call(service.launch, frozen_suite=body.frozen_suite, variants=body.variants, mode=body.mode, operator=is_operator(request), start=start)
-
-    @app.get("/api/lifecycle/jobs/{job_id}")
-    def job(job_id: str):
-        return call(service.job, job_id)

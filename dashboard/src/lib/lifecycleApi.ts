@@ -3,8 +3,12 @@
 
 export interface StepInfo { id: string; label: string; available: boolean; action_available?: boolean; detail: string }
 export interface Unavailable { available: boolean; reason: string; detail: string }
-export interface Overview { steps: StepInfo[]; onboarding: Unavailable; approval: Unavailable; paid: Unavailable;
-  rehearsal: { available: boolean; operator_only: boolean; cost_usd: number; reason: string | null }; sources: { datasets: string[]; store: boolean; jobs: boolean } }
+export interface ArmedEvaluation { arming_id: string; arming_sha256: string; mode: 'paid' | 'rehearsal'; site: string; suite: string; frozen_suite: string; frozen_suite_sha256: string;
+  variants: string[]; armed_at: string; launches: { max: number; used: number; left: number };
+  options: { repetitions: number; trials: number; reservation_usd: number; manifest_sha256: string; available: boolean; fits_hosted_ceiling: boolean | null }[];
+  agent: { model: string; reasoning_effort: string | null; max_completion_tokens: number; profile: string } }
+export interface Overview { steps: StepInfo[]; onboarding: Unavailable; approval: Unavailable; sources: { datasets: string[]; store: boolean; jobs: boolean };
+  evaluation: { engine: string; armed: boolean; reason: string | null; evaluation: ArmedEvaluation | null; repetitions: number[] } | null }
 export interface Persona { id: string; name: string; needs: string; constraints: string }
 export interface Journey { id: string; name: string; attributes: string[]; weight: number }
 export interface Context { label: string; business: string; goals: string[]; personas: Persona[]; journeys: Journey[]; weights_note: string }
@@ -87,11 +91,6 @@ export interface EvaluationSummary { id: string; title: string | null; mode: str
 export interface Step { step: number; path: string | null; title: string | null; screenshot: string | null; assessment: string | null; memory: string | null; goal: string | null;
   actions: { name: string; target: string | null }[]; error: string | null; done: boolean }
 export interface Timeline { id: string; mode?: string; steps: Step[]; errors: string[]; screenshots: string[] }
-export interface FrozenRef { ref: string; sha256: string; suite_sha256: string; site: string; synthetic: boolean; tasks: number; variants: string[] }
-export interface JobStatus { id: string; state: string; mode: string; label: string; request: { frozen_suite: string; variants: string[]; manifest_basis: string } | null; manifest_sha256: string;
-  created_at: number; started_at: number | null; finished_at: number | null; planned: number | null; completed_trials: number; stopped: string | null; error: string | null;
-  live: { trial: string; steps: Step[] } | null; notice: string | null }
-
 export class ApiError extends Error { constructor(message: string, public status: number, public code?: string) { super(message); } }
 
 export async function get<T>(url: string, init?: RequestInit): Promise<T> {
@@ -114,15 +113,10 @@ export const api = {
   generation: (id: string) => get<Generation>(`${B}/generations/${encodeURIComponent(id)}`),
   suites: () => get<SuiteSummary[]>(`${B}/suites`),
   suite: (sha: string) => get<Suite>(`${B}/suites/${sha}`),
-  frozen: () => get<FrozenRef[]>(`${B}/frozen`),
   evaluations: () => get<EvaluationSummary[]>(`${B}/evaluations`),
   evaluation: (id: string) => get<Evaluation>(`${B}/evaluations/${encodeURIComponent(id)}`),
   timeline: (id: string, trial: string) => get<Timeline>(`${B}/evaluations/${encodeURIComponent(id)}/trials/${encodeURIComponent(trial)}`),
   shot: (id: string, trial: string, name: string) => `${B}/evaluations/${encodeURIComponent(id)}/trials/${encodeURIComponent(trial)}/screenshots/${encodeURIComponent(name)}`,
-  job: (id: string) => get<JobStatus>(`${B}/jobs/${id}`),
-  launch: (body: { frozen_suite: string; variants: string[]; mode: 'rehearsal' | 'paid' }, token: string) =>
-    get<{ id: string; manifest_sha256: string; manifest_basis: string; label: string }>(`${B}/evaluations`,
-      { method: 'POST', headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body) }),
 };
 
 export const short = (sha: string | undefined | null, n = 12) => (sha ?? '').slice(0, n);

@@ -160,16 +160,18 @@ def _admission(tmp_path, ceiling=10_000_000):
     return Admission(tmp_path / "a.sqlite", ceiling_microusd=ceiling, job_cap_microusd=1_650_000, min_interval_seconds=60)
 
 
-def test_lifecycle_jobs_share_the_hosted_slot_and_ceiling(tmp_path):
+def test_stage_b_reservations_share_the_hosted_slot_and_ceiling(tmp_path):
     a = _admission(tmp_path)
-    a.reserve_amount("lc-" + "0" * 32, "a" * 64, 0, now=1000)
+    a.reserve_amount("eval-" + "0" * 32, "a" * 64, 0, now=1000)
     with pytest.raises(Refused, match="capacity"):
         a.reserve("eval-" + "1" * 32, "b" * 64, now=2000)                                             # one Chromium workload at a time
-    a.transition("lc-" + "0" * 32, "reserved", "failed")
+    a.transition("eval-" + "0" * 32, "reserved", "failed")
+    with pytest.raises(Refused, match="budget"):
+        a.reserve_amount("eval-" + "2" * 32, "c" * 64, 10_000_001, now=3000)                         # never above the ceiling itself
     with pytest.raises(ValueError):
-        a.reserve_amount("lc-" + "2" * 32, "c" * 64, 10_000_001, now=3000)                         # never above the ceiling itself
+        a.reserve_amount("eval-" + "2" * 32, "c" * 64, -1, now=3000)
     with pytest.raises(ValueError):
-        a.reserve_amount("eval-" + "3" * 32, "c" * 64, 0)                                            # lifecycle ids only
+        a.reserve_amount("lc-" + "3" * 32, "c" * 64, 0)                                             # hosted evaluation ids only
 
 
 def test_reserve_amount_respects_the_ceiling(tmp_path):
@@ -177,46 +179,17 @@ def test_reserve_amount_respects_the_ceiling(tmp_path):
     a.reserve("eval-" + "1" * 32, "b" * 64, now=1000, units=2)                                       # US$3.30
     a.transition("eval-" + "1" * 32, "reserved", "failed")
     with pytest.raises(Refused, match="budget"):
-        a.reserve_amount("lc-" + "2" * 32, "c" * 64, 2_000_000, now=3000)
-    a.reserve_amount("lc-" + "3" * 32, "c" * 64, 1_700_000, now=3000)
+        a.reserve_amount("eval-" + "2" * 32, "c" * 64, 2_000_000, now=3000)
+    a.reserve_amount("eval-" + "3" * 32, "c" * 64, 1_700_000, now=3000)
     assert a.totals()["reserved_microusd"] == 5_000_000
 
 
-# ------------------------------------------------------------------------------------------------------------------------------- paid coordination
 def _guard_store(tmp_path, name="larkspur-guard-test"):
     import importlib.util
     spec = importlib.util.spec_from_file_location("m7_paid_guard_fixture", Path(__file__).parent / "test_m7_paid_guard.py")
     T = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(T)
     return T.build(tmp_path, real_name=name), T.auth
-
-
-def test_admit_paid_verifies_then_reserves_the_worst_case(tmp_path):
-    (store, f, msha, m), auth = _guard_store(tmp_path)
-    from agent_readiness.evalruns import authorization as AU
-    path = AU.write(auth(f, msha), tmp_path / "auth")
-    a = _admission(tmp_path)
-    out = J.admit_paid(a, store, msha, path, job_id="lc-" + "4" * 32, client="d" * 64, ledger_root=tmp_path / "ledgers")
-    assert out["reserved_microusd"] == round(m.budget["worst_case_reservation_usd"] * 1_000_000) == a.totals()["reserved_microusd"]
-
-
-def test_admit_paid_refuses_mismatch_and_used_ledgers_before_reserving(tmp_path):
-    (store, f, msha, m), auth = _guard_store(tmp_path)
-    from agent_readiness.evalruns import authorization as AU
-    a = _admission(tmp_path)
-    bad = AU.write(auth(f, msha, cap_usd=5.0, experiment_id="m8-bad-cap"), tmp_path / "auth")
-    with pytest.raises(PermissionError, match="authorisation mismatch"):
-        J.admit_paid(a, store, msha, bad, job_id="lc-" + "5" * 32, client="d" * 64, ledger_root=tmp_path / "ledgers")
-    ok = AU.write(auth(f, msha), tmp_path / "auth")
-    (tmp_path / "ledgers" / "m7-guard-test").mkdir(parents=True)
-    (tmp_path / "ledgers" / "m7-guard-test" / "ledger.jsonl").write_text('{"kind": "reserve"}\n')
-    with pytest.raises(PermissionError, match="used once"):
-        J.admit_paid(a, store, msha, ok, job_id="lc-" + "6" * 32, client="d" * 64, ledger_root=tmp_path / "ledgers")
-    assert a.totals()["reserved_microusd"] == 0
-
-
-def test_paid_web_launch_is_off_in_this_release():
-    assert J.PAID_WEB_LAUNCH is False
 
 
 # ------------------------------------------------------------------------------------------------------------------------------- API
@@ -243,7 +216,8 @@ def _app(tmp_path, *, store=None, executor=None, admission=None):
 def test_api_serves_the_m7_evaluation_through_the_lifecycle_routes(tmp_path):
     c, _, _ = _app(tmp_path)
     ov = c.get("/api/lifecycle/overview").json()
-    assert ov["approval"]["available"] is False and ov["paid"]["available"] is False and ov["rehearsal"]["available"] is False
+    assert ov["approval"]["available"] is False and ov["evaluation"] is None                                    # no executor: view-only
+    assert c.post("/api/lifecycle/evaluations", json={"repetitions": 1}).status_code == 405                     # the lifecycle API launches nothing
     evs = c.get("/api/lifecycle/evaluations").json()
     assert [e["id"] for e in evs] == ["m7-larkspur-browser-1"] and evs[0]["mode"] == "paid" and evs[0]["source"] == "dataset"
     ev = c.get("/api/lifecycle/evaluations/m7-larkspur-browser-1").json()
@@ -277,57 +251,13 @@ def test_web_approval_is_refused_server_side_even_for_the_operator(tmp_path):
         assert r.status_code == 403 and r.json()["detail"]["code"] == "owner_authentication_not_configured"
 
 
-@pytest.mark.parametrize("extra", [{"url": "https://example.com"}, {"tasks": ["x"]}, {"model": "m"}, {"cap_usd": 1}, {"max_model_requests": 50}])
-def test_launch_refuses_any_client_supplied_task_url_model_or_limit(tmp_path, extra):
-    c, _, _ = _app(tmp_path)
-    r = c.post("/api/lifecycle/evaluations", json={"frozen_suite": "larkspur-core@v2", "variants": ["original", "modified"], **extra},
-               headers={"authorization": "Bearer " + TOKEN.decode()})
-    assert r.status_code == 422
-
-
-def test_paid_launch_is_refused_before_anything_is_reserved(tmp_path):
-    c, _, a = _app(tmp_path)
-    r = c.post("/api/lifecycle/evaluations", json={"frozen_suite": "larkspur-core@v2", "variants": ["original", "modified"], "mode": "paid"},
-               headers={"authorization": "Bearer " + TOKEN.decode()})
-    assert r.status_code == 403 and r.json()["detail"]["code"] == "paid_launch_not_authorized" and a.totals()["reserved_microusd"] == 0 and a.recent() == []
-
-
-def test_rehearsal_launch_is_operator_only_and_unavailable_without_a_store(tmp_path):
-    c, _, _ = _app(tmp_path)
-    body = {"frozen_suite": "larkspur-core@v2", "variants": ["original", "modified"], "mode": "rehearsal"}
-    assert c.post("/api/lifecycle/evaluations", json=body).status_code == 403
-    assert c.post("/api/lifecycle/evaluations", json=body, headers={"authorization": "Bearer " + TOKEN.decode()}).status_code == 503
-
-
-def test_rehearsal_launch_selects_the_server_side_manifest_and_holds_the_slot(tmp_path):
-    (store, f, msha, m), _ = _guard_store(tmp_path, name="synthetic-larkspur-m8-launch")
-    store.ref("frozen_suite", "synthetic-larkspur-m8-launch@v1", f)
-    ex = FakeExecutor()
-    c, svc, a = _app(tmp_path, store=store.root, executor=ex)
-    assert [x["ref"] for x in c.get("/api/lifecycle/frozen").json()] == ["synthetic-larkspur-m8-launch@v1"]
-    h = {"authorization": "Bearer " + TOKEN.decode()}
-    bad = c.post("/api/lifecycle/evaluations", json={"frozen_suite": "synthetic-larkspur-m8-launch@v1", "variants": ["original", "nope"]}, headers=h)
-    assert bad.status_code == 422
-    r = c.post("/api/lifecycle/evaluations", json={"frozen_suite": "synthetic-larkspur-m8-launch@v1", "variants": ["original", "modified"]}, headers=h)
-    assert r.status_code == 202, r.text
-    out = r.json()
-    assert out["manifest_sha256"] == msha and "existing manifest" in out["manifest_basis"]                 # the frozen suite's own manifest, reused
-    held = a.get(out["id"])
-    assert held["reserved_microusd"] == 0
-    st = c.get(f"/api/lifecycle/jobs/{out['id']}").json()
-    assert st["mode"] == "rehearsal" and "not from a model" in st["notice"]
-    # the hosted Ironbark workspace sees the slot as busy, never as one of its own jobs
-    cfg = c.get("/api/ironbark/config").json()
-    assert cfg["active"] is None
-
-
-def test_regression_launch_builds_a_manifest_that_differs_only_in_variants(tmp_path):
+def test_a_re_evaluation_manifest_differs_only_in_its_variants(tmp_path):
+    from agent_readiness.lifecycle import arming as AR
     (store, f, msha, m), _ = _guard_store(tmp_path, name="synthetic-larkspur-m8-regress")
-    store.ref("frozen_suite", "synthetic-larkspur-m8-regress@v1", f)
-    c, svc, a = _app(tmp_path, store=store.root, executor=FakeExecutor())
-    r = c.post("/api/lifecycle/evaluations", json={"frozen_suite": "synthetic-larkspur-m8-regress@v1", "variants": ["modified", "original"]},
-               headers={"authorization": "Bearer " + TOKEN.decode()})
-    assert r.status_code == 202, r.text
-    new = store.get("manifest", r.json()["manifest_sha256"])
-    assert r.json()["manifest_sha256"] != msha and "regression manifest" in r.json()["manifest_basis"]
+    from agent_readiness.lifecycle.sites import site_view
+    reg = {v["name"]: v["snapshot_sha256"] for v in site_view("larkspur")["variants"]}
+    assert AR.select_manifest(store, f, [("original", reg["original"]), ("modified", reg["modified"])], 1)[0] == msha
+    new_sha, basis = AR.select_manifest(store, f, [("modified", reg["modified"]), ("original", reg["original"])], 1)
+    new = store.get("manifest", new_sha)
+    assert new_sha != msha and "regression manifest" in basis
     assert (new.frozen_suite_sha256, new.plan, new.agent, new.seed, new.repetitions) == (m.frozen_suite_sha256, m.plan, m.agent, m.seed, m.repetitions)

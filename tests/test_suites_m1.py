@@ -280,6 +280,8 @@ def test_the_package_is_isolated_from_production():
     import re
     root = Path(B.__file__).resolve().parents[1]
     pattern = re.compile(r"(agent_readiness\.suites\b|from \.+suites\b|from \.\.?\s+import\s+suites\b)")
+    # M8 follow-up: the hosted service runs the lifecycle, but ONLY through the product layer `agent_readiness.lifecycle`; nothing else in
+    # production imports the lifecycle store or records directly.
     for pkg in ("hosted", "framework", "diagnostics", "grading", "investigate", "live", "taskeval", "research"):
         offenders = [str(p) for p in (root / pkg).rglob("*.py") if pattern.search(p.read_text())]
         assert offenders == [], offenders

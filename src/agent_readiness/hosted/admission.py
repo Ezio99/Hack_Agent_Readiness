@@ -73,14 +73,15 @@ class Admission:
                 raise
 
     def reserve_amount(self, job_id: str, client: str, microusd: int, *, now: float | None = None):
-        """Lifecycle evaluations (M8): reserve an exact amount against the SAME durable ceiling and the SAME single evaluation slot as hosted
-        repetitions. A zero-cost rehearsal reserves 0 (it still occupies the slot, so the hosted worker and a lifecycle worker never run Chromium
-        at once); a paid lifecycle run reserves its manifest's worst case. Reservations are never reduced, as for repetitions. Job ids use the
-        `lc-` prefix, so the hosted Ironbark routes never treat them as their own jobs."""
-        if not re.fullmatch(r'lc-[0-9a-f]{32}', job_id) or not re.fullmatch(r'[a-f0-9]{64}', client):
+        """Stage B hosted evaluations (M8): reserve an exact amount (the armed manifest's worst case plus one request bound; a zero-cost rehearsal
+        reserves 0) against the SAME durable ceiling and the SAME single evaluation slot as repetitions always did. The persisted policy row
+        (per-repetition unit) is untouched, so an older image still opens this database. Reservations are never reduced."""
+        if not re.fullmatch(r'eval-[0-9a-f]{32}', job_id) or not re.fullmatch(r'[a-f0-9]{64}', client):
             raise ValueError('invalid admission identity')
-        if type(microusd) is not int or not 0 <= microusd <= self.ceiling:
+        if type(microusd) is not int or microusd < 0:
             raise ValueError('invalid reservation amount')
+        if microusd > self.ceiling:
+            raise Refused('hosted budget exhausted')
         now = time.time() if now is None else now
         if not isinstance(now, (int, float)) or not 0 <= now < 10**12:
             raise ValueError('invalid timestamp')

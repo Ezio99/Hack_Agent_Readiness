@@ -135,7 +135,11 @@ def test_unrelated_structural_risks_are_unverified():
 def test_every_status_is_from_the_documented_set_and_the_package_is_isolated():
     assert STATUSES == ("observed", "unverified", "hypothesis", "supported_exploratory", "supported")
     hosted = Path(__file__).resolve().parents[1] / "src" / "agent_readiness" / "hosted"
-    assert not any("diagnostics" in p.read_text() for p in hosted.glob("*.py"))
+    import ast
+    for p in hosted.glob("*.py"):                       # M8 follow-up: diagnostics reach the product only through lifecycle.projection
+        for node in ast.walk(ast.parse(p.read_text())):
+            names = [node.module or ""] if isinstance(node, ast.ImportFrom) else [a.name for a in node.names] if isinstance(node, ast.Import) else []
+            assert not any("diagnostics" in n for n in names), p
 
 
 RECORDED = Path(__file__).resolve().parents[1] / "scanner-data" / "hosted-copy" / "paired-86a646169296419eb8fffbb59a31dcab"
