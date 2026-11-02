@@ -58,7 +58,7 @@ Future product architecture (not implemented): [docs/FUTURE_ARCHITECTURE.md](doc
 ## Budget
 
 - Hosted admission: US$10 ceiling, US$3.30 reserved, US$1.65 per repetition. Reservations are never released, even for completed jobs, so the remaining capacity is 4 repetitions.
-- Programme: ceiling A$50. This is a limit, never an authorization. The recorded known-spend subtotal is partial (see `collaboration/budget/programme-ledger.json` and the archive). The 2026-11-02 production trial (US$1.126097) is appended as `hosted-live-2`, making the subtotal US$10.566163. Research planner requests add US$0.024452 calculated from usage (`research-taskplan-2`) plus US$0.029054, an UNCONFIRMED conservative upper bound for a rejected request (`research-taskplan-1`). The current subtotal is **US$10.619669 / A$15.9295**. Calculated cost is not a bill.
+- Programme: ceiling A$50. This is a limit, never an authorization. The recorded known-spend subtotal is partial (see `collaboration/budget/programme-ledger.json` and the archive). The 2026-11-02 production trial (US$1.126097) is appended as `hosted-live-2`, making the subtotal US$10.566163. Research planner requests add US$0.024452 calculated from usage (`research-taskplan-2`) plus US$0.029054, an UNCONFIRMED conservative upper bound for a rejected request (`research-taskplan-1`). The isolated Larkspur research pilot (`research-pilot-larkspur-1`) adds US$1.228813, calculated from usage. The current subtotal is **US$11.848482 / A$17.7727**. Calculated cost is not a bill.
 
 ## Deadlines
 
