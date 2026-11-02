@@ -1,0 +1,73 @@
+import { useEffect, useState, type ReactNode } from 'react';
+import { ApiError, VARIANT_LABEL, variantClass, type Grade } from '../../lib/lifecycleApi';
+
+/** Load once per key; errors are shown, never replaced by invented data. */
+export function useLoad<T>(load: () => Promise<T>, key: string): { data: T | null; error: string | null; loading: boolean; reload: () => void } {
+  const [state, setState] = useState<{ data: T | null; error: string | null; loading: boolean }>({ data: null, error: null, loading: true });
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    let live = true;
+    setState(s => ({ ...s, loading: true, error: null }));
+    load().then(d => live && setState({ data: d, error: null, loading: false }),
+      e => live && setState({ data: null, error: e instanceof ApiError || e instanceof Error ? e.message : 'Unavailable.', loading: false }));
+    return () => { live = false; };
+  }, [key, tick]);
+  return { ...state, reload: () => setTick(t => t + 1) };
+}
+
+export function Loading({ what }: { what: string }) { return <p className="lc-loading" aria-busy="true">Loading {what}…</p>; }
+export function Failed({ error, what }: { error: string; what: string }) { return <p className="lc-error" role="alert"><strong>{what} unavailable.</strong> {error}</p>; }
+
+/** A hash shown short, with the full value one click away (approval and freezing are always of the exact full hash). */
+export function Hash({ sha, label, full = false }: { sha: string; label?: string; full?: boolean }) {
+  const [open, setOpen] = useState(full);
+  return <span className="lc-hash">{label && <span className="lc-hash-l">{label}</span>}
+    <code title={sha}>{open ? sha : `${sha.slice(0, 12)}…`}</code>
+    {!full && <button type="button" className="lc-hash-b" onClick={() => setOpen(o => !o)} aria-label={open ? 'Show short hash' : `Show full hash ${label ?? ''}`}>{open ? 'less' : 'full'}</button>}</span>;
+}
+
+export function ModeBadge({ mode }: { mode: string }) {
+  return mode === 'paid' ? <span className="lc-mode paid">Paid evaluation · real model</span> : <span className="lc-mode rehearsal">Rehearsal · scripted stand-in, not a model</span>;
+}
+
+export function VariantName({ v }: { v: string }) {
+  return <span className="lc-vname"><span className={`swatch ${variantClass(v)}`} aria-hidden="true" />{VARIANT_LABEL(v)}</span>;
+}
+
+export function Legend({ variants }: { variants: string[] }) {
+  return <p className="lc-legend" aria-label="Legend">{variants.map(v => <VariantName key={v} v={v} />)}</p>;
+}
+
+/** A grade with its grader always named: v1 is official; v2 is a labelled post-hoc rescore; prospective rules are never applied. */
+export function GradeTag({ g, which }: { g: Grade | null | undefined; which: 'v1' | 'v2' | 'v2.1' }) {
+  const name = which === 'v1' ? 'v1 official' : which === 'v2' ? 'v2 post-hoc' : 'v2.1 review rule (prospective)';
+  if (!g) return <span className="tag tag-neutral">{name}: n/a</span>;
+  const ok = g.passed;
+  return <span className={`tag ${ok ? 'tag-pass' : 'tag-fail'}`} title={g.reasons?.join(', ')}>{ok ? '✓' : '✕'} {name}{ok && g.evidence_backed === false ? ' · evidence not shown' : ''}</span>;
+}
+
+export function Section({ id, n, title, basis, children }: { id: string; n?: string; title: string; basis?: string; children: ReactNode }) {
+  return <section className="lc-section" id={id} aria-labelledby={`${id}-h`}>
+    <header className="lc-section-head">{n && <span className="eyebrow">{n}</span>}<h2 id={`${id}-h`}>{title}</h2>{basis && <p className="lc-basis"><b>Basis.</b> {basis}</p>}</header>
+    {children}
+  </section>;
+}
+
+/** Paired horizontal bars, one row per item, Original and Modified side by side; values are direct labels; the table view is the task matrix. */
+export function PairBars({ rows, variants, unit, label }: { rows: { key: string; label: string; values: Record<string, number | null> }[]; variants: string[]; unit: string; label: string }) {
+  const max = Math.max(1, ...rows.flatMap(r => variants.map(v => r.values[v] ?? 0)));
+  return <figure className="lc-bars" aria-label={label}>
+    <Legend variants={variants} />
+    <div role="table" aria-label={label}>
+      {rows.map(r => <div role="row" className="lc-bar-row" key={r.key}>
+        <span role="rowheader" className="lc-bar-k">{r.label}</span>
+        <span role="cell" className="lc-bar-cells">{variants.map(v => { const x = r.values[v]; return <span key={v} className="lc-bar-line" title={`${r.label} · ${VARIANT_LABEL(v)}: ${x ?? '–'} ${unit}`}>
+          <span className={`lc-bar ${variantClass(v)}`} style={{ width: `${x == null ? 0 : Math.max(1.5, 100 * x / max)}%` }} /><span className="lc-bar-v">{x == null ? '–' : `${Math.round(x * 10) / 10} ${unit}`}</span></span>; })}</span>
+      </div>)}
+    </div>
+  </figure>;
+}
+
+export function Disabled({ title, detail, children }: { title: string; detail: string; children?: ReactNode }) {
+  return <div className="lc-disabled" role="note"><strong>{title}</strong><p>{detail}</p>{children}</div>;
+}

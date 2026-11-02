@@ -1,19 +1,20 @@
 {
- "built_at": "2026-11-02T13:36:30+00:00",
+ "built_at": "2026-11-02T13:48:32+00:00",
  "code_sha256": {
   "audit.py": "589cc210a48657290e22cafd3bd4917d5e74f32e960ab42c6e7a2f7e7c60fc42",
-  "behavioral.py": "042e6768ee07d0f9d7b4bfd245170b9e3e57d1b241ea9fad5a33a273144aaaff",
+  "behavioral.py": "f42cf07e944757b363a852b1b9c3c673516df692859360889b68b9e40234edb4",
   "contrast.py": "895610aaf88389baf153dbbb1144a77563e4f3d7809a3e34430005e4bb502c60",
-  "dataset.py": "105be5b9cddb85210e6256080b3f817292678484a00c3cd3a249f2dadebd5711",
+  "dataset.py": "f6693cb0ed0c163a0287e5da9e117324ab185bae58bd2efae122daa3450337ff",
   "evidence_ranked.py": "bdfcce76b24d4ee33bb1ab62abe2e7f17ac7759a4df7cc75d0d37d22aef546e0",
   "hypotheses.py": "16593e073577f074313ce0a2b6633eadfb0796b8fcaf9875df7490b1a28bddc2",
   "projection.py": "acb74f2984a932c7ce1089a0170598bc4f044d4f2ccef45ba86c3add1a6dc8ab",
+  "run.py": "ffaf6b69cb56b33dbdbe0a24a8926e04127c856dafd1cc036057ef34f3bf10a8",
   "stage_a.py": "92def0fb4b4168232e639692759cdb1f2455277d75eb7cc6a0ec2171bee444a0",
   "telemetry.py": "8bd10cc9cbb1a3a9170a2f864a632eb145ccfceb3a391f7ff8b6ab69f583c65b"
  },
  "description": "Sanitized projection of a recorded lifecycle evaluation; derived from the real run artefacts (git-ignored, local) by agent_readiness.lifecycle.dataset. Screenshots are the recorded browser frames re-encoded to WebP (max width 1024px, quality 72); no pixel is edited.",
  "files": {
-  "evaluation.json": "c800bfd34e4bf2022ba0343d69a33c7fb59f6841cb6a132f0244b6ae8f3c0f24",
+  "evaluation.json": "3332f28776c4659700711018c7e074b6a5567e3a59fe2789b67e4e01546f8828",
   "generation.json": "b15989672b9da2a269bd086186fbadaa9b09fc016f2453ad9ddea59f449cd55a",
   "screenshots/modified-gen-23f1802ee0-n-r1/step-001.webp": "997154ba1e078c29ff66fa8b663cc6417d2ed238901b46ddac8b8c39e07b53a1",
   "screenshots/modified-gen-23f1802ee0-n-r1/step-002.webp": "3285655ade4d516deb76c031605d67f68296914bf1c1e8890157b110065d1a55",

@@ -62,6 +62,20 @@ def from_recorded_fork(run_dir: Path) -> dict:
             "comparison": comparison, "alias": alias}
 
 
+def _evalrun_v2(run_dir: Path) -> dict:
+    """Stage B lifecycle runs (M8): `rescore_run` cannot key the M2b kinds (ranked_subset, either_of), so v2 was silently missing and every v1
+    format rejection read as an incorrect answer. The lifecycle runner's own row grader (same `rescore._trial_rows`, keys from `build_key_any`) is
+    used instead, again only when it reproduces every stored v1 grade."""
+    try:
+        from ..evalruns.runner import condition_results
+        res = condition_results(InvestigationRun(run_dir))
+        if not res["rescore_faithful"]:
+            return {}
+        return {r["trial"]: {"passed": r["v2_passed"], "evidence_backed": r["v2_evidence_backed"], "reasons": r["v2_reasons"]} for r in res["rows"] if r["v2_passed"] is not None}
+    except Exception:
+        return {}
+
+
 def diagnose(bundle: dict) -> dict:
     site, origin = bundle["site"], bundle["origin"]
     versions = []
@@ -72,14 +86,14 @@ def diagnose(bundle: dict) -> dict:
         rs = rescore_run(Path(bundle["source"]))
         v2 = {r["trial"]: r["v2"] for r in rs["trials"] if r["v2"]} if rs["faithful"] else {}
     except Exception:
-        v2 = {}
+        v2 = _evalrun_v2(Path(bundle["source"]))
     st = {v["name"]: structural.observe(v["profile"], site=site, version=v["name"]) for v in versions}
     bh = {v["name"]: behavioral.observe(v["trials"], v["private"], site=site, version=v["name"], version_sha=v["sha256"], origin=origin, tasks_alias=bundle.get("alias"), v2=v2)
           for v in versions}
     hy = hypotheses.link(site=site, versions=versions, structural=st, behavioral=bh, comparison=bundle.get("comparison"), origin=origin, tasks_alias=bundle.get("alias"))
     findings = [f for v in versions for f in st[v["name"]]] + [f for v in versions for f in bh[v["name"]]] + hy
     changes = {v["name"]: structural.compare(st[versions[0]["name"]], st[v["name"]]) for v in versions[1:]}
-    return {"schema": SCHEMA, "rules": {"hypotheses": hypotheses.RULES_VERSION}, "site": site, "source": bundle["source"], "evidence_origin": origin, "versions": {v["name"]: v["sha256"] for v in versions},
+    return {"schema": SCHEMA, "rules": {"hypotheses": hypotheses.RULES_VERSION, "behavioral": behavioral.RULES_VERSION}, "site": site, "source": bundle["source"], "evidence_origin": origin, "versions": {v["name"]: v["sha256"] for v in versions},
             "comparison": bundle.get("comparison"), "structural_changes": changes,
             "summary": {"by_layer_status": dict(Counter(f"{f.layer}:{f.status}" for f in findings)), "findings": len(findings)},
             "findings": [f.as_dict() for f in findings]}

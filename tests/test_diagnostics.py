@@ -86,7 +86,8 @@ def test_behavioural_rules():
     assert unsup == ["1 required evidence item(s) were not shown to the agent (1 answer text, 0 page visit)"] and "observed_text:x" not in unsup[0]
     assert "incorrect-answer" in _rules(_trial(passed=False, backed=False))
     ev = B._trial_findings("n", _trial(passed=False, backed=False), None, {"passed": True})
-    assert any("post-hoc grader v2: correct" in e.detail for r, evs, _ in ev if r == "incorrect-answer" for e in evs)
+    assert any("post-hoc grader v2: correct" in e.detail for r, evs, _ in ev if r == "v1-format-rejection" for e in evs)     # behavioral-2 (M8)
+    assert "incorrect-answer" not in [r for r, _, _ in ev]
 
 
 def test_behavioural_findings_aggregate_per_task_and_cite_trials():

@@ -28,7 +28,7 @@ SCHEMA = "lifecycle-dataset-v1"
 SCREENSHOT = re.compile(r"step-(\d{3})\.png")
 WEBP_WIDTH, WEBP_QUALITY = 1024, 72
 CODE = ("projection.py", "audit.py", "dataset.py", "stage_a.py", "../grading/contrast.py", "../grading/evidence_ranked.py", "../hosted/telemetry.py",
-        "../diagnostics/hypotheses.py", "../diagnostics/behavioral.py")
+        "../diagnostics/hypotheses.py", "../diagnostics/behavioral.py", "../diagnostics/run.py")
 
 
 def _sha(b: bytes) -> str:

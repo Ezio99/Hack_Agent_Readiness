@@ -10,7 +10,9 @@ Rules (per trial, aggregated per rule x task x version):
   unnecessary-navigation   3+ distinct pages that neither hold the answer nor lead to it (outside the task's evidence pages, start page and listing)
   budget-exhaustion        the trial used (nearly) all its model requests, or stopped on a limit
   unsupported-answer       a correct answer the agent was never shown (not evidence-backed)
-  incorrect-answer         a completed trial whose answer was graded wrong"""
+  incorrect-answer         a completed trial whose answer was graded wrong (by official grader v1, and by post-hoc grader v2 when it is available)
+  v1-format-rejection      (behaviour rules 2, M8) official grader v1 rejected an answer that post-hoc grader v2 accepts as correct: a grading-format
+                           observation, not an agent failure; the official grade is unchanged"""
 from __future__ import annotations
 
 import json
@@ -22,13 +24,17 @@ from .model import Evidence, Finding, stable_id
 
 BROWSER_AUTO = re.compile(r"^/(favicon\.ico|apple-touch-icon[^/]*\.png|robots\.txt)$")      # fetched by the browser itself, not by the agent
 
-SEVERITY = {"incorrect-answer": "high", "budget-exhaustion": "high", "unsupported-answer": "medium", "loop": "medium", "dead-end": "medium",
+RULES_VERSION = "behavioral-2"
+
+SEVERITY = {"v1-format-rejection": "low", "incorrect-answer": "high", "budget-exhaustion": "high", "unsupported-answer": "medium", "loop": "medium", "dead-end": "medium",
             "unnecessary-navigation": "low", "revisit": "low", "retry": "low"}
-IMPACT = {"incorrect-answer": "the task was not completed correctly", "budget-exhaustion": "the agent ran out of its request budget, or nearly did",
+IMPACT = {"v1-format-rejection": "the official grade is a fail, but the answer is correct under post-hoc grader v2 (it adds consistent detail or is a full sentence)",
+          "incorrect-answer": "the task was not completed correctly", "budget-exhaustion": "the agent ran out of its request budget, or nearly did",
           "unsupported-answer": "the answer was correct but not grounded in anything the agent was shown", "loop": "steps spent moving back and forth",
           "dead-end": "steps spent on errors or failed actions", "unnecessary-navigation": "steps spent on pages that do not hold the answer",
           "revisit": "the same page was shown repeatedly", "retry": "an action was repeated"}
-ADVICE = {"incorrect-answer": "Compare the agent's answer with the pages it saw (trial steps cited) to see where the needed information was missing or misread.",
+ADVICE = {"v1-format-rejection": "Read the answer beside the official grade: this is a grading-format effect (grader v1 accepts only the bare expected answer), not a website or agent failure.",
+          "incorrect-answer": "Compare the agent's answer with the pages it saw (trial steps cited) to see where the needed information was missing or misread.",
           "budget-exhaustion": "Find which pages consumed the budget (steps cited) and whether the needed facts could be reached in fewer steps.",
           "unsupported-answer": "Check whether the answer is reachable within the agent's view (e.g. below the fold of a long page) before trusting such passes.",
           "loop": "Inspect the two pages in the loop: the agent may be failing to find a link or fact it expects on one of them.",
@@ -73,8 +79,12 @@ def _trial_findings(name: str, t: dict, priv: dict | None, v2: dict | None = Non
         out.append(("unsupported-answer", [Evidence("trial", name, f"{len(miss)} required evidence item(s) were not shown to the agent "
                                                                      f"({sum(m.startswith('observed_text:') for m in miss)} answer text, {sum(m.startswith('visited_path:') for m in miss)} page visit)")], {"missing": len(miss)}))
     if outcome.get("run_status") == "completed" and not ev.get("passed"):
-        note = " (post-hoc grader v2: correct; the answer adds consistent detail)" if (v2 or {}).get("passed") else ""
-        out.append(("incorrect-answer", [Evidence("trial", name, "graded not passed by the official grader v1" + note)], {"v2_passed": (v2 or {}).get("passed")}))
+        if (v2 or {}).get("passed"):
+            out.append(("v1-format-rejection", [Evidence("trial", name, "graded not passed by the official grader v1 (post-hoc grader v2: correct; the answer adds consistent detail)")],
+                        {"v2_passed": True}))
+        else:
+            out.append(("incorrect-answer", [Evidence("trial", name, "graded not passed by the official grader v1" + (" and by post-hoc grader v2" if v2 else ""))],
+                        {"v2_passed": (v2 or {}).get("passed")}))
     return out
 
 

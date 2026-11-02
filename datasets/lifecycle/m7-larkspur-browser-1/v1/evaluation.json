@@ -552,7 +552,7 @@
      },
      "evidence": [
       {
-       "detail": "graded not passed by the official grader v1",
+       "detail": "graded not passed by the official grader v1 and by post-hoc grader v2",
        "ref": "original-gen-23f1802ee0-n-r1",
        "type": "trial"
       }
@@ -581,7 +581,7 @@
      },
      "evidence": [
       {
-       "detail": "graded not passed by the official grader v1",
+       "detail": "graded not passed by the official grader v1 and by post-hoc grader v2",
        "ref": "original-gen-8334922e62-n-r1",
        "type": "trial"
       }
@@ -610,7 +610,7 @@
      },
      "evidence": [
       {
-       "detail": "graded not passed by the official grader v1",
+       "detail": "graded not passed by the official grader v1 and by post-hoc grader v2",
        "ref": "original-gen-ae6c23b20b-n-r1",
        "type": "trial"
       }
@@ -627,35 +627,6 @@
       4
      ],
      "title": "incorrect answer on task 4 (1/1 trials)",
-     "variant": "original",
-     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
-    },
-    {
-     "basis": "observed",
-     "detail": {
-      "trials": [
-       "original-gen-f302fa8fe2-n-r1"
-      ]
-     },
-     "evidence": [
-      {
-       "detail": "graded not passed by the official grader v1",
-       "ref": "original-gen-f302fa8fe2-n-r1",
-       "type": "trial"
-      }
-     ],
-     "evidence_origin": "real_model",
-     "id": "B-f78b0c31bb",
-     "impact": "the task was not completed correctly",
-     "layer": "behavioral",
-     "recommendation": "Compare the agent's answer with the pages it saw (trial steps cited) to see where the needed information was missing or misread.",
-     "rule": "incorrect-answer",
-     "severity": "high",
-     "status": "observed",
-     "tasks": [
-      6
-     ],
-     "title": "incorrect answer on task 6 (1/1 trials)",
      "variant": "original",
      "verify": "Re-run the task after a change and compare this observation's frequency across versions."
     },
@@ -895,6 +866,35 @@
      "basis": "observed",
      "detail": {
       "trials": [
+       "original-gen-f302fa8fe2-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "graded not passed by the official grader v1 (post-hoc grader v2: correct; the answer adds consistent detail)",
+       "ref": "original-gen-f302fa8fe2-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-42e9368d2a",
+     "impact": "the official grade is a fail, but the answer is correct under post-hoc grader v2 (it adds consistent detail or is a full sentence)",
+     "layer": "behavioral",
+     "recommendation": "Read the answer beside the official grade: this is a grading-format effect (grader v1 accepts only the bare expected answer), not a website or agent failure.",
+     "rule": "v1-format-rejection",
+     "severity": "low",
+     "status": "observed",
+     "tasks": [
+      6
+     ],
+     "title": "v1 format rejection on task 6 (1/1 trials)",
+     "variant": "original",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
        "modified-gen-8334922e62-n-r1"
       ]
      },
@@ -982,70 +982,12 @@
      "basis": "observed",
      "detail": {
       "trials": [
-       "modified-gen-23f1802ee0-n-r1"
-      ]
-     },
-     "evidence": [
-      {
-       "detail": "graded not passed by the official grader v1",
-       "ref": "modified-gen-23f1802ee0-n-r1",
-       "type": "trial"
-      }
-     ],
-     "evidence_origin": "real_model",
-     "id": "B-5124faab44",
-     "impact": "the task was not completed correctly",
-     "layer": "behavioral",
-     "recommendation": "Compare the agent's answer with the pages it saw (trial steps cited) to see where the needed information was missing or misread.",
-     "rule": "incorrect-answer",
-     "severity": "high",
-     "status": "observed",
-     "tasks": [
-      1
-     ],
-     "title": "incorrect answer on task 1 (1/1 trials)",
-     "variant": "modified",
-     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
-    },
-    {
-     "basis": "observed",
-     "detail": {
-      "trials": [
-       "modified-gen-4cb59bf627-n-r1"
-      ]
-     },
-     "evidence": [
-      {
-       "detail": "graded not passed by the official grader v1",
-       "ref": "modified-gen-4cb59bf627-n-r1",
-       "type": "trial"
-      }
-     ],
-     "evidence_origin": "real_model",
-     "id": "B-785046d5e5",
-     "impact": "the task was not completed correctly",
-     "layer": "behavioral",
-     "recommendation": "Compare the agent's answer with the pages it saw (trial steps cited) to see where the needed information was missing or misread.",
-     "rule": "incorrect-answer",
-     "severity": "high",
-     "status": "observed",
-     "tasks": [
-      2
-     ],
-     "title": "incorrect answer on task 2 (1/1 trials)",
-     "variant": "modified",
-     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
-    },
-    {
-     "basis": "observed",
-     "detail": {
-      "trials": [
        "modified-gen-8334922e62-n-r1"
       ]
      },
      "evidence": [
       {
-       "detail": "graded not passed by the official grader v1",
+       "detail": "graded not passed by the official grader v1 and by post-hoc grader v2",
        "ref": "modified-gen-8334922e62-n-r1",
        "type": "trial"
       }
@@ -1074,7 +1016,7 @@
      },
      "evidence": [
       {
-       "detail": "graded not passed by the official grader v1",
+       "detail": "graded not passed by the official grader v1 and by post-hoc grader v2",
        "ref": "modified-gen-f090b4b9bc-n-r1",
        "type": "trial"
       }
@@ -1091,35 +1033,6 @@
       5
      ],
      "title": "incorrect answer on task 5 (1/1 trials)",
-     "variant": "modified",
-     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
-    },
-    {
-     "basis": "observed",
-     "detail": {
-      "trials": [
-       "modified-gen-f302fa8fe2-n-r1"
-      ]
-     },
-     "evidence": [
-      {
-       "detail": "graded not passed by the official grader v1",
-       "ref": "modified-gen-f302fa8fe2-n-r1",
-       "type": "trial"
-      }
-     ],
-     "evidence_origin": "real_model",
-     "id": "B-8ae585ec31",
-     "impact": "the task was not completed correctly",
-     "layer": "behavioral",
-     "recommendation": "Compare the agent's answer with the pages it saw (trial steps cited) to see where the needed information was missing or misread.",
-     "rule": "incorrect-answer",
-     "severity": "high",
-     "status": "observed",
-     "tasks": [
-      6
-     ],
-     "title": "incorrect answer on task 6 (1/1 trials)",
      "variant": "modified",
      "verify": "Re-run the task after a change and compare this observation's frequency across versions."
     },
@@ -1241,6 +1154,93 @@
       5
      ],
      "title": "unnecessary navigation on task 5 (1/1 trials)",
+     "variant": "modified",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "modified-gen-23f1802ee0-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "graded not passed by the official grader v1 (post-hoc grader v2: correct; the answer adds consistent detail)",
+       "ref": "modified-gen-23f1802ee0-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-ac468a2f70",
+     "impact": "the official grade is a fail, but the answer is correct under post-hoc grader v2 (it adds consistent detail or is a full sentence)",
+     "layer": "behavioral",
+     "recommendation": "Read the answer beside the official grade: this is a grading-format effect (grader v1 accepts only the bare expected answer), not a website or agent failure.",
+     "rule": "v1-format-rejection",
+     "severity": "low",
+     "status": "observed",
+     "tasks": [
+      1
+     ],
+     "title": "v1 format rejection on task 1 (1/1 trials)",
+     "variant": "modified",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "modified-gen-4cb59bf627-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "graded not passed by the official grader v1 (post-hoc grader v2: correct; the answer adds consistent detail)",
+       "ref": "modified-gen-4cb59bf627-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-dfc986ce25",
+     "impact": "the official grade is a fail, but the answer is correct under post-hoc grader v2 (it adds consistent detail or is a full sentence)",
+     "layer": "behavioral",
+     "recommendation": "Read the answer beside the official grade: this is a grading-format effect (grader v1 accepts only the bare expected answer), not a website or agent failure.",
+     "rule": "v1-format-rejection",
+     "severity": "low",
+     "status": "observed",
+     "tasks": [
+      2
+     ],
+     "title": "v1 format rejection on task 2 (1/1 trials)",
+     "variant": "modified",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "modified-gen-f302fa8fe2-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "graded not passed by the official grader v1 (post-hoc grader v2: correct; the answer adds consistent detail)",
+       "ref": "modified-gen-f302fa8fe2-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-5caa333ba5",
+     "impact": "the official grade is a fail, but the answer is correct under post-hoc grader v2 (it adds consistent detail or is a full sentence)",
+     "layer": "behavioral",
+     "recommendation": "Read the answer beside the official grade: this is a grading-format effect (grader v1 accepts only the bare expected answer), not a website or agent failure.",
+     "rule": "v1-format-rejection",
+     "severity": "low",
+     "status": "observed",
+     "tasks": [
+      6
+     ],
+     "title": "v1 format rejection on task 6 (1/1 trials)",
      "variant": "modified",
      "verify": "Re-run the task after a change and compare this observation's frequency across versions."
     },
@@ -1434,11 +1434,6 @@
        "type": "finding"
       },
       {
-       "detail": "incorrect answer on task 6 (1/1 trials)",
-       "ref": "B-f78b0c31bb",
-       "type": "finding"
-      },
-      {
        "detail": "revisit on task 1 (1/1 trials)",
        "ref": "B-4c8619bfc8",
        "type": "finding"
@@ -1446,6 +1441,11 @@
       {
        "detail": "revisit on task 6 (1/1 trials)",
        "ref": "B-b78e1c9809",
+       "type": "finding"
+      },
+      {
+       "detail": "v1 format rejection on task 6 (1/1 trials)",
+       "ref": "B-42e9368d2a",
        "type": "finding"
       },
       {
@@ -1503,13 +1503,13 @@
        "type": "finding"
       },
       {
-       "detail": "incorrect answer on task 6 (1/1 trials)",
-       "ref": "B-f78b0c31bb",
+       "detail": "revisit on task 6 (1/1 trials)",
+       "ref": "B-b78e1c9809",
        "type": "finding"
       },
       {
-       "detail": "revisit on task 6 (1/1 trials)",
-       "ref": "B-b78e1c9809",
+       "detail": "v1 format rejection on task 6 (1/1 trials)",
+       "ref": "B-42e9368d2a",
        "type": "finding"
       },
       {
@@ -1642,6 +1642,7 @@
     }
    ],
    "rules": {
+    "behavioral": "behavioral-2",
     "hypotheses": "hypotheses-2"
    },
    "schema": "diagnostics-report-v2",
