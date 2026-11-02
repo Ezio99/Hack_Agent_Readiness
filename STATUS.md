@@ -15,13 +15,21 @@ Authoritative current handoff. Check it against the repository and production be
 - `/api/health` returns `mode live, evaluations enabled, access operator, active false`.
 - `/api/ironbark/config` returns `worker idle, model muse-spark-1.3, profile suite-v2-compat2, remaining_repetitions 5`.
 - Security headers present: CSP `default-src 'self'`, HSTS, nosniff, `no-referrer`.
-- In-container checks (jail self-test, image tags, `.env`) need SSH to the VM. They were last recorded by the deploying session (see the archive) and have not been repeated in this session.
+- In-container checks were repeated over SSH before the paid trial: jail self-test ok, image `redesign-b3121a8`, `.env` as documented, provider `/v1/models` 200. See the [trial report](collaboration/reports/hosted-production-trial-2026-11-02.md).
 
 **Branches.** Production runs `product-experience-redesign`. It sits on top of `hosted-ironbark-evaluation`, then `ironbark-evaluation-runner`, then `live-m1-llm-evaluation` (draft PR #60), then `main`. It is **63 commits ahead of `main` and unmerged**, so `main` does not reproduce production. Merging (or a PR from `product-experience-redesign`) needs owner approval. `demo-cinematic-storyboard` holds 4 commits that are not in production: it is the earlier storyboard and is kept as history.
 
 **Paid production trial completed (owner-approved, exactly one repetition):** `eval-aa23e330`, 8/8 in 9 min 01 s, real model. Original 0/4 (52 requests) → Modified 3/4 (26 requests). Frozen rule inconclusive; exploratory rule consistent_with_h1. **New calculated spend US$1.126097**, fully reconciled (0 open reservations, none settled above its reservation). Every production surface worked, including refresh recovery. Findings: an answer-length grading false negative on task 1; a tight Original-arm cap margin; a stale ceiling in the export; operator-token UX. Full details: [report](collaboration/reports/hosted-production-trial-2026-11-02.md). **No further paid call is authorized.**
 
-**Next:** generalization (site adapters, generated and validated tasks) and expanded diagnostics, both isolated from the hosted Ironbark path until validated.
+**Branch `evaluation-v2` (not deployed; owner review requested):**
+- grader_v2 with adversarial tests, and a labelled post-hoc rescore with exact v1 reproduction checks ([design and historical results](collaboration/reports/grader-v2.md)). All 12 recorded runs rescore faithfully; 13 trials newly pass, none newly fail, and no verdict category changes.
+- Hosted v2 view beside the official v1 grades.
+- Export now reports the enforced ceiling.
+- Operator-token field is visible and held in memory only.
+
+grader_v1 remains the grader of record.
+
+**Next:** generalization (site definitions, generated and validated tasks, a second controlled site), then DOM and accessibility diagnostics. Both stay isolated from the hosted Ironbark path until validated.
 
 ## Budget
 
@@ -35,7 +43,8 @@ Feature freeze and demo preparation: **Wednesday 2026-11-04 (Sydney)**. The offi
 ## Known debt and follow-ups
 
 - Production code lives on an unmerged branch stack (see Branches above).
-- Trial findings awaiting owner decisions: the task-1 answer-length grading false negative (frozen rule), and the Original-arm cap margin (about one request of headroom). See the [trial report](collaboration/reports/hosted-production-trial-2026-11-02.md).
+- Original-arm cap margin (about one request of headroom): left unchanged by owner decision. See the [trial report](collaboration/reports/hosted-production-trial-2026-11-02.md).
+- After a reviewed deploy, production's cached `<run>.public.json` exports keep the old ceiling display until regenerated.
 - Demo-day documents predate the redesign and still describe the Replay Studio as the default page: [docs/THREE_MINUTE_DEMO_SCRIPT.md](docs/THREE_MINUTE_DEMO_SCRIPT.md) and [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md). Refresh them on demo-preparation day.
 - Archive UIs remain reachable on purpose as rollback and reference paths: the Replay Studio (`#/studio`) and the classic pages (`#/investigation` and others). The Geist font and its licence exist in both `site/fonts` and `studio/assets`. Vite emits a single asset for them, so the duplication only costs repository bytes.
 - Untracked owner work in the checkout is left untouched: `src/agent_readiness/investigate/prototype/termvalue.py` and `tests/test_termvalue_prototype.py`. They are a later variant of the tracked `taskgen/termvalue.py`.

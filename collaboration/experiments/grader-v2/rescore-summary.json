@@ -1,0 +1,1132 @@
+{
+ "generated_by": "python -m agent_readiness.grading.rescore (then public_summary)",
+ "runs": [
+  {
+   "changed": [
+    {
+     "task": 1,
+     "trial_arm": "baseline",
+     "v1": {
+      "evidence_backed": false,
+      "passed": false
+     },
+     "v2": {
+      "evidence_backed": true,
+      "passed": true,
+      "reasons": [
+       "matches_truth_with_consistent_detail"
+      ]
+     }
+    }
+   ],
+   "comparisons": {
+    "state": "not_evaluated"
+   },
+   "description": "Ironbark source run (historical baseline for every Ironbark fork)",
+   "faithful": true,
+   "graders": {
+    "v1": {
+     "id": "generated-criteria",
+     "implementation": "investigate.taskgen.criteria.grade (answer_match: exact after normalisation, or the truth inside an answer of at most len(truth)+16 characters; sets: exact normalised equality)",
+     "version": "1"
+    },
+    "v2": {
+     "code_sha256": "6c38ad13168434edb11a409d0b70f55d6c93800750eb4c52ba7669f620cf710f",
+     "id": "generated-criteria",
+     "implementation": "agent_readiness.grading.v2",
+     "version": "2"
+    }
+   },
+   "inputs": {
+    "criteria_sha256": "3444b11198cebfa5db78fa4791da38f52ca178996ff0e3802a7f6443d4ebc117",
+    "evaluation_sha256": "10163cf4b93145f2a8986d985feb6033456657c0cb7659c35ddfd1b5ca78d225",
+    "snapshot_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+    "tasks": 4
+   },
+   "key_errors": [],
+   "label": "POST-HOC RESCORE: grader_v2 applied to answers recorded earlier. Not pre-registered. The official results of this run are its grader_v1 grades and verdicts, reproduced here unchanged; v2 statistics apply the same rules to v2 grades and must not be read as the original verdicts.",
+   "run": "live-2d58a80e14",
+   "schema": "grader-rescore-v1-public",
+   "tally": {
+    "baseline": {
+     "trials": 4,
+     "v1_evidence_backed": 0,
+     "v1_passed": 0,
+     "v2_evidence_backed": 1,
+     "v2_passed": 1,
+     "void": 0
+    }
+   },
+   "v2_reason_counts": {
+    "matches_truth_with_consistent_detail": 1,
+    "missing_items": 2,
+    "unrecognised_element": 1
+   }
+  },
+  {
+   "changed": [],
+   "comparisons": {
+    "state": "not_evaluated"
+   },
+   "description": "earlier Ironbark live run",
+   "faithful": true,
+   "graders": {
+    "v1": {
+     "id": "generated-criteria",
+     "implementation": "investigate.taskgen.criteria.grade (answer_match: exact after normalisation, or the truth inside an answer of at most len(truth)+16 characters; sets: exact normalised equality)",
+     "version": "1"
+    },
+    "v2": {
+     "code_sha256": "6c38ad13168434edb11a409d0b70f55d6c93800750eb4c52ba7669f620cf710f",
+     "id": "generated-criteria",
+     "implementation": "agent_readiness.grading.v2",
+     "version": "2"
+    }
+   },
+   "inputs": {
+    "criteria_sha256": "13cf40e5a3a388be8ee927f5f34a8990b29d2bf3823bc4e0df8377f2894251ee",
+    "evaluation_sha256": "10163cf4b93145f2a8986d985feb6033456657c0cb7659c35ddfd1b5ca78d225",
+    "snapshot_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+    "tasks": 4
+   },
+   "key_errors": [],
+   "label": "POST-HOC RESCORE: grader_v2 applied to answers recorded earlier. Not pre-registered. The official results of this run are its grader_v1 grades and verdicts, reproduced here unchanged; v2 statistics apply the same rules to v2 grades and must not be read as the original verdicts.",
+   "run": "live-46b6ba92b8",
+   "schema": "grader-rescore-v1-public",
+   "tally": {
+    "baseline": {
+     "trials": 4,
+     "v1_evidence_backed": 2,
+     "v1_passed": 3,
+     "v2_evidence_backed": 2,
+     "v2_passed": 3,
+     "void": 0
+    }
+   },
+   "v2_reason_counts": {
+    "matches_truth": 3,
+    "multiple_candidates": 1
+   }
+  },
+  {
+   "changed": [
+    {
+     "task": 1,
+     "trial_arm": "baseline",
+     "v1": {
+      "evidence_backed": false,
+      "passed": false
+     },
+     "v2": {
+      "evidence_backed": true,
+      "passed": true,
+      "reasons": [
+       "matches_truth_with_consistent_detail"
+      ]
+     }
+    },
+    {
+     "task": 1,
+     "trial_arm": "patched",
+     "v1": {
+      "evidence_backed": false,
+      "passed": false
+     },
+     "v2": {
+      "evidence_backed": true,
+      "passed": true,
+      "reasons": [
+       "matches_truth_with_consistent_detail"
+      ]
+     }
+    }
+   ],
+   "comparisons": {
+    "exploratory": {
+     "recomputed_v1": "consistent_with_h1",
+     "rules_id": "exploratory-listing-v1",
+     "stored_v1": "consistent_with_h1",
+     "v1_reproduced": true,
+     "v2_post_hoc": "consistent_with_h1",
+     "v2_reasons": [
+      "every affected task meets the effect floor against the contemporaneous control, exceeds the noise estimate, shows fewer page views and loses no pass; controls are inside tolerance; the historical comparison agrees"
+     ]
+    },
+    "frozen": {
+     "prp-2f3f998f8a": {
+      "recomputed_v1": {
+       "p_pass": 1.0,
+       "p_requests": 0.125,
+       "pairs": 4,
+       "pass_delta": 0.25,
+       "reason": "neither the improvement nor the regression rule is met",
+       "request_change": -0.549,
+       "verdict": "inconclusive"
+      },
+      "stored_v1": {
+       "p_pass": 1.0,
+       "p_requests": 0.125,
+       "pairs": 4,
+       "pass_delta": 0.25,
+       "reason": "neither the improvement nor the regression rule is met",
+       "request_change": -0.549,
+       "verdict": "inconclusive"
+      },
+      "v1_reproduced": true,
+      "v2_post_hoc": {
+       "p_pass": 1.0,
+       "p_requests": 0.125,
+       "pairs": 4,
+       "pass_delta": 0.25,
+       "reason": "neither the improvement nor the regression rule is met",
+       "request_change": -0.549,
+       "verdict": "inconclusive"
+      }
+     }
+    },
+    "reproduced": true,
+    "rule": "paired-signflip-v1",
+    "state": "evaluated"
+   },
+   "description": "EXP-C R1",
+   "faithful": true,
+   "graders": {
+    "v1": {
+     "id": "generated-criteria",
+     "implementation": "investigate.taskgen.criteria.grade (answer_match: exact after normalisation, or the truth inside an answer of at most len(truth)+16 characters; sets: exact normalised equality)",
+     "version": "1"
+    },
+    "v2": {
+     "code_sha256": "6c38ad13168434edb11a409d0b70f55d6c93800750eb4c52ba7669f620cf710f",
+     "id": "generated-criteria",
+     "implementation": "agent_readiness.grading.v2",
+     "version": "2"
+    }
+   },
+   "inputs": {
+    "criteria_sha256": "3444b11198cebfa5db78fa4791da38f52ca178996ff0e3802a7f6443d4ebc117",
+    "evaluation_sha256": "c2ca236a836add426a485fca0086f96477695bb4b71c650ae8ea3c2b20f3e7c7",
+    "snapshot_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+    "tasks": 4
+   },
+   "key_errors": [],
+   "label": "POST-HOC RESCORE: grader_v2 applied to answers recorded earlier. Not pre-registered. The official results of this run are its grader_v1 grades and verdicts, reproduced here unchanged; v2 statistics apply the same rules to v2 grades and must not be read as the original verdicts.",
+   "run": "live-ab-ironbark-r1",
+   "schema": "grader-rescore-v1-public",
+   "tally": {
+    "baseline": {
+     "trials": 4,
+     "v1_evidence_backed": 0,
+     "v1_passed": 0,
+     "v2_evidence_backed": 1,
+     "v2_passed": 1,
+     "void": 0
+    },
+    "patched": {
+     "trials": 4,
+     "v1_evidence_backed": 1,
+     "v1_passed": 1,
+     "v2_evidence_backed": 2,
+     "v2_passed": 2,
+     "void": 0
+    },
+    "placebo": {
+     "trials": 4,
+     "v1_evidence_backed": 0,
+     "v1_passed": 0,
+     "v2_evidence_backed": 0,
+     "v2_passed": 0,
+     "void": 0
+    }
+   },
+   "v2_reason_counts": {
+    "matches_truth": 1,
+    "matches_truth_with_consistent_detail": 2,
+    "missing_items": 4,
+    "multiple_candidates": 1,
+    "negated": 1,
+    "no_answer": 2,
+    "unrecognised_element": 1,
+    "unverified_number": 1
+   }
+  },
+  {
+   "changed": [
+    {
+     "task": 1,
+     "trial_arm": "baseline",
+     "v1": {
+      "evidence_backed": false,
+      "passed": false
+     },
+     "v2": {
+      "evidence_backed": true,
+      "passed": true,
+      "reasons": [
+       "matches_truth_with_consistent_detail"
+      ]
+     }
+    },
+    {
+     "task": 2,
+     "trial_arm": "patched",
+     "v1": {
+      "evidence_backed": false,
+      "passed": false
+     },
+     "v2": {
+      "evidence_backed": true,
+      "passed": true,
+      "reasons": [
+       "matches_truth_with_consistent_detail"
+      ]
+     }
+    },
+    {
+     "task": 1,
+     "trial_arm": "placebo",
+     "v1": {
+      "evidence_backed": false,
+      "passed": false
+     },
+     "v2": {
+      "evidence_backed": true,
+      "passed": true,
+      "reasons": [
+       "matches_truth_with_consistent_detail"
+      ]
+     }
+    }
+   ],
+   "comparisons": {
+    "exploratory": {
+     "recomputed_v1": "not_supported",
+     "rules_id": "exploratory-listing-v1",
+     "stored_v1": "not_supported",
+     "v1_reproduced": true,
+     "v2_post_hoc": "not_supported",
+     "v2_reasons": [
+      "missed: gen-4336e8b32f: primary_meets_floor, exceeds_noise"
+     ]
+    },
+    "frozen": {
+     "prp-2f3f998f8a": {
+      "recomputed_v1": {
+       "p_pass": 0.25,
+       "p_requests": 0.125,
+       "pairs": 4,
+       "pass_delta": 0.75,
+       "reason": "neither the improvement nor the regression rule is met",
+       "request_change": -0.4314,
+       "verdict": "inconclusive"
+      },
+      "stored_v1": {
+       "p_pass": 0.25,
+       "p_requests": 0.125,
+       "pairs": 4,
+       "pass_delta": 0.75,
+       "reason": "neither the improvement nor the regression rule is met",
+       "request_change": -0.4314,
+       "verdict": "inconclusive"
+      },
+      "v1_reproduced": true,
+      "v2_post_hoc": {
+       "p_pass": 0.25,
+       "p_requests": 0.125,
+       "pairs": 4,
+       "pass_delta": 0.75,
+       "reason": "neither the improvement nor the regression rule is met",
+       "request_change": -0.4314,
+       "verdict": "inconclusive"
+      }
+     }
+    },
+    "reproduced": true,
+    "rule": "paired-signflip-v1",
+    "state": "evaluated"
+   },
+   "description": "EXP-C S1",
+   "faithful": true,
+   "graders": {
+    "v1": {
+     "id": "generated-criteria",
+     "implementation": "investigate.taskgen.criteria.grade (answer_match: exact after normalisation, or the truth inside an answer of at most len(truth)+16 characters; sets: exact normalised equality)",
+     "version": "1"
+    },
+    "v2": {
+     "code_sha256": "6c38ad13168434edb11a409d0b70f55d6c93800750eb4c52ba7669f620cf710f",
+     "id": "generated-criteria",
+     "implementation": "agent_readiness.grading.v2",
+     "version": "2"
+    }
+   },
+   "inputs": {
+    "criteria_sha256": "3444b11198cebfa5db78fa4791da38f52ca178996ff0e3802a7f6443d4ebc117",
+    "evaluation_sha256": "b6f304f8724ec8ef8edb7d445ab889129e3b322646891351f977d0fa99a38c36",
+    "snapshot_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+    "tasks": 4
+   },
+   "key_errors": [],
+   "label": "POST-HOC RESCORE: grader_v2 applied to answers recorded earlier. Not pre-registered. The official results of this run are its grader_v1 grades and verdicts, reproduced here unchanged; v2 statistics apply the same rules to v2 grades and must not be read as the original verdicts.",
+   "run": "live-ab-ironbark-s1",
+   "schema": "grader-rescore-v1-public",
+   "tally": {
+    "baseline": {
+     "trials": 4,
+     "v1_evidence_backed": 0,
+     "v1_passed": 0,
+     "v2_evidence_backed": 1,
+     "v2_passed": 1,
+     "void": 0
+    },
+    "patched": {
+     "trials": 4,
+     "v1_evidence_backed": 3,
+     "v1_passed": 3,
+     "v2_evidence_backed": 4,
+     "v2_passed": 4,
+     "void": 0
+    },
+    "placebo": {
+     "trials": 4,
+     "v1_evidence_backed": 2,
+     "v1_passed": 2,
+     "v2_evidence_backed": 3,
+     "v2_passed": 3,
+     "void": 0
+    }
+   },
+   "v2_reason_counts": {
+    "matches_truth": 5,
+    "matches_truth_with_consistent_detail": 3,
+    "missing_items": 3,
+    "unrecognised_element": 1
+   }
+  },
+  {
+   "changed": [
+    {
+     "task": 1,
+     "trial_arm": "baseline",
+     "v1": {
+      "evidence_backed": false,
+      "passed": false
+     },
+     "v2": {
+      "evidence_backed": true,
+      "passed": true,
+      "reasons": [
+       "matches_truth_with_consistent_detail"
+      ]
+     }
+    },
+    {
+     "task": 2,
+     "trial_arm": "patched",
+     "v1": {
+      "evidence_backed": false,
+      "passed": false
+     },
+     "v2": {
+      "evidence_backed": true,
+      "passed": true,
+      "reasons": [
+       "matches_truth_with_consistent_detail"
+      ]
+     }
+    }
+   ],
+   "comparisons": {
+    "exploratory": {
+     "recomputed_v1": "not_supported",
+     "rules_id": "exploratory-listing-v1",
+     "stored_v1": "not_supported",
+     "v1_reproduced": true,
+     "v2_post_hoc": "not_supported",
+     "v2_reasons": [
+      "missed: gen-4336e8b32f: primary_meets_floor"
+     ]
+    },
+    "frozen": {
+     "prp-2f3f998f8a": {
+      "recomputed_v1": {
+       "p_pass": 0.5,
+       "p_requests": 0.125,
+       "pairs": 4,
+       "pass_delta": 0.5,
+       "reason": "neither the improvement nor the regression rule is met",
+       "request_change": -0.451,
+       "verdict": "inconclusive"
+      },
+      "stored_v1": {
+       "p_pass": 0.5,
+       "p_requests": 0.125,
+       "pairs": 4,
+       "pass_delta": 0.5,
+       "reason": "neither the improvement nor the regression rule is met",
+       "request_change": -0.451,
+       "verdict": "inconclusive"
+      },
+      "v1_reproduced": true,
+      "v2_post_hoc": {
+       "p_pass": 0.625,
+       "p_requests": 0.125,
+       "pairs": 4,
+       "pass_delta": 0.5,
+       "reason": "neither the improvement nor the regression rule is met",
+       "request_change": -0.451,
+       "verdict": "inconclusive"
+      }
+     }
+    },
+    "reproduced": true,
+    "rule": "paired-signflip-v1",
+    "state": "evaluated"
+   },
+   "description": "EXP-C",
+   "faithful": true,
+   "graders": {
+    "v1": {
+     "id": "generated-criteria",
+     "implementation": "investigate.taskgen.criteria.grade (answer_match: exact after normalisation, or the truth inside an answer of at most len(truth)+16 characters; sets: exact normalised equality)",
+     "version": "1"
+    },
+    "v2": {
+     "code_sha256": "6c38ad13168434edb11a409d0b70f55d6c93800750eb4c52ba7669f620cf710f",
+     "id": "generated-criteria",
+     "implementation": "agent_readiness.grading.v2",
+     "version": "2"
+    }
+   },
+   "inputs": {
+    "criteria_sha256": "3444b11198cebfa5db78fa4791da38f52ca178996ff0e3802a7f6443d4ebc117",
+    "evaluation_sha256": "2d03ea0835eb6774d2ab5b533e9e1fa0d1a5c5dc553da57b93158ac90566a9cf",
+    "snapshot_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+    "tasks": 4
+   },
+   "key_errors": [],
+   "label": "POST-HOC RESCORE: grader_v2 applied to answers recorded earlier. Not pre-registered. The official results of this run are its grader_v1 grades and verdicts, reproduced here unchanged; v2 statistics apply the same rules to v2 grades and must not be read as the original verdicts.",
+   "run": "live-ab-ironbark",
+   "schema": "grader-rescore-v1-public",
+   "tally": {
+    "baseline": {
+     "trials": 4,
+     "v1_evidence_backed": 0,
+     "v1_passed": 0,
+     "v2_evidence_backed": 1,
+     "v2_passed": 1,
+     "void": 0
+    },
+    "patched": {
+     "trials": 4,
+     "v1_evidence_backed": 2,
+     "v1_passed": 2,
+     "v2_evidence_backed": 3,
+     "v2_passed": 3,
+     "void": 0
+    },
+    "placebo": {
+     "trials": 4,
+     "v1_evidence_backed": 0,
+     "v1_passed": 0,
+     "v2_evidence_backed": 0,
+     "v2_passed": 0,
+     "void": 0
+    }
+   },
+   "v2_reason_counts": {
+    "matches_truth": 2,
+    "matches_truth_with_consistent_detail": 2,
+    "missing_items": 4,
+    "multiple_candidates": 1,
+    "no_answer": 2,
+    "unrecognised_element": 1
+   }
+  },
+  {
+   "changed": [],
+   "comparisons": {
+    "state": "not_evaluated"
+   },
+   "description": "earlier Ironbark live run (owner tasks)",
+   "faithful": true,
+   "graders": {
+    "v1": {
+     "id": "generated-criteria",
+     "implementation": "investigate.taskgen.criteria.grade (answer_match: exact after normalisation, or the truth inside an answer of at most len(truth)+16 characters; sets: exact normalised equality)",
+     "version": "1"
+    },
+    "v2": {
+     "code_sha256": "6c38ad13168434edb11a409d0b70f55d6c93800750eb4c52ba7669f620cf710f",
+     "id": "generated-criteria",
+     "implementation": "agent_readiness.grading.v2",
+     "version": "2"
+    }
+   },
+   "inputs": {
+    "criteria_sha256": "22ef34870c3b302086728466a884609356e3d275af2ab3f13766f2a376e3c367",
+    "evaluation_sha256": "10163cf4b93145f2a8986d985feb6033456657c0cb7659c35ddfd1b5ca78d225",
+    "snapshot_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+    "tasks": 2
+   },
+   "key_errors": [],
+   "label": "POST-HOC RESCORE: grader_v2 applied to answers recorded earlier. Not pre-registered. The official results of this run are its grader_v1 grades and verdicts, reproduced here unchanged; v2 statistics apply the same rules to v2 grades and must not be read as the original verdicts.",
+   "run": "live-bb5d48501b",
+   "schema": "grader-rescore-v1-public",
+   "tally": {
+    "baseline": {
+     "trials": 2,
+     "v1_evidence_backed": 2,
+     "v1_passed": 2,
+     "v2_evidence_backed": 2,
+     "v2_passed": 2,
+     "void": 0
+    }
+   },
+   "v2_reason_counts": {
+    "matches_truth_with_consistent_detail": 2
+   }
+  },
+  {
+   "changed": [
+    {
+     "task": 1,
+     "trial_arm": "baseline",
+     "v1": {
+      "evidence_backed": false,
+      "passed": false
+     },
+     "v2": {
+      "evidence_backed": true,
+      "passed": true,
+      "reasons": [
+       "matches_truth_with_consistent_detail"
+      ]
+     }
+    }
+   ],
+   "comparisons": {
+    "exploratory": {
+     "recomputed_v1": "consistent_with_h1",
+     "rules_id": "exploratory-listing-v1",
+     "stored_v1": "consistent_with_h1",
+     "v1_reproduced": true,
+     "v2_post_hoc": "consistent_with_h1",
+     "v2_reasons": [
+      "every affected task meets the effect floor against the contemporaneous control, exceeds the noise estimate, shows fewer page views and loses no pass; controls are inside tolerance; the historical comparison agrees"
+     ]
+    },
+    "frozen": {
+     "prp-2f3f998f8a": {
+      "recomputed_v1": {
+       "p_pass": 0.125,
+       "p_requests": 0.125,
+       "pairs": 4,
+       "pass_delta": 1.0,
+       "reason": "neither the improvement nor the regression rule is met",
+       "request_change": -0.4902,
+       "verdict": "inconclusive"
+      },
+      "stored_v1": {
+       "p_pass": 0.125,
+       "p_requests": 0.125,
+       "pairs": 4,
+       "pass_delta": 1.0,
+       "reason": "neither the improvement nor the regression rule is met",
+       "request_change": -0.4902,
+       "verdict": "inconclusive"
+      },
+      "v1_reproduced": true,
+      "v2_post_hoc": {
+       "p_pass": 0.25,
+       "p_requests": 0.125,
+       "pairs": 4,
+       "pass_delta": 0.75,
+       "reason": "neither the improvement nor the regression rule is met",
+       "request_change": -0.4902,
+       "verdict": "inconclusive"
+      }
+     }
+    },
+    "reproduced": true,
+    "rule": "paired-signflip-v1",
+    "state": "evaluated"
+   },
+   "description": "hosted eval-9aaac35c (production)",
+   "faithful": true,
+   "graders": {
+    "v1": {
+     "id": "generated-criteria",
+     "implementation": "investigate.taskgen.criteria.grade (answer_match: exact after normalisation, or the truth inside an answer of at most len(truth)+16 characters; sets: exact normalised equality)",
+     "version": "1"
+    },
+    "v2": {
+     "code_sha256": "6c38ad13168434edb11a409d0b70f55d6c93800750eb4c52ba7669f620cf710f",
+     "id": "generated-criteria",
+     "implementation": "agent_readiness.grading.v2",
+     "version": "2"
+    }
+   },
+   "inputs": {
+    "criteria_sha256": "3444b11198cebfa5db78fa4791da38f52ca178996ff0e3802a7f6443d4ebc117",
+    "evaluation_sha256": "c672a63fd2d587c50dc5ebbd5fecd28d590c65cea90fe698aa4ec654c8ee3239",
+    "snapshot_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+    "tasks": 4
+   },
+   "key_errors": [],
+   "label": "POST-HOC RESCORE: grader_v2 applied to answers recorded earlier. Not pre-registered. The official results of this run are its grader_v1 grades and verdicts, reproduced here unchanged; v2 statistics apply the same rules to v2 grades and must not be read as the original verdicts.",
+   "run": "paired-60c6a26199b44190a4bc751a45eda7da",
+   "schema": "grader-rescore-v1-public",
+   "tally": {
+    "baseline": {
+     "trials": 4,
+     "v1_evidence_backed": 0,
+     "v1_passed": 0,
+     "v2_evidence_backed": 1,
+     "v2_passed": 1,
+     "void": 0
+    },
+    "patched": {
+     "trials": 4,
+     "v1_evidence_backed": 4,
+     "v1_passed": 4,
+     "v2_evidence_backed": 4,
+     "v2_passed": 4,
+     "void": 0
+    },
+    "placebo": {
+     "trials": 4,
+     "v1_evidence_backed": 1,
+     "v1_passed": 1,
+     "v2_evidence_backed": 1,
+     "v2_passed": 1,
+     "void": 0
+    }
+   },
+   "v2_reason_counts": {
+    "matches_truth": 5,
+    "matches_truth_with_consistent_detail": 1,
+    "missing_items": 4,
+    "unrecognised_element": 1,
+    "unverified_number": 1
+   }
+  },
+  {
+   "changed": [
+    {
+     "task": 1,
+     "trial_arm": "baseline",
+     "v1": {
+      "evidence_backed": false,
+      "passed": false
+     },
+     "v2": {
+      "evidence_backed": true,
+      "passed": true,
+      "reasons": [
+       "matches_truth_with_consistent_detail"
+      ]
+     }
+    },
+    {
+     "task": 1,
+     "trial_arm": "patched",
+     "v1": {
+      "evidence_backed": false,
+      "passed": false
+     },
+     "v2": {
+      "evidence_backed": true,
+      "passed": true,
+      "reasons": [
+       "matches_truth_with_consistent_detail"
+      ]
+     }
+    },
+    {
+     "task": 1,
+     "trial_arm": "placebo",
+     "v1": {
+      "evidence_backed": false,
+      "passed": false
+     },
+     "v2": {
+      "evidence_backed": true,
+      "passed": true,
+      "reasons": [
+       "matches_truth_with_consistent_detail"
+      ]
+     }
+    }
+   ],
+   "comparisons": {
+    "exploratory": {
+     "recomputed_v1": "consistent_with_h1",
+     "rules_id": "exploratory-listing-v1",
+     "stored_v1": "consistent_with_h1",
+     "v1_reproduced": true,
+     "v2_post_hoc": "consistent_with_h1",
+     "v2_reasons": [
+      "every affected task meets the effect floor against the contemporaneous control, exceeds the noise estimate, shows fewer page views and loses no pass; controls are inside tolerance; the historical comparison agrees"
+     ]
+    },
+    "frozen": {
+     "prp-2f3f998f8a": {
+      "recomputed_v1": {
+       "p_pass": 0.25,
+       "p_requests": 0.125,
+       "pairs": 4,
+       "pass_delta": 0.75,
+       "reason": "neither the improvement nor the regression rule is met",
+       "request_change": -0.4902,
+       "verdict": "inconclusive"
+      },
+      "stored_v1": {
+       "p_pass": 0.25,
+       "p_requests": 0.125,
+       "pairs": 4,
+       "pass_delta": 0.75,
+       "reason": "neither the improvement nor the regression rule is met",
+       "request_change": -0.4902,
+       "verdict": "inconclusive"
+      },
+      "v1_reproduced": true,
+      "v2_post_hoc": {
+       "p_pass": 0.25,
+       "p_requests": 0.125,
+       "pairs": 4,
+       "pass_delta": 0.75,
+       "reason": "neither the improvement nor the regression rule is met",
+       "request_change": -0.4902,
+       "verdict": "inconclusive"
+      }
+     }
+    },
+    "reproduced": true,
+    "rule": "paired-signflip-v1",
+    "state": "evaluated"
+   },
+   "description": "hosted eval-aa23e330 (production, paid trial 2026-11-02)",
+   "faithful": true,
+   "graders": {
+    "v1": {
+     "id": "generated-criteria",
+     "implementation": "investigate.taskgen.criteria.grade (answer_match: exact after normalisation, or the truth inside an answer of at most len(truth)+16 characters; sets: exact normalised equality)",
+     "version": "1"
+    },
+    "v2": {
+     "code_sha256": "6c38ad13168434edb11a409d0b70f55d6c93800750eb4c52ba7669f620cf710f",
+     "id": "generated-criteria",
+     "implementation": "agent_readiness.grading.v2",
+     "version": "2"
+    }
+   },
+   "inputs": {
+    "criteria_sha256": "3444b11198cebfa5db78fa4791da38f52ca178996ff0e3802a7f6443d4ebc117",
+    "evaluation_sha256": "44fbe06664976e7b16b19864607792c122034a47f98c0f6f8a0656dd3e4dcbdd",
+    "snapshot_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+    "tasks": 4
+   },
+   "key_errors": [],
+   "label": "POST-HOC RESCORE: grader_v2 applied to answers recorded earlier. Not pre-registered. The official results of this run are its grader_v1 grades and verdicts, reproduced here unchanged; v2 statistics apply the same rules to v2 grades and must not be read as the original verdicts.",
+   "run": "paired-86a646169296419eb8fffbb59a31dcab",
+   "schema": "grader-rescore-v1-public",
+   "tally": {
+    "baseline": {
+     "trials": 4,
+     "v1_evidence_backed": 0,
+     "v1_passed": 0,
+     "v2_evidence_backed": 1,
+     "v2_passed": 1,
+     "void": 0
+    },
+    "patched": {
+     "trials": 4,
+     "v1_evidence_backed": 3,
+     "v1_passed": 3,
+     "v2_evidence_backed": 4,
+     "v2_passed": 4,
+     "void": 0
+    },
+    "placebo": {
+     "trials": 4,
+     "v1_evidence_backed": 0,
+     "v1_passed": 0,
+     "v2_evidence_backed": 1,
+     "v2_passed": 1,
+     "void": 0
+    }
+   },
+   "v2_reason_counts": {
+    "matches_truth": 3,
+    "matches_truth_with_consistent_detail": 3,
+    "missing_items": 5,
+    "unrecognised_element": 1
+   }
+  },
+  {
+   "changed": [
+    {
+     "task": 1,
+     "trial_arm": "baseline",
+     "v1": {
+      "evidence_backed": false,
+      "passed": false
+     },
+     "v2": {
+      "evidence_backed": true,
+      "passed": true,
+      "reasons": [
+       "matches_truth_with_consistent_detail"
+      ]
+     }
+    }
+   ],
+   "comparisons": {
+    "state": "not_evaluated"
+   },
+   "description": "Ironbark investigator replay fork",
+   "faithful": true,
+   "graders": {
+    "v1": {
+     "id": "generated-criteria",
+     "implementation": "investigate.taskgen.criteria.grade (answer_match: exact after normalisation, or the truth inside an answer of at most len(truth)+16 characters; sets: exact normalised equality)",
+     "version": "1"
+    },
+    "v2": {
+     "code_sha256": "6c38ad13168434edb11a409d0b70f55d6c93800750eb4c52ba7669f620cf710f",
+     "id": "generated-criteria",
+     "implementation": "agent_readiness.grading.v2",
+     "version": "2"
+    }
+   },
+   "inputs": {
+    "criteria_sha256": "3444b11198cebfa5db78fa4791da38f52ca178996ff0e3802a7f6443d4ebc117",
+    "evaluation_sha256": "10163cf4b93145f2a8986d985feb6033456657c0cb7659c35ddfd1b5ca78d225",
+    "snapshot_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+    "tasks": 4
+   },
+   "key_errors": [],
+   "label": "POST-HOC RESCORE: grader_v2 applied to answers recorded earlier. Not pre-registered. The official results of this run are its grader_v1 grades and verdicts, reproduced here unchanged; v2 statistics apply the same rules to v2 grades and must not be read as the original verdicts.",
+   "run": "replay-4bad5b1b",
+   "schema": "grader-rescore-v1-public",
+   "tally": {
+    "baseline": {
+     "trials": 4,
+     "v1_evidence_backed": 0,
+     "v1_passed": 0,
+     "v2_evidence_backed": 1,
+     "v2_passed": 1,
+     "void": 0
+    }
+   },
+   "v2_reason_counts": {
+    "matches_truth_with_consistent_detail": 1,
+    "missing_items": 2,
+    "unrecognised_element": 1
+   }
+  },
+  {
+   "changed": [],
+   "comparisons": {
+    "state": "not_evaluated"
+   },
+   "description": "site-5 L1a recovery fork",
+   "faithful": true,
+   "graders": {
+    "v1": {
+     "id": "generated-criteria",
+     "implementation": "investigate.taskgen.criteria.grade (answer_match: exact after normalisation, or the truth inside an answer of at most len(truth)+16 characters; sets: exact normalised equality)",
+     "version": "1"
+    },
+    "v2": {
+     "code_sha256": "6c38ad13168434edb11a409d0b70f55d6c93800750eb4c52ba7669f620cf710f",
+     "id": "generated-criteria",
+     "implementation": "agent_readiness.grading.v2",
+     "version": "2"
+    }
+   },
+   "inputs": {
+    "criteria_sha256": "142b539234947de8ce404e165279ecb4ddef5ac424d9277f1e5b1cea083af58d",
+    "evaluation_sha256": "10163cf4b93145f2a8986d985feb6033456657c0cb7659c35ddfd1b5ca78d225",
+    "snapshot_sha256": "1796c2a3c8b5f957918f99f0262d84feccdb6391e13fb2f88dee189897b6d96b",
+    "tasks": 6
+   },
+   "key_errors": [],
+   "label": "POST-HOC RESCORE: grader_v2 applied to answers recorded earlier. Not pre-registered. The official results of this run are its grader_v1 grades and verdicts, reproduced here unchanged; v2 statistics apply the same rules to v2 grades and must not be read as the original verdicts.",
+   "run": "site-5-live-b",
+   "schema": "grader-rescore-v1-public",
+   "tally": {
+    "baseline": {
+     "trials": 6,
+     "v1_evidence_backed": 4,
+     "v1_passed": 4,
+     "v2_evidence_backed": 4,
+     "v2_passed": 4,
+     "void": 0
+    }
+   },
+   "v2_reason_counts": {
+    "matches_truth": 3,
+    "matches_truth_with_consistent_detail": 1,
+    "missing_items": 1,
+    "multiple_candidates": 1
+   }
+  },
+  {
+   "changed": [],
+   "comparisons": {
+    "exploratory": {
+     "recomputed_v1": "consistent_with_h1",
+     "rules_id": "exploratory-listing-v1",
+     "stored_v1": "consistent_with_h1",
+     "v1_reproduced": true,
+     "v2_post_hoc": "consistent_with_h1",
+     "v2_reasons": [
+      "every affected task meets the effect floor against the contemporaneous control, exceeds the noise estimate, shows fewer page views and loses no pass; controls are inside tolerance; the historical comparison agrees"
+     ]
+    },
+    "frozen": {
+     "prp-06082b03bb": {
+      "recomputed_v1": {
+       "p_pass": 0.5,
+       "p_requests": 0.25,
+       "pairs": 6,
+       "pass_delta": 0.3333,
+       "reason": "neither the improvement nor the regression rule is met",
+       "request_change": -0.4255,
+       "verdict": "inconclusive"
+      },
+      "stored_v1": {
+       "p_pass": 0.5,
+       "p_requests": 0.25,
+       "pairs": 6,
+       "pass_delta": 0.3333,
+       "reason": "neither the improvement nor the regression rule is met",
+       "request_change": -0.4255,
+       "verdict": "inconclusive"
+      },
+      "v1_reproduced": true,
+      "v2_post_hoc": {
+       "p_pass": 0.5,
+       "p_requests": 0.25,
+       "pairs": 6,
+       "pass_delta": 0.3333,
+       "reason": "neither the improvement nor the regression rule is met",
+       "request_change": -0.4255,
+       "verdict": "inconclusive"
+      }
+     }
+    },
+    "reproduced": true,
+    "rule": "paired-signflip-v1",
+    "state": "evaluated"
+   },
+   "description": "site-5 EXP-B",
+   "faithful": true,
+   "graders": {
+    "v1": {
+     "id": "generated-criteria",
+     "implementation": "investigate.taskgen.criteria.grade (answer_match: exact after normalisation, or the truth inside an answer of at most len(truth)+16 characters; sets: exact normalised equality)",
+     "version": "1"
+    },
+    "v2": {
+     "code_sha256": "6c38ad13168434edb11a409d0b70f55d6c93800750eb4c52ba7669f620cf710f",
+     "id": "generated-criteria",
+     "implementation": "agent_readiness.grading.v2",
+     "version": "2"
+    }
+   },
+   "inputs": {
+    "criteria_sha256": "142b539234947de8ce404e165279ecb4ddef5ac424d9277f1e5b1cea083af58d",
+    "evaluation_sha256": "8aa83c05f998354cb8ae0f0b59a4abc8475f529477baf724b13e61902aeac362",
+    "snapshot_sha256": "1796c2a3c8b5f957918f99f0262d84feccdb6391e13fb2f88dee189897b6d96b",
+    "tasks": 6
+   },
+   "key_errors": [],
+   "label": "POST-HOC RESCORE: grader_v2 applied to answers recorded earlier. Not pre-registered. The official results of this run are its grader_v1 grades and verdicts, reproduced here unchanged; v2 statistics apply the same rules to v2 grades and must not be read as the original verdicts.",
+   "run": "site-5-live-c",
+   "schema": "grader-rescore-v1-public",
+   "tally": {
+    "baseline": {
+     "trials": 6,
+     "v1_evidence_backed": 4,
+     "v1_passed": 4,
+     "v2_evidence_backed": 4,
+     "v2_passed": 4,
+     "void": 0
+    },
+    "patched": {
+     "trials": 6,
+     "v1_evidence_backed": 6,
+     "v1_passed": 6,
+     "v2_evidence_backed": 6,
+     "v2_passed": 6,
+     "void": 0
+    },
+    "placebo": {
+     "trials": 3,
+     "v1_evidence_backed": 1,
+     "v1_passed": 1,
+     "v2_evidence_backed": 1,
+     "v2_passed": 1,
+     "void": 0
+    }
+   },
+   "v2_reason_counts": {
+    "matches_truth": 8,
+    "matches_truth_with_consistent_detail": 3,
+    "missing_items": 2,
+    "multiple_candidates": 2
+   }
+  },
+  {
+   "changed": [],
+   "comparisons": {
+    "state": "not_evaluated"
+   },
+   "description": "site-5 L1a",
+   "faithful": true,
+   "graders": {
+    "v1": {
+     "id": "generated-criteria",
+     "implementation": "investigate.taskgen.criteria.grade (answer_match: exact after normalisation, or the truth inside an answer of at most len(truth)+16 characters; sets: exact normalised equality)",
+     "version": "1"
+    },
+    "v2": {
+     "code_sha256": "6c38ad13168434edb11a409d0b70f55d6c93800750eb4c52ba7669f620cf710f",
+     "id": "generated-criteria",
+     "implementation": "agent_readiness.grading.v2",
+     "version": "2"
+    }
+   },
+   "inputs": {
+    "criteria_sha256": "142b539234947de8ce404e165279ecb4ddef5ac424d9277f1e5b1cea083af58d",
+    "evaluation_sha256": "10163cf4b93145f2a8986d985feb6033456657c0cb7659c35ddfd1b5ca78d225",
+    "snapshot_sha256": "1796c2a3c8b5f957918f99f0262d84feccdb6391e13fb2f88dee189897b6d96b",
+    "tasks": 6
+   },
+   "key_errors": [],
+   "label": "POST-HOC RESCORE: grader_v2 applied to answers recorded earlier. Not pre-registered. The official results of this run are its grader_v1 grades and verdicts, reproduced here unchanged; v2 statistics apply the same rules to v2 grades and must not be read as the original verdicts.",
+   "run": "site-5-live",
+   "schema": "grader-rescore-v1-public",
+   "tally": {
+    "baseline": {
+     "trials": 6,
+     "v1_evidence_backed": 4,
+     "v1_passed": 4,
+     "v2_evidence_backed": 4,
+     "v2_passed": 4,
+     "void": 0
+    }
+   },
+   "v2_reason_counts": {
+    "matches_truth": 3,
+    "matches_truth_with_consistent_detail": 1,
+    "missing_items": 1,
+    "multiple_candidates": 1
+   }
+  }
+ ],
+ "schema": "grader-rescore-summary-v1"
+}
