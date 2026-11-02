@@ -41,7 +41,10 @@ def site_view(site_id: str, *, with_hashes: bool = True) -> dict:
     s = get(site_id)
     if not s.controlled:
         raise KeyError(site_id)
-    ctx = context_for(site_id)
+    try:
+        ctx = context_for(site_id)
+    except (OSError, ValueError):
+        ctx = None                                    # shown as "no business context onboarded"; never invented
     return {"id": s.id, "label": s.label, "domain": s.domain, "controlled": s.controlled, "oracle": True, "start_path": s.start_path,
             "listings": list(s.listings), "noun": list(s.noun) if s.noun else None,
             "variants": [{"name": v, "label": v.capitalize(), "description": VARIANT_TEXT.get(site_id, {}).get(v),

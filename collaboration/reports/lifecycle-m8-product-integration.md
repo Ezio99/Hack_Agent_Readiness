@@ -122,14 +122,31 @@ Withheld: expected answers and every oracle record, criteria truths, evidence te
 |---|---|
 | `tests/test_lifecycle_m8.py` (new, 31) | passed |
 | `tests/test_lifecycle_m8_browser.py` (new, real jailed Chromium + worker subprocess through the API; run alone) | 1 passed (87 s) |
-| lifecycle M1–M7 suites + M8 + graders + hosted + diagnostics + framework + deployment safety (not browser) | see the final run below |
-| `scripts/critical-tests.sh` | see the final run below |
+| lifecycle M1–M7 suites + M8 + graders v2/rescore + hosted (api, admission, service, derived cache, paired, jail) + diagnostics + framework + deployment-safety / export scripts (not browser) | **334 passed**, 5 deselected |
+| `scripts/critical-tests.sh` | **214 passed**, 17 deselected (as at the baseline) |
 | `dashboard`: `npx vitest run` | 195 passed (189 existing + 6 new, which render the committed M7 dataset) |
 | `npm run build` (tsc, Vite, `check:dist`) | passed |
 | Rendered review (real FastAPI app, disabled mode, dataset only, production headers): lifecycle steps, report, traces for tasks 1, 5, 6, homepage at 1440×900 and 390×844 | no console errors; no horizontal overflow (one found and fixed: an `sr-only` header escaping a scroll container) |
-| Docker image build and disabled-mode smoke test | see §8.1 |
+| `tests/test_evalruns_m5.py -m browser` (existing M5 end-to-end; run alone) | 1 passed |
+| Dataset re-derivation from the local source artefacts | valid, byte-equal |
+| Docker image build and disabled-mode smoke test | passed after one fix (§8.1) |
 
-The final regression figures and the image smoke test are appended in §8.1 when run.
+### 8.1 Candidate image
+
+`docker build -f deploy/Dockerfile -t agent-readiness-app:m8-candidate .` then a disabled-mode container on loopback against a **copy** of the local
+data volume (the volume itself was never mounted):
+- log: `lifecycle: datasets=m7-larkspur-browser-1 store=no launch=disabled paid=disabled web-approval=disabled`;
+- all 13 lifecycle GET routes 200 (overview, sites, generations, suites, frozen, evaluations, the M7 report, a timeline, a WebP screenshot, …);
+- refusals: lifecycle paid launch 403, a launch with a `url` field 422, hosted Ironbark start 503 (disabled); CSP and nosniff headers present;
+- the existing Ironbark workspace renders its recorded history unchanged;
+- rendered pages at 1440×900 and 390×844: no console errors, no server tracebacks, no horizontal page overflow.
+
+**Bug found by this check and fixed:** the Ironbark context fixture (`suites/stage_a/fixtures/*.json`) was not in the wheel's package data, so
+`/api/lifecycle/sites` failed only in the installed image. `pyproject.toml` now ships `suites/stage_a/fixtures/*.json` and
+`research/taskplan/fixtures/*.json`, and a missing context degrades to "no business context onboarded" instead of an error.
+
+Release-candidate screenshots (from the container): `dashboard/review/m8/` (lifecycle steps, report top and dimensions, traces for tasks 1, 5 and 6,
+mobile trace and report, the unchanged workspace).
 
 ## 9. Owner decisions needed
 
