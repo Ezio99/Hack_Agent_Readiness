@@ -280,3 +280,4 @@ button.ws-cell-button:hover{background:var(--paper)}
 .ws-v2-line small{color:var(--ink-2)}
 .ws-v2-diff{display:block;margin-top:2px;font-style:italic;color:var(--ink-2)}
 .ws-v2-verdicts{margin-top:4px;color:var(--ink-2)}
+.ws-provenance{font-size:13px;line-height:1.55;color:var(--ink-2)}.ws-provenance code{font:400 12px var(--mono)}

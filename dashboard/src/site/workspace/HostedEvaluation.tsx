@@ -11,12 +11,17 @@ import { History, type HistoryItem } from './History';
 type Outcome = 'evidence_supported_pass' | 'strict_pass' | 'not_passed' | string;
 export interface TaskRow { arm: 'Original' | 'Modified'; task: number; state: string; outcome: Outcome; requests: number | null; page_views: number | null; steps: number | null; elapsed_seconds: number | null }
 export interface GradingV2 { label: string; faithful: boolean; tasks: { arm: 'Original' | 'Modified'; task: number; outcome: string; reasons: string[] }[]; assessment: { frozen_rule: string | null; exploratory: string | null } | null }
-export interface Rep { index: number; state: string; tasks: TaskRow[]; assessment: { frozen_rule: string | null; exploratory: string | null; evidence_origin: string | null } | null; grading_v2?: GradingV2 | null }
+type Setting = { value: string | number | (string | number)[] | null; consistent: boolean };
+export interface Provenance { trials: number; model_requests_recorded: number; model: Setting; reasoning_effort: Setting; max_completion_tokens: Setting; consistent: boolean;
+  agent_profile: { name: string | string[]; sha256: string | string[]; verified_against_profile_file: boolean };
+  graders: { official: { id: string; version: string }[]; post_hoc: { id: string; version: string; derivation_id: string } | null };
+  by_arm?: Record<string, { trials: number; agent_profile: { name: string | string[] } }>; arm_labels?: Record<string, string> }
+export interface Rep { index: number; state: string; tasks: TaskRow[]; assessment: { frozen_rule: string | null; exploratory: string | null; evidence_origin: string | null } | null; grading_v2?: GradingV2 | null; provenance?: Provenance | null }
 type ArmV2 = { completed: number; evidence_supported_passes: number; strict_passes: number };
 interface ArmSummary { planned: number; completed: number; failed: number; evidence_supported_passes: number; strict_passes: number; requests_total: number; requests_mean: number | null; page_views_mean: number | null; steps_mean: number | null; elapsed_mean: number | null }
 export interface Job { id: string; state: string; mode: 'live' | 'rehearsal' | null; repetitions: number | null; recovery_required?: boolean; created_at: number; started_at: number | null; finished_at: number | null; reps: Rep[]; summary: Record<'Original' | 'Modified', ArmSummary>; summary_v2?: ({ label: string; repetitions: number } & Record<'Original' | 'Modified', ArmV2>) | null }
 interface Worker { state: 'idle' | 'busy' | 'unavailable'; job: string | null; started_at?: number | null; repetitions?: number; finished_runs?: number; total_runs?: number | null; estimated_remaining_seconds?: number | null }
-interface Config { worker?: Worker; repetition_duration?: { seconds: number; basis: 'measured' | 'first genuine run' | 'default'; samples: number }; available: boolean; mode: 'live' | 'rehearsal' | null; access?: 'public' | 'operator'; reason?: string | null; repetitions: number[]; model: string; agent_profile: string; tasks: { task: number; question: string; limits?: { max_steps?: number; timeout_seconds?: number } }[]; remaining_repetitions: number; active: string | null }
+interface Config { agent_settings?: { profile: string; profile_file_sha256: string; reasoning_effort: string | null; max_completion_tokens: number | null } | null; worker?: Worker; repetition_duration?: { seconds: number; basis: 'measured' | 'first genuine run' | 'default'; samples: number }; available: boolean; mode: 'live' | 'rehearsal' | null; access?: 'public' | 'operator'; reason?: string | null; repetitions: number[]; model: string; agent_profile: string; tasks: { task: number; question: string; limits?: { max_steps?: number; timeout_seconds?: number } }[]; remaining_repetitions: number; active: string | null }
 
 const ACTIVE = ['reserved', 'running'];
 const STORE = 'ironbark-hosted-job';
@@ -47,6 +52,21 @@ function cell(t: TaskRow | undefined) {
 }
 
 const V2_TEXT: Record<string, string> = { evidence_supported_pass: 'pass', strict_pass: 'correct, evidence not observed', not_passed: 'not passed' };
+
+const show = (v: unknown) => Array.isArray(v) ? v.join(' / ') : String(v ?? 'not recorded');
+
+/** Model and grader provenance as recorded for one evaluation (derived server-side from its trial records and request traces). */
+export function ProvenanceNote({ p }: { p: Provenance }) {
+  const official = p.graders.official.map(g => `${g.id} v${g.version}`).join(', ');
+  const baseline = p.by_arm?.baseline;
+  return <p className="ws-provenance" aria-label="Recorded model provenance">
+    <strong>Recorded for this evaluation.</strong> Model <code>{show(p.model.value)}</code> · reasoning_effort <code>{show(p.reasoning_effort.value)}</code> · max_completion_tokens <code>{show(p.max_completion_tokens.value)}</code> ·
+    agent profile <code>{show(p.agent_profile.name)}</code> (sha256 <code>{show(p.agent_profile.sha256).slice(0, 12)}…</code>{p.agent_profile.verified_against_profile_file ? ', matches the profile file' : ', NOT verified against the profile file'}) ·
+    {' '}{p.trials} agent runs, {p.model_requests_recorded} model requests recorded. Official grade: {official}{p.graders.post_hoc ? `; post-hoc rescore: ${p.graders.post_hoc.id} v${p.graders.post_hoc.version} (shown separately, never the official result)` : ''}.
+    {!p.consistent && <> <strong>Inconsistent across runs:</strong> see the export's model_provenance.</>}
+    {baseline && <> The historical baseline used only by the frozen comparison rule was recorded with profile <code>{show(baseline.agent_profile.name)}</code>.</>}
+  </p>;
+}
 
 export function ProgressGrid({ rep, questions, onSelect, selected }: { rep: Rep; questions: Record<number, string>; onSelect?: (s: Selection) => void; selected?: Selection | null }) {
   const find = (arm: string, task: number) => rep.tasks.find(t => t.arm === arm && t.task === task);
@@ -227,7 +247,8 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
             <p className="ws-note" id="ws-run-note">{note}</p></li>
         </ol>
         <details className="ws-method"><summary>Methodology &amp; provenance</summary>
-          <p><strong>Agent.</strong> Browser Use agent driven by <code>{config?.model ?? 'muse-spark-1.3'}</code> with profile <code>{config?.agent_profile ?? 'suite-v2-compat2'}</code>; each task is limited to {config?.tasks[0]?.limits?.max_steps ?? 14} steps and {config?.tasks[0]?.limits?.timeout_seconds ?? 240} seconds; no retries.</p>
+          <p><strong>Agent.</strong> Browser Use agent driven by <code>{config?.model ?? 'unavailable'}</code> with the frozen profile <code>{config?.agent_settings?.profile ?? config?.agent_profile ?? 'unavailable'}</code>{config?.agent_settings && <> (reasoning_effort <code>{show(config.agent_settings.reasoning_effort)}</code>, max_completion_tokens <code>{show(config.agent_settings.max_completion_tokens)}</code>, read from the profile file)</>}; each task is limited to {config?.tasks[0]?.limits?.max_steps ?? 14} steps and {config?.tasks[0]?.limits?.timeout_seconds ?? 240} seconds; no retries.</p>
+          {job?.reps.find(r => r.provenance)?.provenance && <ProvenanceNote p={job.reps.find(r => r.provenance)!.provenance!} />}
           <p><strong>Tasks.</strong> The same four frozen tasks run on both versions, in a counterbalanced order, for every repetition:</p>
           <ol>{(config?.tasks ?? []).map(t => <li key={t.task}>{t.question}</li>)}</ol>
           <p><strong>Grading.</strong> An independent grader checks each answer against ground truth the agent never sees. “Evidence-supported” also requires that the agent actually viewed the pages holding the answer. Agent self-assessment is ignored. Official grades use grader v1 (the version pre-registered for these tasks). Grader v2, shown separately as a post-hoc rescore, also accepts a correct answer that adds detail consistent with the site, and still rejects wrong, hedged, contradictory or multiple-candidate answers.</p>
@@ -287,6 +308,7 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
               <ProgressGrid rep={rep} questions={questions} onSelect={watch} />
               {rep.assessment && <p className="ws-verdicts">Frozen comparison rule: <strong>{rep.assessment.frozen_rule ?? 'unavailable'}</strong> · Exploratory listing rule: <strong>{rep.assessment.exploratory ?? 'unavailable'}</strong> · Evidence: {rep.assessment.evidence_origin === 'real_model' ? 'real model' : rep.assessment.evidence_origin ?? 'unverified'}</p>}
               {rep.grading_v2?.faithful && rep.grading_v2.assessment && <p className="ws-verdicts ws-v2-verdicts" title={rep.grading_v2.label}>Grader v2, post-hoc (not pre-registered): frozen rule applied to v2 grades <strong>{rep.grading_v2.assessment.frozen_rule ?? 'unavailable'}</strong> · exploratory rule <strong>{rep.grading_v2.assessment.exploratory ?? 'unavailable'}</strong></p>}
+              {rep.provenance && <ProvenanceNote p={rep.provenance} />}
             </article>)}</div>
           </div>}
 

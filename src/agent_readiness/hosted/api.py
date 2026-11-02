@@ -97,7 +97,32 @@ def summarize(reps: list[dict]) -> dict:
 
 
 DERIVED = 'derived'                 # disposable caches derived from run evidence; never authoritative, safe to delete (rebuilt on demand)
-EXPORT_CACHE_VERSION = 'export-v2'  # v2 (2026-11-02): spend.ceiling_usd is the ENFORCED ledger ceiling with its basis; v1 caches (<run>.public.json) are no longer read
+EXPORT_CACHE_VERSION = 'export-v3'  # v3: + model_provenance derived from the trial records; v2: spend.ceiling_usd is the ENFORCED ledger ceiling; older caches are no longer read
+EVALUATION_ARMS = ('placebo', 'patched')   # the evaluation's own trials (Original, Modified); a fork's `baseline` trials are imported history
+AGENT_PROFILE = 'suite-v2-compat2'         # the frozen profile new hosted evaluations run with (ironbark_runner.validate_manifest enforces the same name)
+
+
+def _code_id(*files: Path) -> str:
+    h = hashlib.sha256()
+    for f in files:
+        h.update(Path(f).read_bytes())
+    return h.hexdigest()[:16]
+
+
+def provenance_view(root: Path, run_id: str) -> dict:
+    """Model and grader provenance of a finished repetition, derived read-only from its trial records and request traces (agent_readiness.provenance),
+    cached under derived/model-provenance/ keyed by the deriving code."""
+    from .. import provenance as P
+    cached = derived_path(root, 'model-provenance', f'{run_id}.{_code_id(Path(P.__file__))}.json')
+    if cached.is_file():
+        try:
+            return json.loads(cached.read_text())
+        except ValueError:
+            pass
+    view = P.model_provenance(root / run_id, arms=EVALUATION_ARMS)
+    view['arm_labels'] = {'placebo': 'Original', 'patched': 'Modified', 'baseline': 'historical baseline (imported; used only by the frozen comparison rule)'}
+    ironbark_runner.write(cached, view)
+    return view
 
 
 def derived_path(root: Path, namespace: str, name: str) -> Path:
@@ -119,6 +144,7 @@ def verified_export(root: Path, run_id: str) -> dict:
     data = exporter.public_demo(exporter.export_run(root / run_id))
     if not data['run']['complete'] or data['evaluation']['state'] != 'evaluated':
         raise ValueError('evaluation is incomplete')
+    data['model_provenance'] = provenance_view(root, run_id)
     ironbark_runner.write(cached, data)
     return data
 
@@ -335,6 +361,16 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
         return {'state': 'busy', 'job': job_id, 'started_at': started, 'repetitions': data['repetitions'], 'finished_runs': finished, 'total_runs': total,
                 'estimated_remaining_seconds': remaining}
 
+    def agent_settings():
+        """The frozen profile new evaluations run with, read from the profile file (not restated here)."""
+        try:
+            from ..agent import profile
+            from ..suite.core import canonical_hash
+            p = profile(AGENT_PROFILE)
+            return {'profile': AGENT_PROFILE, 'profile_file_sha256': canonical_hash(p), 'reasoning_effort': p.get('reasoning_effort'), 'max_completion_tokens': p.get('max_completion_tokens')}
+        except Exception:
+            return None
+
     @app.get('/api/ironbark/config')
     def config():
         totals = admission.totals()
@@ -342,7 +378,7 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
         from ..agent import ModelConfig
         return {'worker': worker_state(), 'repetition_duration': repetition_seconds(), 'available': enabled(), 'mode': getattr(executor, 'mode', None) if enabled() else None, 'access': 'public' if public_start else 'operator',
                 'reason': None if enabled() else (unavailable_reason or 'disabled'),
-                'repetitions': list(paired.REPETITIONS), 'model': ModelConfig().model, 'agent_profile': 'suite-v2-compat2',
+                'repetitions': list(paired.REPETITIONS), 'model': ModelConfig().model, 'agent_profile': AGENT_PROFILE, 'agent_settings': agent_settings(),
                 'tasks': tasks, 'remaining_repetitions': max(0, (totals['ceiling_microusd'] - totals['reserved_microusd']) // totals['per_repetition_microusd']),
                 'active': active[0] if active else None}
 
@@ -410,6 +446,10 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
                         out['grading_v2'] = grading_v2(root, rep['run_id'])
                     except Exception:
                         out['grading_v2'] = None              # the official v1 results never depend on the rescore
+                    try:
+                        out['provenance'] = provenance_view(root, rep['run_id'])
+                    except Exception:
+                        out['provenance'] = None
         out = {'id': job_id, 'state': held['state'], 'recovery_required': recovery_required, 'mode': job['mode'], 'repetitions': job['repetitions'],
                'created_at': job['created_at'], 'started_at': job.get('started_at'), 'finished_at': job.get('finished_at'),
                'reps': reps, 'summary': summarize(reps), 'summary_v2': summarize_v2(reps)}

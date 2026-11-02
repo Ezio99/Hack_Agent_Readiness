@@ -121,3 +121,22 @@ it('hides grader v2 entirely when the rescore was not faithful', async () => {
   expect(host.querySelector('.ws-v2-diff')).toBeNull();
   expect(host.querySelector('.ws-v2-verdicts')).toBeNull();
 });
+
+it('shows recorded model provenance and the frozen profile settings, both from the server', async () => {
+  const provenance = { trials: 8, model_requests_recorded: 78, consistent: true, model: { value: 'muse-spark-1.3', consistent: true }, reasoning_effort: { value: 'low', consistent: true },
+    max_completion_tokens: { value: 4096, consistent: true }, agent_profile: { name: 'suite-v2-compat2', sha256: '29ad53dcf7c9d799be4e', verified_against_profile_file: true },
+    graders: { official: [{ id: 'generated-criteria', version: '1' }], post_hoc: { id: 'generated-criteria', version: '2', derivation_id: 'abc' } },
+    by_arm: { baseline: { trials: 4, agent_profile: { name: 'suite-v2-compat1' } } } };
+  const done = job({ state: 'completed', finished_at: 61,
+    reps: [{ index: 1, state: 'completed', assessment: { frozen_rule: 'inconclusive', exploratory: 'consistent_with_h1', evidence_origin: 'real_model' }, provenance,
+      tasks: [{ arm: 'Original', task: 1, state: 'completed', outcome: 'not_passed', requests: 13, page_views: 13, steps: 14, elapsed_seconds: 62 }] }],
+    summary: { Original: arm({ completed: 1, requests_total: 13, requests_mean: 13 }), Modified: arm() } });
+  localStorage.setItem('ironbark-hosted-job', done.id);
+  server(url => url.endsWith('/config') ? config({ agent_settings: { profile: 'suite-v2-compat2', profile_file_sha256: 'x', reasoning_effort: 'low', max_completion_tokens: 4096 } }) : url.endsWith('/jobs') ? [] : url.endsWith('/insights') ? { state: 'unavailable' } : done);
+  const { host } = await mount();
+  const notes = [...host.querySelectorAll('.ws-provenance')].map(n => n.textContent ?? '');
+  expect(notes.length).toBeGreaterThanOrEqual(1);
+  for (const s of ['muse-spark-1.3', 'reasoning_effort low', 'max_completion_tokens 4096', 'suite-v2-compat2', '29ad53dcf7c9', 'matches the profile file', '78 model requests', 'generated-criteria v1', 'never the official result', 'suite-v2-compat1'])
+    expect(notes[0]).toContain(s);
+  expect(host.querySelector('.ws-method')!.textContent).toContain('read from the profile file');
+});
