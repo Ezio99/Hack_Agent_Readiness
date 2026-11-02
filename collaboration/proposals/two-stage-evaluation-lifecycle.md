@@ -1,191 +1,156 @@
-# Proposal: two-stage evaluation lifecycle (task-suite design → frozen agent evaluation)
+# Two-stage evaluation lifecycle (task-suite design → frozen agent evaluation)
 
-**Status:** architecture and minimal implementation plan for owner review. **Not implemented. No paid calls.** It is isolated from production and the frozen experiments, and post-dates the 2026-11-04 release freeze.
+**Status:** approved by the owner 2026-11-02. Implementation starts with the proposal update and M1 only; later milestones need review after M1.
+
+**Isolation:** branch `research/llm-task-planning`. The hackathon release candidate, the deployed service and existing frozen experiments (grader v1, evaluator v1, the hosted Ironbark evaluation) are not modified. No paid LLM or browser calls and no deployment without separate approval. **The 2026-11-05 submission takes priority;** Wednesday 2026-11-04 is the submission-readiness checkpoint.
 
 **Evidence base:**
-- the planner experiment (17/20 deterministic with restatement, but only 6/20 with natural wording);
+- the planner experiment (17/20 deterministic with restatement; 6/20 with natural wording);
 - taskeval-1;
 - the Larkspur pilot (8 paid jailed trials);
 - docs/FUTURE_ARCHITECTURE.md.
 
-## 1. Principles
+**Product workflow this implements:** business context and catalogue → LLM task generation → independent validation and refinement → **human approval** → **frozen suite** → live agent evaluation → evidence-linked diagnostics → targeted website improvement → **re-evaluation against the same frozen suite**. A frozen suite is reusable across repeated live evaluations and website variants. Live execution references the frozen manifest and never regenerates tasks.
 
-1. **Natural-language fidelity first.** The executed task should be what a customer would actually say. Restatement is a labelled fallback, not the default. Optimising for gate acceptance at the expense of wording is a failure mode to measure, not a goal.
-2. **Selection blindness.** Stage A sees only the catalogue, business context, personas, journeys, snapshots and evaluator output. Agent trials, variant pass rates and desired comparison outcomes are never inputs. This is enforced by recorded input hashes, not by convention.
-3. **Hard gates before soft scores.** Deterministic verifiability (oracle, graders, cross-variant fairness) is never overridden by relevance or realism scores, nor by any advisory LLM judge.
-4. **Bounded effort, honest gaps.** Stage A has a round and budget limit and a stopping rule. If quality targets are not met, it reports the gaps; it never lowers the bar to fill a suite.
-5. **Immutability and pre-registration.** Stage B runs only an approved, hash-frozen suite with a statistical plan fixed before execution. Anything decided after seeing results is labelled exploratory.
+## 1. Approved decisions (2026-11-02)
 
-## 2. Lifecycle
-
-```
-                    ┌──────────────────── STAGE A: TASK-SUITE DESIGN (per site, per suite version) ───────────────────┐
- site definition ─► │ round r:  generator (LLM, versioned prompt)  ─►  taskeval-2 (code-only)  ─►  feedback synthesiser  │
- catalogue (verified)│            ▲   targets + structured feedback        hard gates / soft criteria     rejection categories,│
- business context    │            └──────────────────────────────────────  coverage matrix  ◄──────────  coverage gaps,       │
- personas, journeys  │   stop: targets met | max rounds | budget | no marginal gain       ─► candidate pool     duplicates      │
-                    └───────────────────────────────────────────────────────────────────────────────┬────────────────────────┘
-                                                              suite proposal + gap report ─► OWNER REVIEW ─► approved suite version
-                    ┌──────────────────── STAGE B: FROZEN AGENT EVALUATION ─────────────────────────┴────────────────────────┐
-                    │ evaluation manifest (immutable, hashed) = suite version × site variants × agent profile × model settings │
-                    │   × request limits × graders × repetitions × randomisation × pre-registered comparison plan              │
-                    │ zero-cost preflight (dev provider, jail) ─► approval ─► paid run (gate, ledger, jail) ─► results:         │
-                    │   pre-registered verdicts | exploratory analyses | diagnostics (Phase 4) | provenance                    │
-                    └──────────────────────────────────────────────────────────────────────────────────────────────────────────┘
-```
-
-## 3. Stage A design
-
-### 3.1 Inputs (hashed into the suite record)
-- **Site definition:** variants, snapshots, oracle.
-- **Verified catalogue view:** attributes, domains, entities.
-- **Business context,** labelled `synthetic` or `owner-provided`.
-- **Personas and journeys,** each with priority weights.
-- **Capability targets** (§3.3).
-- **Generator configuration:** model, prompt version, schema version, reasoning effort, token limit.
-- **Evaluator version and configuration.**
-- **An explicit `agent_evidence_consulted: false`.** Stage A has no API for reading trial data.
-
-### 3.2 taskeval-2: what changes from taskeval-1
-
-| Check | Kind | Change |
+| # | Decision | Status |
 |---|---|---|
-| Grounding, answerable, unique, oracle agreement, grader v1/v2 compatibility, cross-variant fairness, evidence | hard | unchanged (reused) |
-| **Natural-wording gate (proposed `gate-nl-1`)** | hard, for the executed wording | Every constraint *value* must be stated in the customer's words, and the stated values must map unambiguously to one attribute's domain. "Held on Saturdays" passes because Saturday belongs only to class day. "Under a tight budget" fails because no threshold is stated. It replaces the literal field-name requirement *for natural wording only*; the existing gate stays the official gate for frozen experiments. **Needs owner decision (§7).** |
-| **Intent preservation** | hard if the restatement is executed | Criterion values must be traceable to the wording; the restatement may add field names but not new thresholds. Thresholds the generator introduced are recorded as `assumptions`. A task whose spec rests on an unstated assumption cannot run with natural wording. |
-| Expressibility | hard | Classifies into deterministic, rubric or human review, with the reason. Extends to new criterion kinds only when they ship with oracle support (§5, M2b). |
-| Ambiguity | hard | Gate ambiguity checks plus value collisions across attributes (the same value in two domains). |
-| Business relevance | soft | Persona-to-attribute map and journey match. Owner-provided maps override synthetic ones. |
-| Realism | soft | Question form, customer context, length, no internal field names, no catalogue jargon. Optional **advisory** LLM judge: recorded with its own provenance, can only lower confidence, never overrides a hard result, off by default. |
-| Diversity and duplication | soft + hard | An identical criterion is a hard reject. Near-duplicate similarity, and capability and attribute spread, are soft. |
+| 1 | **Natural-wording gate.** A separate, versioned evaluator-v2 check. Evaluator v1 and the frozen experiments stay unchanged. | approved |
+| 2 | **Restated wording.** Only as a separately labelled *assisted-wording* condition. Assisted and natural-wording outcomes are never pooled. | approved |
+| 3 | **Coverage and stopping.** At most three generation rounds, with the proposed coverage targets, a budget cap, a diminishing-return stopping rule and explicit gap reports. Acceptance thresholds are never lowered to fill a suite. | approved provisionally |
+| 4 | **New task kinds.** Ranked-within-a-filter and either/or, built in M2b (after M2), with independent oracle and grader support. | approved |
+| 5 | **Advisory LLM realism judge.** Off by default; deterministic checks and human review come first. | deferred |
+| 6 | **Statistical plan.** Revised (§4.2): α = 0.05 confirmatory, clustering-aware, feasibility or power assessment required, pre-registration, and underpowered studies run as exploratory. | revised |
+| 7 | **Suite approval.** Human approval is required, initially by the owner. Approval precedes immutable freezing; substantive edits create a new version that needs reapproval. | approved |
+| 8 | **Timing.** Begin now with the proposal update and M1; review after M1. Supersedes the earlier post-submission and Wednesday-start restrictions. | approved |
 
-### 3.3 Coverage matrix and targets (per suite)
+## 2. Principles
 
-Cells are persona × journey. A capability axis is reported alongside:
+1. **Natural-language fidelity.** Prefer what a customer would actually say. Preserve genuine customer ambiguity. Never silently invent numeric thresholds or constraints.
+2. **Strict separation of Stage A from Stage B outcomes.** Task design and selection never see agent trials, variant pass rates or desired comparison outcomes. This is enforced through imports, record schemas and store references (§3.6), not by convention.
+3. **Hard gates before soft scores.** Deterministic verifiability (oracle, graders, cross-variant fairness) is never overridden by relevance or realism scores.
+4. **Bounded effort, honest gaps.** Stage A has round and budget limits and a stopping rule. If quality targets are not met, it reports the gaps.
+5. **Immutability and pre-registration.** Stage B runs only an approved, hash-frozen suite with a statistical plan fixed before execution. Anything else is exploratory.
 
-| Capability | Description | Status |
-|---|---|---|
-| lookup | one fact of one named item | today |
-| filter-1 | one condition | today |
-| filter-n | several conditions | today |
-| extremum | highest or lowest | today |
-| constrained ranking | e.g. "cheapest beginner course" | needs extension |
-| two-item comparison | | needs extension |
-| either/or condition | | needs extension |
-| policy (rubric) | | today |
+## 3. Stage A: task-suite design
 
-Default targets (configurable, frozen into the suite record):
-- every persona ≥ 2 tasks;
-- every journey with weight ≥ 0.10 ≥ 1 task;
-- ≥ 4 capabilities;
-- ≥ 30 % multi-condition;
-- **≥ 70 % of tasks executable in natural wording**;
-- no near-duplicate pair above 0.6 similarity;
-- suite size 8–12 deterministic tasks, plus ≤ 2 rubric tasks reported separately.
+### 3.1 Loop
 
-### 3.4 Feedback synthesiser (round r → r+1)
+Each round runs: generator (LLM, versioned prompt) → evaluator v2 (code only) → feedback synthesiser → next round. It stops when:
+- the targets are met; or
+- 3 rounds are complete; or
+- the budget cap is reached; or
+- two consecutive rounds each add fewer than 2 accepted tasks that fill an uncovered cell or improve natural-wording share.
 
-The synthesiser turns evaluator output into structured, answer-free guidance:
-- **Rejection categories with counts and examples of wording only:** for instance, "3 proposals implied a threshold without stating it; state the amount or day in the customer's words", or "'category' is not a verified attribute".
-- **Uncovered coverage cells:** "no task for professional_upskiller × check_availability".
-- **Duplicates to avoid,** by criterion signature.
-- **Capabilities still missing.**
+The output is a suite proposal plus a gap report, which goes to human approval.
 
-It never passes expected answers, agent results or variant outcomes.
+**Inputs, hashed into the suite record:**
+- site definition (variants, snapshots, oracle);
+- verified catalogue view;
+- business context, labelled `synthetic` or `owner-provided`;
+- personas and journeys with weights;
+- capability targets;
+- generator configuration;
+- evaluator version and configuration.
 
-### 3.5 Stopping rule
+### 3.2 Natural-language classification (amendment)
 
-Stop at the first of:
-1. all targets met (§3.3);
-2. **R_max = 3** rounds;
-3. the Stage A budget cap is reached;
-4. two consecutive rounds each add fewer than 2 new accepted tasks that fill an uncovered cell or improve natural-wording share.
+Every candidate's customer wording is classified into exactly one of four categories:
 
-On stopping:
-- **Targets met:** the result is a suite proposal (the deterministic selection rule picks from the pool, maximising coverage; quality breaks ties).
-- **Targets not met:** a gap report naming the uncovered cells, the dominant rejection causes, and which gaps need criterion-language extensions rather than more generation.
+| Category | Meaning | Executed as | Scoring |
+|---|---|---|---|
+| **natural_verifiable** | the customer's own wording states every value the criterion needs, unambiguously | the customer wording, unchanged | deterministic, natural-wording condition |
+| **natural_underspecified** | the intent is clear but a value is missing, e.g. "under a tight budget" or "a few weeks" | **not** executed deterministically as is; recorded as needing clarification. Genuine ambiguity is preserved, never resolved by an invented threshold | excluded from deterministic scoring. It may become an *assisted* task only if a clarification is explicitly recorded (by a human, or as a labelled assisted restatement). |
+| **natural_judgment** | an answer that needs judgment, e.g. "which course would best set me up for IT" | the customer wording | rubric or human review; never deterministic |
+| **assisted_restatement** | the customer wording plus an explicit restatement (may add field names; any added value is a recorded assumption) | the restated text, **labelled `assisted`** | deterministic, assisted condition only; never pooled with natural |
 
-The owner approves, edits (manual tasks are run through the same evaluator), or rejects.
+Each task record preserves the original customer wording, the executed wording, the category, **interpretation decisions** (for example "field name implied by a value unique to the class-day domain"), **assumptions** (any value not stated by the customer), validation reasons and provenance.
 
-## 4. Stage B design
+The **70 % natural-wording execution** figure is an **aspirational development metric** reported per suite. It is **not** an admission requirement.
 
-### 4.1 Evaluation manifest (immutable; content-hashed; write-once)
+### 3.3 Evaluator v2 (built in M2; versioned; v1 unchanged)
 
-- **Suite:**
-  - suite version id and hash;
-  - per task: customer wording, executed wording (with a flag: natural or restated), structured specification, verifiability class, evidence requirements and request limits;
-  - expected outcomes in **private records**, referenced by hash.
-- **Identities:**
-  - the oracle;
-  - the graders: official version plus the post-hoc rescore versions allowed;
-  - each site variant's snapshot sha256 and source fingerprint;
-  - the catalogue and context fingerprints.
-- **Agent:** model, endpoint, reasoning effort, max completion tokens, profile name and hash, parser, and jail policy hash.
-- **Design:**
-  - variants;
-  - repetitions;
-  - randomisation and counterbalancing seed;
-  - task order;
-  - stopping and void policy: no retries, and void trials excluded and listed.
-- **Pre-registered comparison plan:**
-  - primary metric (evidence-supported pass);
-  - secondary metric (requests);
-  - test (paired, task-level exact sign-flip over repetition means);
-  - α;
-  - minimum detectable effect;
-  - **a power and feasibility check:** for example, exactly 4 task pairs can never reach p ≤ 0.10, so the plan must have enough tasks or repetitions;
-  - holdout tasks, if any;
-  - what counts as exploratory.
-- **Budget:** worst-case reservation from frozen limits, hard cap, per-request cap, and approval record.
+- **Hard checks (unchanged from v1):** grounding, answerable, unique, oracle agreement, grader v1/v2 compatibility, cross-variant fairness, evidence.
+- **New `gate-nl-1`:** every constraint value is stated in the customer's words and maps unambiguously to one attribute domain; field names may be implied. It replaces the literal field-name requirement for natural wording only. The existing gate stays for frozen experiments.
+- **New intent preservation:** criterion values must be traceable to the wording. Anything else is an assumption, and it forces the assisted or underspecified category.
+- **Ambiguity classification:** gate ambiguity, value collisions across domains, and missing values (underspecified).
+- **Soft criteria (rank only, never admit):** business relevance, realism, diversity.
 
-### 4.2 Execution and results
+### 3.4 Coverage targets (provisional; frozen into each suite record)
+
+- Persona × journey cells, plus a capability axis: lookup, single-condition filter, multi-condition filter, extremum, ranked-within-a-filter (M2b), either/or (M2b), policy rubric.
+- Defaults:
+  - every persona has ≥ 2 tasks;
+  - every journey with weight ≥ 0.10 has ≥ 1 task;
+  - ≥ 4 capabilities;
+  - ≥ 30 % multi-condition;
+  - no near-duplicate pair above 0.6 similarity;
+  - 8–12 deterministic tasks, plus ≤ 2 rubric tasks reported separately.
+
+### 3.5 Feedback synthesiser
+
+Feedback contains:
+- rejection categories with counts and wording-only examples;
+- uncovered cells;
+- duplicate signatures to avoid;
+- missing capabilities;
+- underspecified wordings, returned as "state the value in the customer's words, or keep the ambiguity and mark it".
+
+It never contains expected answers, agent results or variant outcomes.
+
+### 3.6 Stage A / Stage B boundary (implemented in M1)
+
+- **Imports:** Stage A modules may not import trial execution, agent results, diagnostics of trials, grading rescore or the pilot runner. An AST test checks this.
+- **Data:** Stage A records accept inputs only of allowed kinds (catalogue, context, site, generator, evaluator, suite). References to runs, trials or results are rejected when a record is built and when it is written to the store.
+- **Freezing:** freezing requires a human approval of the exact suite content hash. Any substantive edit changes the hash, so the old approval no longer applies.
+- **Stage B:** Stage B records reference a frozen suite by hash and cannot modify it.
+
+## 4. Stage B: frozen agent evaluation
+
+### 4.1 Evaluation manifest (immutable, content-hashed, write-once)
+
+- the frozen suite reference;
+- per task: customer wording, executed wording, wording category and condition (natural or assisted), structured specification, verifiability class, request limits, evidence requirements; expected outcomes in **private records** referenced by hash;
+- oracle and grader identities (official version, plus the post-hoc rescore versions allowed);
+- site variant snapshot and source fingerprints;
+- model, endpoint, reasoning effort, max completion tokens, agent profile name and hash, jail policy hash;
+- design: variants, repetitions, randomisation and counterbalancing seed, void policy (no retries);
+- task selection rule;
+- the **pre-registered statistical plan**;
+- budget (worst-case reservation, hard cap, per-request cap) and approval references.
+
+### 4.2 Statistical plan (revised per decision 6)
+
+- **Confirmatory α = 0.05** by default, two-sided.
+- **Repeated trials are clustered within tasks.** Repetitions of a task are not independent units. The default analysis aggregates repetitions per task and per variant, compares variants within task (paired), and treats **tasks as the unit of analysis**. Any trial-level model must account for the clustering, for example with task-level random effects or cluster-robust inference.
+- **Feasibility or power is required** for the actual paired design before a study can be confirmatory:
+  - the minimum achievable p-value of the chosen test with the planned number of tasks must be ≤ α. For an exact two-sided sign-flip test over *n* task pairs that minimum is 2/2ⁿ, so *n* ≥ 6 at α = 0.05; this is necessary, not sufficient;
+  - plus a stated minimum detectable effect, or power estimate, under assumed between-task variability.
+
+  No size, including 8 tasks × 3 repetitions, is assumed sufficient.
+- **Pre-registered before execution:** primary outcome, comparison rule, repetitions, analysis, stopping rule, and the confirmatory or exploratory designation.
+- **Underpowered or infeasible studies may proceed as exploratory,** with no confirmatory claims; results are labelled accordingly.
+
+### 4.3 Execution and results
 
 - **Runs:** the identical frozen suite on every variant.
-- **Preflight:** a zero-cost run (dev provider, jailed) on the byte-identical manifest is required before the paid run.
-- **Provenance per request:** model settings and profile hash (`provenance.model_provenance`).
-- **Results are split into three labelled sections:**
-  1. pre-registered verdicts;
-  2. exploratory analyses;
-  3. diagnostics (structural, behavioural, hypotheses, using the existing status rules).
-- **Grading:** official grades never change. Rescoring is post hoc and labelled.
+- **Preflight:** a mandatory zero-cost preflight (dev provider, jail) on the byte-identical manifest.
+- **Per-request provenance** is recorded.
+- **Results come in separate sections:** pre-registered or confirmatory, exploratory, and diagnostics.
+- **Grading:** official grades never change; rescoring is post hoc and labelled.
+- **Regression:** re-running on a new snapshot creates a new manifest that differs only in fingerprints, with a diff report. A task whose oracle answer changed is invalidated for that run, with the reason stated.
 
-**Regression testing:** re-running an approved evaluation manifest on a new site snapshot creates a new manifest that differs only in snapshot fingerprints, with a diff report. A changed oracle answer for a task, for instance after a catalogue change, invalidates that task for the run, and the reason is listed.
+## 5. Implementation plan and order
 
-## 5. Minimal implementation plan (isolated; reuse first)
+| # | Milestone | Status |
+|---|---|---|
+| M1 | Immutable suite, task and evaluation-manifest records; write-once content-addressed store; canonical hashes and provenance; public/private separation; Stage A/B boundary; tests | **this step** |
+| M2 | Evaluator v2: `gate-nl-1`, the natural-language categories (§3.2), intent preservation, ambiguity classification, coverage matrix; v1 reproduced exactly when the v2 checks are off | after M1 review |
+| M2b | Ranked-within-a-filter and either/or criterion kinds, with independent oracle and grader v2 support | after M2 |
+| M3 | Bounded LLM generation and evaluation loop (≤ 3 rounds), feedback synthesiser, stopping rule, gap report; deterministic multi-round fixtures | after M2b |
+| M4 | Human approval workflow and suite freezing; statistical plan with the feasibility check | after M3 |
+| M5 | General zero-cost execution rehearsal against frozen manifests (Larkspur, Ironbark) | after M4 |
+| M6 | Paid validation (Stage A generation, one Stage B run), priced from frozen manifests | **separate approval** |
 
-| Milestone | Builds | Reuses | Tests and validation (zero cost unless stated) |
-|---|---|---|---|
-| **M1 Records and storage** | `SuiteRecord`, `TaskRecord` (three wordings, spec, private outcome ref, provenance, evaluation), `EvaluationManifest`; hashing; write-once store under `scanner-data/suites/` | `suite.core.canonical_hash`, freeze format | schema round-trip, immutability, private/public split |
-| **M2 taskeval-2** | `gate-nl-1` (value-explicit natural-wording gate) as a *new versioned* check; intent preservation; capability classifier; coverage matrix | taskeval-1, research Verifier, oracle, gate v1, graders | adversarial wording tests (implied thresholds, value collisions, leaks); taskeval-1 results reproduced exactly when gate-nl-1 is off |
-| **M2b Criterion extensions (optional, separate approval)** | `ranked_subset` (filter then extremum) and `either_of` conditions, each with oracle support and grader v2 keys | criteria, RecordOracle | oracle/page agreement on Ironbark and Larkspur; frozen experiments unaffected (new kinds only) |
-| **M3 Stage A loop** | feedback synthesiser, round controller, stopping rule, gap report, per-round budget accounting | research planner (prompt v2 with feedback slot), schema v2, MetaClient gate | **multi-round fixture generator** (deterministic rounds that improve or stall) exercising every stop path |
-| **M4 Approval and freeze** | owner approval record; manifest freezer with the pre-registered plan and power check | pilot `prepare`, freeze | the manifest is rejected if the power check fails or any task lacks private outcomes |
-| **M5 Stage B runner** | generalise the pilot runner to any manifest and variant set; counterbalancing from the seed; pre-registered vs exploratory sections | pilot runner, `run_trial`, RequestGate, jail, rescore, provenance, diagnostics | zero-cost jailed run on Larkspur and Ironbark manifests; results byte-stable on re-render |
-| **M6 Paid validation (approval required)** | Stage A on Larkspur (≤ 3 rounds), then one pre-registered Stage B evaluation | all | Stage A cost about US$0.025 per round, so ≤ US$0.10. Stage B priced from the frozen manifest *before* approval. As an illustration only, 8 tasks × 2 variants × 3 repetitions = 48 trials, about US$7 calculated, worst-case reservation about US$30. |
-
-**Effort:** M1–M5 need about 3 working days with tests. M2b adds about 1 day.
-
-**Isolation:**
-- packages `agent_readiness/suites/` (Stage A and the store) and `agent_readiness/evalruns/` (Stage B), on a branch off `research/llm-task-planning`;
-- nothing in `hosted/` imports them (an AST test, as for framework and diagnostics);
-- frozen Ironbark experiments and grader v1 are untouched.
-
-## 6. What this changes relative to the pilot
-
-| Pilot | Lifecycle |
-|---|---|
-| single generation round | 2–3 rounds, with structured feedback |
-| restated wording executed | natural wording preferred and measured (≥ 70 % target); restatement labelled |
-| no comparison plan | pre-registered plan with a power check |
-| ad-hoc artefacts | versioned suite and evaluation manifests with an approval step and a regression diff |
-
-## 7. Decisions needed from the owner
-
-1. **Natural-wording gate (`gate-nl-1`):** adopt it as a new, versioned gate for executed natural wording (values stated and domain-unambiguous; field names may be implied)? The existing gate stays for frozen experiments. *Recommended.*
-2. **Restatement policy:** should restated wording be (a) never executed, (b) executed only as a separately labelled "assisted wording" condition, or (c) allowed as a per-task fallback? *Recommended: (b). Natural and assisted results are never pooled.*
-3. **Coverage targets and stopping thresholds** (§3.3, §3.5): accept the defaults?
-4. **Criterion-language extensions (M2b):** ranked subsets and either/or conditions are needed for realistic "cheapest beginner course" journeys. Build them now or later?
-5. **Advisory LLM judge for realism:** off by default. Enable it (as a paid call) in M6?
-6. **Stage B statistical default:** a task-level paired exact sign-flip over repetition means, with α = 0.10 and a minimum of 3 repetitions and 8 tasks. Or a different plan?
-7. **Who approves suites:** the owner only, or delegated?
-8. **Timing:** start after the 2026-11-05 submission?
+All of this lives in new packages: `agent_readiness/suites/` for the records, store and Stage A, and later `agent_readiness/evalruns/` for Stage B. Nothing in `hosted/` imports them, and an AST test checks this.
