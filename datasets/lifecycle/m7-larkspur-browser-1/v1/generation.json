@@ -1,0 +1,1504 @@
+{
+ "admissions": {
+  "natural": 18,
+  "rejected": 5,
+  "rubric": 1
+ },
+ "cost": {
+  "basis": "calculated from provider-reported usage at published prices; not a bill",
+  "calculated_usd": 0.049804,
+  "requests": 2,
+  "unsettled": 0
+ },
+ "coverage": {
+  "capabilities": {
+   "either_of": 1,
+   "extremum": 0,
+   "lookup": 3,
+   "multi_condition_filter": 5,
+   "policy_rubric": 1,
+   "ranked_subset": 1,
+   "single_condition_filter": 2
+  },
+  "deterministic": 12,
+  "gaps": [],
+  "journey_inconsistent": [],
+  "matrix": {
+   "budget_learner": {
+    "check_availability": 0,
+    "find_affordable": 1,
+    "fit_schedule": 1,
+    "match_level": 0,
+    "plan_commitment": 0,
+    "understand_policies": 1
+   },
+   "career_switcher": {
+    "check_availability": 0,
+    "find_affordable": 1,
+    "fit_schedule": 2,
+    "match_level": 1,
+    "plan_commitment": 1,
+    "understand_policies": 0
+   },
+   "professional_upskiller": {
+    "check_availability": 1,
+    "find_affordable": 0,
+    "fit_schedule": 1,
+    "match_level": 0,
+    "plan_commitment": 1,
+    "understand_policies": 0
+   },
+   "recent_graduate": {
+    "check_availability": 0,
+    "find_affordable": 1,
+    "fit_schedule": 1,
+    "match_level": 0,
+    "plan_commitment": 0,
+    "understand_policies": 0
+   }
+  },
+  "multi_condition_share": 0.583,
+  "natural_share": 1.0,
+  "natural_share_note": "aspirational development metric (target 0.7), not an admission rule",
+  "near_duplicate_pairs": [],
+  "per_journey": {
+   "check_availability": 1,
+   "find_affordable": 3,
+   "fit_schedule": 5,
+   "match_level": 1,
+   "plan_commitment": 2,
+   "understand_policies": 1
+  },
+  "per_persona": {
+   "budget_learner": 3,
+   "career_switcher": 5,
+   "professional_upskiller": 3,
+   "recent_graduate": 2
+  },
+  "rubric": 1,
+  "status": {
+   "capabilities": {
+    "actual": 6,
+    "met": true,
+    "target": ">= 4 distinct"
+   },
+   "deterministic_tasks": {
+    "actual": 12,
+    "met": true,
+    "target": "8-12"
+   },
+   "multi_condition_share": {
+    "actual": 0.583,
+    "met": true,
+    "target": ">= 0.3"
+   },
+   "near_duplicates": {
+    "actual": 0,
+    "met": true,
+    "target": "no pair above 0.6"
+   },
+   "rubric_tasks": {
+    "actual": 1,
+    "met": true,
+    "target": "<= 2 (reported separately)"
+   },
+   "tasks_per_persona": {
+    "actual": {
+     "budget_learner": 3,
+     "career_switcher": 5,
+     "professional_upskiller": 3,
+     "recent_graduate": 2
+    },
+    "met": true,
+    "target": ">= 2 each"
+   },
+   "weighted_journeys": {
+    "actual": {
+     "check_availability": 1,
+     "find_affordable": 3,
+     "fit_schedule": 5,
+     "match_level": 1,
+     "plan_commitment": 2
+    },
+    "met": true,
+    "target": ">= 1 for each journey with weight >= 0.1"
+   }
+  },
+  "targets": {
+   "deterministic_tasks": [
+    8,
+    12
+   ],
+   "journey_min_weight": 0.1,
+   "max_pair_similarity": 0.6,
+   "max_rubric_tasks": 2,
+   "min_capabilities": 4,
+   "min_multi_condition_share": 0.3,
+   "min_tasks_per_persona": 2,
+   "min_tasks_per_weighted_journey": 1,
+   "natural_share_aspiration": 0.7
+  },
+  "targets_met": true
+ },
+ "created_at": "2026-11-02T12:12:42+00:00",
+ "feedback": [
+  {
+   "avoid_signatures": 7,
+   "coverage_gaps": [
+    "persona budget_learner: 1 task(s), target >= 2",
+    "persona professional_upskiller: 1 task(s), target >= 2",
+    "journey check_availability (weight 0.15): no task",
+    "7 deterministic task(s), target 8-12"
+   ],
+   "for_round": 2,
+   "missing_capabilities": [
+    "single_condition_filter",
+    "extremum",
+    "ranked_subset"
+   ],
+   "note": "feedback carries rejection categories, uncovered cells, missing capabilities and signatures to avoid; never answers",
+   "rejection_categories": {
+    "answerable": {
+     "advice": "the criterion must select some but not all items and have a unique answer (no ties)",
+     "count": 2,
+     "wording_examples": [
+      "I'm looking to upskill and need an Advanced course that meets on Tuesday. Among those, tell me the one with the most seats left.",
+      "I want an Intermediate or Advanced course at Northside costing $300 or less to fit around work."
+     ]
+    },
+    "intent_not_preserved": {
+     "advice": "the specification must express exactly what the customer states: no added, dropped or changed constraints",
+     "count": 2,
+     "reasons": [
+      "'least 5 seats left' asks for a ranking the specification does not have",
+      "course fee: the customer says 'under $200' (below) but the specification uses at most"
+     ],
+     "wording_examples": [
+      "Money is tight. What's the cheapest course under $200?",
+      "I need a course that costs $250 or less and still has at least 5 seats left. What qualifies?"
+     ]
+    }
+   }
+  }
+ ],
+ "gap_report": {
+  "conditions": {
+   "natural": 12
+  },
+  "gaps": [],
+  "missing_capabilities": [
+   "extremum"
+  ],
+  "natural_share": 1.0,
+  "note": "acceptance thresholds and coverage targets were not lowered; unmet targets are listed here",
+  "preserved_underspecified": [],
+  "rejections": {
+   "answerable": 2,
+   "intent_not_preserved": 3
+  },
+  "rounds_sent": 2,
+  "stop_reason": "targets_met",
+  "targets_met": true,
+  "thresholds_lowered": false,
+  "uncovered_cells": [
+   {
+    "journey": "find_affordable",
+    "persona": "professional_upskiller",
+    "weight": 0.3
+   },
+   {
+    "journey": "check_availability",
+    "persona": "budget_learner",
+    "weight": 0.15
+   },
+   {
+    "journey": "match_level",
+    "persona": "budget_learner",
+    "weight": 0.15
+   },
+   {
+    "journey": "check_availability",
+    "persona": "career_switcher",
+    "weight": 0.15
+   },
+   {
+    "journey": "match_level",
+    "persona": "professional_upskiller",
+    "weight": 0.15
+   },
+   {
+    "journey": "check_availability",
+    "persona": "recent_graduate",
+    "weight": 0.15
+   },
+   {
+    "journey": "match_level",
+    "persona": "recent_graduate",
+    "weight": 0.15
+   },
+   {
+    "journey": "plan_commitment",
+    "persona": "budget_learner",
+    "weight": 0.1
+   },
+   {
+    "journey": "plan_commitment",
+    "persona": "recent_graduate",
+    "weight": 0.1
+   }
+  ]
+ },
+ "generator": {
+  "max_completion_tokens": 6000,
+  "max_rounds": 3,
+  "model": "muse-spark-1.3",
+  "prompt_version": "taskplan-v2",
+  "proposals_per_round": 12,
+  "reasoning_effort": "low",
+  "schema_version": "taskplan-schema-v3"
+ },
+ "id": "m6-larkspur-core-20261102T121242Z",
+ "kind": "generation",
+ "limits": {
+  "cap_usd": 0.1,
+  "max_requests": 3,
+  "per_request_cap_usd": 0.04
+ },
+ "mode": "paid",
+ "post_fix_reevaluation": {
+  "admissions": {
+   "natural": 20,
+   "rejected": 3,
+   "rubric": 1
+  },
+  "note": "offline re-evaluation (zero cost) of the same recorded proposals after the 'at least N' lexicon fix"
+ },
+ "proposals": [
+  {
+   "admission": "natural",
+   "assumptions": [],
+   "capability": "multi_condition_filter",
+   "category": "natural_verifiable",
+   "customer_wording": "I'm switching careers and want to start from scratch. Show me Beginner courses at Riverside where materials are Included.",
+   "executed_wording": "I'm switching careers and want to start from scratch. Show me Beginner courses at Riverside where materials are Included.",
+   "gates": {
+    "answerable": true,
+    "cross_version_fair": true,
+    "evidence_sufficient": true,
+    "expressible": true,
+    "grader_v1_compatible": true,
+    "grader_v2_compatible": true,
+    "grounded": true,
+    "intent_preserved": true,
+    "natural_wording_gate": true,
+    "oracle_agrees": true,
+    "schema_valid": true,
+    "unique": true
+   },
+   "id": "r1-t01_beginner_riverside_included",
+   "journey": "match_level",
+   "kind": "item_set",
+   "near_duplicate": false,
+   "nl_traces": [
+    {
+     "component": "condition: level eq Beginner",
+     "decision": "field 'level' implied by 'beginner', a value only of the level domain",
+     "status": "traced"
+    },
+    {
+     "component": "condition: campus eq Riverside",
+     "decision": "field 'campus' implied by 'riverside', a value only of the campus domain",
+     "status": "traced"
+    },
+    {
+     "component": "condition: materials eq Included",
+     "decision": "field 'materials' named by the customer",
+     "status": "traced"
+    }
+   ],
+   "persona": "career_switcher",
+   "rejection_reasons": [],
+   "round": 1,
+   "soft": {
+    "journey_relevance": 1.0,
+    "natural_wording": 1.0,
+    "novelty": 0.5,
+    "persona_relevance": 0.667,
+    "realism": 0.75,
+    "specificity": 1.0
+   },
+   "unresolved": [],
+   "withheld": null
+  },
+  {
+   "admission": "natural",
+   "assumptions": [],
+   "capability": "lookup",
+   "category": "natural_verifiable",
+   "customer_wording": "I work weekdays and I'm interested in Wheel-thrown pottery — what class day does it meet on?",
+   "executed_wording": "I work weekdays and I'm interested in Wheel-thrown pottery — what class day does it meet on?",
+   "gates": {
+    "answerable": true,
+    "cross_version_fair": true,
+    "evidence_sufficient": true,
+    "expressible": true,
+    "grader_v1_compatible": true,
+    "grader_v2_compatible": true,
+    "grounded": true,
+    "intent_preserved": true,
+    "natural_wording_gate": true,
+    "oracle_agrees": true,
+    "schema_valid": true,
+    "unique": true
+   },
+   "id": "r1-t02_lookup_pottery_day",
+   "journey": "fit_schedule",
+   "kind": "page_fact",
+   "near_duplicate": false,
+   "nl_traces": [
+    {
+     "component": "entity",
+     "decision": null,
+     "status": "traced"
+    },
+    {
+     "component": "fact asked: class day",
+     "decision": "field 'class day' named by the customer",
+     "status": "traced"
+    }
+   ],
+   "persona": "career_switcher",
+   "rejection_reasons": [],
+   "round": 1,
+   "soft": {
+    "journey_relevance": 1.0,
+    "natural_wording": 1.0,
+    "novelty": 1.0,
+    "persona_relevance": 1.0,
+    "realism": 1.0,
+    "specificity": null
+   },
+   "unresolved": [],
+   "withheld": null
+  },
+  {
+   "admission": "natural",
+   "assumptions": [],
+   "capability": "either_of",
+   "category": "natural_verifiable",
+   "customer_wording": "I work full-time on weekdays, so I can only do Saturday or Sunday. List Beginner courses that meet on Saturday or Sunday.",
+   "executed_wording": "I work full-time on weekdays, so I can only do Saturday or Sunday. List Beginner courses that meet on Saturday or Sunday.",
+   "gates": {
+    "answerable": true,
+    "cross_version_fair": true,
+    "evidence_sufficient": true,
+    "expressible": true,
+    "grader_v1_compatible": true,
+    "grader_v2_compatible": true,
+    "grounded": true,
+    "intent_preserved": true,
+    "natural_wording_gate": true,
+    "oracle_agrees": true,
+    "schema_valid": true,
+    "unique": true
+   },
+   "id": "r1-t03_weekend_beginner",
+   "journey": "fit_schedule",
+   "kind": "either_of",
+   "near_duplicate": false,
+   "nl_traces": [
+    {
+     "component": "condition: level eq Beginner",
+     "decision": "field 'level' implied by 'beginner', a value only of the level domain",
+     "status": "traced"
+    },
+    {
+     "component": "condition: class day one of Saturday / Sunday",
+     "decision": "field 'class day' implied by 'saturday', a value only of the class day domain; field 'class day' implied by 'sunday', a value only of the class day domain",
+     "status": "traced"
+    }
+   ],
+   "persona": "career_switcher",
+   "rejection_reasons": [],
+   "round": 1,
+   "soft": {
+    "journey_relevance": null,
+    "natural_wording": 1.0,
+    "novelty": 0.667,
+    "persona_relevance": null,
+    "realism": 0.25,
+    "specificity": null
+   },
+   "unresolved": [],
+   "withheld": null
+  },
+  {
+   "admission": "natural",
+   "assumptions": [],
+   "capability": "multi_condition_filter",
+   "category": "natural_verifiable",
+   "customer_wording": "I just graduated and need a cheap, quick skill for my CV. Find courses costing $180 or less that last 6 weeks or less.",
+   "executed_wording": "I just graduated and need a cheap, quick skill for my CV. Find courses costing $180 or less that last 6 weeks or less.",
+   "gates": {
+    "answerable": true,
+    "cross_version_fair": true,
+    "evidence_sufficient": true,
+    "expressible": true,
+    "grader_v1_compatible": true,
+    "grader_v2_compatible": true,
+    "grounded": true,
+    "intent_preserved": true,
+    "natural_wording_gate": true,
+    "oracle_agrees": true,
+    "schema_valid": true,
+    "unique": true
+   },
+   "id": "r1-t04_affordable_short",
+   "journey": "find_affordable",
+   "kind": "item_set",
+   "near_duplicate": false,
+   "nl_traces": [
+    {
+     "component": "condition: course fee le $180",
+     "decision": "field 'course fee' implied: the only money attribute in the catalogue",
+     "status": "traced"
+    },
+    {
+     "component": "condition: duration le 6 weeks",
+     "decision": "field 'duration' implied: the only 'weeks' attribute in the catalogue",
+     "status": "traced"
+    }
+   ],
+   "persona": "recent_graduate",
+   "rejection_reasons": [],
+   "round": 1,
+   "soft": {
+    "journey_relevance": 1.0,
+    "natural_wording": 1.0,
+    "novelty": 1.0,
+    "persona_relevance": 1.0,
+    "realism": 0.75,
+    "specificity": 1.0
+   },
+   "unresolved": [],
+   "withheld": null
+  },
+  {
+   "admission": "natural",
+   "assumptions": [],
+   "capability": "lookup",
+   "category": "natural_verifiable",
+   "customer_wording": "My friend mentioned Mindful meditation as a cheap option — how much is the course fee?",
+   "executed_wording": "My friend mentioned Mindful meditation as a cheap option — how much is the course fee?",
+   "gates": {
+    "answerable": true,
+    "cross_version_fair": true,
+    "evidence_sufficient": true,
+    "expressible": true,
+    "grader_v1_compatible": true,
+    "grader_v2_compatible": true,
+    "grounded": true,
+    "intent_preserved": true,
+    "natural_wording_gate": true,
+    "oracle_agrees": true,
+    "schema_valid": true,
+    "unique": true
+   },
+   "id": "r1-t05_lookup_meditation_fee",
+   "journey": "find_affordable",
+   "kind": "page_fact",
+   "near_duplicate": false,
+   "nl_traces": [
+    {
+     "component": "entity",
+     "decision": null,
+     "status": "traced"
+    },
+    {
+     "component": "fact asked: course fee",
+     "decision": "field 'course fee' named by the customer",
+     "status": "traced"
+    }
+   ],
+   "persona": "recent_graduate",
+   "rejection_reasons": [],
+   "round": 1,
+   "soft": {
+    "journey_relevance": 1.0,
+    "natural_wording": 1.0,
+    "novelty": 1.0,
+    "persona_relevance": 1.0,
+    "realism": 1.0,
+    "specificity": null
+   },
+   "unresolved": [],
+   "withheld": null
+  },
+  {
+   "admission": "natural",
+   "assumptions": [],
+   "capability": "multi_condition_filter",
+   "category": "natural_verifiable",
+   "customer_wording": "I want to push beyond basics. Show me Intermediate courses at Northside.",
+   "executed_wording": "I want to push beyond basics. Show me Intermediate courses at Northside.",
+   "gates": {
+    "answerable": true,
+    "cross_version_fair": true,
+    "evidence_sufficient": true,
+    "expressible": true,
+    "grader_v1_compatible": true,
+    "grader_v2_compatible": true,
+    "grounded": true,
+    "intent_preserved": true,
+    "natural_wording_gate": true,
+    "oracle_agrees": true,
+    "schema_valid": true,
+    "unique": true
+   },
+   "id": "r1-t06_intermediate_northside",
+   "journey": "match_level",
+   "kind": "item_set",
+   "near_duplicate": false,
+   "nl_traces": [
+    {
+     "component": "condition: level eq Intermediate",
+     "decision": "field 'level' implied by 'intermediate', a value only of the level domain",
+     "status": "traced"
+    },
+    {
+     "component": "condition: campus eq Northside",
+     "decision": "field 'campus' implied by 'northside', a value only of the campus domain",
+     "status": "traced"
+    }
+   ],
+   "persona": "recent_graduate",
+   "rejection_reasons": [],
+   "round": 1,
+   "soft": {
+    "journey_relevance": 1.0,
+    "natural_wording": 1.0,
+    "novelty": 0.667,
+    "persona_relevance": 0.0,
+    "realism": 0.75,
+    "specificity": 1.0
+   },
+   "unresolved": [],
+   "withheld": null
+  },
+  {
+   "admission": "rejected",
+   "assumptions": [],
+   "capability": "ranked_subset",
+   "category": null,
+   "customer_wording": "Money is tight. What's the cheapest course under $200?",
+   "executed_wording": null,
+   "gates": {
+    "answerable": true,
+    "cross_version_fair": true,
+    "evidence_sufficient": true,
+    "expressible": true,
+    "grader_v1_compatible": true,
+    "grader_v2_compatible": true,
+    "grounded": true,
+    "intent_preserved": false,
+    "oracle_agrees": true,
+    "schema_valid": true,
+    "unique": true
+   },
+   "id": "r1-t07_cheapest_under_200",
+   "journey": "find_affordable",
+   "kind": "ranked_subset",
+   "near_duplicate": false,
+   "nl_traces": [
+    {
+     "component": "condition: course fee le $200",
+     "decision": null,
+     "status": "mismatch"
+    },
+    {
+     "component": "ranking: lowest course fee",
+     "decision": "'cheapest' ranks by course fee (lowest)",
+     "status": "traced"
+    }
+   ],
+   "persona": "budget_learner",
+   "rejection_reasons": [
+    "intent_not_preserved: course fee: the customer says 'under $200' (below) but the specification uses at most"
+   ],
+   "round": 1,
+   "soft": {
+    "journey_relevance": null,
+    "natural_wording": 0.0,
+    "novelty": 0.667,
+    "persona_relevance": null,
+    "realism": 0.75,
+    "specificity": null
+   },
+   "unresolved": [],
+   "withheld": null
+  },
+  {
+   "admission": "rejected",
+   "assumptions": [],
+   "capability": "multi_condition_filter",
+   "category": null,
+   "customer_wording": "I need a course that costs $250 or less and still has at least 5 seats left. What qualifies?",
+   "executed_wording": null,
+   "gates": {
+    "answerable": true,
+    "cross_version_fair": true,
+    "evidence_sufficient": true,
+    "expressible": true,
+    "grader_v1_compatible": true,
+    "grader_v2_compatible": true,
+    "grounded": true,
+    "intent_preserved": false,
+    "oracle_agrees": true,
+    "schema_valid": true,
+    "unique": true
+   },
+   "id": "r1-t08_budget_with_seats",
+   "journey": "check_availability",
+   "kind": "item_set",
+   "near_duplicate": false,
+   "nl_traces": [
+    {
+     "component": "condition: course fee le $250",
+     "decision": "field 'course fee' implied: the only money attribute in the catalogue",
+     "status": "traced"
+    },
+    {
+     "component": "condition: seats left ge 5",
+     "decision": "field 'seats left' named by the customer",
+     "status": "traced"
+    }
+   ],
+   "persona": "budget_learner",
+   "rejection_reasons": [
+    "intent_not_preserved: 'least 5 seats left' asks for a ranking the specification does not have"
+   ],
+   "round": 1,
+   "soft": {
+    "journey_relevance": 1.0,
+    "natural_wording": 0.0,
+    "novelty": 0.667,
+    "persona_relevance": 1.0,
+    "realism": 1.0,
+    "specificity": 1.0
+   },
+   "unresolved": [],
+   "withheld": null
+  },
+  {
+   "admission": "rubric",
+   "assumptions": [],
+   "capability": "policy_rubric",
+   "category": "natural_judgment",
+   "customer_wording": "If I enrol and then can't attend, can I get a refund? Explain the college refund policy.",
+   "executed_wording": "If I enrol and then can't attend, can I get a refund? Explain the college refund policy.",
+   "gates": {
+    "grounded": true,
+    "schema_valid": true
+   },
+   "id": "r1-t09_refund_policy",
+   "journey": "understand_policies",
+   "kind": "open",
+   "near_duplicate": false,
+   "nl_traces": [],
+   "persona": "budget_learner",
+   "rejection_reasons": [],
+   "round": 1,
+   "soft": {
+    "journey_relevance": null,
+    "natural_wording": 0.0,
+    "novelty": 1.0,
+    "persona_relevance": null,
+    "realism": 1.0,
+    "specificity": null
+   },
+   "unresolved": [],
+   "withheld": null
+  },
+  {
+   "admission": "rejected",
+   "assumptions": [],
+   "capability": "ranked_subset",
+   "category": null,
+   "customer_wording": "I'm looking to upskill and need an Advanced course that meets on Tuesday. Among those, tell me the one with the most seats left.",
+   "executed_wording": null,
+   "gates": {
+    "answerable": false,
+    "expressible": true,
+    "grounded": true,
+    "schema_valid": true
+   },
+   "id": "r1-t10_advanced_tuesday_best",
+   "journey": "fit_schedule",
+   "kind": "ranked_subset",
+   "near_duplicate": false,
+   "nl_traces": [],
+   "persona": "professional_upskiller",
+   "rejection_reasons": [
+    "answerable: the filter selects 1 item(s); a ranking within a filter needs at least 2"
+   ],
+   "round": 1,
+   "soft": {
+    "journey_relevance": null,
+    "natural_wording": 0.0,
+    "novelty": 0.8,
+    "persona_relevance": null,
+    "realism": 0.75,
+    "specificity": null
+   },
+   "unresolved": [],
+   "withheld": null
+  },
+  {
+   "admission": "rejected",
+   "assumptions": [],
+   "capability": "either_of",
+   "category": null,
+   "customer_wording": "I want an Intermediate or Advanced course at Northside costing $300 or less to fit around work.",
+   "executed_wording": null,
+   "gates": {
+    "answerable": false,
+    "expressible": true,
+    "grounded": true,
+    "schema_valid": true
+   },
+   "id": "r1-t11_upskill_northside_budget",
+   "journey": "find_affordable",
+   "kind": "either_of",
+   "near_duplicate": false,
+   "nl_traces": [],
+   "persona": "professional_upskiller",
+   "rejection_reasons": [
+    "answerable: alternative(s) 'Advanced' select no item under the other conditions (a degenerate either/or)"
+   ],
+   "round": 1,
+   "soft": {
+    "journey_relevance": null,
+    "natural_wording": 0.0,
+    "novelty": 0.75,
+    "persona_relevance": null,
+    "realism": 0.25,
+    "specificity": null
+   },
+   "unresolved": [],
+   "withheld": null
+  },
+  {
+   "admission": "natural",
+   "assumptions": [],
+   "capability": "lookup",
+   "category": "natural_verifiable",
+   "customer_wording": "I'm considering Spreadsheets for small business but need to judge the time commitment — how long is the duration?",
+   "executed_wording": "I'm considering Spreadsheets for small business but need to judge the time commitment — how long is the duration?",
+   "gates": {
+    "answerable": true,
+    "cross_version_fair": true,
+    "evidence_sufficient": true,
+    "expressible": true,
+    "grader_v1_compatible": true,
+    "grader_v2_compatible": true,
+    "grounded": true,
+    "intent_preserved": true,
+    "natural_wording_gate": true,
+    "oracle_agrees": true,
+    "schema_valid": true,
+    "unique": true
+   },
+   "id": "r1-t12_lookup_duration_spreadsheets",
+   "journey": "plan_commitment",
+   "kind": "page_fact",
+   "near_duplicate": false,
+   "nl_traces": [
+    {
+     "component": "entity",
+     "decision": null,
+     "status": "traced"
+    },
+    {
+     "component": "fact asked: duration",
+     "decision": "field 'duration' named by the customer",
+     "status": "traced"
+    }
+   ],
+   "persona": "professional_upskiller",
+   "rejection_reasons": [],
+   "round": 1,
+   "soft": {
+    "journey_relevance": 1.0,
+    "natural_wording": 1.0,
+    "novelty": 1.0,
+    "persona_relevance": 0.0,
+    "realism": 1.0,
+    "specificity": null
+   },
+   "unresolved": [],
+   "withheld": null
+  },
+  {
+   "admission": "natural",
+   "assumptions": [],
+   "capability": "single_condition_filter",
+   "category": "natural_verifiable",
+   "customer_wording": "Money is really tight right now. What courses cost under $200?",
+   "executed_wording": "Money is really tight right now. What courses cost under $200?",
+   "gates": {
+    "answerable": true,
+    "cross_version_fair": true,
+    "evidence_sufficient": true,
+    "expressible": true,
+    "grader_v1_compatible": true,
+    "grader_v2_compatible": true,
+    "grounded": true,
+    "intent_preserved": true,
+    "natural_wording_gate": true,
+    "oracle_agrees": true,
+    "schema_valid": true,
+    "unique": true
+   },
+   "id": "r2-budget-cheap-under-200",
+   "journey": "find_affordable",
+   "kind": "item_set",
+   "near_duplicate": false,
+   "nl_traces": [
+    {
+     "component": "condition: course fee lt $200",
+     "decision": "field 'course fee' implied: the only money attribute in the catalogue",
+     "status": "traced"
+    }
+   ],
+   "persona": "budget_learner",
+   "rejection_reasons": [],
+   "round": 2,
+   "soft": {
+    "journey_relevance": 1.0,
+    "natural_wording": 1.0,
+    "novelty": 1.0,
+    "persona_relevance": 1.0,
+    "realism": 0.75,
+    "specificity": 1.0
+   },
+   "unresolved": [],
+   "withheld": null
+  },
+  {
+   "admission": "rejected",
+   "assumptions": [],
+   "capability": "multi_condition_filter",
+   "category": null,
+   "customer_wording": "I need an Intermediate course that still has at least 5 seats left so I can join with a colleague. What qualifies?",
+   "executed_wording": null,
+   "gates": {
+    "answerable": true,
+    "cross_version_fair": true,
+    "evidence_sufficient": true,
+    "expressible": true,
+    "grader_v1_compatible": true,
+    "grader_v2_compatible": true,
+    "grounded": true,
+    "intent_preserved": false,
+    "oracle_agrees": true,
+    "schema_valid": true,
+    "unique": true
+   },
+   "id": "r2-upskiller-intermediate-seats",
+   "journey": "check_availability",
+   "kind": "item_set",
+   "near_duplicate": false,
+   "nl_traces": [
+    {
+     "component": "condition: level eq Intermediate",
+     "decision": "field 'level' implied by 'intermediate', a value only of the level domain",
+     "status": "traced"
+    },
+    {
+     "component": "condition: seats left ge 5",
+     "decision": "field 'seats left' named by the customer",
+     "status": "traced"
+    }
+   ],
+   "persona": "professional_upskiller",
+   "rejection_reasons": [
+    "intent_not_preserved: 'least 5 seats left' asks for a ranking the specification does not have"
+   ],
+   "round": 2,
+   "soft": {
+    "journey_relevance": 1.0,
+    "natural_wording": 0.0,
+    "novelty": 0.667,
+    "persona_relevance": 1.0,
+    "realism": 1.0,
+    "specificity": 1.0
+   },
+   "unresolved": [],
+   "withheld": null
+  },
+  {
+   "admission": "natural",
+   "assumptions": [],
+   "capability": "multi_condition_filter",
+   "category": "natural_verifiable",
+   "customer_wording": "I can only get to Riverside. Which courses at Riverside cost $250 or less?",
+   "executed_wording": "I can only get to Riverside. Which courses at Riverside cost $250 or less?",
+   "gates": {
+    "answerable": true,
+    "cross_version_fair": true,
+    "evidence_sufficient": true,
+    "expressible": true,
+    "grader_v1_compatible": true,
+    "grader_v2_compatible": true,
+    "grounded": true,
+    "intent_preserved": true,
+    "natural_wording_gate": true,
+    "oracle_agrees": true,
+    "schema_valid": true,
+    "unique": true
+   },
+   "id": "r2-budget-riverside-fee",
+   "journey": "fit_schedule",
+   "kind": "item_set",
+   "near_duplicate": false,
+   "nl_traces": [
+    {
+     "component": "condition: campus eq Riverside",
+     "decision": "field 'campus' implied by 'riverside', a value only of the campus domain",
+     "status": "traced"
+    },
+    {
+     "component": "condition: course fee le $250",
+     "decision": "field 'course fee' implied: the only money attribute in the catalogue",
+     "status": "traced"
+    }
+   ],
+   "persona": "budget_learner",
+   "rejection_reasons": [],
+   "round": 2,
+   "soft": {
+    "journey_relevance": 1.0,
+    "natural_wording": 1.0,
+    "novelty": 0.75,
+    "persona_relevance": 0.5,
+    "realism": 1.0,
+    "specificity": 1.0
+   },
+   "unresolved": [],
+   "withheld": null
+  },
+  {
+   "admission": "natural",
+   "assumptions": [],
+   "capability": "multi_condition_filter",
+   "category": "natural_verifiable",
+   "customer_wording": "Work keeps me busy, but Thursdays are free. I'm looking for an Intermediate course that meets on Thursday.",
+   "executed_wording": "Work keeps me busy, but Thursdays are free. I'm looking for an Intermediate course that meets on Thursday.",
+   "gates": {
+    "answerable": true,
+    "cross_version_fair": true,
+    "evidence_sufficient": true,
+    "expressible": true,
+    "grader_v1_compatible": true,
+    "grader_v2_compatible": true,
+    "grounded": true,
+    "intent_preserved": true,
+    "natural_wording_gate": true,
+    "oracle_agrees": true,
+    "schema_valid": true,
+    "unique": true
+   },
+   "id": "r2-upskiller-thursday-intermediate",
+   "journey": "fit_schedule",
+   "kind": "item_set",
+   "near_duplicate": false,
+   "nl_traces": [
+    {
+     "component": "condition: class day eq Thursday",
+     "decision": "field 'class day' implied by 'thursday', a value only of the class day domain",
+     "status": "traced"
+    },
+    {
+     "component": "condition: level eq Intermediate",
+     "decision": "field 'level' implied by 'intermediate', a value only of the level domain",
+     "status": "traced"
+    }
+   ],
+   "persona": "professional_upskiller",
+   "rejection_reasons": [],
+   "round": 2,
+   "soft": {
+    "journey_relevance": 1.0,
+    "natural_wording": 1.0,
+    "novelty": 0.667,
+    "persona_relevance": 1.0,
+    "realism": 0.75,
+    "specificity": 1.0
+   },
+   "unresolved": [],
+   "withheld": null
+  },
+  {
+   "admission": "natural",
+   "assumptions": [],
+   "capability": "multi_condition_filter",
+   "category": "natural_verifiable",
+   "customer_wording": "I'm trying a new field and want a Beginner course where materials are Included and the fee is $300 or less. What are my options?",
+   "executed_wording": "I'm trying a new field and want a Beginner course where materials are Included and the fee is $300 or less. What are my options?",
+   "gates": {
+    "answerable": true,
+    "cross_version_fair": true,
+    "evidence_sufficient": true,
+    "expressible": true,
+    "grader_v1_compatible": true,
+    "grader_v2_compatible": true,
+    "grounded": true,
+    "intent_preserved": true,
+    "natural_wording_gate": true,
+    "oracle_agrees": true,
+    "schema_valid": true,
+    "unique": true
+   },
+   "id": "r2-switcher-beginner-materials-budget",
+   "journey": "find_affordable",
+   "kind": "item_set",
+   "near_duplicate": false,
+   "nl_traces": [
+    {
+     "component": "condition: level eq Beginner",
+     "decision": "field 'level' implied by 'beginner', a value only of the level domain",
+     "status": "traced"
+    },
+    {
+     "component": "condition: materials eq Included",
+     "decision": "field 'materials' named by the customer",
+     "status": "traced"
+    },
+    {
+     "component": "condition: course fee le $300",
+     "decision": "field 'course fee' implied: the only money attribute in the catalogue",
+     "status": "traced"
+    }
+   ],
+   "persona": "career_switcher",
+   "rejection_reasons": [],
+   "round": 2,
+   "soft": {
+    "journey_relevance": 1.0,
+    "natural_wording": 1.0,
+    "novelty": 0.5,
+    "persona_relevance": 0.667,
+    "realism": 1.0,
+    "specificity": 1.0
+   },
+   "unresolved": [],
+   "withheld": null
+  },
+  {
+   "admission": "natural",
+   "assumptions": [],
+   "capability": "ranked_subset",
+   "category": "natural_verifiable",
+   "customer_wording": "I just graduated and want to add a skill. I'm a Beginner — what's the cheapest Beginner course?",
+   "executed_wording": "I just graduated and want to add a skill. I'm a Beginner — what's the cheapest Beginner course?",
+   "gates": {
+    "answerable": true,
+    "cross_version_fair": true,
+    "evidence_sufficient": true,
+    "expressible": true,
+    "grader_v1_compatible": true,
+    "grader_v2_compatible": true,
+    "grounded": true,
+    "intent_preserved": true,
+    "natural_wording_gate": true,
+    "oracle_agrees": true,
+    "schema_valid": true,
+    "unique": true
+   },
+   "id": "r2-recent-cheapest-beginner",
+   "journey": "find_affordable",
+   "kind": "ranked_subset",
+   "near_duplicate": false,
+   "nl_traces": [
+    {
+     "component": "condition: level eq Beginner",
+     "decision": "field 'level' implied by 'beginner', a value only of the level domain",
+     "status": "traced"
+    },
+    {
+     "component": "ranking: lowest course fee",
+     "decision": "'cheapest' ranks by course fee (lowest)",
+     "status": "traced"
+    }
+   ],
+   "persona": "recent_graduate",
+   "rejection_reasons": [],
+   "round": 2,
+   "soft": {
+    "journey_relevance": null,
+    "natural_wording": 1.0,
+    "novelty": 0.667,
+    "persona_relevance": null,
+    "realism": 0.75,
+    "specificity": null
+   },
+   "unresolved": [],
+   "withheld": null
+  },
+  {
+   "admission": "natural",
+   "assumptions": [],
+   "capability": "ranked_subset",
+   "category": "natural_verifiable",
+   "customer_wording": "I want an Intermediate course at Riverside for after work. Among those, which one has the most seats left?",
+   "executed_wording": "I want an Intermediate course at Riverside for after work. Among those, which one has the most seats left?",
+   "gates": {
+    "answerable": true,
+    "cross_version_fair": true,
+    "evidence_sufficient": true,
+    "expressible": true,
+    "grader_v1_compatible": true,
+    "grader_v2_compatible": true,
+    "grounded": true,
+    "intent_preserved": true,
+    "natural_wording_gate": true,
+    "oracle_agrees": true,
+    "schema_valid": true,
+    "unique": true
+   },
+   "id": "r2-upskiller-riverside-most-seats",
+   "journey": "check_availability",
+   "kind": "ranked_subset",
+   "near_duplicate": false,
+   "nl_traces": [
+    {
+     "component": "condition: level eq Intermediate",
+     "decision": "field 'level' implied by 'intermediate', a value only of the level domain",
+     "status": "traced"
+    },
+    {
+     "component": "condition: campus eq Riverside",
+     "decision": "field 'campus' implied by 'riverside', a value only of the campus domain",
+     "status": "traced"
+    },
+    {
+     "component": "ranking: highest seats left",
+     "decision": "'most seats left ?' ranks by seats left (highest)",
+     "status": "traced"
+    }
+   ],
+   "persona": "professional_upskiller",
+   "rejection_reasons": [],
+   "round": 2,
+   "soft": {
+    "journey_relevance": null,
+    "natural_wording": 1.0,
+    "novelty": 0.75,
+    "persona_relevance": null,
+    "realism": 1.0,
+    "specificity": null
+   },
+   "unresolved": [],
+   "withheld": null
+  },
+  {
+   "admission": "natural",
+   "assumptions": [],
+   "capability": "lookup",
+   "category": "natural_verifiable",
+   "customer_wording": "I'm thinking of Watercolour foundations as a first creative course. How many seats are left in Watercolour foundations?",
+   "executed_wording": "I'm thinking of Watercolour foundations as a first creative course. How many seats are left in Watercolour foundations?",
+   "gates": {
+    "answerable": true,
+    "cross_version_fair": true,
+    "evidence_sufficient": true,
+    "expressible": true,
+    "grader_v1_compatible": true,
+    "grader_v2_compatible": true,
+    "grounded": true,
+    "intent_preserved": true,
+    "natural_wording_gate": true,
+    "oracle_agrees": true,
+    "schema_valid": true,
+    "unique": true
+   },
+   "id": "r2-switcher-watercolour-seats",
+   "journey": "check_availability",
+   "kind": "page_fact",
+   "near_duplicate": false,
+   "nl_traces": [
+    {
+     "component": "entity",
+     "decision": null,
+     "status": "traced"
+    },
+    {
+     "component": "fact asked: seats left",
+     "decision": "field 'seats left' named by the customer",
+     "status": "traced"
+    }
+   ],
+   "persona": "career_switcher",
+   "rejection_reasons": [],
+   "round": 2,
+   "soft": {
+    "journey_relevance": 1.0,
+    "natural_wording": 1.0,
+    "novelty": 1.0,
+    "persona_relevance": 0.0,
+    "realism": 1.0,
+    "specificity": null
+   },
+   "unresolved": [],
+   "withheld": null
+  },
+  {
+   "admission": "natural",
+   "assumptions": [],
+   "capability": "lookup",
+   "category": "natural_verifiable",
+   "customer_wording": "I like the sound of Life drawing studio but need to watch spending. What is the course fee for Life drawing studio?",
+   "executed_wording": "I like the sound of Life drawing studio but need to watch spending. What is the course fee for Life drawing studio?",
+   "gates": {
+    "answerable": true,
+    "cross_version_fair": true,
+    "evidence_sufficient": true,
+    "expressible": true,
+    "grader_v1_compatible": true,
+    "grader_v2_compatible": true,
+    "grounded": true,
+    "intent_preserved": true,
+    "natural_wording_gate": true,
+    "oracle_agrees": true,
+    "schema_valid": true,
+    "unique": true
+   },
+   "id": "r2-budget-life-drawing-fee",
+   "journey": "find_affordable",
+   "kind": "page_fact",
+   "near_duplicate": false,
+   "nl_traces": [
+    {
+     "component": "entity",
+     "decision": null,
+     "status": "traced"
+    },
+    {
+     "component": "fact asked: course fee",
+     "decision": "field 'course fee' named by the customer",
+     "status": "traced"
+    }
+   ],
+   "persona": "budget_learner",
+   "rejection_reasons": [],
+   "round": 2,
+   "soft": {
+    "journey_relevance": 1.0,
+    "natural_wording": 1.0,
+    "novelty": 1.0,
+    "persona_relevance": 1.0,
+    "realism": 1.0,
+    "specificity": null
+   },
+   "unresolved": [],
+   "withheld": null
+  },
+  {
+   "admission": "natural",
+   "assumptions": [],
+   "capability": "lookup",
+   "category": "natural_verifiable",
+   "customer_wording": "If I sign up for Web pages from scratch, do I need to sort my own stuff or are materials Included? What are the materials for Web pages from scratch?",
+   "executed_wording": "If I sign up for Web pages from scratch, do I need to sort my own stuff or are materials Included? What are the materials for Web pages from scratch?",
+   "gates": {
+    "answerable": true,
+    "cross_version_fair": true,
+    "evidence_sufficient": true,
+    "expressible": true,
+    "grader_v1_compatible": true,
+    "grader_v2_compatible": true,
+    "grounded": true,
+    "intent_preserved": true,
+    "natural_wording_gate": true,
+    "oracle_agrees": true,
+    "schema_valid": true,
+    "unique": true
+   },
+   "id": "r2-switcher-webpages-materials",
+   "journey": "plan_commitment",
+   "kind": "page_fact",
+   "near_duplicate": false,
+   "nl_traces": [
+    {
+     "component": "entity",
+     "decision": null,
+     "status": "traced"
+    },
+    {
+     "component": "fact asked: materials",
+     "decision": "field 'materials' named by the customer",
+     "status": "traced"
+    }
+   ],
+   "persona": "career_switcher",
+   "rejection_reasons": [],
+   "round": 2,
+   "soft": {
+    "journey_relevance": 1.0,
+    "natural_wording": 1.0,
+    "novelty": 1.0,
+    "persona_relevance": 1.0,
+    "realism": 1.0,
+    "specificity": null
+   },
+   "unresolved": [],
+   "withheld": null
+  },
+  {
+   "admission": "natural",
+   "assumptions": [],
+   "capability": "single_condition_filter",
+   "category": "natural_verifiable",
+   "customer_wording": "I work weekdays so I can only come on Saturday. Which courses meet on Saturday?",
+   "executed_wording": "I work weekdays so I can only come on Saturday. Which courses meet on Saturday?",
+   "gates": {
+    "answerable": true,
+    "cross_version_fair": true,
+    "evidence_sufficient": true,
+    "expressible": true,
+    "grader_v1_compatible": true,
+    "grader_v2_compatible": true,
+    "grounded": true,
+    "intent_preserved": true,
+    "natural_wording_gate": true,
+    "oracle_agrees": true,
+    "schema_valid": true,
+    "unique": true
+   },
+   "id": "r2-recent-saturday-courses",
+   "journey": "fit_schedule",
+   "kind": "item_set",
+   "near_duplicate": false,
+   "nl_traces": [
+    {
+     "component": "condition: class day eq Saturday",
+     "decision": "field 'class day' implied by 'saturday', a value only of the class day domain",
+     "status": "traced"
+    }
+   ],
+   "persona": "recent_graduate",
+   "rejection_reasons": [],
+   "round": 2,
+   "soft": {
+    "journey_relevance": 1.0,
+    "natural_wording": 1.0,
+    "novelty": 1.0,
+    "persona_relevance": 0.0,
+    "realism": 1.0,
+    "specificity": 1.0
+   },
+   "unresolved": [],
+   "withheld": null
+  },
+  {
+   "admission": "natural",
+   "assumptions": [],
+   "capability": "multi_condition_filter",
+   "category": "natural_verifiable",
+   "customer_wording": "I want something easy to start and quick to finish — a Beginner course that lasts 4 weeks. What is available?",
+   "executed_wording": "I want something easy to start and quick to finish — a Beginner course that lasts 4 weeks. What is available?",
+   "gates": {
+    "answerable": true,
+    "cross_version_fair": true,
+    "evidence_sufficient": true,
+    "expressible": true,
+    "grader_v1_compatible": true,
+    "grader_v2_compatible": true,
+    "grounded": true,
+    "intent_preserved": true,
+    "natural_wording_gate": true,
+    "oracle_agrees": true,
+    "schema_valid": true,
+    "unique": true
+   },
+   "id": "r2-budget-beginner-short",
+   "journey": "match_level",
+   "kind": "item_set",
+   "near_duplicate": false,
+   "nl_traces": [
+    {
+     "component": "condition: level eq Beginner",
+     "decision": "field 'level' implied by 'beginner', a value only of the level domain",
+     "status": "traced"
+    },
+    {
+     "component": "condition: duration eq 4 weeks",
+     "decision": "field 'duration' implied by '4 weeks'",
+     "status": "traced"
+    }
+   ],
+   "persona": "budget_learner",
+   "rejection_reasons": [],
+   "round": 2,
+   "soft": {
+    "journey_relevance": 1.0,
+    "natural_wording": 1.0,
+    "novelty": 0.667,
+    "persona_relevance": 0.0,
+    "realism": 1.0,
+    "specificity": 1.0
+   },
+   "unresolved": [],
+   "withheld": null
+  }
+ ],
+ "rounds": [
+  {
+   "admissions": {
+    "natural": 7,
+    "rejected": 4,
+    "rubric": 1
+   },
+   "candidates": 12,
+   "completion_tokens": 3984,
+   "cost_usd": 0.020578,
+   "gaps_after": [
+    "persona budget_learner: 1 task(s), target >= 2",
+    "persona professional_upskiller: 1 task(s), target >= 2",
+    "journey check_availability (weight 0.15): no task",
+    "7 deterministic task(s), target 8-12"
+   ],
+   "latency_seconds": 19.86,
+   "model": "muse-spark-1.3",
+   "prompt_tokens": 2917,
+   "reasoning_tokens": 2216,
+   "round": 1,
+   "sent": true,
+   "stop": null,
+   "targets_met": false
+  },
+  {
+   "admissions": {
+    "natural": 11,
+    "rejected": 1
+   },
+   "candidates": 12,
+   "completion_tokens": 5795,
+   "cost_usd": 0.029226,
+   "gaps_after": [],
+   "latency_seconds": 24.64,
+   "model": "muse-spark-1.3",
+   "prompt_tokens": 3678,
+   "reasoning_tokens": 4050,
+   "round": 2,
+   "sent": true,
+   "stop": "targets_met",
+   "targets_met": true
+  }
+ ],
+ "schema": "lifecycle-stage-a-v1",
+ "site": "larkspur",
+ "stop_reason": "targets_met",
+ "suite_name": "larkspur-core",
+ "suite_sha256": "873e07c306cafc6772706c528391ffe5ef734eb7e3ca6216e2bd780b81e8ed89"
+}

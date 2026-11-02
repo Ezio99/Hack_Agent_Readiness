@@ -1,0 +1,462 @@
+{
+ "agent_evidence_consulted": false,
+ "approvals": [
+  {
+   "decided_at": "2026-11-02T12:40:29+00:00",
+   "decision": "approved",
+   "role": "owner",
+   "sha256": "31f1e3aaca7ede03f79a67f7689d3f061c78210d1ef0cbda205f16569be91a58",
+   "synthetic": false
+  }
+ ],
+ "attestation": {
+  "approve": "I am the owner and I approve suite 172d1e712eb18871fd4f24b227a2448ec44a546347bb9874f0946c5609f7848b",
+  "reject": "I am the owner and I reject suite 172d1e712eb18871fd4f24b227a2448ec44a546347bb9874f0946c5609f7848b"
+ },
+ "checklist": [
+  "Each customer wording is something a real customer would say.",
+  "Each natural task executes the customer's words unchanged.",
+  "Every assumption of an assisted task is acceptable and labelled; assisted results will be analysed separately.",
+  "No task wording reveals its answer.",
+  "The coverage gaps are acceptable for this evaluation.",
+  "Approval applies to exactly this hash; any edit creates a new version that needs a new approval."
+ ],
+ "counts": {
+  "by_category": {
+   "natural_verifiable": 6
+  },
+  "by_condition": {
+   "natural": 6
+  },
+  "tasks": 6
+ },
+ "coverage": {
+  "capabilities": {
+   "either_of": 1,
+   "extremum": 0,
+   "lookup": 1,
+   "multi_condition_filter": 3,
+   "policy_rubric": 0,
+   "ranked_subset": 1,
+   "single_condition_filter": 0
+  },
+  "deterministic": 6,
+  "matrix": {
+   "budget_learner": {
+    "check_availability": 1,
+    "find_affordable": 1,
+    "fit_schedule": 0,
+    "match_level": 0,
+    "plan_commitment": 0,
+    "understand_policies": 0
+   },
+   "career_switcher": {
+    "check_availability": 0,
+    "find_affordable": 0,
+    "fit_schedule": 1,
+    "match_level": 0,
+    "plan_commitment": 0,
+    "understand_policies": 0
+   },
+   "professional_upskiller": {
+    "check_availability": 1,
+    "find_affordable": 0,
+    "fit_schedule": 0,
+    "match_level": 0,
+    "plan_commitment": 0,
+    "understand_policies": 0
+   },
+   "recent_graduate": {
+    "check_availability": 0,
+    "find_affordable": 1,
+    "fit_schedule": 0,
+    "match_level": 1,
+    "plan_commitment": 0,
+    "understand_policies": 0
+   }
+  },
+  "multi_condition_share": 0.833,
+  "natural_share": 1.0,
+  "per_journey": {
+   "check_availability": 2,
+   "find_affordable": 2,
+   "fit_schedule": 1,
+   "match_level": 1,
+   "plan_commitment": 0,
+   "understand_policies": 0
+  },
+  "per_persona": {
+   "budget_learner": 2,
+   "career_switcher": 1,
+   "professional_upskiller": 1,
+   "recent_graduate": 2
+  },
+  "rubric": 0,
+  "status": {
+   "capabilities": {
+    "actual": 4,
+    "met": true,
+    "target": ">= 4 distinct"
+   },
+   "deterministic_tasks": {
+    "actual": 6,
+    "met": false,
+    "target": "8-12"
+   },
+   "multi_condition_share": {
+    "actual": 0.833,
+    "met": true,
+    "target": ">= 0.3"
+   },
+   "near_duplicates": {
+    "actual": 0,
+    "met": true,
+    "target": "no pair above 0.6"
+   },
+   "rubric_tasks": {
+    "actual": 0,
+    "met": true,
+    "target": "<= 2 (reported separately)"
+   },
+   "tasks_per_persona": {
+    "actual": {
+     "budget_learner": 2,
+     "career_switcher": 1,
+     "professional_upskiller": 1,
+     "recent_graduate": 2
+    },
+    "met": false,
+    "target": ">= 2 each"
+   },
+   "weighted_journeys": {
+    "actual": {
+     "check_availability": 2,
+     "find_affordable": 2,
+     "fit_schedule": 1,
+     "match_level": 1,
+     "plan_commitment": 0
+    },
+    "met": false,
+    "target": ">= 1 for each journey with weight >= 0.1"
+   }
+  },
+  "targets": {
+   "deterministic_tasks": [
+    8,
+    12
+   ],
+   "journey_min_weight": 0.1,
+   "max_pair_similarity": 0.6,
+   "max_rubric_tasks": 2,
+   "min_capabilities": 4,
+   "min_multi_condition_share": 0.3,
+   "min_tasks_per_persona": 2,
+   "min_tasks_per_weighted_journey": 1,
+   "natural_share_aspiration": 0.7
+  }
+ },
+ "created_at": "2026-11-02T14:00:00+00:00",
+ "created_by": "system",
+ "frozen": [
+  {
+   "approval_sha256": "31f1e3aaca7ede03f79a67f7689d3f061c78210d1ef0cbda205f16569be91a58",
+   "frozen_at": "2026-11-02T12:41:17+00:00",
+   "sha256": "0816af7f7440bb08fae6235c9cb77642d434dce1a8db585d08f5be5983b9b1d7"
+  }
+ ],
+ "gaps": [
+  "persona career_switcher: 1 task(s), target >= 2",
+  "persona professional_upskiller: 1 task(s), target >= 2",
+  "journey plan_commitment (weight 0.1): no task",
+  "6 deterministic task(s), target 8-12"
+ ],
+ "inputs": [
+  {
+   "kind": "catalogue",
+   "name": "larkspur-catalogue-view",
+   "sha256": "d1b87bbc5d28e0e1b28ba8419d1220730d00cb54e0d7a2c551add10313cf40c5"
+  },
+  {
+   "kind": "context",
+   "name": "larkspur-context (SYNTHETIC - illustrative assumptions for a fictional college)",
+   "sha256": "a54ee5a3b10dcf8559c3ede9cb54528902e1d69fe074c2ae1f509250745fbda3"
+  },
+  {
+   "kind": "snapshot",
+   "name": "larkspur@original",
+   "sha256": "2f9fd2ce09a044547ceb728acb9b85108931d81ca6b01374198144f509fed2eb"
+  },
+  {
+   "kind": "generator",
+   "name": "meta:taskplan-v2",
+   "sha256": "d8bdb8670d481bcaa7bf53491325a369cb65786dc13a516e079a403faf6b800f"
+  },
+  {
+   "kind": "evaluator",
+   "name": "taskeval-2:7486f02d5b2250e0",
+   "sha256": "7f0718f6cd84f4c3ba6e7f0f56d075d030b19706ae3b5c92fb970de65e8976ab"
+  },
+  {
+   "kind": "proposals",
+   "name": "24 raw proposals",
+   "sha256": "06647d1143c4384c0fe902cda0363f80a82462688aa3c240af89cad8e045e6ed"
+  },
+  {
+   "kind": "suite",
+   "name": "larkspur-core@v1",
+   "sha256": "873e07c306cafc6772706c528391ffe5ef734eb7e3ca6216e2bd780b81e8ed89"
+  }
+ ],
+ "kind": "suite",
+ "owner_terminal_command": "python -m agent_readiness.suites.stage_a.approval decide <STORE> 172d1e712eb18871fd4f24b227a2448ec44a546347bb9874f0946c5609f7848b approved",
+ "refs": [
+  "larkspur-core@v2"
+ ],
+ "schema": "lifecycle-stage-a-v1",
+ "selection_rule": "selection-2+owner-revision",
+ "sha256": "172d1e712eb18871fd4f24b227a2448ec44a546347bb9874f0946c5609f7848b",
+ "site": "larkspur",
+ "state": "frozen",
+ "suite_name": "larkspur-core",
+ "synthetic": false,
+ "tasks": [
+  {
+   "assumptions": [],
+   "capability": "multi_condition_filter",
+   "category": "natural_verifiable",
+   "condition": "natural",
+   "criterion": {
+    "conditions": [
+     {
+      "label": "course fee",
+      "op": "le",
+      "value": "$180"
+     },
+     {
+      "label": "duration",
+      "op": "le",
+      "value": "6 weeks"
+     }
+    ],
+    "kind": "item_set",
+    "listing": "/courses"
+   },
+   "customer_wording": "I just graduated and need a cheap, quick skill for my CV. Find courses costing $180 or less that last 6 weeks or less.",
+   "executed_wording": "I just graduated and need a cheap, quick skill for my CV. Find courses costing $180 or less that last 6 weeks or less.",
+   "interpretation_decisions": [
+    "field 'course fee' implied: the only money attribute in the catalogue",
+    "field 'duration' implied: the only 'weeks' attribute in the catalogue",
+    "v1 literal field-name rule ('the question does not state every condition's field and threshold (ambiguous)') replaced by gate-nl-1; every other v1 gate rule passed on the customer wording"
+   ],
+   "journey": "find_affordable",
+   "limits": {
+    "max_model_requests": 14,
+    "max_steps": 14,
+    "timeout_seconds": 240
+   },
+   "persona": "recent_graduate",
+   "sha256": "f6593d423804f826acea40a6ec7080cdbab0f8aec73c031e31aa3638e66710dd",
+   "task_id": "gen-f302fa8fe2-n",
+   "unresolved": [],
+   "verifiability": "deterministic"
+  },
+  {
+   "assumptions": [],
+   "capability": "ranked_subset",
+   "category": "natural_verifiable",
+   "condition": "natural",
+   "criterion": {
+    "conditions": [
+     {
+      "label": "level",
+      "op": "eq",
+      "value": "Intermediate"
+     },
+     {
+      "label": "campus",
+      "op": "eq",
+      "value": "Riverside"
+     }
+    ],
+    "direction": "max",
+    "kind": "ranked_subset",
+    "label": "seats left",
+    "listing": "/courses"
+   },
+   "customer_wording": "I want an Intermediate course at Riverside for after work. Among those, which one has the most seats left?",
+   "executed_wording": "I want an Intermediate course at Riverside for after work. Among those, which one has the most seats left?",
+   "interpretation_decisions": [
+    "field 'level' implied by 'intermediate', a value only of the level domain",
+    "field 'campus' implied by 'riverside', a value only of the campus domain",
+    "'most seats left ?' ranks by seats left (highest)",
+    "v1 literal field-name rule ('the question does not state every condition's field and threshold (ambiguous)') replaced by gate-nl-1; every other v1 gate rule passed on the customer wording"
+   ],
+   "journey": "check_availability",
+   "limits": {
+    "max_model_requests": 14,
+    "max_steps": 14,
+    "timeout_seconds": 240
+   },
+   "persona": "professional_upskiller",
+   "sha256": "dd23e831eca0665b11690cc98033d7111985d9ad7f065ef340bcf2b0ebc6a712",
+   "task_id": "gen-f090b4b9bc-n",
+   "unresolved": [],
+   "verifiability": "deterministic"
+  },
+  {
+   "assumptions": [],
+   "capability": "either_of",
+   "category": "natural_verifiable",
+   "condition": "natural",
+   "criterion": {
+    "conditions": [
+     {
+      "label": "level",
+      "op": "eq",
+      "value": "Beginner"
+     }
+    ],
+    "kind": "either_of",
+    "label": "class day",
+    "listing": "/courses",
+    "values": [
+     "Saturday",
+     "Sunday"
+    ]
+   },
+   "customer_wording": "I work full-time on weekdays, so I can only do Saturday or Sunday. List Beginner courses that meet on Saturday or Sunday.",
+   "executed_wording": "I work full-time on weekdays, so I can only do Saturday or Sunday. List Beginner courses that meet on Saturday or Sunday.",
+   "interpretation_decisions": [
+    "field 'level' implied by 'beginner', a value only of the level domain",
+    "field 'class day' implied by 'saturday', a value only of the class day domain; field 'class day' implied by 'sunday', a value only of the class day domain",
+    "'weekdays' read as a negative mention (not a constraint)",
+    "v1 literal field-name rule ('the question does not state every condition's field and threshold (ambiguous)') replaced by gate-nl-1; every other v1 gate rule passed on the customer wording"
+   ],
+   "journey": "fit_schedule",
+   "limits": {
+    "max_model_requests": 14,
+    "max_steps": 14,
+    "timeout_seconds": 240
+   },
+   "persona": "career_switcher",
+   "sha256": "6b13fdd49fd8cb2ac91452bb6d17c3d5c9eb99ddd02044e154511948a48cac02",
+   "task_id": "gen-8334922e62-n",
+   "unresolved": [],
+   "verifiability": "deterministic"
+  },
+  {
+   "assumptions": [],
+   "capability": "lookup",
+   "category": "natural_verifiable",
+   "condition": "natural",
+   "criterion": {
+    "kind": "page_fact",
+    "label": "course fee",
+    "page": "/courses/life-drawing-studio"
+   },
+   "customer_wording": "I like the sound of Life drawing studio but need to watch spending. What is the course fee for Life drawing studio?",
+   "executed_wording": "I like the sound of Life drawing studio but need to watch spending. What is the course fee for Life drawing studio?",
+   "interpretation_decisions": [
+    "field 'course fee' named by the customer",
+    "v1 acceptance gate passed on the customer wording (fields named literally)"
+   ],
+   "journey": "find_affordable",
+   "limits": {
+    "max_model_requests": 14,
+    "max_steps": 14,
+    "timeout_seconds": 240
+   },
+   "persona": "budget_learner",
+   "sha256": "abf1190bf9d135c84b78057fa3b8b05eb3e0f549ce3ce588634f234d04afa698",
+   "task_id": "gen-4cb59bf627-n",
+   "unresolved": [],
+   "verifiability": "deterministic"
+  },
+  {
+   "assumptions": [],
+   "capability": "multi_condition_filter",
+   "category": "natural_verifiable",
+   "condition": "natural",
+   "criterion": {
+    "conditions": [
+     {
+      "label": "course fee",
+      "op": "le",
+      "value": "$250"
+     },
+     {
+      "label": "seats left",
+      "op": "ge",
+      "value": "5"
+     }
+    ],
+    "kind": "item_set",
+    "listing": "/courses"
+   },
+   "customer_wording": "I need a course that costs $250 or less and still has at least 5 seats left. What qualifies?",
+   "executed_wording": "I need a course that costs $250 or less and still has at least 5 seats left. What qualifies?",
+   "interpretation_decisions": [
+    "field 'course fee' implied: the only money attribute in the catalogue",
+    "field 'seats left' named by the customer",
+    "v1 acceptance gate passed on the customer wording (fields named literally)"
+   ],
+   "journey": "check_availability",
+   "limits": {
+    "max_model_requests": 14,
+    "max_steps": 14,
+    "timeout_seconds": 240
+   },
+   "persona": "budget_learner",
+   "sha256": "b431adeaf5d9274e6959bcbffd261283b601262b61498a48601b95e84883a57a",
+   "task_id": "gen-23f1802ee0-n",
+   "unresolved": [],
+   "verifiability": "deterministic"
+  },
+  {
+   "assumptions": [],
+   "capability": "multi_condition_filter",
+   "category": "natural_verifiable",
+   "condition": "natural",
+   "criterion": {
+    "conditions": [
+     {
+      "label": "level",
+      "op": "eq",
+      "value": "Intermediate"
+     },
+     {
+      "label": "campus",
+      "op": "eq",
+      "value": "Northside"
+     }
+    ],
+    "kind": "item_set",
+    "listing": "/courses"
+   },
+   "customer_wording": "I want to push beyond basics. Show me Intermediate courses at Northside.",
+   "executed_wording": "I want to push beyond basics. Show me Intermediate courses at Northside.",
+   "interpretation_decisions": [
+    "field 'level' implied by 'intermediate', a value only of the level domain",
+    "field 'campus' implied by 'northside', a value only of the campus domain",
+    "v1 literal field-name rule ('the question does not state every condition's field and threshold (ambiguous)') replaced by gate-nl-1; every other v1 gate rule passed on the customer wording"
+   ],
+   "journey": "match_level",
+   "limits": {
+    "max_model_requests": 14,
+    "max_steps": 14,
+    "timeout_seconds": 240
+   },
+   "persona": "recent_graduate",
+   "sha256": "a502032c2c322a798d4b74a828afa311b8ef1d99bac0cefb8884459d7f74e53b",
+   "task_id": "gen-ae6c23b20b-n",
+   "unresolved": [],
+   "verifiability": "deterministic"
+  }
+ ],
+ "version": 2,
+ "web_decision": {
+  "available": false,
+  "detail": "Approval from the web needs a verified owner identity, which has not been chosen or configured. Decide at an owner terminal.",
+  "reason": "owner_authentication_not_configured"
+ }
+}

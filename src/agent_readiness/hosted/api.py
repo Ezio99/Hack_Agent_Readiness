@@ -210,13 +210,16 @@ def recover(root: Path, admission: Admission) -> list[str]:
                 cmd = Path(f'/proc/{pid}/cmdline').read_bytes().split(b'\0')
             except OSError:
                 continue
-            if b'agent_readiness.hosted.paired' in cmd and job_id.encode() in cmd:
+            if (b'agent_readiness.hosted.paired' in cmd or b'agent_readiness.lifecycle.jobs' in cmd) and job_id.encode() in cmd:
                 try:
                     os.killpg(int(pid), signal.SIGKILL)
                 except (ProcessLookupError, PermissionError):
                     pass
         job = admission.get(job_id)
         admission.transition(job_id, job['state'], 'interrupted')
+        if job_id.startswith('lc-'):
+            recovered.append(job_id)                      # a lifecycle job (M8): its job file is marked by the lifecycle service
+            continue
         try:
             data = paired.load_job(root, job_id)
             for rep in data['reps']:
@@ -236,7 +239,8 @@ FRIENDLY = {'evaluation capacity is occupied': 'Another evaluation is already ru
 
 
 def create_app(root: Path, admission: Admission, *, client_key: bytes, executor: Executor | None = None, trusted_proxies=(), static_dir: Path | None = None,
-               operator_token: bytes | None = None, public_start: bool = True, unavailable_reason: str | None = None, mode: str | None = None) -> FastAPI:
+               operator_token: bytes | None = None, public_start: bool = True, unavailable_reason: str | None = None, mode: str | None = None,
+               lifecycle=None) -> FastAPI:
     if len(client_key) < 32:
         raise ValueError('client identity key must be at least 32 bytes')
     root = Path(root)
@@ -348,6 +352,8 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
         if not active:
             return {'state': 'idle', 'job': None}
         job_id = active[0]
+        if job_id.startswith('lc-'):                      # the single evaluation slot is held by a lifecycle evaluation (M8)
+            return {'state': 'busy', 'job': None, 'kind': 'lifecycle', 'started_at': None, 'finished_runs': 0, 'total_runs': None, 'estimated_remaining_seconds': None}
         try:
             data = paired.load_job(root, job_id)
         except (OSError, ValueError):
@@ -380,7 +386,7 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
                 'reason': None if enabled() else (unavailable_reason or 'disabled'),
                 'repetitions': list(paired.REPETITIONS), 'model': ModelConfig().model, 'agent_profile': AGENT_PROFILE, 'agent_settings': agent_settings(),
                 'tasks': tasks, 'remaining_repetitions': max(0, (totals['ceiling_microusd'] - totals['reserved_microusd']) // totals['per_repetition_microusd']),
-                'active': active[0] if active else None}
+                'active': active[0] if active and active[0].startswith('eval-') else None}
 
     @app.get('/api/ironbark/jobs')
     def recent():
@@ -545,6 +551,10 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
             return verified_export(root, rep['run_id'])
         except Exception as exc:
             raise HTTPException(409, 'Sanitized results are unavailable') from exc
+
+    if lifecycle is not None:
+        from ..lifecycle.api import register
+        register(app, lifecycle, is_operator=is_operator)
 
     if static_dir is not None:
         from fastapi.staticfiles import StaticFiles

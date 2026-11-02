@@ -72,6 +72,35 @@ class Admission:
                 db.execute('ROLLBACK')
                 raise
 
+    def reserve_amount(self, job_id: str, client: str, microusd: int, *, now: float | None = None):
+        """Lifecycle evaluations (M8): reserve an exact amount against the SAME durable ceiling and the SAME single evaluation slot as hosted
+        repetitions. A zero-cost rehearsal reserves 0 (it still occupies the slot, so the hosted worker and a lifecycle worker never run Chromium
+        at once); a paid lifecycle run reserves its manifest's worst case. Reservations are never reduced, as for repetitions. Job ids use the
+        `lc-` prefix, so the hosted Ironbark routes never treat them as their own jobs."""
+        if not re.fullmatch(r'lc-[0-9a-f]{32}', job_id) or not re.fullmatch(r'[a-f0-9]{64}', client):
+            raise ValueError('invalid admission identity')
+        if type(microusd) is not int or not 0 <= microusd <= self.ceiling:
+            raise ValueError('invalid reservation amount')
+        now = time.time() if now is None else now
+        if not isinstance(now, (int, float)) or not 0 <= now < 10**12:
+            raise ValueError('invalid timestamp')
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            try:
+                if db.execute("SELECT 1 FROM jobs WHERE state IN ('reserved','running') LIMIT 1").fetchone():
+                    raise Refused('evaluation capacity is occupied')
+                last = db.execute('SELECT MAX(created) FROM jobs WHERE client=?', (client,)).fetchone()[0]
+                if last is not None and now - last < self.interval:
+                    raise Refused('rate limit exceeded')
+                total = db.execute('SELECT COALESCE(SUM(reserved),0) FROM jobs').fetchone()[0]
+                if total + microusd > self.ceiling:
+                    raise Refused('hosted budget exhausted')
+                db.execute('INSERT INTO jobs VALUES (?,?,?,?,?)', (job_id, client, now, 'reserved', microusd))
+                db.execute('COMMIT')
+            except BaseException:
+                db.execute('ROLLBACK')
+                raise
+
     def transition(self, job_id: str, expected: str, state: str):
         allowed = {('reserved', 'running'), ('reserved', 'failed'), ('running', 'completed'), ('running', 'failed'), ('running', 'timed_out'),
                    ('reserved', 'interrupted'), ('running', 'interrupted')}

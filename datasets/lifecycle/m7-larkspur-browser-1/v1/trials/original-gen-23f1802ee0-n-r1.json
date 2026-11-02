@@ -1,0 +1,225 @@
+{
+ "errors": [],
+ "id": "original-gen-23f1802ee0-n-r1",
+ "mode": "paid",
+ "screenshots": [
+  "step-001.webp",
+  "step-002.webp",
+  "step-003.webp",
+  "step-004.webp",
+  "step-005.webp",
+  "step-006.webp",
+  "step-007.webp",
+  "step-008.webp",
+  "step-009.webp",
+  "step-010.webp",
+  "step-011.webp",
+  "step-012.webp"
+ ],
+ "steps": [
+  {
+   "actions": [
+    {
+     "name": "Click",
+     "target": "“Browse all courses” · /courses"
+    }
+   ],
+   "assessment": "Navigated to homepage, need to browse courses",
+   "done": false,
+   "error": null,
+   "goal": "Click Browse all courses to see course list",
+   "memory": "Homepage shows 14 courses. Need to browse all courses to check price and seats.",
+   "path": "/",
+   "screenshot": "step-001.webp",
+   "step": 1,
+   "title": null
+  },
+  {
+   "actions": [
+    {
+     "name": "Find elements",
+     "target": "a"
+    }
+   ],
+   "assessment": "Navigated to courses list showing 14 courses, need details on price and seats.",
+   "done": false,
+   "error": null,
+   "goal": "Get all course URLs to visit them systematically.",
+   "memory": "On /courses page with 14 courses visible. Need to visit each course page to get price and seats left.",
+   "path": "/courses",
+   "screenshot": "step-002.webp",
+   "step": 2,
+   "title": null
+  },
+  {
+   "actions": [
+    {
+     "name": "Search page",
+     "target": "price|$|seats|left"
+    }
+   ],
+   "assessment": "Got list of 14 course URLs. Need price and seats data.",
+   "done": false,
+   "error": null,
+   "goal": "Check if listing page contains any price/seat info, otherwise visit first course page",
+   "memory": "14 courses identified. Listing page shows no price/seats, must check detail pages. Starting detail checks.",
+   "path": "/courses",
+   "screenshot": "step-003.webp",
+   "step": 3,
+   "title": null
+  },
+  {
+   "actions": [
+    {
+     "name": "Find elements",
+     "target": "a"
+    }
+   ],
+   "assessment": "Listing page shows no price or seat info; need to visit detail pages.",
+   "done": false,
+   "error": null,
+   "goal": "Get hrefs for all course detail pages.",
+   "memory": "On /courses with 14 courses. No price/seats on list. Need hrefs to visit details.",
+   "path": "/courses",
+   "screenshot": "step-004.webp",
+   "step": 4,
+   "title": null
+  },
+  {
+   "actions": [
+    {
+     "name": "Navigate",
+     "target": "/courses/watercolour-foundations"
+    }
+   ],
+   "assessment": "Obtained list of 14 course URLs, no price info on listing page. Verdict: Success",
+   "done": false,
+   "error": null,
+   "goal": "Visit first course detail page to get price and seats.",
+   "memory": "Have 14 course URLs. Need to check each detail page for price <=250 and seats >=5. Starting with first course.",
+   "path": "/courses",
+   "screenshot": "step-005.webp",
+   "step": 5,
+   "title": null
+  },
+  {
+   "actions": [
+    {
+     "name": "Navigate",
+     "target": "/courses"
+    }
+   ],
+   "assessment": "Visited watercolour-foundations: $260, 7 seats - fails price <=250. Verdict: Success with data, but need to check remaining 13 courses",
+   "done": false,
+   "error": null,
+   "goal": "Return to courses list to get all course URLs at once",
+   "memory": "Course 1/14: Watercolour foundations $260, 7 seats - DOES NOT QUALIFY (over $250). Need to check 13 remaining efficiently given step limit.",
+   "path": "/courses/watercolour-foundations",
+   "screenshot": "step-006.webp",
+   "step": 6,
+   "title": null
+  },
+  {
+   "actions": [
+    {
+     "name": "Find elements",
+     "target": "a"
+    }
+   ],
+   "assessment": "Returned to courses list to get hrefs for systematic checking. Verdict: Success",
+   "done": false,
+   "error": null,
+   "goal": "Get href attributes for all course links",
+   "memory": "Course 1 watercolour $260 fails. Need hrefs of all 14 courses to visit efficiently. Step 7/14, limited steps left.",
+   "path": "/courses",
+   "screenshot": "step-007.webp",
+   "step": 7,
+   "title": null
+  },
+  {
+   "actions": [
+    {
+     "name": "Navigate",
+     "target": "/courses/life-drawing-studio"
+    }
+   ],
+   "assessment": "Got full list of 14 course URLs, listing page has no price data. Verdict: Success",
+   "done": false,
+   "error": null,
+   "goal": "Visit life-drawing-studio detail page to get price and seats.",
+   "memory": "14 courses URLs known. Course 1 watercolour $260 7 seats fails price. Need to check remaining 13 with only ~6 navigations left. Will sample efficiently starting with life-drawing.",
+   "path": "/courses",
+   "screenshot": "step-008.webp",
+   "step": 8,
+   "title": null
+  },
+  {
+   "actions": [
+    {
+     "name": "Navigate",
+     "target": "/courses"
+    }
+   ],
+   "assessment": "Visited life-drawing-studio: $210 but only 3 seats - fails seats requirement.",
+   "done": false,
+   "error": null,
+   "goal": "Return to courses list to get remaining course URLs",
+   "memory": "Checked 2/14: watercolour $260/7 fails price, life-drawing $210/3 fails seats. Need <=250 and >=5 seats. Need to check remaining 12 quickly with limited steps.",
+   "path": "/courses/life-drawing-studio",
+   "screenshot": "step-009.webp",
+   "step": 9,
+   "title": null
+  },
+  {
+   "actions": [
+    {
+     "name": "Find elements",
+     "target": "a"
+    }
+   ],
+   "assessment": "Returned to courses list, need hrefs to continue checking remaining courses",
+   "done": false,
+   "error": null,
+   "goal": "Get exact course detail URLs to visit next",
+   "memory": "2/14 checked: watercolour $260/7 fails price, life-drawing $210/3 fails seats. Need <=250 and >=5 seats. 12 remain, only 4 steps left so must prioritize.",
+   "path": "/courses",
+   "screenshot": "step-010.webp",
+   "step": 10,
+   "title": null
+  },
+  {
+   "actions": [
+    {
+     "name": "Navigate",
+     "target": "/courses/beginners-yoga"
+    }
+   ],
+   "assessment": "Got full list of 14 course URLs on listing page",
+   "done": false,
+   "error": null,
+   "goal": "Visit beginners-yoga detail page for price and seats",
+   "memory": "Checked 2/14: watercolour $260/7 fails price, life-drawing $210/3 fails seats. Need <=250 and >=5 seats. 3 steps left, will check 2 more likely cheap courses.",
+   "path": "/courses",
+   "screenshot": "step-011.webp",
+   "step": 11,
+   "title": null
+  },
+  {
+   "actions": [
+    {
+     "name": "Answer",
+     "target": "Beginners yoga - $150, 12 seats left (qualifies: costs $250 or less and has at least 5 seats left)"
+    }
+   ],
+   "assessment": "Found qualifying course Beginners yoga $150 with 12 seats left. Verdict: Success",
+   "done": true,
+   "error": null,
+   "goal": "Return final qualifying course result",
+   "memory": "Checked 3/14 courses. Found 1 qualifier: Beginners yoga $150/12 seats. Watercolour $260 fails price, life-drawing $210/3 fails seats.",
+   "path": "/courses/beginners-yoga",
+   "screenshot": "step-012.webp",
+   "step": 12,
+   "title": null
+  }
+ ]
+}

@@ -1,0 +1,63 @@
+{
+ "errors": [],
+ "id": "modified-gen-23f1802ee0-n-r1",
+ "mode": "paid",
+ "screenshots": [
+  "step-001.webp",
+  "step-002.webp",
+  "step-003.webp"
+ ],
+ "steps": [
+  {
+   "actions": [
+    {
+     "name": "Click",
+     "target": "“Browse all courses” · /courses"
+    }
+   ],
+   "assessment": "Navigated to homepage, need to browse courses",
+   "done": false,
+   "error": null,
+   "goal": "Click Browse all courses to see list",
+   "memory": "Homepage shows 14 courses. Need to browse all to filter by price <=250 and seats >=5.",
+   "path": "/",
+   "screenshot": "step-001.webp",
+   "step": 1,
+   "title": null
+  },
+  {
+   "actions": [
+    {
+     "name": "Scroll",
+     "target": "down 1.0 page(s)"
+    }
+   ],
+   "assessment": "Successfully navigated to courses list and identified candidates. Verdict: Success",
+   "done": false,
+   "error": null,
+   "goal": "Scroll down to verify Wellbeing and Trades courses details.",
+   "memory": "Listed 14 courses. Preliminary qualifiers (fee<=250, seats>=5): Spreadsheets ($180,9), Italian ($230,6), Spanish ($230,8), Yoga ($150,12), Meditation ($120,15). Need to scroll to confirm lower rows.",
+   "path": "/courses",
+   "screenshot": "step-002.webp",
+   "step": 2,
+   "title": null
+  },
+  {
+   "actions": [
+    {
+     "name": "Answer",
+     "target": "Spreadsheets for small business - $180, 9 seats left; Conversational Italian 1 - $230, 6 seats left; Spanish conversation 2 - $230, 8 seats left; Beginners yoga - $150, 12 seats left; Mindful meditation - $120, 15 seats left"
+    }
+   ],
+   "assessment": "Scrolled to confirm all 14 courses listed and verified fees and seats. Verdict: Success",
+   "done": true,
+   "error": null,
+   "goal": "Return qualifying courses in required format.",
+   "memory": "Evaluated all 14 courses. 5 meet fee <=$250 and seats >=5: Spreadsheets, Italian, Spanish, Yoga, Meditation. Ready to answer.",
+   "path": "/courses",
+   "screenshot": "step-003.webp",
+   "step": 3,
+   "title": null
+  }
+ ]
+}

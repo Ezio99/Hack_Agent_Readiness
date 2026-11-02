@@ -20,7 +20,7 @@ from ..investigate.sitemodel.snapshot import Snapshot
 from ..investigate.taskgen import freeze as freezer
 from . import behavioral, hypotheses, structural
 
-SCHEMA = "diagnostics-report-v1"
+SCHEMA = "diagnostics-report-v2"   # v2 (M8): hypotheses-2 (either_of / ranked_subset labels); every finding carries `basis` (observed | hypothesis)
 
 
 def _trials(run: InvestigationRun, prefix: str) -> dict:
@@ -79,7 +79,7 @@ def diagnose(bundle: dict) -> dict:
     hy = hypotheses.link(site=site, versions=versions, structural=st, behavioral=bh, comparison=bundle.get("comparison"), origin=origin, tasks_alias=bundle.get("alias"))
     findings = [f for v in versions for f in st[v["name"]]] + [f for v in versions for f in bh[v["name"]]] + hy
     changes = {v["name"]: structural.compare(st[versions[0]["name"]], st[v["name"]]) for v in versions[1:]}
-    return {"schema": SCHEMA, "site": site, "source": bundle["source"], "evidence_origin": origin, "versions": {v["name"]: v["sha256"] for v in versions},
+    return {"schema": SCHEMA, "rules": {"hypotheses": hypotheses.RULES_VERSION}, "site": site, "source": bundle["source"], "evidence_origin": origin, "versions": {v["name"]: v["sha256"] for v in versions},
             "comparison": bundle.get("comparison"), "structural_changes": changes,
             "summary": {"by_layer_status": dict(Counter(f"{f.layer}:{f.status}" for f in findings)), "findings": len(findings)},
             "findings": [f.as_dict() for f in findings]}

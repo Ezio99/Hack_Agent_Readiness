@@ -1,0 +1,3627 @@
+{
+ "agent": {
+  "max_completion_tokens": 4096,
+  "model": "muse-spark-1.3",
+  "profile": "suite-v2-compat2",
+  "reasoning_effort": "low"
+ },
+ "analysis": {
+  "natural": {
+   "label": "EXPLORATORY: no confirmatory claim may be made",
+   "official_v1": {
+    "alpha": 0.05,
+    "designation": "exploratory",
+    "mean_difference": -0.1667,
+    "p_value": 1.0,
+    "pairs": 6,
+    "per_task": [
+     {
+      "difference": 0.0,
+      "modified": 0.0,
+      "original": 0.0,
+      "task": 1
+     },
+     {
+      "difference": -1.0,
+      "modified": 0.0,
+      "original": 1.0,
+      "task": 2
+     },
+     {
+      "difference": 0.0,
+      "modified": 0.0,
+      "original": 0.0,
+      "task": 3
+     },
+     {
+      "difference": 1.0,
+      "modified": 1.0,
+      "original": 0.0,
+      "task": 4
+     },
+     {
+      "difference": -1.0,
+      "modified": 0.0,
+      "original": 1.0,
+      "task": 5
+     },
+     {
+      "difference": 0.0,
+      "modified": 0.0,
+      "original": 0.0,
+      "task": 6
+     }
+    ],
+    "planned_pairs": 6,
+    "test": "paired-exact-sign-flip"
+   },
+   "outcome": "evidence-supported pass, per task (repetitions averaged), Modified minus Original",
+   "post_hoc_v2": {
+    "alpha": 0.05,
+    "designation": "exploratory",
+    "mean_difference": 0.1667,
+    "p_value": 1.0,
+    "pairs": 6,
+    "per_task": [
+     {
+      "difference": 1.0,
+      "modified": 1.0,
+      "original": 0.0,
+      "task": 1
+     },
+     {
+      "difference": 0.0,
+      "modified": 1.0,
+      "original": 1.0,
+      "task": 2
+     },
+     {
+      "difference": 0.0,
+      "modified": 0.0,
+      "original": 0.0,
+      "task": 3
+     },
+     {
+      "difference": 1.0,
+      "modified": 1.0,
+      "original": 0.0,
+      "task": 4
+     },
+     {
+      "difference": -1.0,
+      "modified": 0.0,
+      "original": 1.0,
+      "task": 5
+     },
+     {
+      "difference": 0.0,
+      "modified": 1.0,
+      "original": 1.0,
+      "task": 6
+     }
+    ],
+    "planned_pairs": 6,
+    "test": "paired-exact-sign-flip"
+   }
+  }
+ },
+ "approval": {
+  "decided_at": "2026-11-02T12:40:29+00:00",
+  "decision": "approved",
+  "method": "owner attestation of the exact suite hash at an interactive terminal",
+  "role": "owner",
+  "sha256": "31f1e3aaca7ede03f79a67f7689d3f061c78210d1ef0cbda205f16569be91a58",
+  "synthetic": false
+ },
+ "caveat": "Exploratory. 6 task(s) x 1 repetition(s) per variant: the design has no statistical power for a general improvement claim, and none is made. Differences are descriptive observations of these runs.",
+ "cost": {
+  "basis": "calculated from provider-reported token usage at published prices; not a bill",
+  "by_variant": {
+   "modified": 0.614896,
+   "original": 0.905794
+  },
+  "settled_spend": {
+   "basis": "the experiment's durable ledger: every request reserved before sending and settled from provider-reported usage; totals only",
+   "settled_requests": 111,
+   "settled_usd": 1.520696,
+   "unsettled_requests": 0
+  },
+  "total_usd": 1.52069
+ },
+ "diagnostics": {
+  "natural": {
+   "available": true,
+   "evidence_origin": "real_model",
+   "findings": [
+    {
+     "basis": "observed",
+     "detail": {
+      "detail_pages": 14,
+      "items": 14,
+      "label": "campus",
+      "listing": "/courses",
+      "listing_cards": 0
+     },
+     "evidence": [
+      {
+       "detail": "stated on 14/14 item pages (/courses/{}), on 0/14 listing cards",
+       "ref": "/courses#campus",
+       "type": "listing_field"
+      },
+      {
+       "detail": "ul.cards < main#main < body < html",
+       "ref": "/courses",
+       "type": "page"
+      }
+     ],
+     "evidence_origin": "page",
+     "id": "S-e260dd1253",
+     "impact": "an agent comparing items by campus must open up to 14 item pages",
+     "layer": "structural",
+     "recommendation": "State campus on each card of /courses (visible text next to the item name).",
+     "rule": "listing-fact-gap",
+     "severity": "medium",
+     "status": "observed",
+     "tasks": [],
+     "title": "'campus' is only on item pages, not on the /courses listing",
+     "variant": "original",
+     "verify": "Re-run diagnostics: 'campus' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare campus."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "detail_pages": 14,
+      "items": 14,
+      "label": "class day",
+      "listing": "/courses",
+      "listing_cards": 0
+     },
+     "evidence": [
+      {
+       "detail": "stated on 14/14 item pages (/courses/{}), on 0/14 listing cards",
+       "ref": "/courses#class day",
+       "type": "listing_field"
+      },
+      {
+       "detail": "ul.cards < main#main < body < html",
+       "ref": "/courses",
+       "type": "page"
+      }
+     ],
+     "evidence_origin": "page",
+     "id": "S-29db5c51b3",
+     "impact": "an agent comparing items by class day must open up to 14 item pages",
+     "layer": "structural",
+     "recommendation": "State class day on each card of /courses (visible text next to the item name).",
+     "rule": "listing-fact-gap",
+     "severity": "medium",
+     "status": "observed",
+     "tasks": [],
+     "title": "'class day' is only on item pages, not on the /courses listing",
+     "variant": "original",
+     "verify": "Re-run diagnostics: 'class day' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare class day."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "detail_pages": 14,
+      "items": 14,
+      "label": "course fee",
+      "listing": "/courses",
+      "listing_cards": 0
+     },
+     "evidence": [
+      {
+       "detail": "stated on 14/14 item pages (/courses/{}), on 0/14 listing cards",
+       "ref": "/courses#course fee",
+       "type": "listing_field"
+      },
+      {
+       "detail": "ul.cards < main#main < body < html",
+       "ref": "/courses",
+       "type": "page"
+      }
+     ],
+     "evidence_origin": "page",
+     "id": "S-0bc157f0a1",
+     "impact": "an agent comparing items by course fee must open up to 14 item pages",
+     "layer": "structural",
+     "recommendation": "State course fee on each card of /courses (visible text next to the item name).",
+     "rule": "listing-fact-gap",
+     "severity": "medium",
+     "status": "observed",
+     "tasks": [],
+     "title": "'course fee' is only on item pages, not on the /courses listing",
+     "variant": "original",
+     "verify": "Re-run diagnostics: 'course fee' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare course fee."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "detail_pages": 14,
+      "items": 14,
+      "label": "duration",
+      "listing": "/courses",
+      "listing_cards": 0
+     },
+     "evidence": [
+      {
+       "detail": "stated on 14/14 item pages (/courses/{}), on 0/14 listing cards",
+       "ref": "/courses#duration",
+       "type": "listing_field"
+      },
+      {
+       "detail": "ul.cards < main#main < body < html",
+       "ref": "/courses",
+       "type": "page"
+      }
+     ],
+     "evidence_origin": "page",
+     "id": "S-772df826eb",
+     "impact": "an agent comparing items by duration must open up to 14 item pages",
+     "layer": "structural",
+     "recommendation": "State duration on each card of /courses (visible text next to the item name).",
+     "rule": "listing-fact-gap",
+     "severity": "medium",
+     "status": "observed",
+     "tasks": [],
+     "title": "'duration' is only on item pages, not on the /courses listing",
+     "variant": "original",
+     "verify": "Re-run diagnostics: 'duration' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare duration."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "detail_pages": 14,
+      "items": 14,
+      "label": "materials",
+      "listing": "/courses",
+      "listing_cards": 0
+     },
+     "evidence": [
+      {
+       "detail": "stated on 14/14 item pages (/courses/{}), on 0/14 listing cards",
+       "ref": "/courses#materials",
+       "type": "listing_field"
+      },
+      {
+       "detail": "ul.cards < main#main < body < html",
+       "ref": "/courses",
+       "type": "page"
+      }
+     ],
+     "evidence_origin": "page",
+     "id": "S-201f36d03d",
+     "impact": "an agent comparing items by materials must open up to 14 item pages",
+     "layer": "structural",
+     "recommendation": "State materials on each card of /courses (visible text next to the item name).",
+     "rule": "listing-fact-gap",
+     "severity": "medium",
+     "status": "observed",
+     "tasks": [],
+     "title": "'materials' is only on item pages, not on the /courses listing",
+     "variant": "original",
+     "verify": "Re-run diagnostics: 'materials' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare materials."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "detail_pages": 14,
+      "items": 14,
+      "label": "seats left",
+      "listing": "/courses",
+      "listing_cards": 0
+     },
+     "evidence": [
+      {
+       "detail": "stated on 14/14 item pages (/courses/{}), on 0/14 listing cards",
+       "ref": "/courses#seats left",
+       "type": "listing_field"
+      },
+      {
+       "detail": "ul.cards < main#main < body < html",
+       "ref": "/courses",
+       "type": "page"
+      }
+     ],
+     "evidence_origin": "page",
+     "id": "S-74a8c5bd42",
+     "impact": "an agent comparing items by seats left must open up to 14 item pages",
+     "layer": "structural",
+     "recommendation": "State seats left on each card of /courses (visible text next to the item name).",
+     "rule": "listing-fact-gap",
+     "severity": "medium",
+     "status": "observed",
+     "tasks": [],
+     "title": "'seats left' is only on item pages, not on the /courses listing",
+     "variant": "original",
+     "verify": "Re-run diagnostics: 'seats left' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare seats left."
+    },
+    {
+     "basis": "observed",
+     "detail": {},
+     "evidence": [
+      {
+       "detail": "and 13 more item pages",
+       "ref": "/courses/advanced-joinery",
+       "type": "page"
+      }
+     ],
+     "evidence_origin": "page",
+     "id": "S-1bf982fc4f",
+     "impact": "agents and tools that read JSON-LD get nothing machine-readable; the visible text is the only source",
+     "layer": "structural",
+     "recommendation": "Describe each item with schema.org JSON-LD (e.g. Product/Offer or Course) using the same values the page shows.",
+     "rule": "no-structured-data",
+     "severity": "info",
+     "status": "observed",
+     "tasks": [],
+     "title": "none of 14 item pages carries structured data",
+     "variant": "original",
+     "verify": "Re-run diagnostics: item pages carry structured data whose values match the visible facts."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "detail_pages": 14,
+      "items": 14,
+      "label": "campus",
+      "listing": "/courses",
+      "listing_cards": 0
+     },
+     "evidence": [
+      {
+       "detail": "stated on 14/14 item pages (/courses/{}), on 0/14 listing cards",
+       "ref": "/courses#campus",
+       "type": "listing_field"
+      },
+      {
+       "detail": "ul.cards < main#main < body < html",
+       "ref": "/courses",
+       "type": "page"
+      }
+     ],
+     "evidence_origin": "page",
+     "id": "S-e260dd1253",
+     "impact": "an agent comparing items by campus must open up to 14 item pages",
+     "layer": "structural",
+     "recommendation": "State campus on each card of /courses (visible text next to the item name).",
+     "rule": "listing-fact-gap",
+     "severity": "medium",
+     "status": "observed",
+     "tasks": [],
+     "title": "'campus' is only on item pages, not on the /courses listing",
+     "variant": "modified",
+     "verify": "Re-run diagnostics: 'campus' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare campus."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "detail_pages": 14,
+      "items": 14,
+      "label": "class day",
+      "listing": "/courses",
+      "listing_cards": 0
+     },
+     "evidence": [
+      {
+       "detail": "stated on 14/14 item pages (/courses/{}), on 0/14 listing cards",
+       "ref": "/courses#class day",
+       "type": "listing_field"
+      },
+      {
+       "detail": "ul.cards < main#main < body < html",
+       "ref": "/courses",
+       "type": "page"
+      }
+     ],
+     "evidence_origin": "page",
+     "id": "S-29db5c51b3",
+     "impact": "an agent comparing items by class day must open up to 14 item pages",
+     "layer": "structural",
+     "recommendation": "State class day on each card of /courses (visible text next to the item name).",
+     "rule": "listing-fact-gap",
+     "severity": "medium",
+     "status": "observed",
+     "tasks": [],
+     "title": "'class day' is only on item pages, not on the /courses listing",
+     "variant": "modified",
+     "verify": "Re-run diagnostics: 'class day' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare class day."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "detail_pages": 14,
+      "items": 14,
+      "label": "materials",
+      "listing": "/courses",
+      "listing_cards": 0
+     },
+     "evidence": [
+      {
+       "detail": "stated on 14/14 item pages (/courses/{}), on 0/14 listing cards",
+       "ref": "/courses#materials",
+       "type": "listing_field"
+      },
+      {
+       "detail": "ul.cards < main#main < body < html",
+       "ref": "/courses",
+       "type": "page"
+      }
+     ],
+     "evidence_origin": "page",
+     "id": "S-201f36d03d",
+     "impact": "an agent comparing items by materials must open up to 14 item pages",
+     "layer": "structural",
+     "recommendation": "State materials on each card of /courses (visible text next to the item name).",
+     "rule": "listing-fact-gap",
+     "severity": "medium",
+     "status": "observed",
+     "tasks": [],
+     "title": "'materials' is only on item pages, not on the /courses listing",
+     "variant": "modified",
+     "verify": "Re-run diagnostics: 'materials' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare materials."
+    },
+    {
+     "basis": "observed",
+     "detail": {},
+     "evidence": [
+      {
+       "detail": "and 13 more item pages",
+       "ref": "/courses/advanced-joinery",
+       "type": "page"
+      }
+     ],
+     "evidence_origin": "page",
+     "id": "S-1bf982fc4f",
+     "impact": "agents and tools that read JSON-LD get nothing machine-readable; the visible text is the only source",
+     "layer": "structural",
+     "recommendation": "Describe each item with schema.org JSON-LD (e.g. Product/Offer or Course) using the same values the page shows.",
+     "rule": "no-structured-data",
+     "severity": "info",
+     "status": "observed",
+     "tasks": [],
+     "title": "none of 14 item pages carries structured data",
+     "variant": "modified",
+     "verify": "Re-run diagnostics: item pages carry structured data whose values match the visible facts."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "original-gen-ae6c23b20b-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "13 of 14 model requests; stop agent_done",
+       "ref": "original-gen-ae6c23b20b-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-4c5697033d",
+     "impact": "the agent ran out of its request budget, or nearly did",
+     "layer": "behavioral",
+     "recommendation": "Find which pages consumed the budget (steps cited) and whether the needed facts could be reached in fewer steps.",
+     "rule": "budget-exhaustion",
+     "severity": "high",
+     "status": "observed",
+     "tasks": [
+      4
+     ],
+     "title": "budget exhaustion on task 4 (1/1 trials)",
+     "variant": "original",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "original-gen-f090b4b9bc-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "13 of 14 model requests; stop agent_done",
+       "ref": "original-gen-f090b4b9bc-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-3a9a243b9c",
+     "impact": "the agent ran out of its request budget, or nearly did",
+     "layer": "behavioral",
+     "recommendation": "Find which pages consumed the budget (steps cited) and whether the needed facts could be reached in fewer steps.",
+     "rule": "budget-exhaustion",
+     "severity": "high",
+     "status": "observed",
+     "tasks": [
+      5
+     ],
+     "title": "budget exhaustion on task 5 (1/1 trials)",
+     "variant": "original",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "original-gen-23f1802ee0-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "graded not passed by the official grader v1",
+       "ref": "original-gen-23f1802ee0-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-556cc365cf",
+     "impact": "the task was not completed correctly",
+     "layer": "behavioral",
+     "recommendation": "Compare the agent's answer with the pages it saw (trial steps cited) to see where the needed information was missing or misread.",
+     "rule": "incorrect-answer",
+     "severity": "high",
+     "status": "observed",
+     "tasks": [
+      1
+     ],
+     "title": "incorrect answer on task 1 (1/1 trials)",
+     "variant": "original",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "original-gen-8334922e62-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "graded not passed by the official grader v1",
+       "ref": "original-gen-8334922e62-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-121cab4487",
+     "impact": "the task was not completed correctly",
+     "layer": "behavioral",
+     "recommendation": "Compare the agent's answer with the pages it saw (trial steps cited) to see where the needed information was missing or misread.",
+     "rule": "incorrect-answer",
+     "severity": "high",
+     "status": "observed",
+     "tasks": [
+      3
+     ],
+     "title": "incorrect answer on task 3 (1/1 trials)",
+     "variant": "original",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "original-gen-ae6c23b20b-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "graded not passed by the official grader v1",
+       "ref": "original-gen-ae6c23b20b-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-8b325ef972",
+     "impact": "the task was not completed correctly",
+     "layer": "behavioral",
+     "recommendation": "Compare the agent's answer with the pages it saw (trial steps cited) to see where the needed information was missing or misread.",
+     "rule": "incorrect-answer",
+     "severity": "high",
+     "status": "observed",
+     "tasks": [
+      4
+     ],
+     "title": "incorrect answer on task 4 (1/1 trials)",
+     "variant": "original",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "original-gen-f302fa8fe2-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "graded not passed by the official grader v1",
+       "ref": "original-gen-f302fa8fe2-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-f78b0c31bb",
+     "impact": "the task was not completed correctly",
+     "layer": "behavioral",
+     "recommendation": "Compare the agent's answer with the pages it saw (trial steps cited) to see where the needed information was missing or misread.",
+     "rule": "incorrect-answer",
+     "severity": "high",
+     "status": "observed",
+     "tasks": [
+      6
+     ],
+     "title": "incorrect answer on task 6 (1/1 trials)",
+     "variant": "original",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "original-gen-23f1802ee0-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "/courses visited 3 times (returned 2 times)",
+       "ref": "original-gen-23f1802ee0-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-4c8619bfc8",
+     "impact": "the same page was shown repeatedly",
+     "layer": "behavioral",
+     "recommendation": "Check why the agent returned to this page: it may be a listing it must consult repeatedly to compare items.",
+     "rule": "revisit",
+     "severity": "low",
+     "status": "observed",
+     "tasks": [
+      1
+     ],
+     "title": "revisit on task 1 (1/1 trials)",
+     "variant": "original",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "original-gen-8334922e62-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "/courses visited 4 times (returned 3 times)",
+       "ref": "original-gen-8334922e62-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-acb4479e15",
+     "impact": "the same page was shown repeatedly",
+     "layer": "behavioral",
+     "recommendation": "Check why the agent returned to this page: it may be a listing it must consult repeatedly to compare items.",
+     "rule": "revisit",
+     "severity": "low",
+     "status": "observed",
+     "tasks": [
+      3
+     ],
+     "title": "revisit on task 3 (1/1 trials)",
+     "variant": "original",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "original-gen-ae6c23b20b-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "/courses visited 3 times (returned 2 times)",
+       "ref": "original-gen-ae6c23b20b-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-dcb905a68e",
+     "impact": "the same page was shown repeatedly",
+     "layer": "behavioral",
+     "recommendation": "Check why the agent returned to this page: it may be a listing it must consult repeatedly to compare items.",
+     "rule": "revisit",
+     "severity": "low",
+     "status": "observed",
+     "tasks": [
+      4
+     ],
+     "title": "revisit on task 4 (1/1 trials)",
+     "variant": "original",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "original-gen-f090b4b9bc-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "/courses visited 5 times (returned 4 times)",
+       "ref": "original-gen-f090b4b9bc-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-3439e5f349",
+     "impact": "the same page was shown repeatedly",
+     "layer": "behavioral",
+     "recommendation": "Check why the agent returned to this page: it may be a listing it must consult repeatedly to compare items.",
+     "rule": "revisit",
+     "severity": "low",
+     "status": "observed",
+     "tasks": [
+      5
+     ],
+     "title": "revisit on task 5 (1/1 trials)",
+     "variant": "original",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "original-gen-f302fa8fe2-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "/courses visited 4 times (returned 3 times)",
+       "ref": "original-gen-f302fa8fe2-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-b78e1c9809",
+     "impact": "the same page was shown repeatedly",
+     "layer": "behavioral",
+     "recommendation": "Check why the agent returned to this page: it may be a listing it must consult repeatedly to compare items.",
+     "rule": "revisit",
+     "severity": "low",
+     "status": "observed",
+     "tasks": [
+      6
+     ],
+     "title": "revisit on task 6 (1/1 trials)",
+     "variant": "original",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "original-gen-8334922e62-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "3 pages off the evidence path",
+       "ref": "original-gen-8334922e62-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-7d25ca13db",
+     "impact": "steps spent on pages that do not hold the answer",
+     "layer": "behavioral",
+     "recommendation": "Check the pages visited off the evidence path: navigation labels may be misleading the agent.",
+     "rule": "unnecessary-navigation",
+     "severity": "low",
+     "status": "observed",
+     "tasks": [
+      3
+     ],
+     "title": "unnecessary navigation on task 3 (1/1 trials)",
+     "variant": "original",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "original-gen-ae6c23b20b-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "3 pages off the evidence path",
+       "ref": "original-gen-ae6c23b20b-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-1494f21339",
+     "impact": "steps spent on pages that do not hold the answer",
+     "layer": "behavioral",
+     "recommendation": "Check the pages visited off the evidence path: navigation labels may be misleading the agent.",
+     "rule": "unnecessary-navigation",
+     "severity": "low",
+     "status": "observed",
+     "tasks": [
+      4
+     ],
+     "title": "unnecessary navigation on task 4 (1/1 trials)",
+     "variant": "original",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "original-gen-f090b4b9bc-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "3 pages off the evidence path",
+       "ref": "original-gen-f090b4b9bc-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-cf0cf036e4",
+     "impact": "steps spent on pages that do not hold the answer",
+     "layer": "behavioral",
+     "recommendation": "Check the pages visited off the evidence path: navigation labels may be misleading the agent.",
+     "rule": "unnecessary-navigation",
+     "severity": "low",
+     "status": "observed",
+     "tasks": [
+      5
+     ],
+     "title": "unnecessary navigation on task 5 (1/1 trials)",
+     "variant": "original",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "modified-gen-8334922e62-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "13 of 14 model requests; stop agent_done",
+       "ref": "modified-gen-8334922e62-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-6f157b0577",
+     "impact": "the agent ran out of its request budget, or nearly did",
+     "layer": "behavioral",
+     "recommendation": "Find which pages consumed the budget (steps cited) and whether the needed facts could be reached in fewer steps.",
+     "rule": "budget-exhaustion",
+     "severity": "high",
+     "status": "observed",
+     "tasks": [
+      3
+     ],
+     "title": "budget exhaustion on task 3 (1/1 trials)",
+     "variant": "modified",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "modified-gen-ae6c23b20b-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "13 of 14 model requests; stop agent_done",
+       "ref": "modified-gen-ae6c23b20b-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-573da064c3",
+     "impact": "the agent ran out of its request budget, or nearly did",
+     "layer": "behavioral",
+     "recommendation": "Find which pages consumed the budget (steps cited) and whether the needed facts could be reached in fewer steps.",
+     "rule": "budget-exhaustion",
+     "severity": "high",
+     "status": "observed",
+     "tasks": [
+      4
+     ],
+     "title": "budget exhaustion on task 4 (1/1 trials)",
+     "variant": "modified",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "modified-gen-ae6c23b20b-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "http errors [('/courses/building-web-pages', 404), ('/courses/', 404)]; blocked 0; failed actions at steps []",
+       "ref": "modified-gen-ae6c23b20b-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-f88a5e8ee1",
+     "impact": "steps spent on errors or failed actions",
+     "layer": "behavioral",
+     "recommendation": "Fix or remove the failing link or control (status and step cited).",
+     "rule": "dead-end",
+     "severity": "medium",
+     "status": "observed",
+     "tasks": [
+      4
+     ],
+     "title": "dead end on task 4 (1/1 trials)",
+     "variant": "modified",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "modified-gen-23f1802ee0-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "graded not passed by the official grader v1",
+       "ref": "modified-gen-23f1802ee0-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-5124faab44",
+     "impact": "the task was not completed correctly",
+     "layer": "behavioral",
+     "recommendation": "Compare the agent's answer with the pages it saw (trial steps cited) to see where the needed information was missing or misread.",
+     "rule": "incorrect-answer",
+     "severity": "high",
+     "status": "observed",
+     "tasks": [
+      1
+     ],
+     "title": "incorrect answer on task 1 (1/1 trials)",
+     "variant": "modified",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "modified-gen-4cb59bf627-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "graded not passed by the official grader v1",
+       "ref": "modified-gen-4cb59bf627-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-785046d5e5",
+     "impact": "the task was not completed correctly",
+     "layer": "behavioral",
+     "recommendation": "Compare the agent's answer with the pages it saw (trial steps cited) to see where the needed information was missing or misread.",
+     "rule": "incorrect-answer",
+     "severity": "high",
+     "status": "observed",
+     "tasks": [
+      2
+     ],
+     "title": "incorrect answer on task 2 (1/1 trials)",
+     "variant": "modified",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "modified-gen-8334922e62-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "graded not passed by the official grader v1",
+       "ref": "modified-gen-8334922e62-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-7b104a965e",
+     "impact": "the task was not completed correctly",
+     "layer": "behavioral",
+     "recommendation": "Compare the agent's answer with the pages it saw (trial steps cited) to see where the needed information was missing or misread.",
+     "rule": "incorrect-answer",
+     "severity": "high",
+     "status": "observed",
+     "tasks": [
+      3
+     ],
+     "title": "incorrect answer on task 3 (1/1 trials)",
+     "variant": "modified",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "modified-gen-f090b4b9bc-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "graded not passed by the official grader v1",
+       "ref": "modified-gen-f090b4b9bc-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-8c5c55a92d",
+     "impact": "the task was not completed correctly",
+     "layer": "behavioral",
+     "recommendation": "Compare the agent's answer with the pages it saw (trial steps cited) to see where the needed information was missing or misread.",
+     "rule": "incorrect-answer",
+     "severity": "high",
+     "status": "observed",
+     "tasks": [
+      5
+     ],
+     "title": "incorrect answer on task 5 (1/1 trials)",
+     "variant": "modified",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "modified-gen-f302fa8fe2-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "graded not passed by the official grader v1",
+       "ref": "modified-gen-f302fa8fe2-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-8ae585ec31",
+     "impact": "the task was not completed correctly",
+     "layer": "behavioral",
+     "recommendation": "Compare the agent's answer with the pages it saw (trial steps cited) to see where the needed information was missing or misread.",
+     "rule": "incorrect-answer",
+     "severity": "high",
+     "status": "observed",
+     "tasks": [
+      6
+     ],
+     "title": "incorrect answer on task 6 (1/1 trials)",
+     "variant": "modified",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "modified-gen-8334922e62-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "/courses visited 4 times (returned 3 times)",
+       "ref": "modified-gen-8334922e62-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-5f188ca92f",
+     "impact": "the same page was shown repeatedly",
+     "layer": "behavioral",
+     "recommendation": "Check why the agent returned to this page: it may be a listing it must consult repeatedly to compare items.",
+     "rule": "revisit",
+     "severity": "low",
+     "status": "observed",
+     "tasks": [
+      3
+     ],
+     "title": "revisit on task 3 (1/1 trials)",
+     "variant": "modified",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "modified-gen-ae6c23b20b-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "/ visited 3 times (returned 2 times)",
+       "ref": "modified-gen-ae6c23b20b-n-r1",
+       "type": "trial"
+      },
+      {
+       "detail": "/courses visited 3 times (returned 2 times)",
+       "ref": "modified-gen-ae6c23b20b-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-ce6c1f46bb",
+     "impact": "the same page was shown repeatedly",
+     "layer": "behavioral",
+     "recommendation": "Check why the agent returned to this page: it may be a listing it must consult repeatedly to compare items.",
+     "rule": "revisit",
+     "severity": "low",
+     "status": "observed",
+     "tasks": [
+      4
+     ],
+     "title": "revisit on task 4 (1/1 trials)",
+     "variant": "modified",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "modified-gen-f090b4b9bc-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "/courses visited 3 times (returned 2 times)",
+       "ref": "modified-gen-f090b4b9bc-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-b323c21e1c",
+     "impact": "the same page was shown repeatedly",
+     "layer": "behavioral",
+     "recommendation": "Check why the agent returned to this page: it may be a listing it must consult repeatedly to compare items.",
+     "rule": "revisit",
+     "severity": "low",
+     "status": "observed",
+     "tasks": [
+      5
+     ],
+     "title": "revisit on task 5 (1/1 trials)",
+     "variant": "modified",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "observed",
+     "detail": {
+      "trials": [
+       "modified-gen-f090b4b9bc-n-r1"
+      ]
+     },
+     "evidence": [
+      {
+       "detail": "3 pages off the evidence path",
+       "ref": "modified-gen-f090b4b9bc-n-r1",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "B-1938ab9b62",
+     "impact": "steps spent on pages that do not hold the answer",
+     "layer": "behavioral",
+     "recommendation": "Check the pages visited off the evidence path: navigation labels may be misleading the agent.",
+     "rule": "unnecessary-navigation",
+     "severity": "low",
+     "status": "observed",
+     "tasks": [
+      5
+     ],
+     "title": "unnecessary navigation on task 5 (1/1 trials)",
+     "variant": "modified",
+     "verify": "Re-run the task after a change and compare this observation's frequency across versions."
+    },
+    {
+     "basis": "hypothesis",
+     "detail": {
+      "per_version": {
+       "modified": {
+        "evidence_backed": 1,
+        "item_pages_opened_mean": 3,
+        "requests_mean": 12,
+        "resolved_here": false,
+        "trials": 2
+       },
+       "original": {
+        "evidence_backed": 1,
+        "item_pages_opened_mean": 3.5,
+        "requests_mean": 13,
+        "resolved_here": false,
+        "trials": 2
+       }
+      },
+      "status_basis": "untested: no version without this issue has been evaluated"
+     },
+     "evidence": [
+      {
+       "detail": "'campus' is only on item pages, not on the /courses listing",
+       "ref": "S-e260dd1253",
+       "type": "finding"
+      },
+      {
+       "detail": "budget exhaustion on task 4 (1/1 trials)",
+       "ref": "B-4c5697033d",
+       "type": "finding"
+      },
+      {
+       "detail": "budget exhaustion on task 5 (1/1 trials)",
+       "ref": "B-3a9a243b9c",
+       "type": "finding"
+      },
+      {
+       "detail": "incorrect answer on task 4 (1/1 trials)",
+       "ref": "B-8b325ef972",
+       "type": "finding"
+      },
+      {
+       "detail": "revisit on task 4 (1/1 trials)",
+       "ref": "B-dcb905a68e",
+       "type": "finding"
+      },
+      {
+       "detail": "revisit on task 5 (1/1 trials)",
+       "ref": "B-3439e5f349",
+       "type": "finding"
+      },
+      {
+       "detail": "unnecessary navigation on task 4 (1/1 trials)",
+       "ref": "B-1494f21339",
+       "type": "finding"
+      },
+      {
+       "detail": "unnecessary navigation on task 5 (1/1 trials)",
+       "ref": "B-cf0cf036e4",
+       "type": "finding"
+      },
+      {
+       "detail": "item pages opened 3.5, requests 13, evidence-supported 1/2",
+       "ref": "original: 2 trials",
+       "type": "trial"
+      },
+      {
+       "detail": "item pages opened 3, requests 12, evidence-supported 1/2",
+       "ref": "modified: 2 trials",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "H-d92df0a655",
+     "impact": "tasks 4, 5 compare items by campus",
+     "layer": "hypothesis",
+     "recommendation": "State campus on each card of /courses (visible text next to the item name).",
+     "rule": "listing-fact-gap",
+     "severity": "medium",
+     "status": "hypothesis",
+     "tasks": [
+      4,
+      5
+     ],
+     "title": "Listing cards omit 'campus': suspected contributor to item-page navigation on task(s) 4, 5",
+     "variant": "original",
+     "verify": "Re-run diagnostics: 'campus' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare campus."
+    },
+    {
+     "basis": "hypothesis",
+     "detail": {
+      "per_version": {
+       "modified": {
+        "evidence_backed": 0,
+        "item_pages_opened_mean": 4,
+        "requests_mean": 13,
+        "resolved_here": false,
+        "trials": 1
+       },
+       "original": {
+        "evidence_backed": 0,
+        "item_pages_opened_mean": 4,
+        "requests_mean": 12,
+        "resolved_here": false,
+        "trials": 1
+       }
+      },
+      "status_basis": "untested: no version without this issue has been evaluated"
+     },
+     "evidence": [
+      {
+       "detail": "'class day' is only on item pages, not on the /courses listing",
+       "ref": "S-29db5c51b3",
+       "type": "finding"
+      },
+      {
+       "detail": "incorrect answer on task 3 (1/1 trials)",
+       "ref": "B-121cab4487",
+       "type": "finding"
+      },
+      {
+       "detail": "revisit on task 3 (1/1 trials)",
+       "ref": "B-acb4479e15",
+       "type": "finding"
+      },
+      {
+       "detail": "unnecessary navigation on task 3 (1/1 trials)",
+       "ref": "B-7d25ca13db",
+       "type": "finding"
+      },
+      {
+       "detail": "item pages opened 4, requests 12, evidence-supported 0/1",
+       "ref": "original: 1 trials",
+       "type": "trial"
+      },
+      {
+       "detail": "item pages opened 4, requests 13, evidence-supported 0/1",
+       "ref": "modified: 1 trials",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "H-93873c763b",
+     "impact": "tasks 3 compare items by class day",
+     "layer": "hypothesis",
+     "recommendation": "State class day on each card of /courses (visible text next to the item name).",
+     "rule": "listing-fact-gap",
+     "severity": "medium",
+     "status": "hypothesis",
+     "tasks": [
+      3
+     ],
+     "title": "Listing cards omit 'class day': suspected contributor to item-page navigation on task(s) 3",
+     "variant": "original",
+     "verify": "Re-run diagnostics: 'class day' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare class day."
+    },
+    {
+     "basis": "hypothesis",
+     "detail": {
+      "per_version": {
+       "modified": {
+        "evidence_backed": 0,
+        "item_pages_opened_mean": 0,
+        "requests_mean": 3,
+        "resolved_here": true,
+        "trials": 2
+       },
+       "original": {
+        "evidence_backed": 0,
+        "item_pages_opened_mean": 3.5,
+        "requests_mean": 12,
+        "resolved_here": false,
+        "trials": 2
+       }
+      },
+      "status_basis": "behaviour improved on modified, but no recorded comparison rule supports it"
+     },
+     "evidence": [
+      {
+       "detail": "'course fee' is only on item pages, not on the /courses listing",
+       "ref": "S-0bc157f0a1",
+       "type": "finding"
+      },
+      {
+       "detail": "incorrect answer on task 1 (1/1 trials)",
+       "ref": "B-556cc365cf",
+       "type": "finding"
+      },
+      {
+       "detail": "incorrect answer on task 6 (1/1 trials)",
+       "ref": "B-f78b0c31bb",
+       "type": "finding"
+      },
+      {
+       "detail": "revisit on task 1 (1/1 trials)",
+       "ref": "B-4c8619bfc8",
+       "type": "finding"
+      },
+      {
+       "detail": "revisit on task 6 (1/1 trials)",
+       "ref": "B-b78e1c9809",
+       "type": "finding"
+      },
+      {
+       "detail": "item pages opened 3.5, requests 12, evidence-supported 0/2",
+       "ref": "original: 2 trials",
+       "type": "trial"
+      },
+      {
+       "detail": "item pages opened 0, requests 3, evidence-supported 0/2",
+       "ref": "modified: 2 trials",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "H-4d1bd64f93",
+     "impact": "tasks 1, 6 compare items by course fee",
+     "layer": "hypothesis",
+     "recommendation": "State course fee on each card of /courses (visible text next to the item name).",
+     "rule": "listing-fact-gap",
+     "severity": "medium",
+     "status": "hypothesis",
+     "tasks": [
+      1,
+      6
+     ],
+     "title": "Listing cards omit 'course fee': suspected contributor to item-page navigation on task(s) 1, 6",
+     "variant": "original",
+     "verify": "Re-run diagnostics: 'course fee' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare course fee."
+    },
+    {
+     "basis": "hypothesis",
+     "detail": {
+      "per_version": {
+       "modified": {
+        "evidence_backed": 0,
+        "item_pages_opened_mean": 0,
+        "requests_mean": 3,
+        "resolved_here": true,
+        "trials": 1
+       },
+       "original": {
+        "evidence_backed": 0,
+        "item_pages_opened_mean": 4,
+        "requests_mean": 12,
+        "resolved_here": false,
+        "trials": 1
+       }
+      },
+      "status_basis": "behaviour improved on modified, but no recorded comparison rule supports it"
+     },
+     "evidence": [
+      {
+       "detail": "'duration' is only on item pages, not on the /courses listing",
+       "ref": "S-772df826eb",
+       "type": "finding"
+      },
+      {
+       "detail": "incorrect answer on task 6 (1/1 trials)",
+       "ref": "B-f78b0c31bb",
+       "type": "finding"
+      },
+      {
+       "detail": "revisit on task 6 (1/1 trials)",
+       "ref": "B-b78e1c9809",
+       "type": "finding"
+      },
+      {
+       "detail": "item pages opened 4, requests 12, evidence-supported 0/1",
+       "ref": "original: 1 trials",
+       "type": "trial"
+      },
+      {
+       "detail": "item pages opened 0, requests 3, evidence-supported 0/1",
+       "ref": "modified: 1 trials",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "H-f350d1b34c",
+     "impact": "tasks 6 compare items by duration",
+     "layer": "hypothesis",
+     "recommendation": "State duration on each card of /courses (visible text next to the item name).",
+     "rule": "listing-fact-gap",
+     "severity": "medium",
+     "status": "hypothesis",
+     "tasks": [
+      6
+     ],
+     "title": "Listing cards omit 'duration': suspected contributor to item-page navigation on task(s) 6",
+     "variant": "original",
+     "verify": "Re-run diagnostics: 'duration' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare duration."
+    },
+    {
+     "basis": "hypothesis",
+     "detail": {},
+     "evidence": [
+      {
+       "detail": "'materials' is only on item pages, not on the /courses listing",
+       "ref": "S-201f36d03d",
+       "type": "finding"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "H-f6094ac859",
+     "impact": "a structural risk indicator; nothing measured either way",
+     "layer": "hypothesis",
+     "recommendation": "State materials on each card of /courses (visible text next to the item name).",
+     "rule": "listing-fact-gap",
+     "severity": "info",
+     "status": "unverified",
+     "tasks": [],
+     "title": "Risk only: no evaluated task compares items by 'materials'",
+     "variant": "original",
+     "verify": "Add a task that compares items by this fact, then evaluate."
+    },
+    {
+     "basis": "hypothesis",
+     "detail": {
+      "per_version": {
+       "modified": {
+        "evidence_backed": 0,
+        "item_pages_opened_mean": 2,
+        "requests_mean": 7,
+        "resolved_here": true,
+        "trials": 2
+       },
+       "original": {
+        "evidence_backed": 1,
+        "item_pages_opened_mean": 3.5,
+        "requests_mean": 12.5,
+        "resolved_here": false,
+        "trials": 2
+       }
+      },
+      "status_basis": "on modified (issue resolved) behaviour on the dependent tasks did not improve on every measure; not supported"
+     },
+     "evidence": [
+      {
+       "detail": "'seats left' is only on item pages, not on the /courses listing",
+       "ref": "S-74a8c5bd42",
+       "type": "finding"
+      },
+      {
+       "detail": "budget exhaustion on task 5 (1/1 trials)",
+       "ref": "B-3a9a243b9c",
+       "type": "finding"
+      },
+      {
+       "detail": "incorrect answer on task 1 (1/1 trials)",
+       "ref": "B-556cc365cf",
+       "type": "finding"
+      },
+      {
+       "detail": "revisit on task 1 (1/1 trials)",
+       "ref": "B-4c8619bfc8",
+       "type": "finding"
+      },
+      {
+       "detail": "revisit on task 5 (1/1 trials)",
+       "ref": "B-3439e5f349",
+       "type": "finding"
+      },
+      {
+       "detail": "unnecessary navigation on task 5 (1/1 trials)",
+       "ref": "B-cf0cf036e4",
+       "type": "finding"
+      },
+      {
+       "detail": "item pages opened 3.5, requests 12.5, evidence-supported 1/2",
+       "ref": "original: 2 trials",
+       "type": "trial"
+      },
+      {
+       "detail": "item pages opened 2, requests 7, evidence-supported 0/2",
+       "ref": "modified: 2 trials",
+       "type": "trial"
+      }
+     ],
+     "evidence_origin": "real_model",
+     "id": "H-efdf6bb080",
+     "impact": "tasks 1, 5 compare items by seats left",
+     "layer": "hypothesis",
+     "recommendation": "State seats left on each card of /courses (visible text next to the item name).",
+     "rule": "listing-fact-gap",
+     "severity": "medium",
+     "status": "hypothesis",
+     "tasks": [
+      1,
+      5
+     ],
+     "title": "Listing cards omit 'seats left': suspected contributor to item-page navigation on task(s) 1, 5",
+     "variant": "original",
+     "verify": "Re-run diagnostics: 'seats left' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare seats left."
+    }
+   ],
+   "rules": {
+    "hypotheses": "hypotheses-2"
+   },
+   "schema": "diagnostics-report-v2",
+   "structural_changes": {
+    "modified": {
+     "introduced": 0,
+     "persisting": 4,
+     "resolved": 3,
+     "resolved_titles": [
+      "'course fee' is only on item pages, not on the /courses listing",
+      "'seats left' is only on item pages, not on the /courses listing",
+      "'duration' is only on item pages, not on the /courses listing"
+     ]
+    }
+   },
+   "summary": {
+    "by_layer_status": {
+     "behavioral:observed": 26,
+     "hypothesis:hypothesis": 5,
+     "hypothesis:unverified": 1,
+     "structural:observed": 11
+    },
+    "hypotheses": 6,
+    "observed": 37
+   }
+  }
+ },
+ "dimensions": {
+  "agent_reliability": {
+   "basis": "per trial, from the browser and request records: HTTP errors and failed actions (dead ends), whether the trial still ended with an answer, partial and empty answers, trials at or within one request of the limit, and model-output recovery by the protocol parser",
+   "variants": {
+    "modified": {
+     "dead_ends": 1,
+     "empty_answers": 0,
+     "limit_stops": 0,
+     "near_request_limit": 2,
+     "partial_answers": 1,
+     "protocol_recoveries": 39,
+     "recovered_after_dead_end": 1,
+     "void": 0
+    },
+    "original": {
+     "dead_ends": 0,
+     "empty_answers": 1,
+     "limit_stops": 0,
+     "near_request_limit": 2,
+     "partial_answers": 2,
+     "protocol_recoveries": 52,
+     "recovered_after_dead_end": 0,
+     "void": 0
+    }
+   }
+  },
+  "coverage": {
+   "basis": "the frozen suite's own coverage record (Stage A), with its targets and gaps exactly as frozen; personas and journeys are SYNTHETIC - illustrative assumptions for a fictional college; not customer research",
+   "capabilities": {
+    "either_of": 1,
+    "extremum": 0,
+    "lookup": 1,
+    "multi_condition_filter": 3,
+    "policy_rubric": 0,
+    "ranked_subset": 1,
+    "single_condition_filter": 0
+   },
+   "context": {
+    "business": "Larkspur Community College (fictional): evening and weekend short courses for adults at two campuses.",
+    "goals": [
+     "Help adults find a course that fits their budget, schedule and level without phoning the office.",
+     "Fill places in courses with seats left before the term starts.",
+     "Make fees, duration and level easy to compare across courses.",
+     "Reduce enquiries about refunds and concessions."
+    ],
+    "journeys": [
+     {
+      "attributes": [
+       "course fee"
+      ],
+      "id": "find_affordable",
+      "name": "Find a course within budget",
+      "weight": 0.3
+     },
+     {
+      "attributes": [
+       "class day",
+       "campus"
+      ],
+      "id": "fit_schedule",
+      "name": "Find a course on a day or campus that fits",
+      "weight": 0.25
+     },
+     {
+      "attributes": [
+       "level"
+      ],
+      "id": "match_level",
+      "name": "Find a course at the right level",
+      "weight": 0.15
+     },
+     {
+      "attributes": [
+       "seats left"
+      ],
+      "id": "check_availability",
+      "name": "Check that places are still available",
+      "weight": 0.15
+     },
+     {
+      "attributes": [
+       "duration",
+       "materials"
+      ],
+      "id": "plan_commitment",
+      "name": "Judge the time commitment and what to bring",
+      "weight": 0.1
+     },
+     {
+      "attributes": [],
+      "id": "understand_policies",
+      "name": "Understand refunds and concessions",
+      "weight": 0.05
+     }
+    ],
+    "label": "SYNTHETIC - illustrative assumptions for a fictional college; not customer research",
+    "personas": [
+     {
+      "constraints": "beginner level; moderate budget; prefers courses that include materials",
+      "id": "career_switcher",
+      "name": "Career switcher",
+      "needs": "a practical first course in a new field; works weekdays, so the class day matters"
+     },
+     {
+      "constraints": "low budget; flexible on day; short duration preferred",
+      "id": "recent_graduate",
+      "name": "Recent graduate",
+      "needs": "an affordable course to add a skill to a CV"
+     },
+     {
+      "constraints": "fee is the deciding factor; may hold a concession card",
+      "id": "budget_learner",
+      "name": "Budget-conscious learner",
+      "needs": "the cheapest suitable option and certainty about refunds"
+     },
+     {
+      "constraints": "level above beginner; specific campus or day; wants to know seats are available",
+      "id": "professional_upskiller",
+      "name": "Professional upskiller",
+      "needs": "an intermediate or advanced course that fits around work"
+     }
+    ],
+    "weights_note": "Journey weights are illustrative priorities chosen for the experiment, not measured traffic or demand."
+   },
+   "executed_tasks": 6,
+   "gaps": [
+    "persona career_switcher: 1 task(s), target >= 2",
+    "persona professional_upskiller: 1 task(s), target >= 2",
+    "journey plan_commitment (weight 0.1): no task",
+    "6 deterministic task(s), target 8-12"
+   ],
+   "journeys": {
+    "check_availability": 2,
+    "find_affordable": 2,
+    "fit_schedule": 1,
+    "match_level": 1,
+    "plan_commitment": 0,
+    "understand_policies": 0
+   },
+   "matrix": {
+    "budget_learner": {
+     "check_availability": 1,
+     "find_affordable": 1,
+     "fit_schedule": 0,
+     "match_level": 0,
+     "plan_commitment": 0,
+     "understand_policies": 0
+    },
+    "career_switcher": {
+     "check_availability": 0,
+     "find_affordable": 0,
+     "fit_schedule": 1,
+     "match_level": 0,
+     "plan_commitment": 0,
+     "understand_policies": 0
+    },
+    "professional_upskiller": {
+     "check_availability": 1,
+     "find_affordable": 0,
+     "fit_schedule": 0,
+     "match_level": 0,
+     "plan_commitment": 0,
+     "understand_policies": 0
+    },
+    "recent_graduate": {
+     "check_availability": 0,
+     "find_affordable": 1,
+     "fit_schedule": 0,
+     "match_level": 1,
+     "plan_commitment": 0,
+     "understand_policies": 0
+    }
+   },
+   "personas": {
+    "budget_learner": 2,
+    "career_switcher": 1,
+    "professional_upskiller": 1,
+    "recent_graduate": 2
+   },
+   "status": {
+    "capabilities": {
+     "actual": 4,
+     "met": true,
+     "target": ">= 4 distinct"
+    },
+    "deterministic_tasks": {
+     "actual": 6,
+     "met": false,
+     "target": "8-12"
+    },
+    "multi_condition_share": {
+     "actual": 0.833,
+     "met": true,
+     "target": ">= 0.3"
+    },
+    "near_duplicates": {
+     "actual": 0,
+     "met": true,
+     "target": "no pair above 0.6"
+    },
+    "rubric_tasks": {
+     "actual": 0,
+     "met": true,
+     "target": "<= 2 (reported separately)"
+    },
+    "tasks_per_persona": {
+     "actual": {
+      "budget_learner": 2,
+      "career_switcher": 1,
+      "professional_upskiller": 1,
+      "recent_graduate": 2
+     },
+     "met": false,
+     "target": ">= 2 each"
+    },
+    "weighted_journeys": {
+     "actual": {
+      "check_availability": 2,
+      "find_affordable": 2,
+      "fit_schedule": 1,
+      "match_level": 1,
+      "plan_commitment": 0
+     },
+     "met": false,
+     "target": ">= 1 for each journey with weight >= 0.1"
+    }
+   },
+   "tasks": 6
+  },
+  "evidence_quality": {
+   "basis": "the recorded evidence rule: an answer is evidence-supported only if the pages holding it were shown to the agent; counts only (the required pages name answer items)",
+   "prospective_rule": {
+    "id": "evidence-ranked-subset-2",
+    "status": "prospective evidence rule; the recorded (official) evidence rule is unchanged"
+   },
+   "variants": {
+    "modified": {
+     "correct_but_unsupported_v2": 0,
+     "evidence_satisfied": 5,
+     "missing_pages_total": 2,
+     "ranked_subset_rule_2": [
+      {
+       "required_pages": 3,
+       "satisfied": true,
+       "shown_pages": 3,
+       "task": 5
+      }
+     ],
+     "trials": 6
+    },
+    "original": {
+     "correct_but_unsupported_v2": 0,
+     "evidence_satisfied": 3,
+     "missing_pages_total": 9,
+     "ranked_subset_rule_2": [
+      {
+       "required_pages": 3,
+       "satisfied": false,
+       "shown_pages": 2,
+       "task": 5
+      }
+     ],
+     "trials": 6
+    }
+   }
+  },
+  "information_accessibility": {
+   "basis": "measured from each variant's frozen snapshot: on how many listing cards and item pages each fact is stated; per task, where the facts its question depends on are placed",
+   "facts": {
+    "modified": {
+     "campus": {
+      "items": 14,
+      "on_item_pages": 14,
+      "on_listing_cards": 0
+     },
+     "class day": {
+      "items": 14,
+      "on_item_pages": 14,
+      "on_listing_cards": 0
+     },
+     "course fee": {
+      "items": 14,
+      "on_item_pages": 14,
+      "on_listing_cards": 14
+     },
+     "duration": {
+      "items": 14,
+      "on_item_pages": 14,
+      "on_listing_cards": 14
+     },
+     "level": {
+      "items": 14,
+      "on_item_pages": 14,
+      "on_listing_cards": 14
+     },
+     "materials": {
+      "items": 14,
+      "on_item_pages": 14,
+      "on_listing_cards": 0
+     },
+     "seats left": {
+      "items": 14,
+      "on_item_pages": 14,
+      "on_listing_cards": 14
+     }
+    },
+    "original": {
+     "campus": {
+      "items": 14,
+      "on_item_pages": 14,
+      "on_listing_cards": 0
+     },
+     "class day": {
+      "items": 14,
+      "on_item_pages": 14,
+      "on_listing_cards": 0
+     },
+     "course fee": {
+      "items": 14,
+      "on_item_pages": 14,
+      "on_listing_cards": 0
+     },
+     "duration": {
+      "items": 14,
+      "on_item_pages": 14,
+      "on_listing_cards": 0
+     },
+     "level": {
+      "items": 14,
+      "on_item_pages": 14,
+      "on_listing_cards": 3
+     },
+     "materials": {
+      "items": 14,
+      "on_item_pages": 14,
+      "on_listing_cards": 0
+     },
+     "seats left": {
+      "items": 14,
+      "on_item_pages": 14,
+      "on_listing_cards": 0
+     }
+    }
+   },
+   "tasks": [
+    {
+     "facts": [
+      "course fee",
+      "seats left"
+     ],
+     "min_link_steps": {
+      "modified": 1,
+      "original": 2
+     },
+     "placement": {
+      "modified": {
+       "course fee": "listing cards",
+       "seats left": "listing cards"
+      },
+      "original": {
+       "course fee": "item pages only",
+       "seats left": "item pages only"
+      }
+     },
+     "task": 1
+    },
+    {
+     "facts": [
+      "course fee"
+     ],
+     "min_link_steps": {
+      "modified": 2,
+      "original": 2
+     },
+     "placement": {
+      "modified": {
+       "course fee": "listing cards"
+      },
+      "original": {
+       "course fee": "item pages only"
+      }
+     },
+     "task": 2
+    },
+    {
+     "facts": [
+      "level",
+      "class day"
+     ],
+     "min_link_steps": {
+      "modified": 2,
+      "original": 2
+     },
+     "placement": {
+      "modified": {
+       "class day": "item pages only",
+       "level": "listing cards"
+      },
+      "original": {
+       "class day": "item pages only",
+       "level": "item pages only"
+      }
+     },
+     "task": 3
+    },
+    {
+     "facts": [
+      "level",
+      "campus"
+     ],
+     "min_link_steps": {
+      "modified": 2,
+      "original": 2
+     },
+     "placement": {
+      "modified": {
+       "campus": "item pages only",
+       "level": "listing cards"
+      },
+      "original": {
+       "campus": "item pages only",
+       "level": "item pages only"
+      }
+     },
+     "task": 4
+    },
+    {
+     "facts": [
+      "level",
+      "campus",
+      "seats left"
+     ],
+     "min_link_steps": {
+      "modified": 2,
+      "original": 2
+     },
+     "placement": {
+      "modified": {
+       "campus": "item pages only",
+       "level": "listing cards",
+       "seats left": "listing cards"
+      },
+      "original": {
+       "campus": "item pages only",
+       "level": "item pages only",
+       "seats left": "item pages only"
+      }
+     },
+     "task": 5
+    },
+    {
+     "facts": [
+      "course fee",
+      "duration"
+     ],
+     "min_link_steps": {
+      "modified": 1,
+      "original": 2
+     },
+     "placement": {
+      "modified": {
+       "course fee": "listing cards",
+       "duration": "listing cards"
+      },
+      "original": {
+       "course fee": "item pages only",
+       "duration": "item pages only"
+      }
+     },
+     "task": 6
+    }
+   ]
+  },
+  "navigation_efficiency": {
+   "basis": "model requests, agent steps, page views and wall time per trial; revisits = returns to a page already visited (consecutive steps on one page count once)",
+   "variants": {
+    "modified": {
+     "cost_usd_total": 0.614896,
+     "elapsed_seconds_mean": 33.23,
+     "elapsed_seconds_total": 199.4,
+     "item_pages_opened_mean": 2.17,
+     "model_requests_mean": 7.67,
+     "model_requests_total": 46,
+     "page_views_mean": 7.67,
+     "revisits_total": 9,
+     "steps_mean": 8.67
+    },
+    "original": {
+     "cost_usd_total": 0.905794,
+     "elapsed_seconds_mean": 70.66,
+     "elapsed_seconds_total": 423.93,
+     "item_pages_opened_mean": 3.17,
+     "model_requests_mean": 10.83,
+     "model_requests_total": 65,
+     "page_views_mean": 10.83,
+     "revisits_total": 14,
+     "steps_mean": 11.83
+    }
+   }
+  },
+  "task_success": {
+   "basis": "per completed trial; official = grader v1 as recorded; grader v2 is a labelled post-hoc rescore; prospective rules are shown, never applied",
+   "variants": {
+    "modified": {
+     "trials": 6,
+     "v1_evidence_backed": 1,
+     "v1_passed": 1,
+     "v2_1_contrast_review_passes": 1,
+     "v2_evidence_backed": 4,
+     "v2_passed": 4
+    },
+    "original": {
+     "trials": 6,
+     "v1_evidence_backed": 2,
+     "v1_passed": 2,
+     "v2_1_contrast_review_passes": 0,
+     "v2_evidence_backed": 3,
+     "v2_passed": 3
+    }
+   }
+  }
+ },
+ "execution": {
+  "natural": {
+   "authorization_verified": true,
+   "executed": 12,
+   "invalidated": {},
+   "jail_selftest_ok": true,
+   "planned": 12,
+   "stopped": null
+  }
+ },
+ "execution_provider": "real model (muse-spark-1.3)",
+ "exploratory": true,
+ "finished_at": "2026-11-02T12:55:08.968987+00:00",
+ "frozen_suite": {
+  "frozen_at": "2026-11-02T12:41:17+00:00",
+  "sha256": "0816af7f7440bb08fae6235c9cb77642d434dce1a8db585d08f5be5983b9b1d7"
+ },
+ "graders": {
+  "official": "grader v1 (generated-criteria v1), as recorded",
+  "post_hoc": "grader v2 (generated-criteria v2), labelled post-hoc rescore",
+  "prospective": [
+   {
+    "id": "generated-criteria v2.1-contrast",
+    "status": "prospective review rule; never applied to official (v1) or recorded post-hoc (v2) grades"
+   },
+   {
+    "id": "evidence-ranked-subset-2",
+    "status": "prospective evidence rule; the recorded (official) evidence rule is unchanged"
+   }
+  ]
+ },
+ "id": "m7-larkspur-browser-1",
+ "manifest": {
+  "budget": {
+   "hard_cap_usd": 8.0,
+   "per_request_cap_usd": 0.044,
+   "worst_case_reservation_usd": 7.392
+  },
+  "conditions": [
+   "natural"
+  ],
+  "plan": "exploratory",
+  "repetitions": 1,
+  "seed": 7,
+  "sha256": "64a55c5f3a936766627a596af233595efd7c35cd448397f32357b604e6981377",
+  "variants": [
+   {
+    "name": "original",
+    "snapshot_sha256": "2f9fd2ce09a044547ceb728acb9b85108931d81ca6b01374198144f509fed2eb"
+   },
+   {
+    "name": "modified",
+    "snapshot_sha256": "edb9a5d2884a0e85fff8f9dfc6ed0e8a4bed41f9616e82678fc466864befe69f"
+   }
+  ]
+ },
+ "mode": "paid",
+ "mode_label": "Paid evaluation",
+ "notice": null,
+ "projection": "projection-1",
+ "schema": "lifecycle-evaluation-v1",
+ "site": {
+  "controlled": true,
+  "domain": "short-course catalogue",
+  "id": "larkspur",
+  "label": "Larkspur Community College"
+ },
+ "started_at": "2026-11-02T12:44:39.746536+00:00",
+ "suite": {
+  "created_by": "system",
+  "name": "larkspur-core",
+  "selection_rule": "selection-2+owner-revision",
+  "sha256": "172d1e712eb18871fd4f24b227a2448ec44a546347bb9874f0946c5609f7848b",
+  "version": 2
+ },
+ "tasks": [
+  {
+   "assumptions": [],
+   "capability": "multi_condition_filter",
+   "category": "natural_verifiable",
+   "condition": "natural",
+   "customer_wording": "I need a course that costs $250 or less and still has at least 5 seats left. What qualifies?",
+   "executed": true,
+   "executed_wording": "I need a course that costs $250 or less and still has at least 5 seats left. What qualifies?",
+   "facts": [
+    "course fee",
+    "seats left"
+   ],
+   "interpretation_decisions": [
+    "field 'course fee' implied: the only money attribute in the catalogue",
+    "field 'seats left' named by the customer",
+    "v1 acceptance gate passed on the customer wording (fields named literally)"
+   ],
+   "journey": "check_availability",
+   "kind": "item_set",
+   "limits": {
+    "max_model_requests": 14,
+    "max_steps": 14,
+    "timeout_seconds": 240
+   },
+   "min_hops": {
+    "modified": 1,
+    "original": 2
+   },
+   "n": 1,
+   "persona": "budget_learner",
+   "sha256": "b431adeaf5d9274e6959bcbffd261283b601262b61498a48601b95e84883a57a",
+   "task_id": "gen-23f1802ee0-n",
+   "verifiability": "deterministic"
+  },
+  {
+   "assumptions": [],
+   "capability": "lookup",
+   "category": "natural_verifiable",
+   "condition": "natural",
+   "customer_wording": "I like the sound of Life drawing studio but need to watch spending. What is the course fee for Life drawing studio?",
+   "executed": true,
+   "executed_wording": "I like the sound of Life drawing studio but need to watch spending. What is the course fee for Life drawing studio?",
+   "facts": [
+    "course fee"
+   ],
+   "interpretation_decisions": [
+    "field 'course fee' named by the customer",
+    "v1 acceptance gate passed on the customer wording (fields named literally)"
+   ],
+   "journey": "find_affordable",
+   "kind": "page_fact",
+   "limits": {
+    "max_model_requests": 14,
+    "max_steps": 14,
+    "timeout_seconds": 240
+   },
+   "min_hops": {
+    "modified": 2,
+    "original": 2
+   },
+   "n": 2,
+   "persona": "budget_learner",
+   "sha256": "abf1190bf9d135c84b78057fa3b8b05eb3e0f549ce3ce588634f234d04afa698",
+   "task_id": "gen-4cb59bf627-n",
+   "verifiability": "deterministic"
+  },
+  {
+   "assumptions": [],
+   "capability": "either_of",
+   "category": "natural_verifiable",
+   "condition": "natural",
+   "customer_wording": "I work full-time on weekdays, so I can only do Saturday or Sunday. List Beginner courses that meet on Saturday or Sunday.",
+   "executed": true,
+   "executed_wording": "I work full-time on weekdays, so I can only do Saturday or Sunday. List Beginner courses that meet on Saturday or Sunday.",
+   "facts": [
+    "level",
+    "class day"
+   ],
+   "interpretation_decisions": [
+    "field 'level' implied by 'beginner', a value only of the level domain",
+    "field 'class day' implied by 'saturday', a value only of the class day domain; field 'class day' implied by 'sunday', a value only of the class day domain",
+    "'weekdays' read as a negative mention (not a constraint)",
+    "v1 literal field-name rule ('the question does not state every condition's field and threshold (ambiguous)') replaced by gate-nl-1; every other v1 gate rule passed on the customer wording"
+   ],
+   "journey": "fit_schedule",
+   "kind": "either_of",
+   "limits": {
+    "max_model_requests": 14,
+    "max_steps": 14,
+    "timeout_seconds": 240
+   },
+   "min_hops": {
+    "modified": 2,
+    "original": 2
+   },
+   "n": 3,
+   "persona": "career_switcher",
+   "sha256": "6b13fdd49fd8cb2ac91452bb6d17c3d5c9eb99ddd02044e154511948a48cac02",
+   "task_id": "gen-8334922e62-n",
+   "verifiability": "deterministic"
+  },
+  {
+   "assumptions": [],
+   "capability": "multi_condition_filter",
+   "category": "natural_verifiable",
+   "condition": "natural",
+   "customer_wording": "I want to push beyond basics. Show me Intermediate courses at Northside.",
+   "executed": true,
+   "executed_wording": "I want to push beyond basics. Show me Intermediate courses at Northside.",
+   "facts": [
+    "level",
+    "campus"
+   ],
+   "interpretation_decisions": [
+    "field 'level' implied by 'intermediate', a value only of the level domain",
+    "field 'campus' implied by 'northside', a value only of the campus domain",
+    "v1 literal field-name rule ('the question does not state every condition's field and threshold (ambiguous)') replaced by gate-nl-1; every other v1 gate rule passed on the customer wording"
+   ],
+   "journey": "match_level",
+   "kind": "item_set",
+   "limits": {
+    "max_model_requests": 14,
+    "max_steps": 14,
+    "timeout_seconds": 240
+   },
+   "min_hops": {
+    "modified": 2,
+    "original": 2
+   },
+   "n": 4,
+   "persona": "recent_graduate",
+   "sha256": "a502032c2c322a798d4b74a828afa311b8ef1d99bac0cefb8884459d7f74e53b",
+   "task_id": "gen-ae6c23b20b-n",
+   "verifiability": "deterministic"
+  },
+  {
+   "assumptions": [],
+   "capability": "ranked_subset",
+   "category": "natural_verifiable",
+   "condition": "natural",
+   "customer_wording": "I want an Intermediate course at Riverside for after work. Among those, which one has the most seats left?",
+   "executed": true,
+   "executed_wording": "I want an Intermediate course at Riverside for after work. Among those, which one has the most seats left?",
+   "facts": [
+    "level",
+    "campus",
+    "seats left"
+   ],
+   "interpretation_decisions": [
+    "field 'level' implied by 'intermediate', a value only of the level domain",
+    "field 'campus' implied by 'riverside', a value only of the campus domain",
+    "'most seats left ?' ranks by seats left (highest)",
+    "v1 literal field-name rule ('the question does not state every condition's field and threshold (ambiguous)') replaced by gate-nl-1; every other v1 gate rule passed on the customer wording"
+   ],
+   "journey": "check_availability",
+   "kind": "ranked_subset",
+   "limits": {
+    "max_model_requests": 14,
+    "max_steps": 14,
+    "timeout_seconds": 240
+   },
+   "min_hops": {
+    "modified": 2,
+    "original": 2
+   },
+   "n": 5,
+   "persona": "professional_upskiller",
+   "sha256": "dd23e831eca0665b11690cc98033d7111985d9ad7f065ef340bcf2b0ebc6a712",
+   "task_id": "gen-f090b4b9bc-n",
+   "verifiability": "deterministic"
+  },
+  {
+   "assumptions": [],
+   "capability": "multi_condition_filter",
+   "category": "natural_verifiable",
+   "condition": "natural",
+   "customer_wording": "I just graduated and need a cheap, quick skill for my CV. Find courses costing $180 or less that last 6 weeks or less.",
+   "executed": true,
+   "executed_wording": "I just graduated and need a cheap, quick skill for my CV. Find courses costing $180 or less that last 6 weeks or less.",
+   "facts": [
+    "course fee",
+    "duration"
+   ],
+   "interpretation_decisions": [
+    "field 'course fee' implied: the only money attribute in the catalogue",
+    "field 'duration' implied: the only 'weeks' attribute in the catalogue",
+    "v1 literal field-name rule ('the question does not state every condition's field and threshold (ambiguous)') replaced by gate-nl-1; every other v1 gate rule passed on the customer wording"
+   ],
+   "journey": "find_affordable",
+   "kind": "item_set",
+   "limits": {
+    "max_model_requests": 14,
+    "max_steps": 14,
+    "timeout_seconds": 240
+   },
+   "min_hops": {
+    "modified": 1,
+    "original": 2
+   },
+   "n": 6,
+   "persona": "recent_graduate",
+   "sha256": "f6593d423804f826acea40a6ec7080cdbab0f8aec73c031e31aa3638e66710dd",
+   "task_id": "gen-f302fa8fe2-n",
+   "verifiability": "deterministic"
+  }
+ ],
+ "title": "Larkspur core suite v2 · first paid browser-agent evaluation (M7)",
+ "trials": [
+  {
+   "answer": [
+    "Beginners yoga - $150, 12 seats left (qualifies: costs $250 or less and has at least 5 seats left)"
+   ],
+   "answer_coverage": {
+    "expected_items": 5,
+    "named_expected": 1,
+    "named_other": 0,
+    "unrecognised": 0
+   },
+   "condition": "natural",
+   "evidence": {
+    "missing_pages": 4,
+    "missing_texts": 0,
+    "ranked_subset_rule_2": {
+     "applies": false,
+     "rule": "evidence-ranked-subset-2"
+    },
+    "required_pages": 6,
+    "rule": "recorded evidence rule (pages and texts that hold the answer must have been shown)",
+    "satisfied": false
+   },
+   "finished_at": "2026-11-02T12:45:49.348997+00:00",
+   "grades": {
+    "v1": {
+     "answer_valid": true,
+     "evidence_backed": false,
+     "official": true,
+     "passed": false,
+     "reasons": [
+      "does not match the independently derived answer"
+     ]
+    },
+    "v2": {
+     "evidence_backed": false,
+     "official": false,
+     "passed": false,
+     "post_hoc": true,
+     "reasons": [
+      "contradictory_detail",
+      "hedged"
+     ],
+     "review": false
+    },
+    "v2_1_contrast": null
+   },
+   "id": "original-gen-23f1802ee0-n-r1",
+   "metrics": {
+    "completion_tokens": 6318,
+    "cost_usd": 0.170315,
+    "elapsed_seconds": 66.71,
+    "model_requests": 12,
+    "page_views": 12,
+    "prompt_tokens": 114771,
+    "request_limit": 14,
+    "steps": 13
+   },
+   "navigation": {
+    "distinct_pages": 5,
+    "item_pages_opened": 3,
+    "revisits": 2,
+    "visits": [
+     "/",
+     "/courses",
+     "/courses/watercolour-foundations",
+     "/courses",
+     "/courses/life-drawing-studio",
+     "/courses",
+     "/courses/beginners-yoga"
+    ]
+   },
+   "reliability": {
+    "blocked_requests": 0,
+    "dead_end": false,
+    "empty_answer": false,
+    "failed_action_steps": [],
+    "http_errors": [],
+    "limit_stop": false,
+    "near_request_limit": false,
+    "partial_answer": true,
+    "protocol": {
+     "noncompliant": 8,
+     "recovered": 8,
+     "responses": 12
+    },
+    "recovered": false
+   },
+   "repetition": 1,
+   "status": "completed",
+   "stop_reason": "agent_done",
+   "task": 1,
+   "task_id": "gen-23f1802ee0-n",
+   "variant": "original",
+   "void": false
+  },
+  {
+   "answer": [
+    "Spreadsheets for small business - $180, 9 seats left",
+    "Conversational Italian 1 - $230, 6 seats left",
+    "Spanish conversation 2 - $230, 8 seats left",
+    "Beginners yoga - $150, 12 seats left",
+    "Mindful meditation - $120, 15 seats left"
+   ],
+   "answer_coverage": {
+    "expected_items": 5,
+    "named_expected": 5,
+    "named_other": 0,
+    "unrecognised": 0
+   },
+   "condition": "natural",
+   "evidence": {
+    "missing_pages": 0,
+    "missing_texts": 0,
+    "ranked_subset_rule_2": {
+     "applies": false,
+     "rule": "evidence-ranked-subset-2"
+    },
+    "required_pages": 1,
+    "rule": "recorded evidence rule (pages and texts that hold the answer must have been shown)",
+    "satisfied": true
+   },
+   "finished_at": "2026-11-02T12:46:05.763088+00:00",
+   "grades": {
+    "v1": {
+     "answer_valid": true,
+     "evidence_backed": false,
+     "official": true,
+     "passed": false,
+     "reasons": [
+      "does not match the independently derived answer"
+     ]
+    },
+    "v2": {
+     "evidence_backed": true,
+     "official": false,
+     "passed": true,
+     "post_hoc": true,
+     "reasons": [
+      "matches_truth_with_consistent_detail"
+     ],
+     "review": false
+    },
+    "v2_1_contrast": null
+   },
+   "id": "modified-gen-23f1802ee0-n-r1",
+   "metrics": {
+    "completion_tokens": 1096,
+    "cost_usd": 0.039174,
+    "elapsed_seconds": 16.36,
+    "model_requests": 3,
+    "page_views": 3,
+    "prompt_tokens": 27613,
+    "request_limit": 14,
+    "steps": 4
+   },
+   "navigation": {
+    "distinct_pages": 2,
+    "item_pages_opened": 0,
+    "revisits": 0,
+    "visits": [
+     "/",
+     "/courses"
+    ]
+   },
+   "reliability": {
+    "blocked_requests": 0,
+    "dead_end": false,
+    "empty_answer": false,
+    "failed_action_steps": [],
+    "http_errors": [],
+    "limit_stop": false,
+    "near_request_limit": false,
+    "partial_answer": false,
+    "protocol": {
+     "noncompliant": 2,
+     "recovered": 2,
+     "responses": 3
+    },
+    "recovered": false
+   },
+   "repetition": 1,
+   "status": "completed",
+   "stop_reason": "agent_done",
+   "task": 1,
+   "task_id": "gen-23f1802ee0-n",
+   "variant": "modified",
+   "void": false
+  },
+  {
+   "answer": "$210",
+   "answer_coverage": {
+    "expected_items": 1,
+    "named_expected": 1,
+    "named_other": 0,
+    "unrecognised": 0
+   },
+   "condition": "natural",
+   "evidence": {
+    "missing_pages": 0,
+    "missing_texts": 0,
+    "ranked_subset_rule_2": {
+     "applies": false,
+     "rule": "evidence-ranked-subset-2"
+    },
+    "required_pages": 1,
+    "rule": "recorded evidence rule (pages and texts that hold the answer must have been shown)",
+    "satisfied": true
+   },
+   "finished_at": "2026-11-02T12:46:37.690881+00:00",
+   "grades": {
+    "v1": {
+     "answer_valid": true,
+     "evidence_backed": true,
+     "official": true,
+     "passed": true,
+     "reasons": [
+      "matches the independently derived answer"
+     ]
+    },
+    "v2": {
+     "evidence_backed": true,
+     "official": false,
+     "passed": true,
+     "post_hoc": true,
+     "reasons": [
+      "matches_truth"
+     ],
+     "review": false
+    },
+    "v2_1_contrast": null
+   },
+   "id": "original-gen-4cb59bf627-n-r1",
+   "metrics": {
+    "completion_tokens": 456,
+    "cost_usd": 0.035368,
+    "elapsed_seconds": 19.78,
+    "model_requests": 3,
+    "page_views": 3,
+    "prompt_tokens": 26744,
+    "request_limit": 14,
+    "steps": 4
+   },
+   "navigation": {
+    "distinct_pages": 3,
+    "item_pages_opened": 1,
+    "revisits": 0,
+    "visits": [
+     "/",
+     "/courses",
+     "/courses/life-drawing-studio"
+    ]
+   },
+   "reliability": {
+    "blocked_requests": 0,
+    "dead_end": false,
+    "empty_answer": false,
+    "failed_action_steps": [],
+    "http_errors": [],
+    "limit_stop": false,
+    "near_request_limit": false,
+    "partial_answer": false,
+    "protocol": {
+     "noncompliant": 1,
+     "recovered": 1,
+     "responses": 3
+    },
+    "recovered": false
+   },
+   "repetition": 1,
+   "status": "completed",
+   "stop_reason": "agent_done",
+   "task": 2,
+   "task_id": "gen-4cb59bf627-n",
+   "variant": "original",
+   "void": false
+  },
+  {
+   "answer": "The course fee for Life drawing studio is $210.",
+   "answer_coverage": {
+    "expected_items": 1,
+    "named_expected": 1,
+    "named_other": 0,
+    "unrecognised": 0
+   },
+   "condition": "natural",
+   "evidence": {
+    "missing_pages": 0,
+    "missing_texts": 0,
+    "ranked_subset_rule_2": {
+     "applies": false,
+     "rule": "evidence-ranked-subset-2"
+    },
+    "required_pages": 1,
+    "rule": "recorded evidence rule (pages and texts that hold the answer must have been shown)",
+    "satisfied": true
+   },
+   "finished_at": "2026-11-02T12:46:17.867306+00:00",
+   "grades": {
+    "v1": {
+     "answer_valid": true,
+     "evidence_backed": false,
+     "official": true,
+     "passed": false,
+     "reasons": [
+      "does not match the independently derived answer"
+     ]
+    },
+    "v2": {
+     "evidence_backed": true,
+     "official": false,
+     "passed": true,
+     "post_hoc": true,
+     "reasons": [
+      "matches_truth_with_consistent_detail"
+     ],
+     "review": false
+    },
+    "v2_1_contrast": null
+   },
+   "id": "modified-gen-4cb59bf627-n-r1",
+   "metrics": {
+    "completion_tokens": 828,
+    "cost_usd": 0.037259,
+    "elapsed_seconds": 11.93,
+    "model_requests": 3,
+    "page_views": 3,
+    "prompt_tokens": 26992,
+    "request_limit": 14,
+    "steps": 4
+   },
+   "navigation": {
+    "distinct_pages": 3,
+    "item_pages_opened": 1,
+    "revisits": 0,
+    "visits": [
+     "/",
+     "/courses",
+     "/courses/life-drawing-studio"
+    ]
+   },
+   "reliability": {
+    "blocked_requests": 0,
+    "dead_end": false,
+    "empty_answer": false,
+    "failed_action_steps": [],
+    "http_errors": [],
+    "limit_stop": false,
+    "near_request_limit": false,
+    "partial_answer": false,
+    "protocol": {
+     "noncompliant": 2,
+     "recovered": 2,
+     "responses": 3
+    },
+    "recovered": false
+   },
+   "repetition": 1,
+   "status": "completed",
+   "stop_reason": "agent_done",
+   "task": 2,
+   "task_id": "gen-4cb59bf627-n",
+   "variant": "modified",
+   "void": false
+  },
+  {
+   "answer": [
+    "Beginners Yoga"
+   ],
+   "answer_coverage": {
+    "expected_items": 4,
+    "named_expected": 1,
+    "named_other": 0,
+    "unrecognised": 0
+   },
+   "condition": "natural",
+   "evidence": {
+    "missing_pages": 3,
+    "missing_texts": 0,
+    "ranked_subset_rule_2": {
+     "applies": false,
+     "rule": "evidence-ranked-subset-2"
+    },
+    "required_pages": 5,
+    "rule": "recorded evidence rule (pages and texts that hold the answer must have been shown)",
+    "satisfied": false
+   },
+   "finished_at": "2026-11-02T12:49:12.568925+00:00",
+   "grades": {
+    "v1": {
+     "answer_valid": true,
+     "evidence_backed": false,
+     "official": true,
+     "passed": false,
+     "reasons": [
+      "does not match the independently derived answer"
+     ]
+    },
+    "v2": {
+     "evidence_backed": false,
+     "official": false,
+     "passed": false,
+     "post_hoc": true,
+     "reasons": [
+      "missing_items"
+     ],
+     "review": false
+    },
+    "v2_1_contrast": null
+   },
+   "id": "original-gen-8334922e62-n-r1",
+   "metrics": {
+    "completion_tokens": 7160,
+    "cost_usd": 0.172444,
+    "elapsed_seconds": 87.65,
+    "model_requests": 12,
+    "page_views": 12,
+    "prompt_tokens": 113611,
+    "request_limit": 14,
+    "steps": 13
+   },
+   "navigation": {
+    "distinct_pages": 6,
+    "item_pages_opened": 4,
+    "revisits": 3,
+    "visits": [
+     "/",
+     "/courses",
+     "/courses/watercolour-foundations",
+     "/courses",
+     "/courses/beginners-yoga",
+     "/courses",
+     "/courses/intro-to-python",
+     "/courses",
+     "/courses/conversational-italian-1"
+    ]
+   },
+   "reliability": {
+    "blocked_requests": 0,
+    "dead_end": false,
+    "empty_answer": false,
+    "failed_action_steps": [],
+    "http_errors": [],
+    "limit_stop": false,
+    "near_request_limit": false,
+    "partial_answer": true,
+    "protocol": {
+     "noncompliant": 11,
+     "recovered": 11,
+     "responses": 12
+    },
+    "recovered": false
+   },
+   "repetition": 1,
+   "status": "completed",
+   "stop_reason": "agent_done",
+   "task": 3,
+   "task_id": "gen-8334922e62-n",
+   "variant": "original",
+   "void": false
+  },
+  {
+   "answer": [
+    "Wheel-thrown pottery",
+    "Beginners yoga"
+   ],
+   "answer_coverage": {
+    "expected_items": 4,
+    "named_expected": 2,
+    "named_other": 0,
+    "unrecognised": 0
+   },
+   "condition": "natural",
+   "evidence": {
+    "missing_pages": 2,
+    "missing_texts": 0,
+    "ranked_subset_rule_2": {
+     "applies": false,
+     "rule": "evidence-ranked-subset-2"
+    },
+    "required_pages": 5,
+    "rule": "recorded evidence rule (pages and texts that hold the answer must have been shown)",
+    "satisfied": false
+   },
+   "finished_at": "2026-11-02T12:47:44.452136+00:00",
+   "grades": {
+    "v1": {
+     "answer_valid": true,
+     "evidence_backed": false,
+     "official": true,
+     "passed": false,
+     "reasons": [
+      "does not match the independently derived answer"
+     ]
+    },
+    "v2": {
+     "evidence_backed": false,
+     "official": false,
+     "passed": false,
+     "post_hoc": true,
+     "reasons": [
+      "missing_items"
+     ],
+     "review": false
+    },
+    "v2_1_contrast": null
+   },
+   "id": "modified-gen-8334922e62-n-r1",
+   "metrics": {
+    "completion_tokens": 5723,
+    "cost_usd": 0.182575,
+    "elapsed_seconds": 66.44,
+    "model_requests": 13,
+    "page_views": 13,
+    "prompt_tokens": 126602,
+    "request_limit": 14,
+    "steps": 14
+   },
+   "navigation": {
+    "distinct_pages": 6,
+    "item_pages_opened": 4,
+    "revisits": 3,
+    "visits": [
+     "/",
+     "/courses",
+     "/courses/watercolour-foundations",
+     "/courses",
+     "/courses/wheel-thrown-pottery",
+     "/courses",
+     "/courses/intro-to-python",
+     "/courses",
+     "/courses/beginners-yoga"
+    ]
+   },
+   "reliability": {
+    "blocked_requests": 0,
+    "dead_end": false,
+    "empty_answer": false,
+    "failed_action_steps": [],
+    "http_errors": [],
+    "limit_stop": false,
+    "near_request_limit": true,
+    "partial_answer": true,
+    "protocol": {
+     "noncompliant": 12,
+     "recovered": 12,
+     "responses": 13
+    },
+    "recovered": false
+   },
+   "repetition": 1,
+   "status": "completed",
+   "stop_reason": "agent_done",
+   "task": 3,
+   "task_id": "gen-8334922e62-n",
+   "variant": "modified",
+   "void": false
+  },
+  {
+   "answer": [],
+   "answer_coverage": {
+    "expected_items": 2,
+    "named_expected": 0,
+    "named_other": 0,
+    "unrecognised": 0
+   },
+   "condition": "natural",
+   "evidence": {
+    "missing_pages": 2,
+    "missing_texts": 0,
+    "ranked_subset_rule_2": {
+     "applies": false,
+     "rule": "evidence-ranked-subset-2"
+    },
+    "required_pages": 3,
+    "rule": "recorded evidence rule (pages and texts that hold the answer must have been shown)",
+    "satisfied": false
+   },
+   "finished_at": "2026-11-02T12:51:20.436350+00:00",
+   "grades": {
+    "v1": {
+     "answer_valid": true,
+     "evidence_backed": false,
+     "official": true,
+     "passed": false,
+     "reasons": [
+      "does not match the independently derived answer"
+     ]
+    },
+    "v2": {
+     "evidence_backed": false,
+     "official": false,
+     "passed": false,
+     "post_hoc": true,
+     "reasons": [
+      "no_answer"
+     ],
+     "review": false
+    },
+    "v2_1_contrast": null
+   },
+   "id": "original-gen-ae6c23b20b-n-r1",
+   "metrics": {
+    "completion_tokens": 6244,
+    "cost_usd": 0.181717,
+    "elapsed_seconds": 84.46,
+    "model_requests": 13,
+    "page_views": 13,
+    "prompt_tokens": 124144,
+    "request_limit": 14,
+    "steps": 14
+   },
+   "navigation": {
+    "distinct_pages": 5,
+    "item_pages_opened": 3,
+    "revisits": 2,
+    "visits": [
+     "/",
+     "/courses",
+     "/courses/spanish-conversation-2",
+     "/courses",
+     "/courses/furniture-restoration",
+     "/courses",
+     "/courses/wheel-thrown-pottery"
+    ]
+   },
+   "reliability": {
+    "blocked_requests": 0,
+    "dead_end": false,
+    "empty_answer": true,
+    "failed_action_steps": [],
+    "http_errors": [],
+    "limit_stop": false,
+    "near_request_limit": true,
+    "partial_answer": false,
+    "protocol": {
+     "noncompliant": 10,
+     "recovered": 10,
+     "responses": 13
+    },
+    "recovered": false
+   },
+   "repetition": 1,
+   "status": "completed",
+   "stop_reason": "agent_done",
+   "task": 4,
+   "task_id": "gen-ae6c23b20b-n",
+   "variant": "original",
+   "void": false
+  },
+  {
+   "answer": [
+    "Life drawing studio",
+    "Web pages from scratch"
+   ],
+   "answer_coverage": {
+    "expected_items": 2,
+    "named_expected": 2,
+    "named_other": 0,
+    "unrecognised": 0
+   },
+   "condition": "natural",
+   "evidence": {
+    "missing_pages": 0,
+    "missing_texts": 0,
+    "ranked_subset_rule_2": {
+     "applies": false,
+     "rule": "evidence-ranked-subset-2"
+    },
+    "required_pages": 3,
+    "rule": "recorded evidence rule (pages and texts that hold the answer must have been shown)",
+    "satisfied": true
+   },
+   "finished_at": "2026-11-02T12:49:55.510946+00:00",
+   "grades": {
+    "v1": {
+     "answer_valid": true,
+     "evidence_backed": true,
+     "official": true,
+     "passed": true,
+     "reasons": [
+      "matches the independently derived answer"
+     ]
+    },
+    "v2": {
+     "evidence_backed": true,
+     "official": false,
+     "passed": true,
+     "post_hoc": true,
+     "reasons": [
+      "matches_truth"
+     ],
+     "review": false
+    },
+    "v2_1_contrast": null
+   },
+   "id": "modified-gen-ae6c23b20b-n-r1",
+   "metrics": {
+    "completion_tokens": 3430,
+    "cost_usd": 0.169517,
+    "elapsed_seconds": 42.62,
+    "model_requests": 13,
+    "page_views": 13,
+    "prompt_tokens": 123952,
+    "request_limit": 14,
+    "steps": 14
+   },
+   "navigation": {
+    "distinct_pages": 6,
+    "item_pages_opened": 4,
+    "revisits": 4,
+    "visits": [
+     "/",
+     "/courses",
+     "/courses/life-drawing-studio",
+     "/courses/building-web-pages",
+     "/",
+     "/courses",
+     "/courses/web-pages-from-scratch",
+     "/courses/",
+     "/",
+     "/courses"
+    ]
+   },
+   "reliability": {
+    "blocked_requests": 0,
+    "dead_end": true,
+    "empty_answer": false,
+    "failed_action_steps": [],
+    "http_errors": [
+     {
+      "path": "/courses/building-web-pages",
+      "status": 404
+     },
+     {
+      "path": "/courses/",
+      "status": 404
+     }
+    ],
+    "limit_stop": false,
+    "near_request_limit": true,
+    "partial_answer": false,
+    "protocol": {
+     "noncompliant": 11,
+     "recovered": 11,
+     "responses": 13
+    },
+    "recovered": true
+   },
+   "repetition": 1,
+   "status": "completed",
+   "stop_reason": "agent_done",
+   "task": 4,
+   "task_id": "gen-ae6c23b20b-n",
+   "variant": "modified",
+   "void": false
+  },
+  {
+   "answer": "Spanish conversation 2",
+   "answer_coverage": {
+    "expected_items": 1,
+    "named_expected": 1,
+    "named_other": 0,
+    "unrecognised": 0
+   },
+   "condition": "natural",
+   "evidence": {
+    "missing_pages": 0,
+    "missing_texts": 0,
+    "ranked_subset_rule_2": {
+     "applies": true,
+     "required_pages": 3,
+     "rule": "evidence-ranked-subset-2",
+     "satisfied": false,
+     "shown_pages": 2,
+     "status": "prospective evidence rule; the recorded (official) evidence rule is unchanged"
+    },
+    "required_pages": 2,
+    "rule": "recorded evidence rule (pages and texts that hold the answer must have been shown)",
+    "satisfied": true
+   },
+   "finished_at": "2026-11-02T12:53:34.074301+00:00",
+   "grades": {
+    "v1": {
+     "answer_valid": true,
+     "evidence_backed": true,
+     "official": true,
+     "passed": true,
+     "reasons": [
+      "matches the independently derived answer"
+     ]
+    },
+    "v2": {
+     "evidence_backed": true,
+     "official": false,
+     "passed": true,
+     "post_hoc": true,
+     "reasons": [
+      "matches_truth"
+     ],
+     "review": false
+    },
+    "v2_1_contrast": null
+   },
+   "id": "original-gen-f090b4b9bc-n-r1",
+   "metrics": {
+    "completion_tokens": 5672,
+    "cost_usd": 0.17878,
+    "elapsed_seconds": 86.97,
+    "model_requests": 13,
+    "page_views": 13,
+    "prompt_tokens": 123739,
+    "request_limit": 14,
+    "steps": 14
+   },
+   "navigation": {
+    "distinct_pages": 6,
+    "item_pages_opened": 4,
+    "revisits": 4,
+    "visits": [
+     "/",
+     "/courses",
+     "/courses/watercolour-foundations",
+     "/courses",
+     "/courses/spanish-conversation-2",
+     "/courses",
+     "/courses/wheel-thrown-pottery",
+     "/courses",
+     "/courses/web-pages-from-scratch",
+     "/courses"
+    ]
+   },
+   "reliability": {
+    "blocked_requests": 0,
+    "dead_end": false,
+    "empty_answer": false,
+    "failed_action_steps": [],
+    "http_errors": [],
+    "limit_stop": false,
+    "near_request_limit": true,
+    "partial_answer": false,
+    "protocol": {
+     "noncompliant": 12,
+     "recovered": 12,
+     "responses": 13
+    },
+    "recovered": false
+   },
+   "repetition": 1,
+   "status": "completed",
+   "stop_reason": "agent_done",
+   "task": 5,
+   "task_id": "gen-f090b4b9bc-n",
+   "variant": "original",
+   "void": false
+  },
+  {
+   "answer": "Spanish conversation 2 - Intermediate at Riverside on Thursday with 8 seats left (vs Furniture restoration with 1 seat on Sunday); it is the Intermediate Riverside after-work option with the most seats.",
+   "answer_coverage": {
+    "expected_items": 1,
+    "named_expected": 1,
+    "named_other": 1,
+    "unrecognised": 0
+   },
+   "condition": "natural",
+   "evidence": {
+    "missing_pages": 0,
+    "missing_texts": 0,
+    "ranked_subset_rule_2": {
+     "applies": true,
+     "required_pages": 3,
+     "rule": "evidence-ranked-subset-2",
+     "satisfied": true,
+     "shown_pages": 3,
+     "status": "prospective evidence rule; the recorded (official) evidence rule is unchanged"
+    },
+    "required_pages": 2,
+    "rule": "recorded evidence rule (pages and texts that hold the answer must have been shown)",
+    "satisfied": true
+   },
+   "finished_at": "2026-11-02T12:52:06.664933+00:00",
+   "grades": {
+    "v1": {
+     "answer_valid": true,
+     "evidence_backed": false,
+     "official": true,
+     "passed": false,
+     "reasons": [
+      "does not match the independently derived answer"
+     ]
+    },
+    "v2": {
+     "evidence_backed": false,
+     "official": false,
+     "passed": false,
+     "post_hoc": true,
+     "reasons": [
+      "multiple_candidates"
+     ],
+     "review": true
+    },
+    "v2_1_contrast": {
+     "passed": true,
+     "reasons": [
+      "matches_truth_with_contrasted_alternative"
+     ],
+     "review": true,
+     "status": "prospective review rule; never applied to official (v1) or recorded post-hoc (v2) grades"
+    }
+   },
+   "id": "modified-gen-f090b4b9bc-n-r1",
+   "metrics": {
+    "completion_tokens": 3905,
+    "cost_usd": 0.147614,
+    "elapsed_seconds": 46.01,
+    "model_requests": 11,
+    "page_views": 11,
+    "prompt_tokens": 104814,
+    "request_limit": 14,
+    "steps": 12
+   },
+   "navigation": {
+    "distinct_pages": 6,
+    "item_pages_opened": 4,
+    "revisits": 2,
+    "visits": [
+     "/",
+     "/courses",
+     "/courses/life-drawing-studio",
+     "/courses",
+     "/courses/web-pages-from-scratch",
+     "/courses",
+     "/courses/spanish-conversation-2",
+     "/courses/furniture-restoration"
+    ]
+   },
+   "reliability": {
+    "blocked_requests": 0,
+    "dead_end": false,
+    "empty_answer": false,
+    "failed_action_steps": [],
+    "http_errors": [],
+    "limit_stop": false,
+    "near_request_limit": false,
+    "partial_answer": false,
+    "protocol": {
+     "noncompliant": 10,
+     "recovered": 10,
+     "responses": 11
+    },
+    "recovered": false
+   },
+   "repetition": 1,
+   "status": "completed",
+   "stop_reason": "agent_done",
+   "task": 5,
+   "task_id": "gen-f090b4b9bc-n",
+   "variant": "modified",
+   "void": false
+  },
+  {
+   "answer": [
+    "Spreadsheets for small business - $180, 4 weeks",
+    "Mindful meditation - $120, 4 weeks",
+    "Beginners yoga - $150, 6 weeks"
+   ],
+   "answer_coverage": {
+    "expected_items": 3,
+    "named_expected": 3,
+    "named_other": 0,
+    "unrecognised": 0
+   },
+   "condition": "natural",
+   "evidence": {
+    "missing_pages": 0,
+    "missing_texts": 0,
+    "ranked_subset_rule_2": {
+     "applies": false,
+     "rule": "evidence-ranked-subset-2"
+    },
+    "required_pages": 4,
+    "rule": "recorded evidence rule (pages and texts that hold the answer must have been shown)",
+    "satisfied": true
+   },
+   "finished_at": "2026-11-02T12:54:52.872601+00:00",
+   "grades": {
+    "v1": {
+     "answer_valid": true,
+     "evidence_backed": false,
+     "official": true,
+     "passed": false,
+     "reasons": [
+      "does not match the independently derived answer"
+     ]
+    },
+    "v2": {
+     "evidence_backed": true,
+     "official": false,
+     "passed": true,
+     "post_hoc": true,
+     "reasons": [
+      "matches_truth_with_consistent_detail"
+     ],
+     "review": false
+    },
+    "v2_1_contrast": null
+   },
+   "id": "original-gen-f302fa8fe2-n-r1",
+   "metrics": {
+    "completion_tokens": 5745,
+    "cost_usd": 0.16717,
+    "elapsed_seconds": 78.36,
+    "model_requests": 12,
+    "page_views": 12,
+    "prompt_tokens": 114203,
+    "request_limit": 14,
+    "steps": 13
+   },
+   "navigation": {
+    "distinct_pages": 6,
+    "item_pages_opened": 4,
+    "revisits": 3,
+    "visits": [
+     "/",
+     "/courses",
+     "/courses/intro-to-python",
+     "/courses",
+     "/courses/spreadsheets-for-small-business",
+     "/courses",
+     "/courses/mindful-meditation",
+     "/courses",
+     "/courses/beginners-yoga"
+    ]
+   },
+   "reliability": {
+    "blocked_requests": 0,
+    "dead_end": false,
+    "empty_answer": false,
+    "failed_action_steps": [],
+    "http_errors": [],
+    "limit_stop": false,
+    "near_request_limit": false,
+    "partial_answer": false,
+    "protocol": {
+     "noncompliant": 10,
+     "recovered": 10,
+     "responses": 12
+    },
+    "recovered": false
+   },
+   "repetition": 1,
+   "status": "completed",
+   "stop_reason": "agent_done",
+   "task": 6,
+   "task_id": "gen-f302fa8fe2-n",
+   "variant": "original",
+   "void": false
+  },
+  {
+   "answer": [
+    "Spreadsheets for small business - $180, 4 weeks",
+    "Beginners yoga - $150, 6 weeks",
+    "Mindful meditation - $120, 4 weeks"
+   ],
+   "answer_coverage": {
+    "expected_items": 3,
+    "named_expected": 3,
+    "named_other": 0,
+    "unrecognised": 0
+   },
+   "condition": "natural",
+   "evidence": {
+    "missing_pages": 0,
+    "missing_texts": 0,
+    "ranked_subset_rule_2": {
+     "applies": false,
+     "rule": "evidence-ranked-subset-2"
+    },
+    "required_pages": 1,
+    "rule": "recorded evidence rule (pages and texts that hold the answer must have been shown)",
+    "satisfied": true
+   },
+   "finished_at": "2026-11-02T12:55:08.968987+00:00",
+   "grades": {
+    "v1": {
+     "answer_valid": true,
+     "evidence_backed": false,
+     "official": true,
+     "passed": false,
+     "reasons": [
+      "does not match the independently derived answer"
+     ]
+    },
+    "v2": {
+     "evidence_backed": true,
+     "official": false,
+     "passed": true,
+     "post_hoc": true,
+     "reasons": [
+      "matches_truth_with_consistent_detail"
+     ],
+     "review": false
+    },
+    "v2_1_contrast": null
+   },
+   "id": "modified-gen-f302fa8fe2-n-r1",
+   "metrics": {
+    "completion_tokens": 994,
+    "cost_usd": 0.038757,
+    "elapsed_seconds": 16.04,
+    "model_requests": 3,
+    "page_views": 3,
+    "prompt_tokens": 27626,
+    "request_limit": 14,
+    "steps": 4
+   },
+   "navigation": {
+    "distinct_pages": 2,
+    "item_pages_opened": 0,
+    "revisits": 0,
+    "visits": [
+     "/",
+     "/courses"
+    ]
+   },
+   "reliability": {
+    "blocked_requests": 0,
+    "dead_end": false,
+    "empty_answer": false,
+    "failed_action_steps": [],
+    "http_errors": [],
+    "limit_stop": false,
+    "near_request_limit": false,
+    "partial_answer": false,
+    "protocol": {
+     "noncompliant": 2,
+     "recovered": 2,
+     "responses": 3
+    },
+    "recovered": false
+   },
+   "repetition": 1,
+   "status": "completed",
+   "stop_reason": "agent_done",
+   "task": 6,
+   "task_id": "gen-f302fa8fe2-n",
+   "variant": "modified",
+   "void": false
+  }
+ ]
+}

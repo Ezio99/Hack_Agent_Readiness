@@ -1,0 +1,63 @@
+{
+ "errors": [],
+ "id": "modified-gen-f302fa8fe2-n-r1",
+ "mode": "paid",
+ "screenshots": [
+  "step-001.webp",
+  "step-002.webp",
+  "step-003.webp"
+ ],
+ "steps": [
+  {
+   "actions": [
+    {
+     "name": "Click",
+     "target": "“Browse all courses” · /courses"
+    }
+   ],
+   "assessment": "Navigated to homepage. Need to browse courses.",
+   "done": false,
+   "error": null,
+   "goal": "Click Browse all courses to see course list.",
+   "memory": "Homepage shows 14 courses. Need to browse all to filter by price <=180 and duration <=6 weeks.",
+   "path": "/",
+   "screenshot": "step-001.webp",
+   "step": 1,
+   "title": null
+  },
+  {
+   "actions": [
+    {
+     "name": "Scroll",
+     "target": "down 1.0 page(s)"
+    }
+   ],
+   "assessment": "Navigated to courses list and identified candidates meeting criteria. Verdict: Success",
+   "done": false,
+   "error": null,
+   "goal": "Scroll down to verify remaining courses details.",
+   "memory": "Courses page shows 14 courses. Candidates <=$180 and <=6wks: Spreadsheets ($180,4w), Beginners yoga ($150,6w), Mindful meditation ($120,4w). Need to verify bottom of page.",
+   "path": "/courses",
+   "screenshot": "step-002.webp",
+   "step": 2,
+   "title": null
+  },
+  {
+   "actions": [
+    {
+     "name": "Answer",
+     "target": "Spreadsheets for small business - $180, 4 weeks; Beginners yoga - $150, 6 weeks; Mindful meditation - $120, 4 weeks"
+    }
+   ],
+   "assessment": "Scrolled to verify all 14 courses, confirmed only 3 meet both criteria. Verdict: Success",
+   "done": true,
+   "error": null,
+   "goal": "Return final answer with qualifying courses.",
+   "memory": "Identified 3 courses meeting <=$180 and <=6 weeks: Spreadsheets, Beginners yoga, Mindful meditation.",
+   "path": "/courses",
+   "screenshot": "step-003.webp",
+   "step": 3,
+   "title": null
+  }
+ ]
+}

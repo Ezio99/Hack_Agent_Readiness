@@ -16,6 +16,10 @@ Configuration (environment; nothing is accepted from requests):
   X-Forwarded-For), ``AR_HOSTED_MIN_INTERVAL`` (seconds per client, default 120),
   ``AR_HOST``/``AR_PORT``.
 * ``AGENT_READINESS_BROWSER_JAIL``: jail policy JSON (required unless disabled).
+* Lifecycle (M8): ``AR_LIFECYCLE_DATASETS`` (sanitized datasets; default ``/app/datasets/lifecycle`` or the checkout's
+  ``datasets/lifecycle``), ``AR_LIFECYCLE_STORE`` (the write-once lifecycle store; default ``<AR_HOSTED_DATA>/lifecycle/store``, used
+  only if it exists) and ``AR_LIFECYCLE_RUNS`` (launched evaluations; default ``<AR_HOSTED_DATA>/lifecycle/runs``). Launching (operator-only,
+  zero-cost rehearsals) needs the same preconditions as hosted evaluations plus the store; paid lifecycle launch and web approval are disabled.
 
 Startup never crash-loops on an evaluation problem: if any precondition fails the
 site and past results stay up, evaluations are disabled, ``/api/health`` reports a
@@ -121,6 +125,33 @@ def verify_isolation(attempts: int = 3) -> dict:
     return result
 
 
+def build_lifecycle(base: Path, admission: Admission, hosted_executor, client_key: bytes):
+    """The lifecycle service (M8). Never prevents the site from starting: any problem only disables lifecycle launches."""
+    try:
+        from ..lifecycle.jobs import LifecycleExecutor, load_job, update_job
+        from ..lifecycle.service import LifecycleService
+        repo = Path(__file__).resolve().parents[3] / 'datasets' / 'lifecycle'
+        datasets = Path(os.environ.get('AR_LIFECYCLE_DATASETS') or ('/app/datasets/lifecycle' if Path('/app/datasets/lifecycle').is_dir() else repo))
+        store = Path(os.environ.get('AR_LIFECYCLE_STORE') or base / 'lifecycle' / 'store')
+        runs = Path(os.environ.get('AR_LIFECYCLE_RUNS') or base / 'lifecycle' / 'runs')
+        executor = None
+        if hosted_executor is not None and (store / 'objects').is_dir():
+            runs.mkdir(parents=True, exist_ok=True)
+            executor = LifecycleExecutor(runs, store, admission)
+            for p in sorted((runs / 'jobs').glob('lc-*.json')) if (runs / 'jobs').is_dir() else []:
+                job = load_job(runs, p.stem)
+                if job['state'] in ('reserved', 'running'):
+                    update_job(runs, p.stem, state='interrupted', error='the service restarted while this evaluation was running; it is never re-run automatically')
+        service = LifecycleService(datasets=datasets, store_root=store, runs_root=runs if runs.is_dir() else None, executor=executor, admission=admission,
+                                   client_key=client_key, log=log)
+        log(f'lifecycle: datasets={",".join(sorted(service.datasets)) or "none"} store={"yes" if service.store_root else "no"} '
+            f'launch={"rehearsal (operator)" if executor else "disabled"} paid=disabled web-approval=disabled')
+        return service
+    except Exception as exc:                                              # the site and the hosted evaluation stay up
+        log(f'lifecycle: unavailable ({type(exc).__name__}: {str(exc)[:160]})')
+        return None
+
+
 def build():
     mode = os.environ.get('AR_HOSTED_MODE', 'disabled')
     access = os.environ.get('AR_HOSTED_ACCESS', 'operator')
@@ -175,11 +206,12 @@ def build():
             reason = exc.code
             log(f'evaluations disabled [{exc.code}]: {exc}')
 
+    lifecycle = build_lifecycle(base, admission, executor, _client_key(root))
     static = os.environ.get('AR_STATIC_DIR')
     proxies = [p for p in os.environ.get('AR_TRUSTED_PROXIES', '').split(',') if p.strip()]
     app = create_app(root, admission, client_key=_client_key(root), executor=executor, trusted_proxies=proxies,
                      static_dir=Path(static) if static else None, operator_token=operator_token,
-                     public_start=(access == 'public'), unavailable_reason=reason, mode=mode)
+                     public_start=(access == 'public'), unavailable_reason=reason, mode=mode, lifecycle=lifecycle)
     app.state.lock = lock
     log(f'mode={mode} access={access} evaluations={"enabled" if executor else "disabled"}'
         f'{" reason=" + reason if reason else ""} jail={"verified" if executor else "unused"}')

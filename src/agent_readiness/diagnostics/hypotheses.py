@@ -14,11 +14,17 @@ from .behavioral import item_page_visits
 from .model import Evidence, Finding, stable_id
 
 
+RULES_VERSION = "hypotheses-2"   # 2 (M8): either_of and ranked_subset tasks count as comparing items by their labels (v1 ignored both kinds, so
+                                 # M7 reported "no evaluated task compares items by 'class day'" although task 3 does). Prospective: stored reports are unchanged.
+
+
 def _criterion_labels(c: dict) -> tuple[str | None, set[str]]:
     if c.get("kind") == "extremum":
         return c.get("listing"), {c.get("label")}
     if c.get("kind") == "item_set":
         return c.get("listing"), {x.get("label") for x in c.get("conditions", [])}
+    if c.get("kind") in ("either_of", "ranked_subset"):
+        return c.get("listing"), {c.get("label")} | {x.get("label") for x in c.get("conditions", [])}
     return None, set()
 
 

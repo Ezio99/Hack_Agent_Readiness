@@ -54,5 +54,11 @@ class Finding:
     def __post_init__(self):
         assert self.layer in LAYERS and self.status in STATUSES and self.severity in SEVERITIES, (self.layer, self.status, self.severity)
 
+    @property
+    def basis(self) -> str:
+        """`observed` for a measured fact (a page property or something a recorded agent did); `hypothesis` for anything inferred or untested
+        (unverified risks, hypotheses, exploratory support): the two are never presented as the same kind of claim."""
+        return "observed" if self.status == "observed" else "hypothesis"
+
     def as_dict(self) -> dict:
-        return asdict(self)
+        return {**asdict(self), "basis": self.basis}
