@@ -82,7 +82,7 @@ export function TrialView({ jobId, trial, live, scripted, focus, onFocus }: { jo
             {s.goal && <small className="ws-detail"><b>{scripted ? 'Script' : 'Goal'}:</b> {s.goal}</small>}
             {s.assessment && <small className="ws-detail ws-assess"><b>Assessed:</b> {s.assessment}</small>}
             {s.error && <small className="ws-error">⚠ {s.error}</small>}
-            {s.path && <small className="ws-path">{s.path}</small>}
+            {s.path && <small className="ws-path">on {s.path}</small>}
           </span></button></li>)}
           {live && trial.state === 'running' && <li className="ws-thinking" aria-live="polite"><span className="ws-step-n">··</span><span>{scripted ? 'Next scripted step…' : 'Muse Spark is deciding the next action…'}</span></li>}
         </ol>
