@@ -2,7 +2,12 @@
 
 **Status:** isolated research on branch `research/llm-task-planning`. It is not a release feature and is not deployed.
 
-**So far:** the offline pipeline has run with a developer-written fixture. The single owner-approved Muse Spark request (2026-11-02) was **rejected by the provider before generation** (see Paid run 1). The research question is therefore still unanswered.
+**So far:**
+- the offline pipeline has run with a developer-written fixture;
+- paid run 1 was rejected by the provider (strict schema);
+- **paid run 2 (schema v2) completed**, and its results are below.
+
+No further request has been made.
 
 ## What was built (`src/agent_readiness/research/taskplan/`)
 
@@ -134,3 +139,77 @@ What the offline experiment does establish:
 **Preserved:** request.json (prompt `taskplan-v1`, model settings, catalogue fingerprint `d1b87bbc…`, context fingerprint `a54ee5a3…`, site versions), response.json (provider error and latency) and the ledger.
 
 **Fix (not applied; needs owner approval, because it changes the wire schema of this experiment):** emit a strict-compatible schema. Every property is listed in `required`, and optional ones are typed nullable (`anyOf [..., null]`; empty arrays allowed). Parsing and validation are unchanged, since pydantic already accepts null and empty values for these fields. A new run would be labelled schema `taskplan-schema-v2` with the same prompt. It needs a separately approved request with the same reservation bound (US$0.029054).
+
+## Paid run 2 (2026-11-02, owner-approved; run `taskplan-20261102T203537-meta-7aca17`)
+
+**Setup:** prompt `taskplan-v1`, byte-identical to run 1. Schema `taskplan-schema-v2`, preflight all 7 checks passed. `muse-spark-1.3`, reasoning_effort low, 6,000-token limit. One request, no retry. Validator and decision logic unchanged.
+
+**Provider result:**
+
+| Measure | Value |
+|---|---|
+| Finish reason | `stop` |
+| Prompt tokens | 2,643 |
+| Completion tokens | 4,976 (2,262 reasoning) |
+| Latency | 18.2 s |
+| Reserved | US$0.028963 |
+| **Calculated from usage (not a bill)** | **US$0.024452** |
+| Proposals | 20 well-formed, none with an answer field |
+
+**Experiment spend:** US$0.024452 calculated, plus run 1's US$0.029054, which is an *unconfirmed conservative* bound. US$0.053506 is counted against the US$0.06 experiment ceiling. The hosted ledger was not used.
+
+### The seven measures (LLM vs the 20 developer-written proposals vs rule-based)
+
+| Measure | LLM, natural wording | LLM, exact restatement | Fixture, natural | Fixture, restated | Rule-based |
+|---|---|---|---|---|---|
+| 1. Valid (scoring-eligible) | **6 / 20** | **17 / 20 (85 %)** | 3 / 20 | 8 / 20 | 7 / 8 |
+| 2a. Personas (eligible tasks) | 2 / 4 | **4 / 4** | 2 / 4 | 4 / 4 | 0 / 4 |
+| 2b. Journeys (by attributes) | 5 / 6 | 5 / 6 (+ refunds as rubric) | 2 / 6 | 5 / 6 | 3 / 6 |
+| 2c. Catalogue attributes | 5 / 7 | **7 / 7** | 2 / 7 | 7 / 7 | 4 / 7 |
+| 3a. Multi-condition share | 0 % | **47 %** (7 two-condition, 1 three-condition) | 0 % | 50 % | 0 % |
+| 3b. Duplicates | 0 | 0 (no overlap with rule-based either) | 1 | 1 | 0 |
+| 4. Hallucinated attributes, entities or values | **0** | **0** | 5 (designed) | 5 (designed) | 0 |
+| 5. Classes (det. / rubric / human review / rejected) | 6 / 1 / 2 / 11 | **17 / 1 / 2 / 0** | 3 / 1 / 2 / 14 | 8 / 1 / 2 / 9 | 7 / 1 / 0 / 0 |
+| Distinct task shapes | 2 | **8** | 3 | 6 | 4 |
+| 7. Cost and latency | US$0.024452, 18.2 s | (same call) | US$0 | US$0 | US$0 |
+
+**Rejections.** All 11 natural-wording rejections are the gate's ambiguity rule: the scenario does not literally state the field and threshold. For example, "*What courses do you have for under a tight budget?*" carries `course fee at_most $180` only in the structured constraints. Restating the criterion removes all 11. No proposal was rejected for a hallucination, an out-of-domain value, a tie, an answer leak or a duplicate.
+
+**Not scored:**
+- 2 human-review tasks: "*cheapest beginner course*" and "*cheapest short option*". These are rankings within a filtered subset, which the criterion language cannot express.
+- 1 rubric task: the refund policy.
+- The LLM proposed no unconstrained "best" (extremum) task.
+
+**Accepted examples** (customer wording as generated; the restated question is in `wording-and-specification.json`):
+- career switcher: *"I work full time on weekdays, so I can only do weekends. Are there any beginner courses on Saturday?"* (class day = Saturday AND level = Beginner);
+- budget learner: *"I don't want to miss out on an affordable course that's already full. Which low-cost courses still have…"* (seats left ≥ 5 AND fee ≤ $250);
+- career switcher, three conditions: level = Beginner AND fee ≤ $300 AND materials = Included;
+- professional upskiller: intermediate courses with seats left > 0.
+
+**Answer-set sizes:** 1–8 items. The four lookups and two filters have a single answer.
+
+### Does the LLM add genuinely useful diversity? (one batch, one model, one prompt)
+
+**Yes, under the exact-restatement format**:
+- 17 deterministic, oracle-validated tasks;
+- all four personas, all seven attributes, eight task shapes;
+- 47 % multi-condition, which the rule-based generator produces 0 % of;
+- no overlap with the rule-based set;
+- no hallucinations, at US$0.024.
+
+**Not under natural wording alone:** 6 valid tasks, because personas describe needs ("tight budget", "weekends") rather than literal field thresholds.
+
+**Caveats:**
+- n = 1 batch at temperature defaults, so variance across batches is unknown.
+- Persona fit is LLM-declared and unchecked.
+- Thresholds such as $180 for "tight budget" are the LLM's choices.
+- Whether agents find the restated tasks realistic, or the natural wording solvable, is untested (no browser runs).
+
+**Preserved** (git-ignored, `scanner-data/research/taskplan/taskplan-20261102T203537-meta-7aca17/`):
+- request.json: prompt, schema version and wire schema, model settings, fingerprints;
+- preflight.json;
+- response.json: raw text, usage, latency;
+- proposals.json;
+- decisions.raw/framed.(public|private).json: expected answers in the private files only;
+- wording-and-specification.json: the customer wording kept separate from the oracle specification and the compatibility question;
+- metrics.json, examples.public.json and the ledger.
