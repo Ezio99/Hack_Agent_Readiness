@@ -1,82 +1,34 @@
-import { ReplayStudio } from "./studio/ReplayStudio";
-import { useEffect, useState } from "react";
-import { Overview } from "./pages/Overview";
-import { Scopes } from "./pages/Scopes";
-import { Evidence } from "./pages/Evidence";
-import { ReplayPage } from "./pages/Replay";
-import { ScannerPage } from "./pages/Scanner";
-import { InvestigationPage } from "./pages/Investigation";
-import { provenance } from "./data/task007";
+import { lazy, Suspense, useEffect } from 'react';
+import { useRoute } from './site/router';
+import { Home } from './site/Home';
+import { Workspace } from './site/workspace/Workspace';
 
-export type Page = "studio" | "overview" | "scopes" | "evidence" | "replay" | "scanner" | "investigation";
-const MAIN: { id: Page; label: string } = { id: "investigation", label: "Investigation" };
-/** Earlier experiments, kept as a secondary section. */
-const HISTORICAL: { id: Page; label: string }[] = [
-  { id: "overview", label: "Task 007 overview" },
-  { id: "scopes", label: "Scope comparison" },
-  { id: "evidence", label: "Evidence & method" },
-  { id: "replay", label: "Recorded replay" },
-  { id: "scanner", label: "Protected scanner" },
-];
-const PAGES = [{ id: "studio" as Page, label: "Replay Studio" }, MAIN, ...HISTORICAL];
-const runJob = (): string | null | undefined => {
-  const m = window.location.hash.match(/^#\/run(?:\/(eval-[0-9a-f]{32}))?$/);
-  return m ? (m[1] ?? null) : undefined;
-};
-const fromHash = (): Page => {
-  const h = window.location.hash.replace(/^#\/?/, "");
-  if (runJob() !== undefined) return "studio";
-  return (PAGES.find((p) => p.id === h)?.id ?? "studio") as Page;
+/** The cinematic demo carries its own evidence frames; the archive carries the pre-redesign app. Both load on demand. */
+const Demo = lazy(() => import('./site/demo/Demo').then(m => ({ default: m.Demo })));
+const Classic = lazy(() => import('./legacy/Classic'));
+
+const TITLES: Record<string, string> = {
+  home: 'Agent Readiness — usability testing for AI agents',
+  demo: 'Demo — watch an AI agent use a website · Agent Readiness',
+  run: 'Evaluation workspace · Agent Readiness',
+  studio: 'Replay archive · Agent Readiness',
+  classic: 'Investigation archive · Agent Readiness',
 };
 
 export default function App() {
-  const [page, setPage] = useState<Page>(fromHash);
+  const route = useRoute();
+  useEffect(() => { document.title = TITLES[route.name]; }, [route.name]);
+  // Each route starts at the top unless it targets a section/scene; those components scroll themselves.
   useEffect(() => {
-    const on = () => setPage(fromHash());
-    window.addEventListener("hashchange", on);
-    return () => window.removeEventListener("hashchange", on);
-  }, []);
-  const go = (p: Page) => {
-    window.location.hash = `/${p}`;
-    setPage(p);
-    window.scrollTo({ top: 0 });
-  };
-  if (page === "studio") return <ReplayStudio openReport={() => go("investigation")} runJob={runJob()} />;
-  return (
-    <>
-      <a className="skip" href="#main">Skip to content</a>
-      <header className="site">
-        <div className="wrap head">
-          <div>
-            <p className="brand">Agent Readiness <span className="tag">diagnostic dashboard</span></p>
-            <p className="sub">{page === "investigation" ? "Test website → Discover friction → Explore improvements → Measure impact." : "What a Meta Muse Spark shopping agent did on a controlled storefront, why, and what a site owner could change."}</p>
-          </div>
-          <p className="badge" role="note">{page === "investigation" ? "Recorded Ironbark demo" : "Recorded experiment data · Task 007 · not live inference"}</p>
-        </div>
-        <nav className="wrap" aria-label="Sections">
-          <ul className="tabs"><li><a href="#/studio" onClick={e => { e.preventDefault(); go("studio"); }}>Replay Studio</a></li>
-            <li><a href={`#/${MAIN.id}`} aria-current={page === MAIN.id ? "page" : undefined} onClick={(e) => { e.preventDefault(); go(MAIN.id); }}>{MAIN.label}</a></li>
-            <li className="history-menu"><details><summary>Historical experiments</summary><ul>
-            {HISTORICAL.map((p) => (
-              <li key={p.id}>
-                <a href={`#/${p.id}`} aria-current={page === p.id ? "page" : undefined} onClick={(e) => { e.preventDefault(); go(p.id); }} className="nav-secondary-link">{p.label}</a>
-              </li>
-            ))}
-            </ul></details></li>
-          </ul>
-        </nav>
-      </header>
-      <main id="main" className="wrap" tabIndex={-1}>
-        {page === "overview" && <Overview go={(p) => go(p)} />}
-        {page === "scopes" && <Scopes />}
-        {page === "evidence" && <Evidence />}
-        {page === "replay" && <ReplayPage />}
-        {page === "scanner" && <ScannerPage />}
-        {page === "investigation" && <InvestigationPage />}
-      </main>
-      <footer className="site"><div className="wrap">
-        <p>{page === "investigation" ? <>Agent Readiness · Recorded evaluation · Experiment details available in the report</> : <>Controlled synthetic storefront (20 products) · Meta Muse Spark <code>{provenance.model}</code> reference agent · executed from commit <code>{provenance.executionCommit}</code> · costs are calculated estimates, not bills · no universal readiness score, no claims about real websites.</>}</p>
-      </div></footer>
-    </>
-  );
+    const targeted = (route.name === 'home' && route.section) || (route.name === 'demo' && route.scene);
+    if (!targeted) window.scrollTo?.({ top: 0 });
+  }, [route.name]);
+
+  const fallback = <div className="ar route-loading" aria-busy="true"><p className="sr-only">Loading…</p></div>;
+  switch (route.name) {
+    case 'home': return <Home section={route.section} />;
+    case 'run': return <Workspace job={route.job} />;
+    case 'demo': return <Suspense fallback={<div className="ar ar-night route-loading" aria-busy="true"><p className="sr-only">Loading the demo…</p></div>}><Demo scene={route.scene} /></Suspense>;
+    default: return <Suspense fallback={fallback}><Classic /></Suspense>;
+  }
 }

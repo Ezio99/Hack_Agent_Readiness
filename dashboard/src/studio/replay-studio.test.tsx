@@ -4,7 +4,7 @@ import {createRoot, type Root} from 'react-dom/client';
 import {afterEach,beforeEach,expect,it,vi} from 'vitest';
 import {ReplayStudio} from './ReplayStudio';
 import {adaptReplay} from './evidence';
-import App from '../App';
+import Classic from '../legacy/Classic';
 import {Tasks} from './Tasks';
 import {ArchivedResults,summarizeArchivedS1} from './ArchivedResults';
 import {Transformation,transformationReference} from './Transformation';
@@ -18,7 +18,7 @@ afterEach(()=>{act(()=>root.unmount());host.remove();vi.useRealTimers();});
 const mount=()=>act(()=>root.render(<ReplayStudio openReport={()=>{}}/>));
 const click=(label:string)=>act(()=>{const b=[...host.querySelectorAll('button')].find(b=>b.getAttribute('aria-label')===label||b.textContent?.endsWith(label));expect(b).toBeTruthy();b!.click();});
 const position=()=>host.querySelector('.studio-action')?.getAttribute('data-event-ref');
-it('studio is the default, with full-report fallback navigation',()=>{window.location.hash='';act(()=>root.render(<App/>));expect(host.textContent).toContain('See the journey.');click('Classic dashboard ↗');expect(window.location.hash).toBe('#/investigation');});
+it('the archived studio still opens at #/studio, with full-report fallback navigation',()=>{window.location.hash='#/studio';act(()=>root.render(<Classic/>));expect(host.textContent).toContain('See the journey.');click('Classic dashboard ↗');expect(window.location.hash).toBe('#/investigation');});
 it('steps, event selection, scrub and inspector refer to the same archived entry',()=>{
  mount();const events=recording.storyboard.steps;
  expect(position()).toBe('/storyboard/steps/0');expect([...host.querySelectorAll('button')].some(b=>b.textContent==='Pause')).toBe(false);

@@ -1,17 +1,24 @@
 import { Fragment, useEffect, useState } from 'react';
 
-function useNarrow() {
-  const query = '(max-width: 600px)';
-  const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.(query).matches);
-  useEffect(() => { const m = window.matchMedia?.(query); if (!m) return; const on = () => setNarrow(m.matches); m.addEventListener?.('change', on); return () => m.removeEventListener?.('change', on); }, []);
-  return narrow;
+/** Charts draw at their container's real width (1 SVG unit = 1 CSS px), so text never shrinks with the layout. */
+function useWidth(fallback = 560) {
+  const [el, ref] = useState<HTMLDivElement | null>(null);   // callback ref: re-measures when the chart remounts
+  const [w, setW] = useState(fallback);
+  useEffect(() => {
+    if (!el) return;
+    const on = () => { const cw = Math.round(el.clientWidth); if (cw > 0) setW(Math.max(280, cw)); };
+    on();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(on); ro.observe(el); return () => ro.disconnect();
+  }, [el]);
+  return [ref, w] as const;
 }
 import type { Job, TaskRow } from './HostedEvaluation';
 
 /** Experiment analytics computed from the server's per-trial rows (no client-side invention).
- *  Series colours are a validated categorical pair on the dark surface (#101B2B):
- *  Original #8E79E8, Modified #1A9DB3 (CVD ΔE 8.9, normal-vision ΔE 17.3). */
-export const SERIES = { Original: '#8E79E8', Modified: '#1A9DB3' } as const;
+ *  Series colours come from the site tokens: Original = rust #C2552E, Modified = signal #2B3BE6 on paper
+ *  (validated: CVD ΔE 30.5, normal-vision ΔE 38.1, contrast ≥ 3:1). Identity is never colour-alone: legend + row labels. */
+export const SERIES = { Original: 'var(--original)', Modified: 'var(--modified)' } as const;
 type Arm = keyof typeof SERIES;
 const ARMS: Arm[] = ['Original', 'Modified'];
 
@@ -46,8 +53,8 @@ function Legend() {
 }
 
 /** Horizontal paired bars: evidence-supported pass rate per task. */
-function SuccessChart({ data, questions }: { data: ReturnType<typeof perTask>; questions: Record<number, string> }) {
-  const W = useNarrow() ? 360 : 640, left = 70, right = 64, bar = 10, gap = 2, row = 2 * bar + gap + 22, H = 4 * row + 24;
+function SuccessChart({ data, questions, W }: { data: ReturnType<typeof perTask>; questions: Record<number, string>; W: number }) {
+  const left = 70, right = 64, bar = 10, gap = 2, row = 2 * bar + gap + 22, H = 4 * row + 24;
   const x = (v: number) => left + v * (W - left - right);
   return <svg viewBox={`0 0 ${W} ${H}`} className="viz" role="img" aria-label="Evidence-supported pass rate per task, Original and Modified">
     {[0, .5, 1].map(v => <g key={v}><line x1={x(v)} x2={x(v)} y1={4} y2={H - 18} className="viz-grid" /><text x={x(v)} y={H - 4} className="viz-axis" textAnchor="middle">{v * 100}%</text></g>)}
@@ -56,17 +63,17 @@ function SuccessChart({ data, questions }: { data: ReturnType<typeof perTask>; q
       {ARMS.map((arm, j) => { const c = data[n][arm], rate = c.done ? c.supported / c.done : 0, y = y0 + j * (bar + gap);
         return <g key={arm} className="viz-mark"><title>{`Task ${n} · ${arm}: ${c.supported} of ${c.done} completed runs evidence-supported${questions[n] ? ` — ${questions[n]}` : ''}`}</title>
           <rect x={left} y={y - 3} width={W - left - right} height={bar + 6} fill="transparent" />
-          {c.done ? <rect x={left} y={y} width={Math.max(4, x(rate) - left)} height={bar} rx={4} fill={SERIES[arm]} /> : <rect x={left} y={y + bar / 2 - 1} width={W - left - right} height={2} className="viz-empty" />}
+          {c.done ? <rect x={left} y={y} width={Math.max(4, x(rate) - left)} height={bar} rx={4} style={{ fill: SERIES[arm] }} /> : <rect x={left} y={y + bar / 2 - 1} width={W - left - right} height={2} className="viz-empty" />}
           <text x={c.done ? Math.max(x(rate), left + 4) + 8 : W - right + 8} y={y + bar - 1} className="viz-value">{c.done ? `${c.supported}/${c.done}` : '—'}</text></g>; })}
     </g>; })}
   </svg>;
 }
 
 /** Dot = mean model requests; whisker = min–max across repetitions. */
-function RequestsChart({ data }: { data: ReturnType<typeof perTask> }) {
+function RequestsChart({ data, W }: { data: ReturnType<typeof perTask>; W: number }) {
   const all = [1, 2, 3, 4].flatMap(n => ARMS.flatMap(a => data[n][a].requests));
   const max = Math.max(4, ...all), top = Math.ceil(max / 4) * 4;
-  const W = useNarrow() ? 360 : 640, left = 70, right = 30, row = 46, H = 4 * row + 24;
+  const left = 70, right = 30, row = 46, H = 4 * row + 24;
   const x = (v: number) => left + (v / top) * (W - left - right);
   return <svg viewBox={`0 0 ${W} ${H}`} className="viz" role="img" aria-label="Model requests per task: mean and range across repetitions">
     {[0, top / 2, top].map(v => <g key={v}><line x1={x(v)} x2={x(v)} y1={4} y2={H - 18} className="viz-grid" /><text x={x(v)} y={H - 4} className="viz-axis" textAnchor="middle">{v}</text></g>)}
@@ -76,8 +83,8 @@ function RequestsChart({ data }: { data: ReturnType<typeof perTask> }) {
         const lo = Math.min(...r), hi = Math.max(...r), m = mean(r)!;
         return <g key={arm} className="viz-mark"><title>{`Task ${n} · ${arm}: mean ${m} requests (min ${lo}, max ${hi}, ${r.length} run${r.length > 1 ? 's' : ''})`}</title>
           <rect x={left} y={y - 7} width={W - left - right} height={14} fill="transparent" />
-          {hi > lo && <line x1={x(lo)} x2={x(hi)} y1={y} y2={y} stroke={SERIES[arm]} strokeWidth={2} strokeLinecap="round" />}
-          <circle cx={x(m)} cy={y} r={5} fill={SERIES[arm]} stroke="#101B2B" strokeWidth={2} />
+          {hi > lo && <line x1={x(lo)} x2={x(hi)} y1={y} y2={y} style={{ stroke: SERIES[arm] }} strokeWidth={2} strokeLinecap="round" />}
+          <circle cx={x(m)} cy={y} r={5} style={{ fill: SERIES[arm], stroke: 'var(--sheet)' }} strokeWidth={2} />
           <text x={x(hi) + 10} y={y + 4} className="viz-value">{m}</text></g>; })}
     </g>; })}
   </svg>;
@@ -85,21 +92,22 @@ function RequestsChart({ data }: { data: ReturnType<typeof perTask> }) {
 
 export function Analytics({ job, questions }: { job: Job; questions: Record<number, string> }) {
   const [table, setTable] = useState(false);
+  const [r1, w1] = useWidth(), [r2, w2] = useWidth();
   const data = perTask(job), reps = perRepetition(job);
   const any = ARMS.some(a => [1, 2, 3, 4].some(n => data[n][a].done));
-  if (!any) return <p className="agent-empty">Analytics appear as soon as the first agent runs are graded.</p>;
+  if (!any) return <p className="ws-empty-note">Analytics appear as soon as the first agent runs are graded.</p>;
   return <section className="analytics" aria-label="Experiment analytics">
-    <div className="analytics-head"><Legend /><button className="hosted-link" aria-pressed={table} onClick={() => setTable(t => !t)}>{table ? 'Show charts' : 'Show as table'}</button></div>
-    {table ? <div className="table-scroll"><table className="hosted-grid analytics-table"><thead><tr><th>Task</th>{ARMS.map(a => <th key={a} colSpan={3}>{a}</th>)}</tr>
+    <div className="analytics-head"><Legend /><button className="ws-link" aria-pressed={table} onClick={() => setTable(t => !t)}>{table ? 'Show charts' : 'Show as table'}</button></div>
+    {table ? <div className="table-scroll"><table className="ws-table analytics-table"><thead><tr><th>Task</th>{ARMS.map(a => <th key={a} colSpan={3}>{a}</th>)}</tr>
       <tr><th />{ARMS.map(a => <Fragment key={a}><th>Evidence-supported</th><th>Requests (mean · range)</th><th>Pages</th></Fragment>)}</tr></thead>
       <tbody>{[1, 2, 3, 4].map(n => <tr key={n}><th scope="row">Task {n}<small>{questions[n]}</small></th>{ARMS.map(a => { const c = data[n][a]; return <Fragment key={a}>
         <td>{c.done ? `${c.supported}/${c.done}` : '—'}</td><td>{c.requests.length ? `${mean(c.requests)} · ${Math.min(...c.requests)}–${Math.max(...c.requests)}` : '—'}</td><td>{mean(c.pages) ?? '—'}</td></Fragment>; })}</tr>)}</tbody></table></div>
     : <div className="analytics-charts">
-      <article><h3>Task success by task</h3><p>Share of completed runs with an evidence-supported pass.</p><SuccessChart data={data} questions={questions} /></article>
-      <article><h3>Model requests by task</h3><p>Dot: mean across repetitions · line: lowest to highest.</p><RequestsChart data={data} /></article>
+      <article><h3>Task success by task</h3><p>Share of completed runs with an evidence-supported pass.</p><div ref={r1}><SuccessChart data={data} questions={questions} W={w1} /></div></article>
+      <article><h3>Model requests by task</h3><p>Dot: mean across repetitions · line: lowest to highest.</p><div ref={r2}><RequestsChart data={data} W={w2} /></div></article>
     </div>}
     {reps.length > 1 && <article className="analytics-reps"><h3>Variation across repetitions</h3>
-      <div className="table-scroll"><table className="hosted-grid"><thead><tr><th>Repetition</th><th>Original passes</th><th>Modified passes</th><th>Original requests</th><th>Modified requests</th></tr></thead>
+      <div className="table-scroll"><table className="ws-table"><thead><tr><th>Repetition</th><th>Original passes</th><th>Modified passes</th><th>Original requests</th><th>Modified requests</th></tr></thead>
         <tbody>{reps.map(r => <tr key={r.index}><th scope="row">{r.index}</th>
           {ARMS.map(a => <td key={a}><span className="rep-dots" aria-label={`${r[a].supported} of ${r[a].done}`}>{[0, 1, 2, 3].map(i => <i key={i} style={i < r[a].supported ? { background: SERIES[a] } : undefined} className={i < r[a].done ? '' : 'pending'} />)}</span> {r[a].supported}/{r[a].done}</td>)}
           {ARMS.map(a => <td key={a + 'q'}>{r[a].done ? r[a].requests : '—'}</td>)}</tr>)}</tbody></table></div></article>}

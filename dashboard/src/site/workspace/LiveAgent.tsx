@@ -21,34 +21,37 @@ export function TrialView({ jobId, trial, live, scripted }: { jobId: string; tri
   const shown = picked !== null ? steps.find(s => s.step === picked) ?? latest : latest;
   const shot = shown?.screenshot ? `/api/ironbark/jobs/${jobId}/repetitions/${trial.repetition}/trials/${trial.arm}/${trial.task}/screenshots/${shown.screenshot}` : null;
   const answer = steps.find(s => s.done)?.actions.find(a => a.name === 'Answer')?.target;
-  return <section className="agent-view" aria-label="Agent activity">
-    <header className="agent-head">
-      <div><p className="studio-kicker">{live ? <><span className="live-dot" aria-hidden="true" /> LIVE AGENT</> : 'AGENT RUN'} · REPETITION {trial.repetition} · {ARM[trial.arm].toUpperCase()} · TASK {trial.task}</p>
+  const memory = shown && 'memory' in shown ? (shown as Step).memory : null;
+  return <section className="ws-agent" aria-label="Agent activity">
+    <header className="ws-agent-head">
+      <div><p className="eyebrow">{live ? <><span className="ws-live" aria-hidden="true" /> Live agent</> : 'Agent run'} · Repetition {trial.repetition} · <span className={`arm-${trial.arm}`}>{ARM[trial.arm]}</span> · Task {trial.task}</p>
         <h2>{trial.question ?? `Task ${trial.task}`}</h2></div>
-      <span className={`hosted-pill ${trial.state}`}>{trial.state === 'running' ? 'Agent working' : trial.state.replaceAll('_', ' ')}</span>
+      <span className={`ws-pill ${trial.state}`}>{trial.state === 'running' ? 'Agent working' : trial.state.replaceAll('_', ' ')}</span>
     </header>
-    <div className="agent-body">
-      <figure className="agent-browser">
-        <div className="agent-chrome"><span aria-hidden="true">● ● ●</span><code>ironbark-hire{shown?.path ?? ''}</code><small>{shown ? `Step ${shown.step}` : 'Starting'}</small></div>
-        {shot ? <img src={shot} alt={`Browser at step ${shown!.step}: ${shown!.path ?? 'page'}`} /> : <div className="agent-noshot">{live && !steps.length ? 'Starting a fresh browser…' : 'No screenshot for this step'}</div>}
+    <div className="ws-agent-body">
+      <figure className="ws-browser">
+        <div className="frame">
+          <div className="frame-bar"><span className="frame-dots"><i /><i /><i /></span><span className="frame-url">ironbark-hire{shown?.path ?? ''}</span><span>{shown ? `Step ${shown.step}` : 'Starting'}</span></div>
+          <div className="frame-shot">{shot ? <img src={shot} alt={`Browser at step ${shown!.step}: ${shown!.path ?? 'page'}`} /> : <div className="ws-noshot">{live && !steps.length ? 'Starting a fresh browser…' : 'No screenshot for this step'}</div>}</div>
+        </div>
         <figcaption>{scripted ? 'Real jailed browser · scripted rehearsal agent (not a model)' : 'Real jailed browser · screenshot captured by the agent harness'}</figcaption>
+        {memory && <p className="ws-memory"><b>Agent memory at step {shown!.step}</b>“{memory}”</p>}
+        {answer && <p className="ws-answer"><b>Final answer:</b> {answer}</p>}
       </figure>
-      <div className="agent-steps">
-        <p className="agent-steps-head"><strong>{steps.length}</strong> steps{trial.current && live ? ' · observing next page' : ''}{picked !== null && <button onClick={() => setPicked(null)}>{live ? 'Follow live' : 'Latest'}</button>}</p>
+      <div className="agent-steps ws-steps-list">
+        <p className="ws-steps-head"><span><strong>{steps.length}</strong> steps{trial.current && live ? ' · observing next page' : ''}</span>{picked !== null && <button className="ws-link" onClick={() => setPicked(null)}>{live ? 'Follow live' : 'Latest'}</button>}</p>
         <ol ref={list} aria-label="Agent steps">{steps.map(s => <li key={s.step}><button aria-current={shown?.step === s.step ? 'step' : undefined} onClick={() => setPicked(s.step)}>
-          <span className="agent-step-n">{String(s.step).padStart(2, '0')}</span>
-          <span className="agent-step-body">
-            {s.actions.map((a, i) => <span key={i} className={`agent-action ${a.name === 'Answer' ? 'answer' : ''}`}><i aria-hidden="true">{ICON[a.name] ?? '•'}</i>{a.name}{a.target && <em>{a.target}</em>}</span>)}
+          <span className="ws-step-n">{String(s.step).padStart(2, '0')}</span>
+          <span className="ws-step-body">
+            {s.actions.map((a, i) => <span key={i} className={`ws-action${a.name === 'Answer' ? ' answer' : ''}`}><i aria-hidden="true">{ICON[a.name] ?? '•'}</i>{a.name}{a.target && <em>{a.target}</em>}</span>)}
             {s.goal && <small><b>{scripted ? 'Script' : 'Goal'}:</b> {s.goal}</small>}
-            {s.assessment && <small className="agent-assess"><b>Assessed:</b> {s.assessment}</small>}
-            {s.error && <small className="agent-error">⚠ {s.error}</small>}
-            {s.path && <small className="agent-path">on {s.path}</small>}
+            {s.assessment && <small className="ws-assess"><b>Assessed:</b> {s.assessment}</small>}
+            {s.error && <small className="ws-error">⚠ {s.error}</small>}
+            {s.path && <small className="ws-path">on {s.path}</small>}
           </span></button></li>)}
-          {live && trial.state === 'running' && <li className="agent-thinking" aria-live="polite"><span className="agent-step-n">··</span><span>{scripted ? 'Next scripted step…' : 'Muse Spark is deciding the next action…'}</span></li>}
+          {live && trial.state === 'running' && <li className="ws-thinking" aria-live="polite"><span className="ws-step-n">··</span><span>{scripted ? 'Next scripted step…' : 'Muse Spark is deciding the next action…'}</span></li>}
         </ol>
-        {shown && 'memory' in shown && (shown as Step).memory && <p className="agent-memory"><b>Agent memory at step {shown.step}:</b> {(shown as Step).memory}</p>}
-        {answer && <p className="agent-answer"><b>Final answer:</b> {answer}</p>}
-        {trial.errors.length > 0 && <p className="agent-error">{trial.errors.join(' · ')}</p>}
+        {trial.errors.length > 0 && <p className="ws-error">{trial.errors.join(' · ')}</p>}
       </div>
     </div>
   </section>;
@@ -72,7 +75,7 @@ export function AgentPanel({ jobId, active, selection, scripted, onClear }: { jo
     const timer = active ? setInterval(load, 2000) : undefined;
     return () => { stop = true; if (timer) clearInterval(timer); };
   }, [jobId, active, selection?.repetition, selection?.arm, selection?.task]);
-  if (!trial) return <div className="agent-empty"><p>{missing ? (active ? 'Waiting for the first agent to open a browser…' : 'No agent activity was recorded for this selection.') : 'Loading agent activity…'}</p></div>;
-  return <>{selection && <button className="hosted-link agent-back" onClick={onClear}>{active ? '← Follow the live agent' : '← Latest run'}</button>}
+  if (!trial) return <div className="ws-empty-note"><p>{missing ? (active ? 'Waiting for the first agent to open a browser…' : 'No agent activity was recorded for this selection.') : 'Loading agent activity…'}</p></div>;
+  return <>{selection && <button className="ws-link ws-back" onClick={onClear}>{active ? '← Follow the live agent' : '← Latest run'}</button>}
     <TrialView jobId={jobId} trial={trial} live={active && !selection ? true : active && trial.state === 'running'} scripted={scripted} /></>;
 }

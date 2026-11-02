@@ -6,7 +6,7 @@ import publicFixture from "./fixtures/investigation-synthetic-expb-public.json";
 import { compare, parseInvestigation, tally, type InvestigationExport } from "./lib/investigation";
 import { InvestigationPage, InvestigationView } from "./pages/Investigation";
 import { frame } from "./components/Storefront";
-import App from "./App";
+import App from "./legacy/Classic";
 import { vi } from "vitest";
 
 const base = () => structuredClone(fixture) as unknown as InvestigationExport;

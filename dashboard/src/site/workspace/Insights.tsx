@@ -14,11 +14,11 @@ export function Insights({ jobId, active }: { jobId: string; active: boolean }) 
     const t = active ? setInterval(load, 10000) : undefined;
     return () => { stop = true; if (t) clearInterval(t); };
   }, [jobId, active]);
-  if (!data) return <p className="agent-empty">Loading insights…</p>;
-  if (data.state === 'insufficient') return <p className="agent-empty">Insights need at least one finished run on the Original site.</p>;
+  if (!data) return <p className="ws-empty-note">Loading insights…</p>;
+  if (data.state === 'insufficient') return <p className="ws-empty-note">Insights need at least one finished run on the Original site.</p>;
   const byId = Object.fromEntries(data.findings.map(f => [f.id, f]));
   return <section className="insights" aria-label="Friction insights">
-    {data.mode === 'rehearsal' && <p className="hosted-alert">Rehearsal telemetry comes from a scripted agent. These findings describe the script, not Muse Spark.</p>}
+    {data.mode === 'rehearsal' && <p className="ws-alert">Rehearsal telemetry comes from a scripted agent. These findings describe the script, not Muse Spark.</p>}
     <p className="insights-basis">Based on {data.runs.Original} Original and {data.runs.Modified} Modified agent runs{data.final ? '' : ' so far'}. {data.method}</p>
     <div className="insights-grid">
       <article><h3>Observed friction</h3><p className="insights-sub">What the agents actually did</p>
