@@ -289,30 +289,41 @@ class Analyser:
         return sorted({a for c in classes for a in self.cat.of_class(c)})
 
     # ---------------------------------------------------------------- per-component traces
+    def _value_set(self, toks, label, taken):
+        """A positive mention of a definitional value set ('weekends') for a weekday-class attribute: (phrase, members, span) or None."""
+        if self.cat.classes.get(label) != "weekday":
+            return None
+        for phrase, members in L.VALUE_SETS.items():
+            for s, e in find(toks, phrase, taken=taken):
+                if not self._negative(toks, s):
+                    return phrase, members, (s, e)
+        return None
+
     def _trace_text_condition(self, toks, cond, taken, used) -> Trace:
         label, values, op = cond["label"], cond.get("values") or [cond["value"]], cond["op"]
         comp = f"condition: {label} {'one of ' + ' / '.join(values) if len(values) > 1 else op + ' ' + values[0]}"
-        decisions = []
+        found, negative_only = {}, []
         for v in values:
-            hits = [h for h in self._value_mentions(toks, v, taken)]
+            hits = self._value_mentions(toks, v, taken)
             pos = [h for h in hits if not self._negative(toks, h[0])]
-            set_hit = None
-            if not pos:
-                for phrase, members in L.VALUE_SETS.items():
-                    if v.lower() in members and self.cat.classes.get(label) == "weekday":
-                        for s, e in find(toks, phrase, taken=taken):
-                            if not self._negative(toks, s):
-                                set_hit = (phrase, members, (s, e))
-                if set_hit and set(set_hit[1]) <= {x.lower() for x in values}:
-                    used |= set(range(*set_hit[2]))
-                    decisions.append(f"'{set_hit[0]}' names exactly {', '.join(set_hit[1])} (definitional value set)")
-                    continue
-                if set_hit:
-                    return Trace(comp, "mismatch", f"{label}: the customer says '{set_hit[0]}' ({', '.join(set_hit[1])}) but the specification is narrower ({', '.join(values)})")
-                if hits:
-                    return Trace(comp, "mismatch", f"{label}: '{v}' appears only in a negative context (e.g. a day the customer is busy)")
-                return Trace(comp, "added_assumption", f"{label} {OP_WORDS.get(op, op)} {v} is not stated by the customer")
-            s, e = pos[0]
+            if pos:
+                found[v] = pos[0]
+            elif hits:
+                negative_only.append(v)
+        missing = [v for v in values if v not in found]
+        if missing:
+            vs = self._value_set(toks, label, taken)
+            want = {v.lower() for v in values}
+            if vs and set(vs[1]) == want:                                   # 'weekends' for exactly {Saturday, Sunday}
+                used |= set(range(*vs[2]))
+                return Trace(comp, "traced", f"{label}: stated", f"'{vs[0]}' names exactly {', '.join(vs[1])} (definitional value set; field '{label}' implied)")
+            if vs and want < set(vs[1]):
+                return Trace(comp, "mismatch", f"{label}: the customer says '{vs[0]}' ({', '.join(vs[1])}) but the specification is narrower ({', '.join(values)})")
+            if negative_only and set(negative_only) & set(missing):
+                return Trace(comp, "mismatch", f"{label}: '{sorted(set(negative_only) & set(missing))[0]}' appears only in a negative context (e.g. a day the customer is busy)")
+            return Trace(comp, "added_assumption", f"{label} {OP_WORDS.get(op, op)} {' or '.join(missing)} is not stated by the customer")
+        decisions = []
+        for v, (s, e) in found.items():
             used |= set(range(s, e))
             owners = [k for k, a in self.cat.attrs.items() if a["kind"] == "text" and any(_same_phrase(v2, " ".join(toks[s:e])) for v2 in a.get("values", []))]
             if len(owners) > 1 and label not in self.cat.labels_named(toks, (s, e)):

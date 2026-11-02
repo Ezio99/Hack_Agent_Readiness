@@ -143,14 +143,15 @@ class TaskEvaluatorV2:
         if crit is None or failed:
             return [self._rejected(cand, r1, p, [x for x in r1["rejection_reasons"]] or ["no verifiable specification"], crit=crit)]
         analysis = self.nl.analyse(customer, crit)
-        return self._admit(cand, r1, p, crit, truth, analysis, r1["_accepted"])
+        return self._admit(cand, r1, p, crit, truth, analysis, r1["_accepted"], r1["hard_gates"])
 
-    def _admit(self, cand, r1, p, crit, truth, analysis, framed: Accepted | None, *, framed_ok: bool | None = None) -> list[dict]:
-        """Shared by v1 kinds and the M2b kinds: `framed` is the accepted assisted (restated) task, None if the restated wording failed the gate."""
+    def _admit(self, cand, r1, p, crit, truth, analysis, framed: Accepted | None, gates: dict) -> list[dict]:
+        """Shared by v1 kinds and the M2b kinds. `gates`: the v1-named hard gates (all non-wording gates passed); `framed`: the accepted assisted
+        (restated) task, None if the restated wording failed the acceptance gate."""
         customer = p.scenario
         verdict = analysis.verdict()
-        base_gates = {k: {"pass": v["pass"]} for k, v in r1["hard_gates"].items() if k != WORDING_GATE} if framed_ok is None else dict(r1["hard_gates"])
-        framed_pass = (r1["hard_gates"][WORDING_GATE]["pass"] if framed_ok is None else framed_ok) and framed is not None
+        base_gates = {k: {"pass": v["pass"]} for k, v in gates.items() if k != WORDING_GATE}
+        framed_pass = gates[WORDING_GATE]["pass"] and framed is not None
         intent = {"pass": not analysis.intent_violations, "evidence": analysis.intent_violations}
         if verdict == "intent_not_preserved":
             return [self._rejected(cand, r1, p, [f"intent_not_preserved: {v}" for v in analysis.intent_violations], crit=crit, analysis=analysis,
