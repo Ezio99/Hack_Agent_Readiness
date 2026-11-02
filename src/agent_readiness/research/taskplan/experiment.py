@@ -94,9 +94,18 @@ def run(*, client: str = "fixture", n: int = 20, out: Path | None = None, approv
     (out / "request.json").write_text(json.dumps({"schema": SCHEMA, **P.request_record(request), "model": model, "messages": request.messages,
                                                   "catalogue_fingerprint": K.fingerprint(view), "site_versions": view["versions"], "context_fingerprint": X.fingerprint(),
                                                   "context_label": X.LABEL, "n_requested": n}, indent=1))
-    resp = llm.complete(request)
+    started = time.time()
+    t0 = time.monotonic()
+    try:
+        resp = llm.complete(request)                                             # exactly one call; never retried here
+    except Exception as exc:                                                     # preserved, then re-raised: a failed paid request is still a result
+        (out / "response.json").write_text(json.dumps({"error": type(exc).__name__, "detail": str(exc)[:300], "latency_seconds": round(time.monotonic() - t0, 2),
+                                                       "started_at": started}, indent=1))
+        raise
+    latency = round(time.monotonic() - t0, 2)
     (out / "response.json").write_text(json.dumps({"mode": resp.mode, "model": resp.model, "text": resp.text, "usage": resp.usage, "cost_usd": resp.cost_usd,
-                                                   "finish_reason": resp.finish_reason, "reasoning_tokens": resp.reasoning_tokens}, indent=1))
+                                                   "finish_reason": resp.finish_reason, "reasoning_tokens": resp.reasoning_tokens, "latency_seconds": latency,
+                                                   "started_at": started}, indent=1))
     items, batch_error = P.parse_batch(resp.text)
     (out / "proposals.json").write_text(json.dumps({"batch_error": batch_error, "items": [{k: v for k, v in it.items() if k != "proposal"} for it in items]}, indent=1))
     base_rows = rule_based(site)
@@ -118,7 +127,8 @@ def run(*, client: str = "fixture", n: int = 20, out: Path | None = None, approv
     decisions = all_decisions["raw"]
     doc = {"schema": SCHEMA, "run": run_id, "client": client, "model": model, "prompt_version": P.PROMPT_VERSION, "catalogue_fingerprint": K.fingerprint(view),
            "context_fingerprint": X.fingerprint(), "context_label": X.LABEL, "site_versions": view["versions"], "batch_error": batch_error,
-           "cost": {"usage": resp.usage, "calculated_usd": resp.cost_usd, "basis": "calculated at published prices; not a bill" if client == "meta" else "fixture: no model call"},
+           "cost": {"usage": resp.usage, "calculated_usd": resp.cost_usd, "basis": "calculated at published prices; not a bill" if client == "meta" else "fixture: no model call",
+                    "latency_seconds": latency},
            "llm": by_framing, "rule_based": m_rule,
            "stripped_answer_fields": sum(bool(it["stripped_answer_fields"]) for it in items)}
     (out / "metrics.json").write_text(json.dumps(doc, indent=1))
