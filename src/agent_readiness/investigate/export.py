@@ -114,6 +114,22 @@ def _evaluation(run: InvestigationRun, ev, verified: bool) -> dict:
     return {"state": "evaluated", "reason": None, "rule": _pick(rule, ("id", "primary", "secondary", "alpha", "min_pairs", "pass_delta_floor", "request_reduction_floor", "void_policy", "causal_scope")), "results": results, "exploratory": _exploratory(run, e)}
 
 
+def enforced_ceiling(run: InvestigationRun) -> tuple[float | None, str]:
+    """The hard ceiling actually enforced on the shared spend ledger: `ledger_ceiling_usd` of the most recently APPROVED spending manifest (each spending stage opens the ledger with
+    the ceiling its approved manifest states). A fork copies the source run's configuration, so `run.json`'s `total_cap_usd` can be stale; it is only the fallback."""
+    from ..suite.core import canonical_hash
+    for a in reversed(run.approvals()):
+        path = run.dir / "artifacts" / "manifests" / f"{a.get('stage')}-{str(a.get('manifest_sha256', ''))[:16]}.json"
+        try:
+            m = json.loads(path.read_text())
+        except (OSError, ValueError):
+            continue
+        if canonical_hash(m) == a.get("manifest_sha256") and isinstance(m.get("ledger_ceiling_usd"), (int, float)) and not isinstance(m.get("ledger_ceiling_usd"), bool):
+            return float(m["ledger_ceiling_usd"]), f"approved {a['stage']} manifest {a['manifest_sha256'][:16]}"
+    configured = (run.state.get("config") or {}).get("total_cap_usd")
+    return configured, ("run configuration (no approved spending manifest states a ceiling)" if configured is not None else "unknown")
+
+
 def _spend(run: InvestigationRun) -> dict:
     """Calculated (published-price) spend from the durable ledger, by arm: never a bill. Ids are `<trial or stage>:<request>`; trial ids start with the arm label."""
     try:
@@ -131,9 +147,10 @@ def _spend(run: InvestigationRun) -> dict:
         if arm != "other":
             by_trial[trial] = by_trial.get(trial, 0) + usd
     total = sum(settled.values())
-    ceiling = (run.state.get("config") or {}).get("total_cap_usd")
+    ceiling, ceiling_basis = enforced_ceiling(run)
     r6 = lambda x: round(x, 6)
-    return {"state": "ok", "basis": "calculated at published prices from the spend ledger; not a bill", "committed_usd": r6(total), "ceiling_usd": ceiling, "remaining_usd": r6(ceiling - total) if ceiling else None,
+    return {"state": "ok", "basis": "calculated at published prices from the spend ledger; not a bill", "committed_usd": r6(total), "ceiling_usd": ceiling, "ceiling_basis": ceiling_basis,
+            "remaining_usd": r6(ceiling - total) if ceiling else None,
             "open_reservations": len(open_), "by_arm_usd": {k: r6(v) for k, v in sorted(by_arm.items())}, "by_trial_usd": {k: r6(v) for k, v in sorted(by_trial.items())}}
 
 
