@@ -97,6 +97,18 @@ Handoff: [collaboration/LIFECYCLE_HANDOFF.md](collaboration/LIFECYCLE_HANDOFF.md
 - Awaiting owner approval: deploy, ceiling migration, paid arming, launch (exact commands in the report §11).
 - Report, decisions, deployment and rollback: [collaboration/reports/lifecycle-m8-product-integration.md](collaboration/reports/lifecycle-m8-product-integration.md).
 
+**M9 release readiness (branch `m9-release-readiness` from `a6cd59c`; 2026-11-03 Sydney; zero cost; production not accessed):** independent
+verification of the M8 release candidate. Report: [collaboration/reports/m9-release-readiness.md](collaboration/reports/m9-release-readiness.md).
+- **Verdict:** GO to deploy `m9-release-readiness` HEAD. Conditional GO for the migration to US$10.736, the paid arming and the launch, subject to the pre-flights in report §7: VM `ceiling status` = 10/3.30/2 completed/0 active, store integrity, the jail self-test, and a recommended zero-cost VM rehearsal.
+- **Verified:**
+  - the operator launch runs the Stage B pipeline: rehearsal e2e, plus the paid branch through the hosted API with a dummy key behind a network guard (reserved before sending, void, halt, no retry, US$7.436 held, relaunch 409);
+  - arming, pinning and validation;
+  - the reconciliation reproduces US$3.820762 / US$17.240080 to the microdollar from 48 ledgers;
+  - the deployed image's admission code on a migrated DB.
+- **Fixed:** an idempotent re-run of the exact `ceiling migrate` command; the exact `.env` value printed by the migration; `admin watch` shows Stage B trial totals and stop reasons; the rollback guidance (roll back with `AR_HOSTED_CEILING_USD=10`). 12 new tests.
+- **Main risk:** the launch is single-shot. Any failure after admission uses up US$7.436 and the only launch, even with zero spend.
+- The M8 documents' "2026-11-04" dates are 2026-11-03 Sydney per the commits.
+
 ## Budget
 
 - Hosted admission: US$10 ceiling, US$3.30 reserved, US$1.65 per repetition. Reservations are never released, even for completed jobs, so the remaining capacity is 4 repetitions.

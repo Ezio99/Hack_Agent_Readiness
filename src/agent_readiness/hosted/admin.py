@@ -31,10 +31,14 @@ def call(path: str, body: dict | None = None, token: bytes | None = None):
 
 def line(job: dict) -> str:
     done = sum(t['state'] in ('completed', 'failed') for r in job['reps'] for t in r['tasks'])
+    # Stage B jobs (M8) plan tasks x 2 variants x repetitions trials (12 for larkspur-core@v2); the retired paired engine planned 8 per repetition.
+    total = job.get('tasks_planned') or (sum(len(r['tasks']) for r in job['reps']) if job.get('engine') == 'stage-b' else 8 * (job['repetitions'] or 0))
     s = job['summary']
-    return (f"{job['state']:<11} {done}/{8 * (job['repetitions'] or 0)} runs | reps {[r['state'] for r in job['reps']]} | "
+    text = (f"{job['state']:<11} {done}/{total} runs | reps {[r['state'] for r in job['reps']]} | "
             f"Original {s['Original']['evidence_supported_passes']}/{s['Original']['completed']} ({s['Original']['requests_total']} req) | "
             f"Modified {s['Modified']['evidence_supported_passes']}/{s['Modified']['completed']} ({s['Modified']['requests_total']} req)")
+    reason = job.get('stopped') or job.get('error')
+    return text + (f" | {reason}" if reason else '')
 
 
 def main(argv=None) -> int:

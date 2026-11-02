@@ -68,6 +68,13 @@ def usd(micro: int) -> str:
     return f"US${micro / 1_000_000:.6f}"
 
 
+def env_value(micro: int) -> str:
+    """The exact `AR_HOSTED_CEILING_USD` value for a ceiling in microdollars (M9: `:g` would round to 6 significant digits, e.g. 12.345678 ->
+    12.3457, and the service would then stay fail-closed with budget_policy_mismatch)."""
+    text = f"{Decimal(micro) / 1_000_000:f}"
+    return text.rstrip("0").rstrip(".") if "." in text else text
+
+
 def _columns(db, table: str) -> list[str]:
     return [r[1] for r in db.execute(f"PRAGMA table_info({table})").fetchall()]
 
@@ -144,7 +151,11 @@ def plan(path: Path, *, to: str, expect_ceiling: str, expect_reserved: str, reas
         raise MigrationRefused("malformed", "state the reason for the change (at least 10 characters)")
     target, exp_c, exp_r = microusd(to, "the new ceiling"), microusd(expect_ceiling, "--expect-ceiling"), microusd(expect_reserved, "--expect-reserved")
     st = status(path)
-    if st["ceiling"] != exp_c:
+    last = st["history"][-1] if st["history"] else None
+    # Already applied (M9): the target is in place and the last audit row recorded it. Re-running the SAME command (`--expect-ceiling` = the old
+    # ceiling, e.g. after a dropped SSH session) or one that names the new ceiling is a no-op, not a policy mismatch.
+    already = last is not None and target == st["ceiling"] == last["to_ceiling"] and exp_c in (last["from_ceiling"], target)
+    if st["ceiling"] != exp_c and not already:
         raise MigrationRefused("policy_mismatch", f"the persisted ceiling is {usd(st['ceiling'])}, not the expected {usd(exp_c)}; nothing changed")
     if st["reserved"] != exp_r:
         raise MigrationRefused("reservations_mismatch", f"{usd(st['reserved'])} is reserved, not the expected {usd(exp_r)}; nothing changed")
@@ -156,8 +167,6 @@ def plan(path: Path, *, to: str, expect_ceiling: str, expect_reserved: str, reas
         raise MigrationRefused("below_unit", "the ceiling may not be below the per-repetition unit of the persisted policy")
     if target > MAX_CEILING_MICROUSD:
         raise MigrationRefused("above_programme", f"{usd(target)} exceeds the programme ceiling (A$50 at 1.50 AUD/USD = {usd(MAX_CEILING_MICROUSD)})")
-    last = st["history"][-1] if st["history"] else None
-    already = target == st["ceiling"] and last is not None and last["to_ceiling"] == target
     if target == st["ceiling"] and not already:
         raise MigrationRefused("no_change", "the new ceiling equals the current one")
     return {**st, "to": target, "already_applied": already, "reason": reason.strip(),
@@ -250,7 +259,7 @@ def main(argv=None) -> int:
         out = migrate(a.db, to=a.to, expect_ceiling=a.expect_ceiling, expect_reserved=a.expect_reserved, reason=a.reason, typed=typed,
                       interactive=sys.stdin.isatty(), actor=f"owner terminal (uid {os.getuid()})")
         print(f"migrated: ceiling {usd(out['from'])} -> {usd(out['to'])}; reserved {usd(out['reserved'])} by {out['jobs']} job(s) (unchanged); "
-              f"audit row #{out['audit_seq']}. Set AR_HOSTED_CEILING_USD={out['to'] / 1_000_000:g} in deploy/.env before starting the app.")
+              f"audit row #{out['audit_seq']}. Set AR_HOSTED_CEILING_USD={env_value(out['to'])} in deploy/.env before starting the app.")
         return 0
     except MigrationRefused as exc:
         print(f"refused [{exc.code}]: {exc.detail}", file=sys.stderr)

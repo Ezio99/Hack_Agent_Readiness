@@ -44,8 +44,11 @@ access change for the deploy itself. A paid `larkspur-core@v2` evaluation (reser
 `docker compose stop app && docker compose run --rm --no-deps -it app python -m agent_readiness.hosted.ceiling migrate --db /data/hosted/live/admission.sqlite --to 10.736 --expect-ceiling 10 --expect-reserved 3.3 --reason "…"`,
 then `AR_HOSTED_CEILING_USD=10.736` in `.env` and `docker compose up -d --no-build --no-deps app` (a mismatch keeps evaluations disabled: fix `.env`, never the
 database). Rolling back the image keeps the migrated ceiling and every reservation; the old image needs `AR_HOSTED_CEILING_USD=10.736` to admit, or
-stays fail-closed. Full sequence (backup, deploy, verify, migrate, arm, launch, monitor, rollback):
-[collaboration/reports/lifecycle-m8-product-integration.md §8–§11](../collaboration/reports/lifecycle-m8-product-integration.md).
+stays fail-closed. **M9: after a ceiling migration, roll back with `AR_HOSTED_CEILING_USD=10` (fail-closed, history viewable).** With 10.736 and no
+Stage B launch yet, the retired paired engine would be live again and could reserve 4 × US$1.65 = US$6.60 of the capacity meant for the Stage B
+evaluation (verified against the deployed `140a4e8` admission code). Full sequence (backup, deploy, verify, migrate, arm, launch, monitor, rollback):
+[collaboration/reports/lifecycle-m8-product-integration.md §8–§11](../collaboration/reports/lifecycle-m8-product-integration.md); M9 verification,
+pre-flight checks and the corrected runbook: [collaboration/reports/m9-release-readiness.md](../collaboration/reports/m9-release-readiness.md).
 
 ## VM requirements
 
