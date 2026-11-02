@@ -26,7 +26,7 @@ Authoritative current handoff. Check it against the repository and production be
 ## Budget
 
 - Hosted admission: US$10 ceiling, US$3.30 reserved, US$1.65 per repetition. Reservations are never released, even for completed jobs, so the remaining capacity is 4 repetitions.
-- Programme: ceiling A$50. This is a limit, never an authorization. The recorded known-spend subtotal is US$9.440066 / A$14.1601 at the 1.50 assumption, and is partial (see `collaboration/budget/programme-ledger.json` and the archive). The 2026-11-02 production trial (US$1.126097) is **not yet appended; that is an owner action**. With it the subtotal is US$10.566163 / A$15.85. Calculated cost is not a bill.
+- Programme: ceiling A$50. This is a limit, never an authorization. The recorded known-spend subtotal is partial (see `collaboration/budget/programme-ledger.json` and the archive). The 2026-11-02 production trial (US$1.126097) is appended as `hosted-live-2`, making the subtotal **US$10.566163 / A$15.8492**. Calculated cost is not a bill.
 
 ## Deadlines
 
