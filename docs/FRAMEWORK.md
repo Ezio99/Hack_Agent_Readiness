@@ -74,9 +74,50 @@ A fictional adult-education short-course catalogue.
 - **Variants:** `original` has cards with name, category and summary only. `modified` cards also show fee, duration, level and seats left, which mirrors Ironbark's listing-information change in a different domain. Only `/courses` differs between the variants (tested).
 - **Capture:** the site is crawled with the pipeline's own crawler, exactly like any other site.
 
-## Not yet done
+## Orchestration and zero-cost execution (`framework/evaluate.py`)
 
-- **Executing generated tasks with agents.** Running trials on Larkspur needs the site served to the jailed browser and a trials stage pointed at the frozen manifest. The path exists (`freeze` format, trials stage, dev-provider fixture), but it is not wired for framework task sets. Live runs need owner approval.
-- **LLM-proposed tasks.** The existing proposer (`taskgen/propose.py`) can feed the same gate, oracle and classes, but it is not connected here because it makes paid calls.
-- **Rubric grading.** Rubric checklists are recorded only; nothing scores them.
-- **Phase 4 diagnostics** (DOM, accessibility, forms, JSON-LD and navigation friction, linked to agent trajectories) build on the same site definitions.
+One interface for every site. There is no site-specific code in the engine; a test checks the AST of `evaluate.py`, `generate.py`, `verifiability.py` and `oracle.py`.
+
+```
+prepare(site, root)  -> generate + validate + freeze; persisted as a standard investigation run:
+                        snapshot/, site-profile, tasks-manifest, private/criteria.json, framework-taskset (public view),
+                        framework-provenance (site, variant hashes, oracle, generation rules, verifiability counts,
+                        tasks-manifest sha256, criteria sha256, official grader v1, post-hoc grader v2 derivation id, agent provider and profile)
+execute(run)         -> every eligible task x every variant through investigate.trials.runner.run_trial (real Browser Use, real Chromium,
+                        snapshot served on loopback), each request behind the RequestGate and ledger; non-base variants use the private
+                        record re-derived on that variant (evaluate.stage.still_valid); resumable; trial records in the standard format
+results(run)         -> v1 grades as recorded, grader_v2 post-hoc view (grading.rescore, v1 reproduction check), per-variant totals,
+                        evidence files per trial; written once as framework-results
+```
+
+**Zero cost only.** `provider=dev` is the loopback dev provider (`live.devprovider`, not a model), pinned to the run and serving real HTTP. `provider=mock` is the in-process scripted agent, with behaviours correct, wrong and lazy. Any non-loopback endpoint is refused.
+
+**A shared fix to the dev provider (`live/devprovider.py`).** It cached one scripted agent per (run, task). A second variant or repeat of the same task therefore got an exhausted script and the first trial's stale mirror URL, and answered at step 1. It is now keyed per trial (by mirror URL), and a regression test covers it. Single-trial uses behave exactly as before.
+
+### Execution results (2026-11-02, dev provider, local Chromium, no model, no cost)
+
+| Site | Trials (variants × tasks) | Void | Correct answers (v1 strict) | Evidence-supported, v1 = v2 | Model requests | Rescore faithful |
+|---|---|---|---|---|---|---|
+| Larkspur | 14 (2 × 7) | 0 | 14/14 | original 7/7, modified 7/7 | 46 + 46 | yes |
+| Ironbark | 10 (2 × 5) | 0 | 10/10 | original 3/5, modified 3/5 | 21 + 21 | yes |
+
+The stand-in is handed the frozen answer, so these numbers prove the pipeline, not agent or website quality.
+
+The two Ironbark trials that aren't evidence-supported are the per-day tasks, which need only the 16-item `/hire` listing. The stand-in navigates without scrolling, so the answer items low on the listing were never shown to it. The evidence rule correctly refuses to credit an answer the agent could not have seen. A real agent has to scroll there, as the recorded Muse Spark trials did.
+
+The scripted agent answering wrongly fails every task on both sites (test).
+
+## Limitations, and what stands between Larkspur and a real (paid) agent run
+
+1. **No paid execution path for framework sites.** The hosted executor is deliberately Ironbark-only: `live/ironbark_runner` pins the ORIGINAL/MODIFIED snapshot hashes, the tasks and rule hashes, and validates manifests against them. A Larkspur paid run needs:
+   - a framework executor using the hosted admission/budget and a manifest-approval step;
+   - per-arm caps sized from Larkspur's task limits;
+   - the jailed browser.
+
+   The framework orchestrator refuses non-loopback endpoints by design.
+2. **No browser jail locally.** `execute` uses local Chromium. Production isolation (network namespace, loopback mirror only) exists only in the hosted container; a real run must go through it.
+3. **No pre-registered comparison rule for framework task sets.** Results are per-variant totals. The frozen `paired-signflip-v1` and exploratory rules are tied to the investigation/proposal flow. Before any effect claim, a rule must be registered against the task-set hash, with repetition count and power considered (with an exact two-sided sign-flip test, 4 task pairs can never reach p ≤ 0.10, since the minimum is 2/16 = 0.125; 5–7 pairs can only if nearly all point the same way).
+4. **The scripted stand-in is not a behavioural model.** It cannot exercise scrolling, recovery, or the real-model protocol issues seen with Muse Spark (prose-prefixed JSON, invalid indices), which `suite-v2-compat2` handles.
+5. **Generated task limits** come from hop distance (8 + 3 × hops, at most 16 steps). The paid Ironbark trial used 13 of 14 requests on Original tasks, so the limits and caps for a new site should be checked against a first real run.
+6. **Oracle and task coverage.** The oracle answers page_fact, item_set and extremum only. Rubric tasks are recorded but not graded. LLM-proposed tasks are not connected (they would need paid calls).
+7. **Larkspur is a local snapshot.** It is served only to the agent's browser on loopback, never published.

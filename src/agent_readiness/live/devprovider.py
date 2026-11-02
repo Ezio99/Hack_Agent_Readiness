@@ -144,7 +144,7 @@ class DevProvider:
         if inst is None:
             raise RuntimeError("the browser agent asked about a task that is not in the run")
         base = re.search(r"http://127\.0\.0\.1:\d+", text)
-        key = (run.state["id"], inst.spec.task_id)
+        key = (run.state["id"], inst.spec.task_id, base.group(0) if base else None)       # one scripted agent per TRIAL (each trial has its own mirror port): a second arm or repeat of the same task starts fresh
         if key not in self._handlers:
             self._handlers[key] = mock_handler(inst, base.group(0) if base else "http://127.0.0.1", "correct", [r.value for r in inst.evidence if r.kind == "visited_path"])
         r = self._handlers[key](type("R", (), {"content": json.dumps(body).encode()})())

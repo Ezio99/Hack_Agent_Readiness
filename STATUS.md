@@ -35,7 +35,16 @@ grader_v1 remains the grader of record.
 - Validated autonomous task generation: Ironbark gets 5 deterministic tasks (its variants are exactly the hosted Original/Modified) and the second controlled site, Larkspur Community College, gets 7. The uncontrolled zoo site correctly gets 0.
 - Eligible tasks freeze into the existing manifest format and grade through grader_v1/v2.
 
-Not yet wired: agent execution of generated tasks.
+**Zero-cost evaluation loop (milestone met, 2026-11-02):** `framework/evaluate.py` runs prepare → execute → results through the same interface for every site. The path is site definition → independent oracle → task generation → validation → manifest freezing → agent execution (real Chromium, loopback dev provider) → evidence capture → grading (official v1 + post-hoc v2) → persisted results, with full provenance.
+
+| Site | Trials | Correct answers | Evidence-supported |
+|---|---|---|---|
+| Larkspur | 14 | 14/14 | 14/14 |
+| Ironbark | 10 | 10/10 | 6/10 (the scripted stand-in doesn't scroll the long listing, and the evidence rule correctly refuses to credit unseen answers) |
+
+Fixed the shared dev provider's per-trial script reuse. Limitations and what blocks a real Larkspur run: [docs/FRAMEWORK.md](docs/FRAMEWORK.md).
+
+**Model provenance:** derived from the frozen records into exports and the workspace methodology (on `evaluation-v2`, not deployed): muse-spark-1.3, reasoning_effort low (frozen by owner decision), 4096, profile and hash, official v1 / post-hoc v2.
 
 **Next:** Phase 4 diagnostics (DOM, accessibility, forms, JSON-LD and navigation friction, linked to agent evidence), isolated in the same way. Feature freeze is Wednesday 2026-11-04.
 
