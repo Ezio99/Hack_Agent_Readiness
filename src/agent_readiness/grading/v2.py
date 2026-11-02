@@ -1,8 +1,8 @@
 """grader_v2: deterministic, key-based grading of frozen generated-criteria answers.
 
 Why: grader_v1 (`criteria.answer_match`) accepts the expected string only when the whole answer is at most `len(truth) + 16` characters, so
-"Electric scissor lift 6 m with a refundable deposit of $600" (correct, with a correct supporting fact) fails while "Electric scissor lift 6 m"
-passes; its set grading also requires every list element to equal a name exactly ("Cordless drill driver kit 18V" != "... 18 V").
+"Boom crane 9 m with a refundable deposit of $600" (correct, with a correct supporting fact) fails while "Boom crane 9 m"
+passes; its set grading also requires every list element to equal a name exactly ("Impact wrench kit 20V" != "... 20 V").
 
 v2 does NOT widen that tolerance. It grades against an ANSWER KEY re-derived from the frozen snapshot (the same extractors v1 uses):
 every candidate the site offers for the question, and each candidate's own labelled facts. An answer is decomposed into
@@ -16,7 +16,7 @@ every candidate the site offers for the question, and each candidate's own label
 String tasks pass iff exactly one candidate (the truth) is mentioned and the residual is consistent. Set tasks pass iff every element maps to
 candidates whose own details are consistent, nothing unrecognised is listed, and the mapped set equals the truth set.
 Failures carry reason codes; `review` marks failures a human might overturn (e.g. a contrastive mention of another candidate). A review flag
-never changes the score: v2 is binary and conservative. Not fuzzy: partial names ("scissor lift") are not matched.
+never changes the score: v2 is binary and conservative. Not fuzzy: partial names ("crane") are not matched.
 """
 from __future__ import annotations
 
@@ -44,7 +44,7 @@ def code_sha256() -> str:
 
 def canon(text: str) -> str:
     """Canonical comparison form: thousands separators dropped, lower case, punctuation as spaces ('$', '%' and decimal points kept), and a space
-    between a number and a following/preceding word ('18V' == '18 V', '13hp' == '13 hp', '7.3m' == '7.3 m')."""
+    between a number and a following/preceding word ('20V' == '20 V', '22t' == '22 t', '7.3m' == '7.3 m')."""
     s = re.sub(r"(?<=\d),(?=\d{3}\b)", "", norm(str(text)))
     s = re.sub(r"(?<!\d)\.|\.(?!\d)", " ", s.lower())
     s = re.sub(r"[^\w$%.]+", " ", s).replace("_", " ")
@@ -102,7 +102,7 @@ class Graded:
 
 
 def _mentions(tokens: list[str], key: AnswerKey) -> list[tuple[int, int, Candidate]]:
-    """Non-overlapping full-name mentions, longest candidate first (so 'Wood chipper 100 mm' wins over a candidate named 'Wood chipper')."""
+    """Non-overlapping full-name mentions, longest candidate first (so 'Leaf mulcher 80 mm' wins over a candidate named 'Leaf mulcher')."""
     taken = [False] * len(tokens)
     found = []
     for cand in sorted(key.candidates, key=lambda c: -len(canon(c.name).split())):
