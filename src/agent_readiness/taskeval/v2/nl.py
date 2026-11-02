@@ -273,6 +273,8 @@ class Analyser:
         for i, t in enumerate(toks):
             if i in taken or t not in L.SUPERLATIVE_WORDS:
                 continue
+            if i > 0 and toks[i - 1] in ("at", "the") and t in ("least", "most") and i + 1 < len(toks) and number_value(toks[i + 1]) is not None:
+                continue                                                     # "at least 5 seats" / "at most $300" are comparators, not superlatives
             d = L.SUPERLATIVE_WORDS[t]
             windows = [(i + 1, min(len(toks), i + 4))] + ([(max(0, i - 2), i)] if t in ("least", "most") else [])   # "most weeks", "highest fee"; "costs the least"
             for lo, hi in windows:

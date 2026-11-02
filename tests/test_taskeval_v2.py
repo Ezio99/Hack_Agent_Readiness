@@ -165,6 +165,9 @@ def test_money_cue_is_ambiguous_when_the_catalogue_has_several_money_attributes(
     ("I work Monday to Wednesday. Which courses are held on Saturdays?", [("class day", "equals", "Saturday")], "verifiable"),          # negative context
     ("Which intermediate courses still have seats?", [("level", "equals", "Intermediate"), ("seats left", "greater_than", "0")], "verifiable"),
     ("Which courses cost $250 or less and run for six weeks or less?", [("course fee", "at_most", "$250"), ("duration", "at_most", "6 weeks")], "verifiable"),
+    ("I need a course that still has at least 5 seats left. What qualifies?", [("seats left", "at_least", "5")], "verifiable"),          # M6 false rejection: 'at least' is a comparator
+    ("Which courses cost at most $300 and have at least 5 seats left?", [("course fee", "at_most", "$300"), ("seats left", "at_least", "5")], "verifiable"),
+    ("Which course has the most seats left?", [("course fee", "at_most", "$300")], "intent_not_preserved"),                              # a real superlative is still caught
 ])
 def test_intent_preservation_both_ways(larkspur, scenario, constraints, expect):
     from agent_readiness.research.taskplan.verify import OPS
