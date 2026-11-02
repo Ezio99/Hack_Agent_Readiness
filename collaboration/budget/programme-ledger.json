@@ -161,6 +161,14 @@
       "basis": "CALCULATED from provider-reported usage (2 requests; 6595 prompt + 9779 completion tokens incl. 6266 reasoning) at published prices; not a bill",
       "source": "scanner-data/research/stage-a/ledgers/m6-larkspur-core/ledger.jsonl (git-ignored); run m6-larkspur-core-20261102T121242Z",
       "authorized_by": "owner (explicit approval 2026-11-02: one Stage A generation experiment, hard total cap US$0.10, at most 3 requests; no Stage B)"
+    },
+    {
+      "id": "research-stage-b-m7-1",
+      "label": "Research M7 Stage B: ONE owner-authorised paid browser-agent evaluation of the owner-frozen suite larkspur-core v2 (frozen 0816af7f7440; manifest 64a55c5f3a93): 6 natural tasks x Original/Modified x 1 repetition = 12 jailed trials, muse-spark-1.3, profile suite-v2-compat2, reasoning_effort low; hard cap US$8.00",
+      "usd": 1.520696,
+      "basis": "CALCULATED from provider-reported usage (111 requests; 1054811 prompt + 47571 completion tokens) at published prices; not a bill; all requests settled, none above its reservation",
+      "source": "scanner-data/research/stage-b/ledgers/m7-larkspur-browser-1/ledger.jsonl (git-ignored); run evalrun-paid-64a55c5f3a-natural",
+      "authorized_by": "owner (conditional chat authorisation 2026-11-02, amended to 12 trials and US$8.00; satisfied by the owner's terminal approval and freeze of larkspur-core v2)"
     }
   ],
   "recorded_runtime_stages": [
@@ -223,6 +231,14 @@
       "known_spend_subtotal_before_usd": 11.848482,
       "known_spend_subtotal_after_usd": 11.898286,
       "note": "Appended only; earlier entries unchanged. The owner-authorised cap US$0.10 is a limit, not spend; both requests settled from reported usage."
+    },
+    "research_addendum_5": {
+      "as_of": "2026-11-02",
+      "added_entry": "research-stage-b-m7-1",
+      "added_usd": 1.520696,
+      "known_spend_subtotal_before_usd": 11.898286,
+      "known_spend_subtotal_after_usd": 13.418982,
+      "note": "Appended only; earlier entries unchanged. The US$8.00 cap and US$7.392 worst-case reservation are limits, not spend."
     }
   }
 }

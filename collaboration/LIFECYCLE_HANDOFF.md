@@ -35,7 +35,10 @@ Nothing in this document authorises spending, deployment, merging or modifying e
   - only synthetic suites have been approved.
 - **M6 Stage A done** (owner-authorised, US$0.10 cap): US$0.049804 spent; the `larkspur-core` proposal is UNAPPROVED. See [`reports/lifecycle-m6-stage-a.md`](reports/lifecycle-m6-stage-a.md).
   - The driver is `python -m agent_readiness.suites.experiments.m6_stage_a` (preflight-only by default; its fixed ledger is now used, so it refuses to run again).
-  - Next: owner review of the generated tasks. Stage B and any further paid call need new authorisation. `evalruns.runner.execute` still refuses paid mode.
+  - Next: owner review of the generated tasks. Stage B and any further paid call need new authorisation.
+- **M7 Stage B done** (owner-frozen `larkspur-core` v2 `0816af7f…`; manifest `64a55c5f…`; 12 trials; US$1.520696). See [`reports/lifecycle-m7-browser.md`](reports/lifecycle-m7-browser.md).
+  - Paid mode is now guarded by `evalruns/authorization.py` (a write-once record bound to the frozen suite, manifest, experiment ledger, trial count and cap).
+  - Driver: `python -m agent_readiness.evalruns.m7_larkspur`. Its experiment ledger is used, so it cannot run again.
 - The step-5 "stop for approval after M2" instruction below is superseded by the owner's later authorisation. "The research branch is not pushed" (§2) is no longer true.
 
 ## NEW AGENT START HERE
