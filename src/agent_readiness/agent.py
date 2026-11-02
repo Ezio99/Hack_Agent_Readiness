@@ -377,7 +377,13 @@ async def attempt(task: PublicTask, url: str, llm, recorder: Recorder, effective
     from browser_use import Browser
     from playwright.async_api import async_playwright
     async with async_playwright() as pw:
-        browser = Browser(**browser_options(url, pw.chromium.executable_path, effective))
+        executable = pw.chromium.executable_path
+        from .hosted import jail                              # hosted runs: Chromium in a loopback-only network namespace
+        isolation = jail.policy()
+        if isolation is not None:
+            executable = jail.wrapper(executable, url, isolation)
+        browser = Browser(**browser_options(url, executable, effective))
+        recorder.event("browser_isolation", mode="netns-loopback-mirror-only" if isolation is not None else "none")
         if network_capture is not None:                       # optional (WebArena): start the browser first so the capture is attached before the first navigation
             await browser.start()
             await network_capture.attach(browser.cdp_url)

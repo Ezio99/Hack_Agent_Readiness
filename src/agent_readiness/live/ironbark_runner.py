@@ -118,7 +118,8 @@ def progress(root, job):
                     from ..investigate.trials.stage import VOID_STATUSES
                     row.update(state='failed' if status in VOID_STATUSES else 'completed', outcome=status,
                                strict_pass=t.get('evaluation', {}).get('passed'), evidence_supported=t.get('evaluation', {}).get('evidence_backed'),
-                               requests=t.get('metrics', {}).get('model_requests'))
+                               requests=t.get('metrics', {}).get('model_requests'), page_views=t.get('metrics', {}).get('page_views'),
+                               steps=t.get('metrics', {}).get('steps'), elapsed_seconds=t.get('metrics', {}).get('elapsed_seconds'))
                     if status in VOID_STATUSES:
                         row.update(strict_pass=None, evidence_supported=None)
                 except (OSError, ValueError, KeyError):

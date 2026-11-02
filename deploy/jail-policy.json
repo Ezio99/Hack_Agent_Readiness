@@ -1,0 +1,1 @@
+{"hide": ["/app", "/data", "/run/secrets", "/home", "/root", "/etc/agent-readiness"], "dir": "/tmp/arj"}

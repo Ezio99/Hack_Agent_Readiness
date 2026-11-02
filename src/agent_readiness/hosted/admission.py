@@ -29,14 +29,29 @@ class Admission:
             if db.execute('SELECT ceiling, cap, interval FROM policy WHERE id=1').fetchone() != (self.ceiling, self.cap, self.interval):
                 raise ValueError('hosted budget policy differs from durable policy; manual reconciliation required')
 
+    @classmethod
+    def open_existing(cls, path: Path) -> 'Admission':
+        """Open with the durable policy (used by the worker, which must not define its own)."""
+        db = sqlite3.connect(f'file:{Path(path)}?mode=rw', uri=True, timeout=10)
+        try:
+            row = db.execute('SELECT ceiling, cap, interval FROM policy WHERE id=1').fetchone()
+        finally:
+            db.close()
+        if not row:
+            raise ValueError('hosted budget policy is missing')
+        return cls(path, ceiling_microusd=row[0], job_cap_microusd=row[1], min_interval_seconds=row[2])
+
     def connect(self):
         db = sqlite3.connect(self.path, timeout=10, isolation_level=None)
         db.execute('PRAGMA busy_timeout=10000')
         return db
 
-    def reserve(self, job_id: str, client: str, *, now: float | None = None):
+    def reserve(self, job_id: str, client: str, *, now: float | None = None, units: int = 1):
+        """Reserve ``units`` x the per-unit cap (one unit = one paired repetition), atomically."""
         if not re.fullmatch(r'[a-zA-Z0-9_-]{1,64}', job_id) or not re.fullmatch(r'[a-f0-9]{64}', client):
             raise ValueError('invalid admission identity')
+        if type(units) is not int or not 1 <= units <= 5:
+            raise ValueError('invalid reservation size')
         now = time.time() if now is None else now
         if not isinstance(now, (int, float)) or not 0 <= now < 10**12:
             raise ValueError('invalid timestamp')
@@ -49,16 +64,17 @@ class Admission:
                 if last is not None and now - last < self.interval:
                     raise Refused('rate limit exceeded')
                 total = db.execute('SELECT COALESCE(SUM(reserved),0) FROM jobs').fetchone()[0]
-                if total + self.cap > self.ceiling:
+                if total + self.cap * units > self.ceiling:
                     raise Refused('hosted budget exhausted')
-                db.execute('INSERT INTO jobs VALUES (?,?,?,?,?)', (job_id, client, now, 'reserved', self.cap))
+                db.execute('INSERT INTO jobs VALUES (?,?,?,?,?)', (job_id, client, now, 'reserved', self.cap * units))
                 db.execute('COMMIT')
             except BaseException:
                 db.execute('ROLLBACK')
                 raise
 
     def transition(self, job_id: str, expected: str, state: str):
-        allowed = {('reserved', 'running'), ('reserved', 'failed'), ('running', 'completed'), ('running', 'failed'), ('running', 'timed_out')}
+        allowed = {('reserved', 'running'), ('reserved', 'failed'), ('running', 'completed'), ('running', 'failed'), ('running', 'timed_out'),
+                   ('reserved', 'interrupted'), ('running', 'interrupted')}
         if (expected, state) not in allowed:
             raise ValueError('invalid transition')
         with self.connect() as db:
@@ -69,3 +85,17 @@ class Admission:
         with self.connect() as db:
             row = db.execute('SELECT id, state, created, reserved FROM jobs WHERE id=?', (job_id,)).fetchone()
         return dict(zip(('id', 'state', 'created', 'reserved_microusd'), row)) if row else None
+
+    def active(self):
+        with self.connect() as db:
+            return [r[0] for r in db.execute("SELECT id FROM jobs WHERE state IN ('reserved','running') ORDER BY created")]
+
+    def recent(self, limit: int = 20):
+        with self.connect() as db:
+            rows = db.execute('SELECT id, state, created, reserved FROM jobs ORDER BY created DESC LIMIT ?', (limit,)).fetchall()
+        return [dict(zip(('id', 'state', 'created', 'reserved_microusd'), r)) for r in rows]
+
+    def totals(self):
+        with self.connect() as db:
+            reserved = db.execute('SELECT COALESCE(SUM(reserved),0) FROM jobs').fetchone()[0]
+        return {'ceiling_microusd': self.ceiling, 'reserved_microusd': reserved, 'per_repetition_microusd': self.cap}

@@ -19,8 +19,13 @@ const HISTORICAL: { id: Page; label: string }[] = [
   { id: "scanner", label: "Protected scanner" },
 ];
 const PAGES = [{ id: "studio" as Page, label: "Replay Studio" }, MAIN, ...HISTORICAL];
+const runJob = (): string | null | undefined => {
+  const m = window.location.hash.match(/^#\/run(?:\/(eval-[0-9a-f]{32}))?$/);
+  return m ? (m[1] ?? null) : undefined;
+};
 const fromHash = (): Page => {
   const h = window.location.hash.replace(/^#\/?/, "");
+  if (runJob() !== undefined) return "studio";
   return (PAGES.find((p) => p.id === h)?.id ?? "studio") as Page;
 };
 
@@ -36,7 +41,7 @@ export default function App() {
     setPage(p);
     window.scrollTo({ top: 0 });
   };
-  if (page === "studio") return <ReplayStudio openReport={() => go("investigation")} />;
+  if (page === "studio") return <ReplayStudio openReport={() => go("investigation")} runJob={runJob()} />;
   return (
     <>
       <a className="skip" href="#main">Skip to content</a>

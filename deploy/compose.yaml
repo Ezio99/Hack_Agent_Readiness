@@ -1,0 +1,38 @@
+# Single Linux host. Prerequisites and checks: deploy/DEPLOY.md
+name: agent-readiness
+services:
+  app:
+    build: {context: .., dockerfile: deploy/Dockerfile}
+    restart: unless-stopped
+    environment:
+      AR_HOSTED_MODE: ${AR_HOSTED_MODE:-disabled}             # disabled | rehearsal | live (live needs owner authorization)
+      AR_HOSTED_CEILING_USD: ${AR_HOSTED_CEILING_USD:-}       # owner-set global ceiling; required unless disabled
+      AR_HOSTED_MIN_INTERVAL: ${AR_HOSTED_MIN_INTERVAL:-120}
+      AR_TRUSTED_PROXIES: 172.30.0.2                          # only Caddy may set X-Forwarded-For
+      META_MODEL_API_KEY_FILE: /run/secrets/meta_model_api_key
+    secrets: [meta_model_api_key]
+    volumes:
+      - data:/data
+      - ${AR_SOURCE_RUN:?path to the private live-2d58a80e14 source run}:/app/scanner-data/live/live-2d58a80e14:ro
+    # The browser jail needs unprivileged user/net/pid/mount namespaces and a fresh /proc.
+    # No capabilities are added and the process is not root; the service refuses to start
+    # evaluations unless its isolation self-test passes.
+    security_opt: ["seccomp=unconfined", "apparmor=unconfined", "systempaths=unconfined", "no-new-privileges:true"]
+    cap_drop: [ALL]
+    shm_size: 1gb
+    mem_limit: 4g
+    pids_limit: 1024
+    networks: {edge: {ipv4_address: 172.30.0.3}}
+  caddy:
+    image: caddy:2.10
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment: {SITE_ADDRESS: "${SITE_ADDRESS:?public hostname, e.g. readiness.example.com}"}
+    volumes: [./Caddyfile:/etc/caddy/Caddyfile:ro, caddy:/data]
+    networks: {edge: {ipv4_address: 172.30.0.2}}
+    depends_on: [app]
+secrets:
+  meta_model_api_key: {file: ./secrets/meta_model_api_key}
+volumes: {data: {}, caddy: {}}
+networks:
+  edge: {ipam: {config: [{subnet: 172.30.0.0/24}]}}

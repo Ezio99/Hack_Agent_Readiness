@@ -1,5 +1,9 @@
 # Agent Readiness — status
 
+## Hosted vertical slice: jailed browser, batch executor, public run UI, deploy config (2026-11-02)
+
+Branch `hosted-ironbark-evaluation`. Judges' flow at `#/run`: choose 1/3/5 paired repetitions → run → live per-task grid → metrics → sanitized evidence/replay; results survive reload. Chromium runs in a loopback-only network namespace bridging only the mirror and CDP (verified at service start; fails closed). Worker runs the unchanged paired driver per repetition with reservation/manifest cap binding; restart marks jobs interrupted. A local **rehearsal** (real jailed browsers and grading, scripted agent, no provider; labelled scripted, unmeasured) completed 8/8 trials end-to-end over HTTP. Docker/Compose/Caddy written but **not built** (no Docker here). **No paid call, no deployment.** Live mode, the hosted ceiling and the public deployment need owner authorization. [Report](collaboration/reports/hosted-ironbark-wip.md), [deploy guide](deploy/DEPLOY.md).
+
 ## Hosted fixed-target API fixture increment (2026-11-02)
 
 A disabled-by-default fixed-target API now connects durable admission to a test-only eight-task fixture executor and public-safe export. Six hosted API/admission tests passed; this is not deployed or wired to a real worker. Container isolation, restart reconciliation, per-task progress and Replay Studio integration remain outstanding. [Work-in-progress report](collaboration/reports/hosted-ironbark-wip.md). No paid call.

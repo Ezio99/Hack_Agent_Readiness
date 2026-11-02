@@ -1,0 +1,11 @@
+{$SITE_ADDRESS} {
+	encode gzip
+	request_body {
+		max_size 4KB
+	}
+	# Overwrite (never append to) any client-supplied forwarding header.
+	reverse_proxy app:8080 {
+		header_up X-Forwarded-For {remote_host}
+	}
+	header Strict-Transport-Security "max-age=31536000"
+}
