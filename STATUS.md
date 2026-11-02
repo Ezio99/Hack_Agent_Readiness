@@ -1,5 +1,9 @@
 # Agent Readiness — status
 
+## Operator-only cloud deployment (2026-11-02)
+
+**https://209-38-84-72.sslip.io/#/run** (DigitalOcean Droplet, Sydney, Ubuntu 24.04, 2 vCPU/4 GB + 2 GB swap; commit `60fcbc6`). Mode live, access **operator-only** (public starts are refused with 403); US$10 ceiling unchanged, US$1.65 reserved, 5 repetitions remain. Verified on the VM: Let's Encrypt TLS, HTTP→HTTPS, HSTS/CSP; in-container jail self-test ok (mirror reachable, escapes blocked, filesystem hidden); container uid 10001 with zero effective capabilities and no published ports; admission policy/jobs/reservation identical to the migrated source; key absent from logs and environment; 403 without/with wrong token; 422 for URL/model/caps/tasks/invalid repetitions; the first Muse Spark evaluation (history, verdicts, export, telemetry, screenshots, insights) served publicly. Local live container stopped with restart disabled; backups in `~/agent-readiness-backups/20261102T134523` (not deleted). **Public paid execution still needs owner approval.**
+
 ## Deployment preparation and ledger reconciliation (2026-11-02)
 
 Programme ledger: owner-instructed append of `hosted-live-1` US$1.090968 (76 settled reservations, 0 open; imported US$0.864825 excluded; the hosted US$1.65 admission hold is not spend). Known-spend subtotal US$9.440066 / A$14.1601 (prior entries unchanged; still partial). Public UX: worker available/busy banner with live progress and an estimated time left, per-option duration estimates measured from completed evaluations (first run: 9 min 18 s per repetition), friendly busy/rate/budget messages, history browsable while busy. Startup retries an isolation self-test whose browser did not start (a real boundary failure is final). The volume migration path (live history plus the persisted US$10 policy) was rehearsed locally. [VM requirements and exact commands](deploy/DEPLOY.md). Not deployed; public access and any ceiling change need owner approval.
