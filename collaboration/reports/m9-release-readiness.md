@@ -188,8 +188,8 @@ cd /root/agent-readiness-build-m9 && docker build -f deploy/Dockerfile -t agent-
 #    PRE-FLIGHT A (read-only, new image): expect ceiling US$10.000000; US$3.300000 held by 2 job(s) completed; active 0; no migration line. Else STOP.
 docker run --rm -v agent-readiness_data:/data:ro agent-readiness-app:m9-<C> python -m agent_readiness.hosted.ceiling status --db /data/hosted/live/admission.sqlite
 #    PRE-FLIGHT B (store copied intact): expect "31 objects, 15 private, refs ['frozen_suite/larkspur-core@v2.json', ...]"
-docker run --rm -v agent-readiness_data:/data:ro agent-readiness-app:m9-<C> python -c "from pathlib import Path; from agent_readiness.suites.store import WriteOnceStore as W; s=W(Path('/data/hosted/lifecycle/store')); o=[s.get(p.parent.name,p.stem) for p in (s.root/'objects').glob('*/*.json')]; v=[s.get('private_outcome',p.stem) for p in (s.root/'private').glob('*.json')]; print(len(o),'objects,',len(v),'private, refs',sorted(str(p.relative_to(s.root/'refs')) for p in (s.root/'refs').rglob('*.json')))"
-#    (the private/ directory is 0700 for uid 10001; the image runs as uid 10001, so this read works)
+docker run --rm -v agent-readiness_data:/data agent-readiness-app:m9-<C> python -c "from pathlib import Path; from agent_readiness.suites.store import WriteOnceStore as W; s=W(Path('/data/hosted/lifecycle/store')); o=[s.get(p.parent.name,p.stem) for p in (s.root/'objects').glob('*/*.json')]; v=[s.get('private_outcome',p.stem) for p in (s.root/'private').glob('*.json')]; print(len(o),'objects,',len(v),'private, refs',sorted(str(p.relative_to(s.root/'refs')) for p in (s.root/'refs').rglob('*.json')))"
+#    (read-write mount: WriteOnceStore() chmods private/ to 0700 when it opens, which fails on :ro; it is already 0700. Corrected in §9.3)
 docker tag agent-readiness-app:latest agent-readiness-app:rollback-140a4e8 && docker tag agent-readiness-app:m9-<C> agent-readiness-app:latest
 cd /root/agent-readiness/deploy && docker compose up -d --no-build --no-deps app
 # 3. VERIFY: as M8 §11 step 3 (log line engine=stage-b armed=none (not_armed); health; history 200).
@@ -225,3 +225,84 @@ docker compose up -d --no-build --no-deps app
 5. **The paid launch** (step 6). Expected about US$1.5 (M7); planning bound US$7.436; enforced cap US$8.00.
 6. **Programme ledger:** append the reconciliation entry US$3.820762, the +US$0.000336 task012 correction and, after the run, its settled total.
 7. **Merge strategy** (`m9-release-readiness` → `m8-product-integration` → `evaluation-v2` → `main`). Any public-access change. Any later second migration or arming.
+
+---
+
+## 9. Addendum: authorised production deployment and zero-cost VM rehearsal (2026-11-02 22:43–23:23 UTC = 2026-11-03 Sydney)
+
+**Owner approval:** deployment of `m9-release-readiness` @ `b563a33` with the lifecycle store, production checks, the zero-cost rehearsal on
+the VM, then a return to live mode. **Not authorised, and not done:** ceiling migration, paid arming, paid calls, programme-ledger changes, merges, access changes.
+
+### 9.1 Pre-change state (read-only, before anything changed)
+- VM `ubuntu-s-2vcpu-4gb-syd1`. The app ran `agent-readiness-app:latest` = `evalv2-140a4e8d0bf8` (`de3edfefc6aa`), healthy; checkout `140a4e8`.
+- `.env`: live, operator, `AR_HOSTED_CEILING_USD=10`. Secrets are uid 10001, mode 0400.
+- **Admission DB (read-only query): exactly as expected.**
+  - policy (1, 10 000 000, 1 650 000, 120);
+  - jobs `eval-9aaac35c…` and `eval-aa23e330…`, both completed, 1 650 000 each;
+  - reserved US$3.30, 0 active;
+  - no `policy_migrations` table;
+  - no `/data/hosted/rehearsal`.
+
+### 9.2 Backup
+On the VM in `/root/backups/`:
+- `predeploy-m9-20261102T224342Z.tgz`: the whole data volume, 1 529 entries, sha256 `62a78504…`;
+- `env-predeploy-m9-20261102T224342Z`;
+- `predeploy-m9-20261102T224342Z.sha256`: a checksum manifest of the 1 398 authoritative files (`admission.sqlite` sha256 `34c07648…`; the M9 workstation copy `ef18cafd…` is a different file with the same rows).
+
+### 9.3 Deployment
+| Step | Result |
+|---|---|
+| Store archive | sha256 `46ffa528…`, verified after `scp`. Extracted into the new `/data/hosted/lifecycle/store` (48 files, uid 10001, `private/` 0700) |
+| **Pre-flight B** | 31 objects and 15 private outcomes verify. The refs are `larkspur-core@v2` and the synthetic M7 rehearsal suite. **Byte-identical** to the workstation store (sorted sha256 tree hash `8dffa7a0…` on both sides) |
+| Build | `git worktree` `/root/agent-readiness-build-m9` at `b563a33` → `agent-readiness-app:m9-b563a33` = `cc97e0049042` (2.24 GB) |
+| **Pre-flight A** (new image, `:ro`) | ceiling US$10.000000; US$3.300000 held by 2 completed jobs; 0 active; no migration |
+| Candidate smoke test | disabled mode, loopback 18080, on a **copy** of the volume: history, insights, exports, trials, lifecycle views, the M7 report and the refusals all as expected. Copy and container removed |
+| Switch | `rollback-140a4e8` = `de3edfefc6aa` (the previous production image, kept with `rollback-b3121a8` and `rollback-60fcbc6`); `latest` = `cc97e0049042`; `docker compose up -d --no-build --no-deps app` (Caddy and volumes untouched). Log line: `mode=live access=operator evaluations=enabled jail=verified engine=stage-b armed=none (not_armed)` |
+
+**Runbook correction (pre-flight B):** the §7 command fails on a `:ro` mount, because `WriteOnceStore()` always `chmod`s `private/` to 0700 when it opens. Run it with a read-write mount (`-v agent-readiness_data:/data`). The directory is already 0700, so nothing changes.
+
+### 9.4 Production checks (public HTTPS)
+- `/api/health`: live, evaluations enabled, operator, not active.
+- `/api/ironbark/config`: engine `stage-b`, `not_armed`, ceiling US$10 / US$3.30.
+- **Ironbark history intact:** both jobs completed, with the same grades as before (`eval-aa23e330` Original 0 / Modified 3 evidence-supported; `eval-9aaac35c` 1 / 4). Insights, exports, trials and live all 200.
+- **Refusals:** start without a token 403; an extra `url` field 422; web suite approval 403.
+- **Lifecycle:** overview, sites, generations, suites and evaluations 200. The M7 report has 6 dimensions and 12 trials, and its trial view loads.
+- **Security headers:** HSTS, CSP, nosniff, no-referrer; HTTP → HTTPS 308. In the container: uid 10001, CapEff 0, jail self-test ok, no tracebacks or key in the logs.
+- **Data integrity:** all 1 398 authoritative files are byte-identical to the backup manifest; only the disposable `derived/` caches are newer.
+- **Browser** (Chromium, GET only) on `#/run`, `#/lifecycle`, `#/reports/m7-larkspur-browser-1`, `#/run/eval-aa23e330…` and `#/`: rendered; no console errors, no failed or ≥400 responses, no non-GET requests.
+  - The workspace shows "No evaluation armed" and Run is disabled.
+  - Cosmetic: with nothing armed, the intro and worker banner still use the retired engine's wording ("4 … tasks", "8 new agent runs", "about 1 min per repetition").
+
+### 9.5 Zero-cost rehearsal on the VM
+1. `.env` set to `AR_HOSTED_MODE=rehearsal`. The new rehearsal admission DB `/data/hosted/rehearsal/admission.sqlite` was created with policy US$10.
+2. **Arming:** `prepare` bound manifest `64a55c5f…`, 12 trials. `arm --arming vm-rehearsal-1 --mode rehearsal --frozen larkspur-core@v2 --variants original modified --repetitions 1 --launches 1` was recorded through a real pseudo-terminal (`ssh -tt` + `exec -it`) with the typed attestation.
+3. **Launch** through the operator path: `hosted.admin start --repetitions 1 --watch` → `POST /api/ironbark/jobs` with the operator token → `eval-e8ccbacff02bb0cc4a467b441fc99bc5`.
+4. **Result:** **12/12 trials completed in 3 min 16 s** (23:17:55–23:21:11 UTC). Each of the 6 tasks ran on both Original and Modified, with 8, 3, 7, 5, 4 and 6 requests, 66 in total. All were evidence-supported passes, as expected from the scripted stand-in, which is built from the frozen answers and is not a measurement.
+   - execution: 12/12, not stopped; the worker's jail self-test was ok (mirror reachable, escapes blocked, filesystem hidden);
+   - runtime jail hides `/app`, `/data`, `/run/secrets`, `/home`, `/root`, `/etc/agent-readiness`, the store, the runs root and the Stage B root;
+   - the public leak audit is clean;
+   - `dev-provider.json` is present.
+5. **Product routes:** status, trial, screenshot (PNG 200), live and export all 200. Relaunch refused with 409 "All armed launches have been used".
+6. **Browser:** the report `#/reports/eval-e8cc…` renders with the banner "Rehearsal · scripted stand-in, not a model", "US$0 · no model was called"; no console errors.
+7. **Money:** the rehearsal DB reserved US$0. No `authorizations/` or `ledgers/` directory exists under the Stage B root. The live admission DB was unchanged.
+   - The rehearsal added rehearsal-labelled RunResult records to the store, as predicted in §7.
+
+### 9.6 Final state (23:23 UTC)
+- `arming disarm`: ACTIVE = null; `vm-rehearsal-1.json` is kept, write-once, and used up.
+- `.env` back to `AR_HOSTED_MODE=live`, **identical to the pre-deploy backup**.
+- Log line `mode=live access=operator evaluations=enabled jail=verified engine=stage-b armed=none (not_armed)`.
+- `arming status`: active null.
+- Live admission: **US$10 ceiling, US$3.30 reserved by 2 completed jobs, 0 active, no migration**.
+- Smoke checks pass; all 1 398 authoritative live files are byte-identical to the backup; jail self-test ok.
+- **No paid evaluation is armed. No model was called. Nothing was spent.**
+
+### 9.7 Remaining risks and next approvals
+- §5 R1 (single shot) and R4 (DB copy age) stand. R2 is now partly retired: the new image's worker, jail and Chromium ran 12 trials on the VM itself.
+- The working-tree note `deploy/DEPLOYED.txt` on the VM records this deployment.
+- **Still needed, each with your explicit approval:**
+  - the ceiling migration to US$10.736 (§7 step 4);
+  - the paid arming (step 5);
+  - the paid launch, immediately after pre-flight D (step 6);
+  - the programme-ledger entries;
+  - the merge strategy.
+- **Rollback:** `docker tag agent-readiness-app:rollback-140a4e8 agent-readiness-app:latest && docker compose up -d --no-build --no-deps app`, keeping `AR_HOSTED_CEILING_USD=10`.
