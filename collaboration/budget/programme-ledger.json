@@ -131,6 +131,16 @@
       "provider_usage": null,
       "recorded_on": "2026-11-02",
       "authorized_by": "owner (explicit approval of exactly one request, max reserve US$0.029, experiment ceiling US$0.05, no retries)"
+    },
+    {
+      "id": "research-taskplan-2",
+      "label": "Research: ONE approved muse-spark-1.3 task-generation request (Larkspur, 20 proposals, prompt taskplan-v1, schema taskplan-schema-v2, reasoning_effort low, max_completion_tokens 6000); completed",
+      "usd": 0.024452,
+      "basis": "CALCULATED from provider-reported usage (2643 prompt + 4976 completion tokens, incl. 2262 reasoning) at published prices; not a bill",
+      "reservation_usd": 0.028963,
+      "source": "research-local ledger scanner-data/research/taskplan/taskplan-20261102T203537-meta-7aca17/ledger/ledger.jsonl (1 reservation, 1 settled); the hosted ledger was not used",
+      "recorded_on": "2026-11-02",
+      "authorized_by": "owner (explicit approval: schema v2 and exactly one additional request, max new reservation US$0.029054; cumulative experiment ceiling US$0.06)"
     }
   ],
   "recorded_runtime_stages": [
@@ -168,6 +178,15 @@
       "known_spend_subtotal_before_usd": 10.566163,
       "known_spend_subtotal_after_usd": 10.595217,
       "note": "Appended only. Conservative: a rejected request's reservation is counted in full until provider billing shows otherwise."
+    },
+    "research_addendum_2": {
+      "as_of": "2026-11-02",
+      "added_entry": "research-taskplan-2",
+      "added_usd": 0.024452,
+      "known_spend_subtotal_before_usd": 10.595217,
+      "known_spend_subtotal_after_usd": 10.619669,
+      "research_taskplan_split": {"calculated_from_usage_usd": 0.024452, "unconfirmed_conservative_reservation_usd": 0.029054, "total_counted_usd": 0.053506, "experiment_ceiling_usd": 0.06},
+      "note": "Appended only. research-taskplan-1 remains an UNCONFIRMED conservative upper bound (rejected request, no usage reported), not confirmed consumption."
     }
   }
 }
