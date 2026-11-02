@@ -28,7 +28,7 @@
 .plate-legend i{width:8px;height:8px;border-radius:2px;background:var(--rule-2)}
 .plate-legend .t-item{background:var(--rust)} .plate-legend .t-done{background:var(--ink)}
 .plate-verdicts{display:grid;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--rule)}
-.plate-verdicts div{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.plate-verdicts div{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 12px;min-width:0}
 .plate-verdicts small{font:400 12px/1.2 var(--mono);color:var(--ink-3);white-space:nowrap}
 .ticks{display:flex;gap:3px}
 .ticks li{flex:1;height:20px;border-radius:2px;background:var(--rule-2)}

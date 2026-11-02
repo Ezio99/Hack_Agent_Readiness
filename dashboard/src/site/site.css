@@ -56,7 +56,7 @@
 .muted{color:var(--ink-3)}
 
 /* Buttons */
-.btn{white-space:nowrap;display:inline-flex;align-items:center;gap:10px;height:46px;padding:0 20px;border-radius:8px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);font:500 15px/1 var(--sans);letter-spacing:-.005em;text-decoration:none;cursor:pointer;transition:background .2s var(--ease),border-color .2s var(--ease),transform .2s var(--ease)}
+.btn{max-width:100%;white-space:nowrap;display:inline-flex;align-items:center;gap:10px;height:46px;padding:0 20px;border-radius:8px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);font:500 15px/1 var(--sans);letter-spacing:-.005em;text-decoration:none;cursor:pointer;transition:background .2s var(--ease),border-color .2s var(--ease),transform .2s var(--ease)}
 .btn:hover{background:var(--signal);border-color:var(--signal);color:#fff}
 .btn .arr{transition:transform .25s var(--ease)}
 .btn:hover .arr{transform:translateX(3px)}
@@ -138,3 +138,4 @@
 html,body{margin:0}
 body{background:#F2F0EB}
 body:has(.ar-night){background:#0E0E0D}
+@media (max-width:400px){.btn{max-width:100%;white-space:normal;height:auto;min-height:46px;padding-top:11px;padding-bottom:11px;line-height:1.25}}
