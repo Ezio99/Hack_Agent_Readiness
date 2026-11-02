@@ -1,6 +1,18 @@
 # Deploying the hosted Ironbark evaluation
 
-**Deployed (operator-only) on 2026-11-02 at https://209-38-84-72.sslip.io (DigitalOcean, Ubuntu 24.04, 2 vCPU/4 GB + 2 GB swap); steps A–C passed on the VM.** One Linux VM runs everything: Caddy (automatic HTTPS) in front of a single app container (API, job worker, jailed Chromium). Status: the image builds and, in Docker Desktop (WSL2), passed the in-container isolation self-test, a rehearsal and restart recovery, and completed the first genuine Muse Spark evaluation. **The cloud VM must repeat step 4 because its kernel and AppArmor settings differ.** Public deployment, public paid execution and any ceiling change need explicit owner approval.
+**Currently deployed (2026-11-02 05:12 UTC): `product-experience-redesign` @ `b3121a8`** at https://209-38-84-72.sslip.io: the redesigned frontend (homepage `#/`, demo `#/demo`, workspace `#/run`) on the unchanged backend (API, jail and policies byte-identical to `60fcbc6`). Image `agent-readiness-app:latest` = `redesign-b3121a8` (`sha256:8e0e2378…`); mode live, access **operator-only**, US$10 ceiling, 5 repetitions remaining. Verified after deploy: jail self-test ok, ledger logically identical, all 697 data files and 308 source-run files byte-identical, 403/422 refusals, HTTPS/HSTS/CSP, 46/46 browser checks. Pre-deploy backup (config, read-only data-volume archive, fingerprints, `DEPLOYED.txt`) in `/root/backups/predeploy-20261102T045813Z` on the VM.
+
+**Rollback** (previous image kept as `agent-readiness-app:rollback-60fcbc6` = `9052053090b9`; volumes, `.env` and secrets are not touched by either direction):
+
+```sh
+cd /root/agent-readiness && git checkout -q hosted-ironbark-evaluation \
+  && docker tag agent-readiness-app:rollback-60fcbc6 agent-readiness-app:latest \
+  && cd deploy && docker compose up -d --no-build --no-deps app
+```
+
+**Frontend-only updates** (how this one was done): build a tagged candidate from a separate worktree (`git worktree add --detach /root/agent-readiness-build <sha>`; `docker build -f deploy/Dockerfile -t agent-readiness-app:redesign-<sha> .`), smoke-test it disabled on loopback against a copy of the data volume, tag it `latest`, then `docker compose up -d --no-build --no-deps app`. Caddy and the volumes are not recreated.
+
+**First deployed (operator-only) on 2026-11-02 at https://209-38-84-72.sslip.io (DigitalOcean, Ubuntu 24.04, 2 vCPU/4 GB + 2 GB swap); steps A–C passed on the VM.** One Linux VM runs everything: Caddy (automatic HTTPS) in front of a single app container (API, job worker, jailed Chromium). Status: the image builds and, in Docker Desktop (WSL2), passed the in-container isolation self-test, a rehearsal and restart recovery, and completed the first genuine Muse Spark evaluation. **The cloud VM must repeat step 4 because its kernel and AppArmor settings differ.** Public deployment, public paid execution and any ceiling change need explicit owner approval.
 
 ## VM requirements
 

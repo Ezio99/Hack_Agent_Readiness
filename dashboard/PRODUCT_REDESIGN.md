@@ -1,8 +1,8 @@
 # Product experience redesign (branch `product-experience-redesign`, 2026-11-02)
 
 Frontend-only redesign of the hosted Agent Readiness site: a product homepage, a cinematic scroll-driven
-demo of a real recorded evaluation, and a redesigned evaluation workspace. **Not deployed**; the production
-branch `hosted-ironbark-evaluation` and the Droplet are unchanged. No backend, jail, grading, admission,
+demo of a real recorded evaluation, and a redesigned evaluation workspace. **Deployed to production on 2026-11-02 at `b3121a8`** (see `deploy/DEPLOY.md`); the backend
+is unchanged from `hosted-ironbark-evaluation` @ `60fcbc6`. No backend, jail, grading, admission,
 budget, authorization or historical data was modified. No model call was made.
 
 ## Routes (hash routing; the server still serves one static `index.html`)
@@ -109,3 +109,9 @@ Original). Status indicators (live mode, running) are neutral; the evidence numb
 Checks: `npm run build` incl. `check:dist`; 185 vitest (4 new refinement tests); 72 hosted/deployment-safety
 pytest; critical suite 214 passed (17 deselected); rendered desktop 1440×900 and mobile 390×844 review of every changed screen,
 reduced-motion render and keyboard paths. Screenshots: `dashboard/review/redesign/` (refreshed).
+
+## Production deployment (2026-11-02)
+
+Deployed `b3121a8` (after two pre-deploy fixes: inline timeline action chips, and narrow-screen overflow) to
+https://209-38-84-72.sslip.io. Production verification screenshots: `review/redesign/production/`. Full checks,
+data-integrity evidence and the rollback command are in `STATUS.md` and `deploy/DEPLOY.md`.
