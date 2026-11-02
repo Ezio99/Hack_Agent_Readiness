@@ -10,7 +10,8 @@ Configuration (environment; nothing is accepted from requests):
   Every evaluation reserves US$1.65 per repetition against it, permanently.
 * ``AR_OPERATOR_TOKEN_FILE`` (default ``/run/secrets/operator_token``),
   ``META_MODEL_API_KEY_FILE`` (provider key, read only by the worker; live only).
-* ``AR_HOSTED_ROOT`` (default ``/data/hosted``), ``AR_STATIC_DIR`` (dashboard build),
+* ``AR_HOSTED_DATA`` (default ``/data/hosted``; live/disabled use ``live/``, rehearsal ``rehearsal/``,
+  each with its own admission database), ``AR_HOSTED_ROOT`` (explicit override), ``AR_STATIC_DIR`` (dashboard build),
   ``AR_TRUSTED_PROXIES`` (comma-separated reverse-proxy addresses allowed to set
   X-Forwarded-For), ``AR_HOSTED_MIN_INTERVAL`` (seconds per client, default 120),
   ``AR_HOST``/``AR_PORT``.
@@ -111,7 +112,10 @@ def build():
     access = os.environ.get('AR_HOSTED_ACCESS', 'operator')
     if mode not in ('disabled', *paired.MODES) or access not in ('operator', 'public'):
         raise SystemExit('AR_HOSTED_MODE must be disabled|rehearsal|live and AR_HOSTED_ACCESS operator|public')
-    root = Path(os.environ.get('AR_HOSTED_ROOT', '/data/hosted')).resolve()
+    # Rehearsal never shares the live admission database: it would consume the live ceiling and mix
+    # scripted runs into the public history. `disabled` shows the live history.
+    base = Path(os.environ.get('AR_HOSTED_DATA', '/data/hosted'))
+    root = Path(os.environ.get('AR_HOSTED_ROOT') or base / ('rehearsal' if mode == 'rehearsal' else 'live')).resolve()
     try:
         root.mkdir(parents=True, exist_ok=True)
         probe = root / '.write-test'

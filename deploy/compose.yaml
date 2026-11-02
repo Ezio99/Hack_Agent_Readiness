@@ -3,6 +3,7 @@ name: agent-readiness
 services:
   app:
     build: {context: .., dockerfile: deploy/Dockerfile}
+    image: agent-readiness-app:latest
     restart: unless-stopped
     init: true                                                # reaps orphaned browser processes
     environment:

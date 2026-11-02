@@ -25,7 +25,7 @@ COPY deploy/chromium-policy.json /etc/chromium/policies/managed/agent-readiness.
 RUN useradd --uid 10001 --create-home --home-dir /home/agent agent \
     && mkdir -p /data /app/scanner-data/live && chown -R agent:agent /data /app
 USER agent
-ENV AR_HOSTED_ROOT=/data/hosted AR_STATIC_DIR=/srv/studio AR_HOST=0.0.0.0 AR_PORT=8080 \
+ENV AR_HOSTED_DATA=/data/hosted AR_STATIC_DIR=/srv/studio AR_HOST=0.0.0.0 AR_PORT=8080 \
     AGENT_READINESS_BROWSER_JAIL=/etc/agent-readiness/jail.json
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=90s CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=5)"]

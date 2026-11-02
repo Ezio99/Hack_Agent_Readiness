@@ -161,3 +161,22 @@ def test_selftest_passes_with_the_jail_and_fails_without_it(policy, monkeypatch)
     monkeypatch.setattr(jail, 'wrapper', lambda chromium, url, pol: chromium)       # an unjailed browser
     result = jail.selftest()
     assert result['ok'] is False and result['escapes_blocked'] is False
+
+
+@pytest.mark.browser
+def test_jailed_chromium_starts_when_the_real_home_is_hidden(tmp_path, monkeypatch):
+    """Regression (found in the container): with $HOME hidden read-only, Chromium needs a private writable home."""
+    import shutil, tempfile
+    home = tmp_path / 'home'
+    (home / '.config').mkdir(parents=True)
+    import os
+    monkeypatch.setenv('PLAYWRIGHT_BROWSERS_PATH', os.environ.get('PLAYWRIGHT_BROWSERS_PATH') or os.path.expanduser('~/.cache/ms-playwright'))
+    monkeypatch.setenv('HOME', str(home))
+    short = tempfile.mkdtemp(prefix='arj-', dir='/tmp')
+    path = tmp_path / 'policy.json'
+    path.write_text(json.dumps({'hide': [str(home)], 'dir': short}))
+    monkeypatch.setenv(jail.ENV, str(path))
+    try:
+        assert jail.selftest()['ok'] is True
+    finally:
+        shutil.rmtree(short, ignore_errors=True)

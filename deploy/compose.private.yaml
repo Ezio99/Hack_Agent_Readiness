@@ -1,0 +1,6 @@
+# Private operation: publish the app on 127.0.0.1 only (no Caddy, nothing public).
+# Reach it from another machine with an SSH tunnel:  ssh -L 8080:127.0.0.1:8080 host
+#   docker compose -f compose.yaml -f compose.private.yaml up -d app
+services:
+  app:
+    ports: ["127.0.0.1:${AR_PRIVATE_PORT:-8080}:8080"]

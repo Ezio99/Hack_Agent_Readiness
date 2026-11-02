@@ -208,13 +208,20 @@ def inner(cfg_path: str, cdp: int, args: list[str]) -> int:
             elif os.path.exists(path):
                 _mount('/dev/null', path, None, MS_BIND)
         os.chdir('/')                              # do not keep a handle on a now-hidden working directory
+        # The real home may be hidden (read-only, empty): Chromium's profile, crash database and caches
+        # go to a private writable directory that is deleted with the jail.
+        home = Path(cfg['dir']) / 'home'
+        for sub in ('', '.config', '.cache', '.local/share'):
+            (home / sub).mkdir(parents=True, exist_ok=True)
+        env = {**os.environ, 'HOME': str(home), 'XDG_CONFIG_HOME': str(home / '.config'), 'XDG_CACHE_HOME': str(home / '.cache'),
+               'XDG_DATA_HOME': str(home / '.local/share'), 'TMPDIR': str(home)}
         d = Path(cfg['dir'])
         mirror_sock, cdp_sock = str(d / 'mirror.sock'), str(d / 'cdp.sock')
 
         async def main():
             mirror_server = await asyncio.start_server(_bridge(lambda: _unix(mirror_sock)), '127.0.0.1', int(cfg['mirror_port']))
             cdp_server = await asyncio.start_unix_server(_bridge(lambda: asyncio.open_connection('127.0.0.1', cdp)), cdp_sock)
-            browser = await asyncio.create_subprocess_exec(cfg['chromium'], *args, stdin=subprocess.DEVNULL, preexec_fn=_pdeathsig)
+            browser = await asyncio.create_subprocess_exec(cfg['chromium'], *args, stdin=subprocess.DEVNULL, preexec_fn=_pdeathsig, env=env)
             async with mirror_server, cdp_server:
                 return await browser.wait()
         os._exit(asyncio.run(main()) & 0xff)
@@ -291,9 +298,13 @@ def selftest(timeout: float = 30) -> dict:
                 procs = (await listing('file:///proc/')).split()
                 hidden_ok = True
                 for path in policy()['hide']:
-                    if os.path.isdir(path) and os.listdir(path):
+                    try:
+                        names = os.listdir(path)[:20] if os.path.isdir(path) else []
+                    except OSError:
+                        continue                       # not listable by this user either
+                    if names:
                         shown = await listing('file://' + path + '/')
-                        hidden_ok &= not any(name in shown for name in os.listdir(path)[:20])
+                        hidden_ok &= not any(name in shown for name in names)
                 await browser.close()
                 fs_ok = str(os.getpid()) not in procs and hidden_ok
                 return {'ok': reached and all(blocked) and fs_ok and not any(t == 'OTHER' for t, _ in hits),
