@@ -141,6 +141,18 @@
       "source": "research-local ledger scanner-data/research/taskplan/taskplan-20261102T203537-meta-7aca17/ledger/ledger.jsonl (1 reservation, 1 settled); the hosted ledger was not used",
       "recorded_on": "2026-11-02",
       "authorized_by": "owner (explicit approval: schema v2 and exactly one additional request, max new reservation US$0.029054; cumulative experiment ceiling US$0.06)"
+    },
+    {
+      "id": "research-pilot-larkspur-1",
+      "label": "Research pilot: 8 paid jailed browser trials on Larkspur (4 evaluator-selected LLM-generated tasks x Original/Modified, 1 repetition, muse-spark-1.3, profile suite-v2-compat2, reasoning_effort low)",
+      "usd": 1.228813,
+      "basis": "CALCULATED from provider-reported usage (83 requests; 801116 prompt + 53510 completion tokens) at published prices; not a bill",
+      "reserved_usd": 2.938332,
+      "worst_case_reservation_usd": 4.928,
+      "hard_cap_usd": 5.0,
+      "source": "research-local ledger scanner-data/research/pilot/pilot-larkspur-live-2f8108d3/spend/ledger.jsonl (83 reservations, 83 settled, 0 open); the hosted ledger was not used",
+      "recorded_on": "2026-11-02",
+      "authorized_by": "owner (explicit approval: isolated Larkspur pilot, up to US$5 new spending, at most 8 paid browser trials, no retries)"
     }
   ],
   "recorded_runtime_stages": [
@@ -187,6 +199,14 @@
       "known_spend_subtotal_after_usd": 10.619669,
       "research_taskplan_split": {"calculated_from_usage_usd": 0.024452, "unconfirmed_conservative_reservation_usd": 0.029054, "total_counted_usd": 0.053506, "experiment_ceiling_usd": 0.06},
       "note": "Appended only. research-taskplan-1 remains an UNCONFIRMED conservative upper bound (rejected request, no usage reported), not confirmed consumption."
+    },
+    "research_addendum_3": {
+      "as_of": "2026-11-02",
+      "added_entry": "research-pilot-larkspur-1",
+      "added_usd": 1.228813,
+      "known_spend_subtotal_before_usd": 10.619669,
+      "known_spend_subtotal_after_usd": 11.848482,
+      "note": "Appended only. Calculated from usage; the pilot's US$5 hard cap and worst-case reservation (US$4.928) are limits, not spend."
     }
   }
 }
