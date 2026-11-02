@@ -1,0 +1,184 @@
+{
+ "controlled": true,
+ "counts": {
+  "deterministic": 5,
+  "human_review": 1,
+  "rubric": 2
+ },
+ "drafts": 12,
+ "eligible": 5,
+ "generated_on": "original",
+ "generator": {
+  "candidates": "investigate.taskgen.candidates",
+  "gate": "investigate.taskgen.gate",
+  "id": "framework-rules",
+  "version": "1"
+ },
+ "label": "Ironbark Hire Co.",
+ "oracle": "ironbark data.PRODUCTS",
+ "rejected": [
+  {
+   "kind": "page_fact",
+   "question": "What is the availability today for the hire machine 'Cordless drill driver kit 18 V'?",
+   "reason": "the expected answer is visible on the start page"
+  },
+  {
+   "kind": "page_fact",
+   "question": "What is the bar length for the hire machine 'Cordless drill driver kit 18 V'?",
+   "reason": "criterion does not compile: no fact labelled 'bar length' on /hire/cordless-drill-driver-kit-18v"
+  },
+  {
+   "kind": "page_fact",
+   "question": "What is the sort for the hire machine 'Cordless drill driver kit 18 V'?",
+   "reason": "criterion does not compile: no fact labelled 'sort' on /hire/cordless-drill-driver-kit-18v"
+  },
+  {
+   "kind": "extremum",
+   "question": "Which hire machine has the highest per week? Give its name.",
+   "reason": "near-duplicate wording of an accepted task with the same answer"
+  },
+  {
+   "kind": "page_fact",
+   "question": "What is the diameter listed under 'Continuous-rim tile blade 250 mm'?",
+   "reason": "the question contains the expected answer"
+  },
+  {
+   "kind": "extremum",
+   "question": "Which hire machine has the lowest per week? Give its name.",
+   "reason": "near-duplicate wording of an accepted task with the same answer"
+  }
+ ],
+ "rubric": [
+  {
+   "checklist_items": 3,
+   "class": "rubric",
+   "eligible": false,
+   "kind": "rubric",
+   "page": "/contact",
+   "question": "What does Ironbark Hire Co. say about opening hours?",
+   "reasons": [
+    "open answer judged against a checklist"
+   ],
+   "start_path": "/",
+   "task_id": "rub-ead4bbb662"
+  },
+  {
+   "checklist_items": 2,
+   "class": "rubric",
+   "eligible": false,
+   "kind": "rubric",
+   "page": "/hire-terms",
+   "question": "What does Ironbark Hire Co. say about delivery and collection fees?",
+   "reasons": [
+    "open answer judged against a checklist"
+   ],
+   "start_path": "/",
+   "task_id": "rub-91f69adb4b"
+  }
+ ],
+ "schema": "framework-taskset-v1",
+ "site": "ironbark",
+ "tasks": [
+  {
+   "class": "human_review",
+   "criterion_sha256": "e5125a184a413f0a436d8ef8ad2f8e702ae4b2e931185d9f08d342fe281eb7bb",
+   "eligible": false,
+   "grader_v2_keyable": true,
+   "kind": "item_set",
+   "min_hops": 1,
+   "oracle": "declined",
+   "oracle_note": "field 'availability today' is not in the source data",
+   "question": "Which hire machines have availability today 'fully booked'? List every one by name.",
+   "reasons": [
+    "independent oracle cannot answer this criterion"
+   ],
+   "stable_across_variants": true,
+   "start_path": "/",
+   "task_id": "gen-edbaa5f658"
+  },
+  {
+   "class": "deterministic",
+   "criterion_sha256": "14ed384730b4b0f8dd11e55e2d772b49803bec638c76ac3be1c4f33101437cba",
+   "eligible": true,
+   "grader_v2_keyable": true,
+   "kind": "extremum",
+   "min_hops": 1,
+   "oracle": "agrees",
+   "question": "Which hire machine has the highest per day? Give its name.",
+   "reasons": [
+    "page-derived answer reproduced by the independent oracle; keyable; stable across variants"
+   ],
+   "stable_across_variants": true,
+   "start_path": "/",
+   "task_id": "gen-5c4f26f8a2"
+  },
+  {
+   "class": "deterministic",
+   "criterion_sha256": "4364efa98916886969a2b38acf8959068f56c2d75acb2e2a41d9d76f9929d5b2",
+   "eligible": true,
+   "grader_v2_keyable": true,
+   "kind": "item_set",
+   "min_hops": 2,
+   "oracle": "agrees",
+   "question": "Which hire machines have delivery and collection 'Required for this item'? List every one by name.",
+   "reasons": [
+    "page-derived answer reproduced by the independent oracle; keyable; stable across variants"
+   ],
+   "stable_across_variants": true,
+   "start_path": "/",
+   "task_id": "gen-660570f215"
+  },
+  {
+   "class": "deterministic",
+   "criterion_sha256": "9bbb1f80ef036bd987a415602fdb4af33b9091a5622cff0e6242f2ccffc5b52b",
+   "eligible": true,
+   "grader_v2_keyable": true,
+   "kind": "extremum",
+   "min_hops": 1,
+   "oracle": "agrees",
+   "question": "Which hire machine has the lowest per day? Give its name.",
+   "reasons": [
+    "page-derived answer reproduced by the independent oracle; keyable; stable across variants"
+   ],
+   "stable_across_variants": true,
+   "start_path": "/",
+   "task_id": "gen-338ec877d8"
+  },
+  {
+   "class": "deterministic",
+   "criterion_sha256": "e469a02f6e65a1686d57f7d1b5d425f91c7115011d314ab95266a13024108ed4",
+   "eligible": true,
+   "grader_v2_keyable": true,
+   "kind": "item_set",
+   "min_hops": 2,
+   "oracle": "agrees",
+   "question": "Which hire machines have minimum hire '2 days'? List every one by name.",
+   "reasons": [
+    "page-derived answer reproduced by the independent oracle; keyable; stable across variants"
+   ],
+   "stable_across_variants": true,
+   "start_path": "/",
+   "task_id": "gen-bbf4a34af3"
+  },
+  {
+   "class": "deterministic",
+   "criterion_sha256": "c328a5066b3203552f829f0ac5d59abda96d385e858e66bf6dec064d066c84e6",
+   "eligible": true,
+   "grader_v2_keyable": true,
+   "kind": "item_set",
+   "min_hops": 1,
+   "oracle": "agrees",
+   "question": "Which hire machines have a per day below $80? List every one by name.",
+   "reasons": [
+    "page-derived answer reproduced by the independent oracle; keyable; stable across variants"
+   ],
+   "stable_across_variants": true,
+   "start_path": "/",
+   "task_id": "gen-c3ba8c11f9"
+  }
+ ],
+ "variants": {
+  "modified": "40c5d886963c925a7b99ff721d7971d5ebacbc52d0237d9549febe301d74f1ed",
+  "original": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f"
+ }
+}

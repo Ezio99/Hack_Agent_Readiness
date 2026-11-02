@@ -1,0 +1,194 @@
+{
+ "controlled": false,
+ "counts": {
+  "deterministic": 0,
+  "human_review": 10,
+  "rubric": 0
+ },
+ "drafts": 11,
+ "eligible": 0,
+ "generated_on": "original",
+ "generator": {
+  "candidates": "investigate.taskgen.candidates",
+  "gate": "investigate.taskgen.gate",
+  "id": "framework-rules",
+  "version": "1"
+ },
+ "label": "Investigation zoo site-1",
+ "oracle": null,
+ "rejected": [
+  {
+   "kind": "extremum",
+   "question": "Among the workshops listed, which one has the lowest seats left? Give its name.",
+   "reason": "criterion does not compile: the extreme value is tied; the answer would be ambiguous"
+  }
+ ],
+ "rubric": [],
+ "schema": "framework-taskset-v1",
+ "site": "zoo-site-1",
+ "tasks": [
+  {
+   "class": "human_review",
+   "criterion_sha256": "c58930ee5e7bac8615f50f6ac433fea7b680a85d1e467460b4d57b704487fb46",
+   "eligible": false,
+   "grader_v2_keyable": true,
+   "kind": "page_fact",
+   "min_hops": 2,
+   "oracle": "absent",
+   "question": "What is the date of Pottery Basics?",
+   "reasons": [
+    "no independent oracle for this site (uncontrolled)"
+   ],
+   "stable_across_variants": true,
+   "start_path": "/",
+   "task_id": "gen-8feaea2ca1"
+  },
+  {
+   "class": "human_review",
+   "criterion_sha256": "9c1d81ff59e9553a3ee0dae12a651724b852af0cfc910b0957c06737636fd08f",
+   "eligible": false,
+   "grader_v2_keyable": true,
+   "kind": "item_set",
+   "min_hops": 2,
+   "oracle": "absent",
+   "question": "Which of the workshops have date '12 Nov'? List their names.",
+   "reasons": [
+    "no independent oracle for this site (uncontrolled)"
+   ],
+   "stable_across_variants": true,
+   "start_path": "/",
+   "task_id": "gen-f7a53e12f3"
+  },
+  {
+   "class": "human_review",
+   "criterion_sha256": "9dad32e29f22409317ff818543f3f1b3833f9bbf3333314ce992aadcedd3b095",
+   "eligible": false,
+   "grader_v2_keyable": true,
+   "kind": "extremum",
+   "min_hops": 2,
+   "oracle": "absent",
+   "question": "Among the workshops listed, which one has the highest price? Give its name.",
+   "reasons": [
+    "no independent oracle for this site (uncontrolled)"
+   ],
+   "stable_across_variants": true,
+   "start_path": "/",
+   "task_id": "gen-cbf4aa6d24"
+  },
+  {
+   "class": "human_review",
+   "criterion_sha256": "c0ee3bd5b08cb727ecdd0c08d49f1e1bfa3ba8e06567ed7cd8bc4748df973050",
+   "eligible": false,
+   "grader_v2_keyable": true,
+   "kind": "page_fact",
+   "min_hops": 2,
+   "oracle": "absent",
+   "question": "What is the duration of Pottery Basics?",
+   "reasons": [
+    "no independent oracle for this site (uncontrolled)"
+   ],
+   "stable_across_variants": true,
+   "start_path": "/",
+   "task_id": "gen-bf23e3a0e8"
+  },
+  {
+   "class": "human_review",
+   "criterion_sha256": "707a75d246faca260703c8ff007bd3328df620b4d7a5d16d07b6cf46ccc50df7",
+   "eligible": false,
+   "grader_v2_keyable": true,
+   "kind": "item_set",
+   "min_hops": 2,
+   "oracle": "absent",
+   "question": "Which of the workshops have duration '2 hours'? List their names.",
+   "reasons": [
+    "no independent oracle for this site (uncontrolled)"
+   ],
+   "stable_across_variants": true,
+   "start_path": "/",
+   "task_id": "gen-d3ec106eed"
+  },
+  {
+   "class": "human_review",
+   "criterion_sha256": "42781731317006f38a2c170e50f46dff4bc15b44e1ab7ebfb66230109411e859",
+   "eligible": false,
+   "grader_v2_keyable": true,
+   "kind": "extremum",
+   "min_hops": 2,
+   "oracle": "absent",
+   "question": "Among the workshops listed, which one has the lowest price? Give its name.",
+   "reasons": [
+    "no independent oracle for this site (uncontrolled)"
+   ],
+   "stable_across_variants": true,
+   "start_path": "/",
+   "task_id": "gen-c3015daf2b"
+  },
+  {
+   "class": "human_review",
+   "criterion_sha256": "dde5a9e94bba3fd9a4dd95a0033ea6d8658f0d4189a842dd8dfba5ffb574e45a",
+   "eligible": false,
+   "grader_v2_keyable": true,
+   "kind": "page_fact",
+   "min_hops": 1,
+   "oracle": "absent",
+   "question": "What is the email listed under 'Contact'?",
+   "reasons": [
+    "no independent oracle for this site (uncontrolled)"
+   ],
+   "stable_across_variants": true,
+   "start_path": "/",
+   "task_id": "gen-0ac84d18d3"
+  },
+  {
+   "class": "human_review",
+   "criterion_sha256": "95942c794675ac95857aff4a2d03ecb07f7aa1dca023ca250c4fbe76917131a7",
+   "eligible": false,
+   "grader_v2_keyable": true,
+   "kind": "item_set",
+   "min_hops": 2,
+   "oracle": "absent",
+   "question": "Which of the workshops have level 'Intermediate'? List their names.",
+   "reasons": [
+    "no independent oracle for this site (uncontrolled)"
+   ],
+   "stable_across_variants": true,
+   "start_path": "/",
+   "task_id": "gen-24e23023e7"
+  },
+  {
+   "class": "human_review",
+   "criterion_sha256": "e32b119cb5f9ba994a38b4e0f3639896896fbeb4ea6c48e1c7ea48a2f7ce0d53",
+   "eligible": false,
+   "grader_v2_keyable": true,
+   "kind": "extremum",
+   "min_hops": 2,
+   "oracle": "absent",
+   "question": "Among the workshops listed, which one has the highest seats left? Give its name.",
+   "reasons": [
+    "no independent oracle for this site (uncontrolled)"
+   ],
+   "stable_across_variants": true,
+   "start_path": "/",
+   "task_id": "gen-8d9f543932"
+  },
+  {
+   "class": "human_review",
+   "criterion_sha256": "b918e47226fc2da2e577eca3bfb9b6b1b20babbbb45d221960d2f11541fcba99",
+   "eligible": false,
+   "grader_v2_keyable": true,
+   "kind": "item_set",
+   "min_hops": 2,
+   "oracle": "absent",
+   "question": "Which of the workshops have location 'Studio A'? List their names.",
+   "reasons": [
+    "no independent oracle for this site (uncontrolled)"
+   ],
+   "stable_across_variants": true,
+   "start_path": "/",
+   "task_id": "gen-42eff61541"
+  }
+ ],
+ "variants": {
+  "original": "06de8885ac3760f36f05e2e17c38d021e547498f73f370ceeda8379fc0380698"
+ }
+}

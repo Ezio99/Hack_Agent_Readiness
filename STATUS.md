@@ -29,7 +29,15 @@ Authoritative current handoff. Check it against the repository and production be
 
 grader_v1 remains the grader of record.
 
-**Next:** generalization (site definitions, generated and validated tasks, a second controlled site), then DOM and accessibility diagnostics. Both stay isolated from the hosted Ironbark path until validated.
+**Phase 3 framework (isolated; not on the hosted path):** [docs/FRAMEWORK.md](docs/FRAMEWORK.md).
+- Site definitions, with independent record oracles for controlled sites.
+- Verifiability classes; only deterministic, oracle-validated tasks are scoring-eligible.
+- Validated autonomous task generation: Ironbark gets 5 deterministic tasks (its variants are exactly the hosted Original/Modified) and the second controlled site, Larkspur Community College, gets 7. The uncontrolled zoo site correctly gets 0.
+- Eligible tasks freeze into the existing manifest format and grade through grader_v1/v2.
+
+Not yet wired: agent execution of generated tasks.
+
+**Next:** Phase 4 diagnostics (DOM, accessibility, forms, JSON-LD and navigation friction, linked to agent evidence), isolated in the same way. Feature freeze is Wednesday 2026-11-04.
 
 ## Budget
 

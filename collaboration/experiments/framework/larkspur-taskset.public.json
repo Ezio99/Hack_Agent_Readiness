@@ -1,0 +1,176 @@
+{
+ "controlled": true,
+ "counts": {
+  "deterministic": 7,
+  "human_review": 0,
+  "rubric": 1
+ },
+ "drafts": 11,
+ "eligible": 7,
+ "generated_on": "original",
+ "generator": {
+  "candidates": "investigate.taskgen.candidates",
+  "gate": "investigate.taskgen.gate",
+  "id": "framework-rules",
+  "version": "1"
+ },
+ "label": "Larkspur Community College",
+ "oracle": "larkspur data.COURSES",
+ "rejected": [
+  {
+   "kind": "page_fact",
+   "question": "What is the campus for the course 'Watercolour foundations'?",
+   "reason": "the expected answer is visible on the start page"
+  },
+  {
+   "kind": "page_fact",
+   "question": "What is the when you withdraw listed under 'Enrolment and refunds'?",
+   "reason": "the question contains the expected answer"
+  },
+  {
+   "kind": "extremum",
+   "question": "Which course has the highest duration? Give its name.",
+   "reason": "criterion does not compile: the extreme value is tied; the answer would be ambiguous"
+  },
+  {
+   "kind": "extremum",
+   "question": "Which course has the lowest duration? Give its name.",
+   "reason": "criterion does not compile: the extreme value is tied; the answer would be ambiguous"
+  }
+ ],
+ "rubric": [
+  {
+   "checklist_items": 4,
+   "class": "rubric",
+   "eligible": false,
+   "kind": "rubric",
+   "page": "/enrolment-policy",
+   "question": "What does Larkspur Community College say about refunds and withdrawals?",
+   "reasons": [
+    "open answer judged against a checklist"
+   ],
+   "start_path": "/",
+   "task_id": "rub-31180d505e"
+  }
+ ],
+ "schema": "framework-taskset-v1",
+ "site": "larkspur",
+ "tasks": [
+  {
+   "class": "deterministic",
+   "criterion_sha256": "5b0f81063843c34f80ed954025474e570895326b6c2457f694c21351bb25cced",
+   "eligible": true,
+   "grader_v2_keyable": true,
+   "kind": "item_set",
+   "min_hops": 2,
+   "oracle": "agrees",
+   "question": "Which courses have campus 'Riverside'? List every one by name.",
+   "reasons": [
+    "page-derived answer reproduced by the independent oracle; keyable; stable across variants"
+   ],
+   "stable_across_variants": true,
+   "start_path": "/",
+   "task_id": "gen-72dace7441"
+  },
+  {
+   "class": "deterministic",
+   "criterion_sha256": "c6613f0542b13cb6a97ec5ee16a5ac276e1becca883d2f7da0370094d0644d77",
+   "eligible": true,
+   "grader_v2_keyable": true,
+   "kind": "extremum",
+   "min_hops": 2,
+   "oracle": "agrees",
+   "question": "Which course has the highest course fee? Give its name.",
+   "reasons": [
+    "page-derived answer reproduced by the independent oracle; keyable; stable across variants"
+   ],
+   "stable_across_variants": true,
+   "start_path": "/",
+   "task_id": "gen-e0218c9820"
+  },
+  {
+   "class": "deterministic",
+   "criterion_sha256": "8dddcf79eeb8a01f215e773b2da8056f9cfff2482e4d72489d878e71c58c78ab",
+   "eligible": true,
+   "grader_v2_keyable": true,
+   "kind": "page_fact",
+   "min_hops": 2,
+   "oracle": "agrees",
+   "question": "What is the class day for the course 'Watercolour foundations'?",
+   "reasons": [
+    "page-derived answer reproduced by the independent oracle; keyable; stable across variants"
+   ],
+   "stable_across_variants": true,
+   "start_path": "/",
+   "task_id": "gen-a55a077513"
+  },
+  {
+   "class": "deterministic",
+   "criterion_sha256": "86d41314c3c5da19917231e30b4e56e288a98b542ad4e55c4e508bbc1e098308",
+   "eligible": true,
+   "grader_v2_keyable": true,
+   "kind": "item_set",
+   "min_hops": 2,
+   "oracle": "agrees",
+   "question": "Which courses have class day 'Tuesday'? List every one by name.",
+   "reasons": [
+    "page-derived answer reproduced by the independent oracle; keyable; stable across variants"
+   ],
+   "stable_across_variants": true,
+   "start_path": "/",
+   "task_id": "gen-af08ebd01d"
+  },
+  {
+   "class": "deterministic",
+   "criterion_sha256": "efe0de6840f2d14ca5b7800ea32472804447dfe3fe9ad43d1f25a0f468a3da38",
+   "eligible": true,
+   "grader_v2_keyable": true,
+   "kind": "extremum",
+   "min_hops": 2,
+   "oracle": "agrees",
+   "question": "Which course has the lowest course fee? Give its name.",
+   "reasons": [
+    "page-derived answer reproduced by the independent oracle; keyable; stable across variants"
+   ],
+   "stable_across_variants": true,
+   "start_path": "/",
+   "task_id": "gen-4eb21be379"
+  },
+  {
+   "class": "deterministic",
+   "criterion_sha256": "78a6be375f16de92385e2ddee615d35165a8bbe18b85553f7e641d7192105306",
+   "eligible": true,
+   "grader_v2_keyable": true,
+   "kind": "item_set",
+   "min_hops": 2,
+   "oracle": "agrees",
+   "question": "Which courses have a course fee below $260? List every one by name.",
+   "reasons": [
+    "page-derived answer reproduced by the independent oracle; keyable; stable across variants"
+   ],
+   "stable_across_variants": true,
+   "start_path": "/",
+   "task_id": "gen-582c5d8b8c"
+  },
+  {
+   "class": "deterministic",
+   "criterion_sha256": "06744be608452397654fc9a17d9e7edac9b82b1b001d6cbc803d9c634a94a619",
+   "eligible": true,
+   "grader_v2_keyable": true,
+   "kind": "item_set",
+   "min_hops": 2,
+   "oracle": "agrees",
+   "question": "Which courses have a duration below 8 weeks? List every one by name.",
+   "reasons": [
+    "page-derived answer reproduced by the independent oracle; keyable; stable across variants"
+   ],
+   "stable_across_variants": true,
+   "start_path": "/",
+   "task_id": "gen-8e067d4141"
+  }
+ ],
+ "variants": {
+  "modified": "edb9a5d2884a0e85fff8f9dfc6ed0e8a4bed41f9616e82678fc466864befe69f",
+  "original": "2f9fd2ce09a044547ceb728acb9b85108931d81ca6b01374198144f509fed2eb"
+ }
+}
