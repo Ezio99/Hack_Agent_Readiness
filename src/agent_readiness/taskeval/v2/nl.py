@@ -383,7 +383,7 @@ class Analyser:
                         return Trace(comp, "traced", f"{label}: stated", f"'{idiom}' read as {label} above 0 (availability idiom: definitional, no threshold invented)")
         vague = self._vague(toks, cls, taken) if cls else []
         if vague:
-            return Trace(comp, "underspecified", f"{label}: '{vague[0]}' states no amount (the generator assumed {OP_WORDS.get(op, op)} {value})")
+            return Trace(comp, "underspecified", f"{label}: '{vague[0]}' states no amount (the specification assumes {OP_WORDS.get(op, op)} {value})")
         return Trace(comp, "added_assumption", f"{label} {OP_WORDS.get(op, op)} {value} is not stated by the customer")
 
     def _kind_word(self, label: str) -> str:
@@ -418,7 +418,7 @@ class Analyser:
             return Trace(comp, "traced", f"{label}: stated", f"'{s['text']}' ranks by {label} ({'highest' if direction == 'max' else 'lowest'})")
         judged = [c for c in L.JUDGMENT_CUES if find(toks, c)]
         if judged:
-            return Trace(comp, "underspecified", f"ranking: '{judged[0]}' does not say what to rank by (the generator assumed the {'highest' if direction == 'max' else 'lowest'} {label})")
+            return Trace(comp, "underspecified", f"ranking: '{judged[0]}' does not say what to rank by (the specification assumes the {'highest' if direction == 'max' else 'lowest'} {label})")
         return Trace(comp, "added_assumption", f"ranking by the {'highest' if direction == 'max' else 'lowest'} {label} is not stated by the customer")
 
     def _trace_entity(self, toks, page) -> tuple[Trace, set[int]]:

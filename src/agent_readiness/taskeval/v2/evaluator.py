@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from contextlib import contextmanager
 from pathlib import Path
 
 from ...investigate.taskgen.gate import DUP_JACCARD, Accepted, Draft, _signature as gate_signature, _tokens, evaluate as gate_v1
@@ -34,6 +35,7 @@ VERSION = "taskeval-2"
 LITERAL_FIELD_REASONS = ("the question does not state every condition's field and threshold (ambiguous)",
                          "the question does not name the compared field (ambiguous)")
 CONFIG = {"nl_gate": NL.GATE_ID, "lexicon": L.VERSION, "assisted_from_generator_assumptions": True, "new_kinds": [],
+          "assumption_label": "generator assumption (labelled assisted, not the customer's words)",
           "coverage_targets": {k: (list(v) if isinstance(v, tuple) else v) for k, v in COV.TARGETS.items()}}
 ADMISSIONS = ("natural", "assisted", "preserved_unexecuted", "rubric", "human_review", "rejected")
 WORDING_GATE = "executable_wording_unambiguous"
@@ -46,6 +48,20 @@ def config_fingerprint(config: dict | None = None) -> str:
         h.update((here / name).read_bytes())
     h.update(Path(V1.__file__).read_bytes())
     return h.hexdigest()[:16]
+
+
+@contextmanager
+def _v1_grounding_context(context: dict):
+    """Evaluator v1's verifier checks persona and journey ids against the module global `research.taskplan.context.CONTEXT` (the synthetic
+    Larkspur context), whatever context it is given. v2 supplies the configured context through that global for the duration of the v1 call
+    (the identity on Larkspur, so v1 parity is unaffected) and restores it. v1 code is not modified."""
+    from ...research.taskplan import context as X
+    saved = X.CONTEXT
+    X.CONTEXT = context
+    try:
+        yield
+    finally:
+        X.CONTEXT = saved
 
 
 def v1_shape(raw):
@@ -102,7 +118,8 @@ class TaskEvaluatorV2:
         if not self.checks:
             return v1.evaluate(candidates)
         candidates = [{**c, "raw": v1_shape(c["raw"])} for c in candidates]
-        v1_records = v1.evaluate(candidates)
+        with _v1_grounding_context(self.context):
+            v1_records = v1.evaluate(candidates)
         out: list[dict] = []
         self._natural: list[Accepted] = []
         for cand, r1 in zip(candidates, v1_records):
@@ -206,7 +223,7 @@ class TaskEvaluatorV2:
         if self.config["assisted_from_generator_assumptions"] and framed_pass:
             out.append(self._record(cand, r1, p, crit=crit, truth=truth, admission="assisted", category="assisted_restatement", executed=restated,
                                     verifiability="deterministic", gates=assisted_gates, reasons=[], analysis=analysis, accepted=framed,
-                                    assumptions=[f"generator assumption (labelled assisted, not the customer's words): {a}" for a in analysis.unresolved]
+                                    assumptions=[f"{self.config['assumption_label']}: {a}" for a in analysis.unresolved]
                                     + [a for a in analysis.assumptions if a not in analysis.unresolved],
                                     decisions=analysis.decisions, derived_from=cand["candidate_id"], suffix="~assisted"))
         return out

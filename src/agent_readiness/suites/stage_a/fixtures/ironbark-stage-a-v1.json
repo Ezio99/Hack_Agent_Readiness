@@ -1,0 +1,306 @@
+{
+ "label": "DEVELOPER-WRITTEN FIXTURE - NOT model output. Ironbark Stage A context (SYNTHETIC) and proposal pool for zero-cost rehearsals.",
+ "schema_version": "taskplan-schema-v3",
+ "context": {
+  "label": "SYNTHETIC - illustrative assumptions for the fictional Ironbark Hire Co.; not customer research",
+  "business": "Ironbark Hire Co. (fictional): tool and equipment hire for households, landscapers and renovation contractors.",
+  "goals": [
+   "Let customers compare hire prices without phoning the depot.",
+   "Make deposits and delivery requirements clear before booking.",
+   "Help weekend and week-long jobs find a suitable machine."
+  ],
+  "personas": [
+   {
+    "id": "diy_homeowner",
+    "name": "DIY homeowner",
+    "needs": "a cheap machine for a short household job",
+    "constraints": "small budget; usually a weekend or a day"
+   },
+   {
+    "id": "landscaper",
+    "name": "Landscaper",
+    "needs": "garden machinery for a client job",
+    "constraints": "needs to know delivery and minimum hire"
+   },
+   {
+    "id": "renovation_contractor",
+    "name": "Renovation contractor",
+    "needs": "heavier machines for a week-long project",
+    "constraints": "compares weekly prices and deposits"
+   }
+  ],
+  "journeys": [
+   {
+    "id": "compare_daily_rates",
+    "name": "Compare daily hire prices",
+    "attributes": [
+     "per day"
+    ],
+    "weight": 0.3
+   },
+   {
+    "id": "plan_deposit",
+    "name": "Check the deposit",
+    "attributes": [
+     "refundable deposit"
+    ],
+    "weight": 0.2
+   },
+   {
+    "id": "weekend_job",
+    "name": "Hire for a weekend",
+    "attributes": [
+     "weekend"
+    ],
+    "weight": 0.2
+   },
+   {
+    "id": "weekly_project",
+    "name": "Hire for a week",
+    "attributes": [
+     "per week"
+    ],
+    "weight": 0.15
+   },
+   {
+    "id": "logistics",
+    "name": "Delivery and minimum hire",
+    "attributes": [
+     "delivery and collection",
+     "minimum hire"
+    ],
+    "weight": 0.15
+   }
+  ],
+  "weights_note": "Journey weights are illustrative priorities chosen for the rehearsal, not measured traffic or demand."
+ },
+ "tasks": [
+  {
+   "intent_id": "i01",
+   "persona": "diy_homeowner",
+   "journey": "compare_daily_rates",
+   "scenario": "I only need it for a day. Which hire machines cost less than $50 per day?",
+   "task_type": "filter",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "per day",
+     "operator": "less_than",
+     "value": "$50",
+     "values": null
+    }
+   ],
+   "ranking": null,
+   "answer_form": "list",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "i02",
+   "persona": "renovation_contractor",
+   "journey": "plan_deposit",
+   "scenario": "Which machines have a refundable deposit of at most $150?",
+   "task_type": "filter",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "refundable deposit",
+     "operator": "at_most",
+     "value": "$150",
+     "values": null
+    }
+   ],
+   "ranking": null,
+   "answer_form": "list",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "i03",
+   "persona": "landscaper",
+   "journey": "logistics",
+   "scenario": "Which machines say delivery and collection is required for this item?",
+   "task_type": "filter",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "delivery and collection",
+     "operator": "equals",
+     "value": "Required for this item",
+     "values": null
+    }
+   ],
+   "ranking": null,
+   "answer_form": "list",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "i04",
+   "persona": "diy_homeowner",
+   "journey": "weekend_job",
+   "scenario": "Among machines where delivery and collection is optional, which has the lowest weekend rate?",
+   "task_type": "best",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "delivery and collection",
+     "operator": "equals",
+     "value": "Optional",
+     "values": null
+    }
+   ],
+   "ranking": {
+    "attribute": "weekend",
+    "direction": "lowest"
+   },
+   "answer_form": "single",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "i05",
+   "persona": "renovation_contractor",
+   "journey": "weekly_project",
+   "scenario": "Which machine has the highest per week price?",
+   "task_type": "best",
+   "entity": null,
+   "attribute": null,
+   "constraints": [],
+   "ranking": {
+    "attribute": "per week",
+    "direction": "highest"
+   },
+   "answer_form": "single",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "i06",
+   "persona": "landscaper",
+   "journey": "compare_daily_rates",
+   "scenario": "What is the per day rate for the Stump grinder 13 hp?",
+   "task_type": "lookup",
+   "entity": "Stump grinder 13 hp",
+   "attribute": "per day",
+   "constraints": [],
+   "ranking": null,
+   "answer_form": "single",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "i07",
+   "persona": "landscaper",
+   "journey": "logistics",
+   "scenario": "What is the minimum hire for the Electric scissor lift 6 m?",
+   "task_type": "lookup",
+   "entity": "Electric scissor lift 6 m",
+   "attribute": "minimum hire",
+   "constraints": [],
+   "ranking": null,
+   "answer_form": "single",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "i08",
+   "persona": "diy_homeowner",
+   "journey": "plan_deposit",
+   "scenario": "Of the machines with a per day rate under $60, which has the highest refundable deposit?",
+   "task_type": "best",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "per day",
+     "operator": "less_than",
+     "value": "$60",
+     "values": null
+    }
+   ],
+   "ranking": {
+    "attribute": "refundable deposit",
+    "direction": "highest"
+   },
+   "answer_form": "single",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "i09",
+   "persona": "renovation_contractor",
+   "journey": "weekend_job",
+   "scenario": "Which machines cost more than $250 for a weekend?",
+   "task_type": "filter",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "weekend",
+     "operator": "greater_than",
+     "value": "$250",
+     "values": null
+    }
+   ],
+   "ranking": null,
+   "answer_form": "list",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "i10",
+   "persona": "diy_homeowner",
+   "journey": "weekly_project",
+   "scenario": "Which machines can I hire for under $150 per week with delivery and collection optional?",
+   "task_type": "filter",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "per week",
+     "operator": "less_than",
+     "value": "$150",
+     "values": null
+    },
+    {
+     "attribute": "delivery and collection",
+     "operator": "equals",
+     "value": "Optional",
+     "values": null
+    }
+   ],
+   "ranking": null,
+   "answer_form": "list",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "i11",
+   "persona": "landscaper",
+   "journey": "compare_daily_rates",
+   "scenario": "How much is the Petrol chainsaw 45 cm?",
+   "task_type": "lookup",
+   "entity": "Petrol chainsaw 45 cm",
+   "attribute": "per day",
+   "constraints": [],
+   "ranking": null,
+   "answer_form": "single",
+   "rationale": "developer-written fixture (NOT model output)"
+  },
+  {
+   "intent_id": "i12",
+   "persona": "renovation_contractor",
+   "journey": "plan_deposit",
+   "scenario": "Which machines are cheap to hire?",
+   "task_type": "filter",
+   "entity": null,
+   "attribute": null,
+   "constraints": [
+    {
+     "attribute": "per day",
+     "operator": "at_most",
+     "value": "$60",
+     "values": null
+    }
+   ],
+   "ranking": null,
+   "answer_form": "list",
+   "rationale": "developer-written fixture (NOT model output)"
+  }
+ ]
+}
