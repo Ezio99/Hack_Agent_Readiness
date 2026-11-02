@@ -40,7 +40,12 @@ cd /root/agent-readiness && git checkout -q --detach b3121a8 \
 The hosted evaluation's engine becomes the lifecycle Stage B runner; the launch API, operator token, admission (US$10 ceiling), slot, jail and
 recovery are unchanged. Evaluations need the lifecycle store at `/data/hosted/lifecycle/store` (else `lifecycle_store_missing`; the site stays up)
 and an owner arming (`docker compose exec -it app python -m agent_readiness.lifecycle.arming arm …`; else `not_armed`). No `.env`, secret, ceiling or
-access change. Procedure, smoke checks, budget fit and rollback: [collaboration/reports/lifecycle-m8-product-integration.md §8–§10](../collaboration/reports/lifecycle-m8-product-integration.md).
+access change for the deploy itself. A paid `larkspur-core@v2` evaluation (reserves US$7.436) needs the owner's ceiling migration first:
+`docker compose stop app && docker compose run --rm --no-deps -it app python -m agent_readiness.hosted.ceiling migrate --db /data/hosted/live/admission.sqlite --to 10.736 --expect-ceiling 10 --expect-reserved 3.3 --reason "…"`,
+then `AR_HOSTED_CEILING_USD=10.736` in `.env` and `docker compose up -d --no-build --no-deps app` (a mismatch keeps evaluations disabled: fix `.env`, never the
+database). Rolling back the image keeps the migrated ceiling and every reservation; the old image needs `AR_HOSTED_CEILING_USD=10.736` to admit, or
+stays fail-closed. Full sequence (backup, deploy, verify, migrate, arm, launch, monitor, rollback):
+[collaboration/reports/lifecycle-m8-product-integration.md §8–§11](../collaboration/reports/lifecycle-m8-product-integration.md).
 
 ## VM requirements
 
@@ -135,6 +140,6 @@ Public starts are limited to one evaluation at a time (others see "Worker busy" 
 | `isolation_check_failed`, `isolation_policy_invalid` | Namespaces blocked: run `unshare -Urn true` on the host; re-run the bootstrap; check the `security_opt` lines in compose.yaml. |
 | `source_run_missing`, `source_run_unreadable` | Path in `.env` or ownership: `sudo chown -R 10001:10001 /srv/agent-readiness/live-2d58a80e14`. |
 | `missing_provider_key`, `missing_operator_token` | Secret file empty, or not owned/readable by 10001. |
-| `budget_policy_mismatch`, `ceiling_*` | `.env` ceiling differs from the persisted policy. Restore `10`; never edit the database. |
+| `budget_policy_mismatch`, `ceiling_*` | `.env` ceiling differs from the persisted policy. Set it to the persisted value (`python -m agent_readiness.hosted.ceiling status`); change the persisted value only with `ceiling migrate` (owner); never edit the database. |
 
 The site and history stay up in every case. Private operation without Caddy: `docker compose -f compose.yaml -f compose.private.yaml up -d app` and `ssh -L 8080:127.0.0.1:8080 <host>`. Operations: `docker compose exec app python -m agent_readiness.hosted.admin list|watch <id>|health`.

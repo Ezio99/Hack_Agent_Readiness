@@ -219,8 +219,11 @@ def test_the_worker_rechecks_and_hands_the_launch_authorisation_to_the_runner(en
         seen["authorization"] = authorization
         raise RuntimeError("stop before any request (test)")
     monkeypatch.setattr(RN, "execute", execute)
+    from agent_readiness.evalruns import manifest as MF
+    declared = MF.JAIL_POLICY
     with pytest.raises(RuntimeError, match="stop before"):
         J.run_job(ex.runs_root, env["store"].root, job, a)
+    assert MF.JAIL_POLICY is declared                                  # the runtime-only jail extension never leaks into the pinned agent config
     assert seen["mode"] == "paid" and seen["manifest"] == env["manifest"]
     assert seen["authorization"] == AU.STAGE_B / "authorizations" / "w-1-l1.json" and seen.get("key_loaded") and "loopback_guard" not in seen
 

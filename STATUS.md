@@ -91,7 +91,10 @@ Handoff: [collaboration/LIFECYCLE_HANDOFF.md](collaboration/LIFECYCLE_HANDOFF.md
 - Each launch reserves its worst case + one request bound in the same admission (US$10 ceiling, one slot), claims its launch number once, and (paid) gets its own write-once PaidAuthorization and ledger; the worker re-checks everything; jailed Chromium; reserve-before-send; no retries.
 - Results = the six-dimension readiness report and trace comparison (`/api/lifecycle/evaluations/<id>`), the same projection as the preloaded M7 dataset `datasets/lifecycle/m7-larkspur-browser-1/v1`.
 - Verified in the candidate container (rehearsal mode, copy of the data): terminal arming, operator launch, 12/12 jailed trials, report, relaunch refused, restart-safe.
-- **Blocking owner decision:** a paid launch of `larkspur-core@v2` reserves US$7.436 but production has US$6.70 left, so it is refused (fail-closed) until the owner raises the ceiling or approves a smaller suite.
+- **Budget reconciled (2026-11-04, durable records):** known spend US$17.240080 = A$25.86 at the conservative 1.50 planning rate (programme ledger US$13.418982 + US$3.820762 of event-period spend the ledger lists as unreconciled, found in local ledgers); **A$24.14 remains** of A$50. Production admission (copy of 2026-11-02 06:22 UTC): ceiling US$10, US$3.30 reserved (2 jobs), US$6.70 left.
+- One full `larkspur-core@v2` evaluation (12 trials) reserves **US$7.436** (worst case 7.392 + one request bound 0.044); it does not fit US$10. **Recommended ceiling: exactly US$10.736** (one launch; worst case after it A$37.01 of A$50).
+- New owner-only `python -m agent_readiness.hosted.ceiling` migration (TTY, typed confirmation, app stopped, expectations bound, one atomic value + audit row, accounting untouched, fail-closed check kept); rehearsed on a copy of the production database; the launch API then admits the exact M7 manifest (network disabled, nothing sent).
+- Awaiting owner approval: deploy, ceiling migration, paid arming, launch (exact commands in the report §11).
 - Report, decisions, deployment and rollback: [collaboration/reports/lifecycle-m8-product-integration.md](collaboration/reports/lifecycle-m8-product-integration.md).
 
 ## Budget

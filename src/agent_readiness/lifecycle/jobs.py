@@ -123,8 +123,12 @@ def harden_jail(runs_root: Path, store_root: Path) -> list[str]:
     pol = os.environ.get("AGENT_READINESS_BROWSER_JAIL")
     if pol and Path(pol).is_file():
         extra = list(json.loads(Path(pol).read_text()).get("hide") or []) + extra
-    MF.JAIL_POLICY = {**MF.JAIL_POLICY, "hide": list(dict.fromkeys(list(MF.JAIL_POLICY["hide"]) + extra))}
-    return extra
+    declared = MF.JAIL_POLICY
+    MF.JAIL_POLICY = {**declared, "hide": list(dict.fromkeys(list(declared["hide"]) + extra))}
+
+    def restore():                                          # the declared policy (hashed into every manifest's agent) is restored after execution
+        MF.JAIL_POLICY = declared
+    return extra, restore
 
 
 def run_job(runs_root: Path, store_root: Path, job_id: str, admission) -> dict:
@@ -153,13 +157,16 @@ def run_job(runs_root: Path, store_root: Path, job_id: str, admission) -> dict:
     manifest = store.get("manifest", job["manifest_sha256"])
     update_job(runs_root, job_id, runs={c: str(r.dir.relative_to(Path(runs_root))) for c, r in runs.items()},
                planned=sum(len(RN.steps(r, manifest)) for r in runs.values()), state="running")
-    hidden = harden_jail(runs_root, store_root)
+    hidden, restore = harden_jail(runs_root, store_root)
     update_job(runs_root, job_id, runtime_jail_hides=hidden)
     stopped = []
-    for c, r in runs.items():
-        out = RN.execute(r, store, authorization=auth_path)                 # paid: the runner verifies the authorisation again and enforces its ledger
-        if out.get("stopped"):
-            stopped.append(f"{c}: {out['stopped']}")
+    try:
+        for c, r in runs.items():
+            out = RN.execute(r, store, authorization=auth_path)             # paid: the runner verifies the authorisation again and enforces its ledger
+            if out.get("stopped"):
+                stopped.append(f"{c}: {out['stopped']}")
+    finally:
+        restore()
     at = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime())
     doc = RN.report(store, job["manifest_sha256"], runs, created_at=at)
     pub = RN.public_report(doc)

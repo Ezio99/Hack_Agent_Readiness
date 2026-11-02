@@ -446,7 +446,7 @@ def _print(p: dict, adm) -> None:
         t = adm.totals()
         rem = t["ceiling_microusd"] - t["reserved_microusd"]
         fit = [o["repetitions"] for o in p["options"] if o["reservation_microusd"] <= rem]
-        print(f"hosted ceiling  US${t['ceiling_microusd'] / 1e6:.2f}; reserved US${t['reserved_microusd'] / 1e6:.6f}; remaining US${rem / 1e6:.6f} -> "
+        print(f"hosted ceiling  US${t['ceiling_microusd'] / 1e6:.6f}; reserved US${t['reserved_microusd'] / 1e6:.6f}; remaining US${rem / 1e6:.6f} -> "
               + (f"fits for repetitions {fit}" if fit else "NO option fits: launches will be refused"))
     print(f"attestation     {p['attestation']}")
 
