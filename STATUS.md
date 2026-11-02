@@ -55,13 +55,21 @@ Future product architecture (not implemented): [docs/FUTURE_ARCHITECTURE.md](doc
 
 **Next:** feature freeze. Demo and submission preparation for Wednesday 2026-11-04 (submission deadline 2026-11-05 13:00 Sydney).
 
-**Research branch `research/llm-task-planning` (local, isolated, not deployed):**
+**Research branch `research/llm-task-planning` (isolated, not deployed, not merged; pushed to origin with owner authorisation 2026-11-02):**
 - LLM task planner: two paid planner runs.
 - taskeval-1 and selection-1.
 - Isolated Larkspur pilot: 8 paid jailed trials.
-- **Two-stage evaluation lifecycle:** proposal approved with eight decisions; **M1 implemented** (immutable records, write-once store, Stage A/B boundary; 26 tests).
+- **Two-stage evaluation lifecycle:** proposal approved with eight decisions. **M1–M5 implemented** (M2 `c721c47`, M2b `5bc7892`, M3 `11e1a59`, M4 `258ec96`, M5 in the report's final commit):
+  - evaluator v2 with gate-nl-1 and the four wording categories (12–13 / 20 recorded Muse Spark proposals now execute in the customer's own words, against 6 / 20 under the v1 gate);
+  - ranked_subset and either_of kinds;
+  - the bounded Stage A loop;
+  - human approval and freezing, the statistical plan and manifests;
+  - the general Stage B runner.
+  - **Zero-cost rehearsals** on Larkspur and Ironbark (real Chromium in the jail, loopback dev provider; NOT a model).
+  - **No paid call.** Every approval made was of a SYNTHETIC fixture suite.
+  - Report: [collaboration/reports/lifecycle-m2-m5.md](collaboration/reports/lifecycle-m2-m5.md).
 
-M2 onward is owned by the next agent. Handoff: [collaboration/LIFECYCLE_HANDOFF.md](collaboration/LIFECYCLE_HANDOFF.md).
+M6 (paid validation) needs separate owner approval. Handoff: [collaboration/LIFECYCLE_HANDOFF.md](collaboration/LIFECYCLE_HANDOFF.md).
 
 ## Budget
 

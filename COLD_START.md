@@ -6,7 +6,7 @@
 
 ## Latest handoff — 2026-11-02 (research: two-stage evaluation lifecycle)
 
-**Research agents start with [collaboration/LIFECYCLE_HANDOFF.md](collaboration/LIFECYCLE_HANDOFF.md)** ("NEW AGENT START HERE"). It covers branch `research/llm-task-planning`, the approved two-stage lifecycle decisions, completed M1, and M2–M5 next. The research work is isolated from production and the release candidate.
+**Research agents start with [collaboration/LIFECYCLE_HANDOFF.md](collaboration/LIFECYCLE_HANDOFF.md)** ("NEW AGENT START HERE"). It covers branch `research/llm-task-planning`, the approved two-stage lifecycle decisions and the completed milestones M1–M5 (report: [collaboration/reports/lifecycle-m2-m5.md](collaboration/reports/lifecycle-m2-m5.md)). M6 (paid validation) is next and needs separate owner approval. The research work is isolated from production and the release candidate.
 
 ## Production handoff — 2026-11-02
 

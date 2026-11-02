@@ -265,3 +265,13 @@ def test_coverage_matrix_and_targets(larkspur):
 
 def test_stage_a_boundary_still_clean():
     assert B.forbidden_imports(ROOT / "src/agent_readiness/suites") == []
+
+
+def test_fingerprints_are_identical_across_processes():
+    """Suite and task hashes embed the evaluator fingerprint: it may not depend on per-process hash randomisation."""
+    import subprocess
+    import sys
+    code = "from agent_readiness.taskeval.v2 import evaluator as E; print(E.config_fingerprint({**E.CONFIG, 'new_kinds': ['ranked_subset', 'either_of']}))"
+    outs = {subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=120, env={**__import__("os").environ, "PYTHONHASHSEED": str(seed)}).stdout.strip()
+            for seed in (1, 2, 3)}
+    assert len(outs) == 1 and len(next(iter(outs))) == 16

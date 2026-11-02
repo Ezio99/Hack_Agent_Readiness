@@ -8,6 +8,34 @@ Nothing in this document authorises spending, deployment, merging or modifying e
 
 ---
 
+## UPDATE 2026-11-02 (later): M2–M5 implemented. Read this block first
+
+**[fact]** M2 (`c721c47`), M2b (`5bc7892`), M3 (`11e1a59`), M4 (`258ec96`) and M5 (the final commit of the report) are implemented on `research/llm-task-planning`. The owner authorised them as one continuous zero-cost run and authorised pushing this branch; it is pushed, not merged. Full report: [`collaboration/reports/lifecycle-m2-m5.md`](reports/lifecycle-m2-m5.md).
+
+- **What exists now:**
+  - `taskeval/v2/` (evaluator v2, `gate-nl-1`, lexicon, coverage, M2b kinds);
+  - `research/taskplan/{schema_v3,planner_v2}.py` (`taskplan-v2` prompt, `MetaGenerator`; paid use refuses without approval);
+  - `suites/stage_a/{taskrecords,loop,selection,feedback,stopping,generators,approval}.py`;
+  - `suites/plan.py`;
+  - `evalruns/{manifest,runner,rehearse}.py`.
+- **Tests:**
+  ```bash
+  .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_suites_m1.py tests/test_taskeval.py tests/test_research_taskplan.py tests/test_taskeval_v2.py tests/test_kinds_m2b.py tests/test_stage_a_loop.py tests/test_lifecycle_m4.py tests/test_evalruns_m5.py -m "not browser"
+  .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_evalruns_m5.py -m browser     # real Chromium + jail; zero cost; run alone
+  bash scripts/critical-tests.sh
+  ```
+- **Rehearse:**
+  ```bash
+  python -m agent_readiness.evalruns.rehearse larkspur|ironbark --root scanner-data/research/lifecycle/<new dir>
+  ```
+  Zero cost: a fixture generator, a SYNTHETIC approval and the loopback dev provider.
+- **Still true:**
+  - no paid call has been made by the lifecycle code;
+  - v1 code (`criteria`, `gate`, `key`, `grader v2`, `oracle`, taskeval v1, `verify`, `schema`, `freeze`) is unchanged and pinned by hash;
+  - only synthetic suites have been approved.
+- **Next: M6** (paid validation). It needs explicit owner approval, a cap and an approval note. Instructions and cost estimates: report §7. `evalruns.runner.execute` refuses paid mode until M6 adds the approval check.
+- The step-5 "stop for approval after M2" instruction below is superseded by the owner's later authorisation. "The research branch is not pushed" (§2) is no longer true.
+
 ## NEW AGENT START HERE
 
 1. **Read, in order:**

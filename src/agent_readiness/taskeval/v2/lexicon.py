@@ -69,5 +69,5 @@ LABEL_STOPWORDS = {"per", "and", "the", "of", "left", "for", "a", "an"}
 
 
 def snapshot() -> dict:
-    """Everything above, for the configuration fingerprint."""
-    return {k: v for k, v in globals().items() if k.isupper()}
+    """Everything above, for the configuration fingerprint (sets as sorted lists: a fingerprint must not depend on hash randomisation)."""
+    return {k: (sorted(v) if isinstance(v, (set, frozenset)) else v) for k, v in globals().items() if k.isupper()}
