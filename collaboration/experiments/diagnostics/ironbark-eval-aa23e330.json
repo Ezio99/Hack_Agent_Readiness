@@ -1,0 +1,1363 @@
+{
+ "schema": "diagnostics-report-v1",
+ "site": "ironbark",
+ "source": "scanner-data/hosted-copy/paired-86a646169296419eb8fffbb59a31dcab",
+ "evidence_origin": "real_model",
+ "versions": {
+  "original": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+  "modified": "40c5d886963c925a7b99ff721d7971d5ebacbc52d0237d9549febe301d74f1ed"
+ },
+ "comparison": {
+  "frozen": "inconclusive",
+  "frozen_rule_id": "paired-signflip-v1",
+  "exploratory": "consistent_with_h1",
+  "exploratory_rule_id": "exploratory-listing-v1"
+ },
+ "structural_changes": {
+  "modified": {
+   "resolved": [
+    "S-74da5c1c65",
+    "S-b042572203",
+    "S-fc900d5098"
+   ],
+   "introduced": [],
+   "persisting": [
+    "S-0d2d172c57",
+    "S-50aa1180f0",
+    "S-dcf2f6c941",
+    "S-f7ce0a5ad3"
+   ],
+   "titles": {
+    "S-fc900d5098": "'refundable deposit' is only on item pages, not on the /hire listing",
+    "S-f7ce0a5ad3": "'fits' is only on item pages, not on the /accessories listing",
+    "S-50aa1180f0": "none of 33 item pages carries structured data",
+    "S-0d2d172c57": "'per week' is only on item pages, not on the /hire listing",
+    "S-74da5c1c65": "'delivery and collection' is only on item pages, not on the /hire listing",
+    "S-b042572203": "'minimum hire' is only on item pages, not on the /hire listing",
+    "S-dcf2f6c941": "'weekend' is only on item pages, not on the /hire listing"
+   }
+  }
+ },
+ "summary": {
+  "by_layer_status": {
+   "structural:observed": 11,
+   "behavioral:observed": 16,
+   "hypothesis:unverified": 3,
+   "hypothesis:supported_exploratory": 3
+  },
+  "findings": 33
+ },
+ "findings": [
+  {
+   "id": "S-f7ce0a5ad3",
+   "layer": "structural",
+   "rule": "listing-fact-gap",
+   "title": "'fits' is only on item pages, not on the /accessories listing",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "medium",
+   "impact": "an agent comparing items by fits must open up to 8 item pages",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "listing_field",
+     "ref": "/accessories#fits",
+     "detail": "stated on 8/8 item pages (/accessories/{}), on 0/8 listing cards"
+    },
+    {
+     "type": "page",
+     "ref": "/accessories",
+     "detail": "div.grid.g4 < div.wrap < main#main < body"
+    }
+   ],
+   "recommendation": "State fits on each card of /accessories (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'fits' appears on 8/8 listing cards; then run a paired evaluation on tasks that compare fits.",
+   "tasks": [],
+   "evidence_origin": "page",
+   "detail": {
+    "listing": "/accessories",
+    "template": "/accessories/{}",
+    "label": "fits",
+    "items": 8,
+    "detail_pages": 8,
+    "listing_cards": 0
+   }
+  },
+  {
+   "id": "S-74da5c1c65",
+   "layer": "structural",
+   "rule": "listing-fact-gap",
+   "title": "'delivery and collection' is only on item pages, not on the /hire listing",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "medium",
+   "impact": "an agent comparing items by delivery and collection must open up to 16 item pages",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "listing_field",
+     "ref": "/hire#delivery and collection",
+     "detail": "stated on 16/16 item pages (/hire/{}), on 0/16 listing cards"
+    },
+    {
+     "type": "page",
+     "ref": "/hire",
+     "detail": "div.grid.g3 < div.wrap < main#main < body"
+    },
+    {
+     "type": "page",
+     "ref": "/, /hire/category/access, /hire/category/cutting, /hire/sort/name, /hire/sort/price-asc, /hire/sort/price-desc",
+     "detail": "6 other listings of the same items"
+    }
+   ],
+   "recommendation": "State delivery and collection on each card of /hire (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'delivery and collection' appears on 16/16 listing cards; then run a paired evaluation on tasks that compare delivery and collection.",
+   "tasks": [],
+   "evidence_origin": "page",
+   "detail": {
+    "listing": "/hire",
+    "template": "/hire/{}",
+    "label": "delivery and collection",
+    "items": 16,
+    "detail_pages": 16,
+    "listing_cards": 0
+   }
+  },
+  {
+   "id": "S-b042572203",
+   "layer": "structural",
+   "rule": "listing-fact-gap",
+   "title": "'minimum hire' is only on item pages, not on the /hire listing",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "medium",
+   "impact": "an agent comparing items by minimum hire must open up to 16 item pages",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "listing_field",
+     "ref": "/hire#minimum hire",
+     "detail": "stated on 16/16 item pages (/hire/{}), on 0/16 listing cards"
+    },
+    {
+     "type": "page",
+     "ref": "/hire",
+     "detail": "div.grid.g3 < div.wrap < main#main < body"
+    },
+    {
+     "type": "page",
+     "ref": "/, /hire/category/access, /hire/category/cutting, /hire/sort/name, /hire/sort/price-asc, /hire/sort/price-desc",
+     "detail": "6 other listings of the same items"
+    }
+   ],
+   "recommendation": "State minimum hire on each card of /hire (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'minimum hire' appears on 16/16 listing cards; then run a paired evaluation on tasks that compare minimum hire.",
+   "tasks": [],
+   "evidence_origin": "page",
+   "detail": {
+    "listing": "/hire",
+    "template": "/hire/{}",
+    "label": "minimum hire",
+    "items": 16,
+    "detail_pages": 16,
+    "listing_cards": 0
+   }
+  },
+  {
+   "id": "S-0d2d172c57",
+   "layer": "structural",
+   "rule": "listing-fact-gap",
+   "title": "'per week' is only on item pages, not on the /hire listing",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "medium",
+   "impact": "an agent comparing items by per week must open up to 16 item pages",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "listing_field",
+     "ref": "/hire#per week",
+     "detail": "stated on 16/16 item pages (/hire/{}), on 0/16 listing cards"
+    },
+    {
+     "type": "page",
+     "ref": "/hire",
+     "detail": "div.grid.g3 < div.wrap < main#main < body"
+    },
+    {
+     "type": "page",
+     "ref": "/, /hire/category/access, /hire/category/cutting, /hire/sort/name, /hire/sort/price-asc, /hire/sort/price-desc",
+     "detail": "6 other listings of the same items"
+    }
+   ],
+   "recommendation": "State per week on each card of /hire (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'per week' appears on 16/16 listing cards; then run a paired evaluation on tasks that compare per week.",
+   "tasks": [],
+   "evidence_origin": "page",
+   "detail": {
+    "listing": "/hire",
+    "template": "/hire/{}",
+    "label": "per week",
+    "items": 16,
+    "detail_pages": 16,
+    "listing_cards": 0
+   }
+  },
+  {
+   "id": "S-fc900d5098",
+   "layer": "structural",
+   "rule": "listing-fact-gap",
+   "title": "'refundable deposit' is only on item pages, not on the /hire listing",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "medium",
+   "impact": "an agent comparing items by refundable deposit must open up to 16 item pages",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "listing_field",
+     "ref": "/hire#refundable deposit",
+     "detail": "stated on 16/16 item pages (/hire/{}), on 0/16 listing cards"
+    },
+    {
+     "type": "page",
+     "ref": "/hire",
+     "detail": "div.grid.g3 < div.wrap < main#main < body"
+    },
+    {
+     "type": "page",
+     "ref": "/, /hire/category/access, /hire/category/cutting, /hire/sort/name, /hire/sort/price-asc, /hire/sort/price-desc",
+     "detail": "6 other listings of the same items"
+    }
+   ],
+   "recommendation": "State refundable deposit on each card of /hire (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'refundable deposit' appears on 16/16 listing cards; then run a paired evaluation on tasks that compare refundable deposit.",
+   "tasks": [],
+   "evidence_origin": "page",
+   "detail": {
+    "listing": "/hire",
+    "template": "/hire/{}",
+    "label": "refundable deposit",
+    "items": 16,
+    "detail_pages": 16,
+    "listing_cards": 0
+   }
+  },
+  {
+   "id": "S-dcf2f6c941",
+   "layer": "structural",
+   "rule": "listing-fact-gap",
+   "title": "'weekend' is only on item pages, not on the /hire listing",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "medium",
+   "impact": "an agent comparing items by weekend must open up to 16 item pages",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "listing_field",
+     "ref": "/hire#weekend",
+     "detail": "stated on 16/16 item pages (/hire/{}), on 0/16 listing cards"
+    },
+    {
+     "type": "page",
+     "ref": "/hire",
+     "detail": "div.grid.g3 < div.wrap < main#main < body"
+    },
+    {
+     "type": "page",
+     "ref": "/, /hire/category/access, /hire/category/cutting, /hire/sort/name, /hire/sort/price-asc, /hire/sort/price-desc",
+     "detail": "6 other listings of the same items"
+    }
+   ],
+   "recommendation": "State weekend on each card of /hire (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'weekend' appears on 16/16 listing cards; then run a paired evaluation on tasks that compare weekend.",
+   "tasks": [],
+   "evidence_origin": "page",
+   "detail": {
+    "listing": "/hire",
+    "template": "/hire/{}",
+    "label": "weekend",
+    "items": 16,
+    "detail_pages": 16,
+    "listing_cards": 0
+   }
+  },
+  {
+   "id": "S-50aa1180f0",
+   "layer": "structural",
+   "rule": "no-structured-data",
+   "title": "none of 33 item pages carries structured data",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "info",
+   "impact": "agents and tools that read JSON-LD get nothing machine-readable; the visible text is the only source",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "page",
+     "ref": "/accessories/continuous-rim-tile-blade-250mm",
+     "detail": "and 32 more item pages"
+    }
+   ],
+   "recommendation": "Describe each item with schema.org JSON-LD (e.g. Product/Offer or Course) using the same values the page shows.",
+   "verify": "Re-run diagnostics: item pages carry structured data whose values match the visible facts.",
+   "tasks": [],
+   "evidence_origin": "page",
+   "detail": {}
+  },
+  {
+   "id": "S-f7ce0a5ad3",
+   "layer": "structural",
+   "rule": "listing-fact-gap",
+   "title": "'fits' is only on item pages, not on the /accessories listing",
+   "site": "ironbark",
+   "version": "modified",
+   "version_sha256": "40c5d886963c925a7b99ff721d7971d5ebacbc52d0237d9549febe301d74f1ed",
+   "severity": "medium",
+   "impact": "an agent comparing items by fits must open up to 8 item pages",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "listing_field",
+     "ref": "/accessories#fits",
+     "detail": "stated on 8/8 item pages (/accessories/{}), on 0/8 listing cards"
+    },
+    {
+     "type": "page",
+     "ref": "/accessories",
+     "detail": "div.grid.g4 < div.wrap < main#main < body"
+    }
+   ],
+   "recommendation": "State fits on each card of /accessories (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'fits' appears on 8/8 listing cards; then run a paired evaluation on tasks that compare fits.",
+   "tasks": [],
+   "evidence_origin": "page",
+   "detail": {
+    "listing": "/accessories",
+    "template": "/accessories/{}",
+    "label": "fits",
+    "items": 8,
+    "detail_pages": 8,
+    "listing_cards": 0
+   }
+  },
+  {
+   "id": "S-0d2d172c57",
+   "layer": "structural",
+   "rule": "listing-fact-gap",
+   "title": "'per week' is only on item pages, not on the /hire listing",
+   "site": "ironbark",
+   "version": "modified",
+   "version_sha256": "40c5d886963c925a7b99ff721d7971d5ebacbc52d0237d9549febe301d74f1ed",
+   "severity": "medium",
+   "impact": "an agent comparing items by per week must open up to 16 item pages",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "listing_field",
+     "ref": "/hire#per week",
+     "detail": "stated on 16/16 item pages (/hire/{}), on 1/16 listing cards"
+    },
+    {
+     "type": "page",
+     "ref": "/hire",
+     "detail": "div.grid.g3 < div.wrap < main#main < body"
+    },
+    {
+     "type": "page",
+     "ref": "/, /hire/category/access, /hire/category/cutting, /hire/sort/name, /hire/sort/price-asc, /hire/sort/price-desc",
+     "detail": "6 other listings of the same items"
+    }
+   ],
+   "recommendation": "State per week on each card of /hire (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'per week' appears on 16/16 listing cards; then run a paired evaluation on tasks that compare per week.",
+   "tasks": [],
+   "evidence_origin": "page",
+   "detail": {
+    "listing": "/hire",
+    "template": "/hire/{}",
+    "label": "per week",
+    "items": 16,
+    "detail_pages": 16,
+    "listing_cards": 1
+   }
+  },
+  {
+   "id": "S-dcf2f6c941",
+   "layer": "structural",
+   "rule": "listing-fact-gap",
+   "title": "'weekend' is only on item pages, not on the /hire listing",
+   "site": "ironbark",
+   "version": "modified",
+   "version_sha256": "40c5d886963c925a7b99ff721d7971d5ebacbc52d0237d9549febe301d74f1ed",
+   "severity": "medium",
+   "impact": "an agent comparing items by weekend must open up to 16 item pages",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "listing_field",
+     "ref": "/hire#weekend",
+     "detail": "stated on 16/16 item pages (/hire/{}), on 0/16 listing cards"
+    },
+    {
+     "type": "page",
+     "ref": "/hire",
+     "detail": "div.grid.g3 < div.wrap < main#main < body"
+    },
+    {
+     "type": "page",
+     "ref": "/, /hire/category/access, /hire/category/cutting, /hire/sort/name, /hire/sort/price-asc, /hire/sort/price-desc",
+     "detail": "6 other listings of the same items"
+    }
+   ],
+   "recommendation": "State weekend on each card of /hire (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'weekend' appears on 16/16 listing cards; then run a paired evaluation on tasks that compare weekend.",
+   "tasks": [],
+   "evidence_origin": "page",
+   "detail": {
+    "listing": "/hire",
+    "template": "/hire/{}",
+    "label": "weekend",
+    "items": 16,
+    "detail_pages": 16,
+    "listing_cards": 0
+   }
+  },
+  {
+   "id": "S-50aa1180f0",
+   "layer": "structural",
+   "rule": "no-structured-data",
+   "title": "none of 33 item pages carries structured data",
+   "site": "ironbark",
+   "version": "modified",
+   "version_sha256": "40c5d886963c925a7b99ff721d7971d5ebacbc52d0237d9549febe301d74f1ed",
+   "severity": "info",
+   "impact": "agents and tools that read JSON-LD get nothing machine-readable; the visible text is the only source",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "page",
+     "ref": "/accessories/continuous-rim-tile-blade-250mm",
+     "detail": "and 32 more item pages"
+    }
+   ],
+   "recommendation": "Describe each item with schema.org JSON-LD (e.g. Product/Offer or Course) using the same values the page shows.",
+   "verify": "Re-run diagnostics: item pages carry structured data whose values match the visible facts.",
+   "tasks": [],
+   "evidence_origin": "page",
+   "detail": {}
+  },
+  {
+   "id": "B-1cad0d65f6",
+   "layer": "behavioral",
+   "rule": "budget-exhaustion",
+   "title": "budget exhaustion on task 1 (1/1 trials)",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "high",
+   "impact": "the agent ran out of its request budget, or nearly did",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "trial",
+     "ref": "placebo-prp-2f3f998f8a-gen-0a0d1f9340-r1",
+     "detail": "13 of 14 model requests; stop agent_done"
+    }
+   ],
+   "recommendation": "Find which pages consumed the budget (steps cited) and whether the needed facts could be reached in fewer steps.",
+   "verify": "Re-run the task after a change and compare this observation's frequency across versions.",
+   "tasks": [
+    "gen-0a0d1f9340"
+   ],
+   "evidence_origin": "real_model",
+   "detail": {
+    "trials": [
+     "placebo-prp-2f3f998f8a-gen-0a0d1f9340-r1"
+    ],
+    "occurrences": [
+     {
+      "requests": 13,
+      "limit": 14
+     }
+    ]
+   }
+  },
+  {
+   "id": "B-f10a66e7af",
+   "layer": "behavioral",
+   "rule": "budget-exhaustion",
+   "title": "budget exhaustion on task 2 (1/1 trials)",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "high",
+   "impact": "the agent ran out of its request budget, or nearly did",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "trial",
+     "ref": "placebo-prp-2f3f998f8a-gen-4336e8b32f-r1",
+     "detail": "13 of 14 model requests; stop agent_done"
+    }
+   ],
+   "recommendation": "Find which pages consumed the budget (steps cited) and whether the needed facts could be reached in fewer steps.",
+   "verify": "Re-run the task after a change and compare this observation's frequency across versions.",
+   "tasks": [
+    "gen-4336e8b32f"
+   ],
+   "evidence_origin": "real_model",
+   "detail": {
+    "trials": [
+     "placebo-prp-2f3f998f8a-gen-4336e8b32f-r1"
+    ],
+    "occurrences": [
+     {
+      "requests": 13,
+      "limit": 14
+     }
+    ]
+   }
+  },
+  {
+   "id": "B-b7e3dc8c6b",
+   "layer": "behavioral",
+   "rule": "budget-exhaustion",
+   "title": "budget exhaustion on task 3 (1/1 trials)",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "high",
+   "impact": "the agent ran out of its request budget, or nearly did",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "trial",
+     "ref": "placebo-prp-2f3f998f8a-gen-660570f215-r1",
+     "detail": "13 of 14 model requests; stop agent_done"
+    }
+   ],
+   "recommendation": "Find which pages consumed the budget (steps cited) and whether the needed facts could be reached in fewer steps.",
+   "verify": "Re-run the task after a change and compare this observation's frequency across versions.",
+   "tasks": [
+    "gen-660570f215"
+   ],
+   "evidence_origin": "real_model",
+   "detail": {
+    "trials": [
+     "placebo-prp-2f3f998f8a-gen-660570f215-r1"
+    ],
+    "occurrences": [
+     {
+      "requests": 13,
+      "limit": 14
+     }
+    ]
+   }
+  },
+  {
+   "id": "B-58d76a395e",
+   "layer": "behavioral",
+   "rule": "budget-exhaustion",
+   "title": "budget exhaustion on task 4 (1/1 trials)",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "high",
+   "impact": "the agent ran out of its request budget, or nearly did",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "trial",
+     "ref": "placebo-prp-2f3f998f8a-gen-bbf4a34af3-r1",
+     "detail": "13 of 14 model requests; stop agent_done"
+    }
+   ],
+   "recommendation": "Find which pages consumed the budget (steps cited) and whether the needed facts could be reached in fewer steps.",
+   "verify": "Re-run the task after a change and compare this observation's frequency across versions.",
+   "tasks": [
+    "gen-bbf4a34af3"
+   ],
+   "evidence_origin": "real_model",
+   "detail": {
+    "trials": [
+     "placebo-prp-2f3f998f8a-gen-bbf4a34af3-r1"
+    ],
+    "occurrences": [
+     {
+      "requests": 13,
+      "limit": 14
+     }
+    ]
+   }
+  },
+  {
+   "id": "B-4248cb4bce",
+   "layer": "behavioral",
+   "rule": "dead-end",
+   "title": "dead end on task 3 (1/1 trials)",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "medium",
+   "impact": "steps spent on errors or failed actions",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "trial",
+     "ref": "placebo-prp-2f3f998f8a-gen-660570f215-r1",
+     "detail": "http errors [('/hire/wood-chipper-100-mm', 404)]; blocked 0; failed actions at steps []"
+    }
+   ],
+   "recommendation": "Fix or remove the failing link or control (status and step cited).",
+   "verify": "Re-run the task after a change and compare this observation's frequency across versions.",
+   "tasks": [
+    "gen-660570f215"
+   ],
+   "evidence_origin": "real_model",
+   "detail": {
+    "trials": [
+     "placebo-prp-2f3f998f8a-gen-660570f215-r1"
+    ],
+    "occurrences": [
+     {
+      "http": [
+       [
+        "/hire/wood-chipper-100-mm",
+        404
+       ]
+      ],
+      "failed_steps": []
+     }
+    ]
+   }
+  },
+  {
+   "id": "B-292d69f1be",
+   "layer": "behavioral",
+   "rule": "incorrect-answer",
+   "title": "incorrect answer on task 1 (1/1 trials)",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "high",
+   "impact": "the task was not completed correctly",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "trial",
+     "ref": "placebo-prp-2f3f998f8a-gen-0a0d1f9340-r1",
+     "detail": "graded not passed by the official grader v1 (post-hoc grader v2: correct; the answer adds consistent detail)"
+    }
+   ],
+   "recommendation": "Compare the agent's answer with the pages it saw (trial steps cited) to see where the needed information was missing or misread.",
+   "verify": "Re-run the task after a change and compare this observation's frequency across versions.",
+   "tasks": [
+    "gen-0a0d1f9340"
+   ],
+   "evidence_origin": "real_model",
+   "detail": {
+    "trials": [
+     "placebo-prp-2f3f998f8a-gen-0a0d1f9340-r1"
+    ],
+    "occurrences": [
+     {
+      "v2_passed": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "B-b98cd888ca",
+   "layer": "behavioral",
+   "rule": "incorrect-answer",
+   "title": "incorrect answer on task 2 (1/1 trials)",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "high",
+   "impact": "the task was not completed correctly",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "trial",
+     "ref": "placebo-prp-2f3f998f8a-gen-4336e8b32f-r1",
+     "detail": "graded not passed by the official grader v1"
+    }
+   ],
+   "recommendation": "Compare the agent's answer with the pages it saw (trial steps cited) to see where the needed information was missing or misread.",
+   "verify": "Re-run the task after a change and compare this observation's frequency across versions.",
+   "tasks": [
+    "gen-4336e8b32f"
+   ],
+   "evidence_origin": "real_model",
+   "detail": {
+    "trials": [
+     "placebo-prp-2f3f998f8a-gen-4336e8b32f-r1"
+    ],
+    "occurrences": [
+     {
+      "v2_passed": false
+     }
+    ]
+   }
+  },
+  {
+   "id": "B-60a86403f7",
+   "layer": "behavioral",
+   "rule": "incorrect-answer",
+   "title": "incorrect answer on task 3 (1/1 trials)",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "high",
+   "impact": "the task was not completed correctly",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "trial",
+     "ref": "placebo-prp-2f3f998f8a-gen-660570f215-r1",
+     "detail": "graded not passed by the official grader v1"
+    }
+   ],
+   "recommendation": "Compare the agent's answer with the pages it saw (trial steps cited) to see where the needed information was missing or misread.",
+   "verify": "Re-run the task after a change and compare this observation's frequency across versions.",
+   "tasks": [
+    "gen-660570f215"
+   ],
+   "evidence_origin": "real_model",
+   "detail": {
+    "trials": [
+     "placebo-prp-2f3f998f8a-gen-660570f215-r1"
+    ],
+    "occurrences": [
+     {
+      "v2_passed": false
+     }
+    ]
+   }
+  },
+  {
+   "id": "B-3cd0523564",
+   "layer": "behavioral",
+   "rule": "incorrect-answer",
+   "title": "incorrect answer on task 4 (1/1 trials)",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "high",
+   "impact": "the task was not completed correctly",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "trial",
+     "ref": "placebo-prp-2f3f998f8a-gen-bbf4a34af3-r1",
+     "detail": "graded not passed by the official grader v1"
+    }
+   ],
+   "recommendation": "Compare the agent's answer with the pages it saw (trial steps cited) to see where the needed information was missing or misread.",
+   "verify": "Re-run the task after a change and compare this observation's frequency across versions.",
+   "tasks": [
+    "gen-bbf4a34af3"
+   ],
+   "evidence_origin": "real_model",
+   "detail": {
+    "trials": [
+     "placebo-prp-2f3f998f8a-gen-bbf4a34af3-r1"
+    ],
+    "occurrences": [
+     {
+      "v2_passed": false
+     }
+    ]
+   }
+  },
+  {
+   "id": "B-baac85ec6c",
+   "layer": "behavioral",
+   "rule": "loop",
+   "title": "loop on task 1 (1/1 trials)",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "medium",
+   "impact": "steps spent moving back and forth",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "trial",
+     "ref": "placebo-prp-2f3f998f8a-gen-0a0d1f9340-r1",
+     "detail": "/hire <-> /hire-terms"
+    }
+   ],
+   "recommendation": "Inspect the two pages in the loop: the agent may be failing to find a link or fact it expects on one of them.",
+   "verify": "Re-run the task after a change and compare this observation's frequency across versions.",
+   "tasks": [
+    "gen-0a0d1f9340"
+   ],
+   "evidence_origin": "real_model",
+   "detail": {
+    "trials": [
+     "placebo-prp-2f3f998f8a-gen-0a0d1f9340-r1"
+    ],
+    "occurrences": [
+     {
+      "pages": [
+       "/hire",
+       "/hire-terms"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "B-7f529fa8aa",
+   "layer": "behavioral",
+   "rule": "retry",
+   "title": "retry on task 1 (1/1 trials)",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "low",
+   "impact": "an action was repeated",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "step",
+     "ref": "placebo-prp-2f3f998f8a-gen-0a0d1f9340-r1#8",
+     "detail": ""
+    }
+   ],
+   "recommendation": "Inspect the repeated action: the target may not respond as the agent expects.",
+   "verify": "Re-run the task after a change and compare this observation's frequency across versions.",
+   "tasks": [
+    "gen-0a0d1f9340"
+   ],
+   "evidence_origin": "real_model",
+   "detail": {
+    "trials": [
+     "placebo-prp-2f3f998f8a-gen-0a0d1f9340-r1"
+    ],
+    "occurrences": [
+     {
+      "steps": [
+       8
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "B-abdc03bd08",
+   "layer": "behavioral",
+   "rule": "revisit",
+   "title": "revisit on task 1 (1/1 trials)",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "low",
+   "impact": "the same page was shown repeatedly",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "trial",
+     "ref": "placebo-prp-2f3f998f8a-gen-0a0d1f9340-r1",
+     "detail": "/hire visited 4 times (returned 3 times)"
+    }
+   ],
+   "recommendation": "Check why the agent returned to this page: it may be a listing it must consult repeatedly to compare items.",
+   "verify": "Re-run the task after a change and compare this observation's frequency across versions.",
+   "tasks": [
+    "gen-0a0d1f9340"
+   ],
+   "evidence_origin": "real_model",
+   "detail": {
+    "trials": [
+     "placebo-prp-2f3f998f8a-gen-0a0d1f9340-r1"
+    ],
+    "occurrences": [
+     {
+      "page": "/hire",
+      "visits": 4
+     }
+    ]
+   }
+  },
+  {
+   "id": "B-731c2075dd",
+   "layer": "behavioral",
+   "rule": "revisit",
+   "title": "revisit on task 2 (1/1 trials)",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "low",
+   "impact": "the same page was shown repeatedly",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "trial",
+     "ref": "placebo-prp-2f3f998f8a-gen-4336e8b32f-r1",
+     "detail": "/hire visited 4 times (returned 3 times)"
+    }
+   ],
+   "recommendation": "Check why the agent returned to this page: it may be a listing it must consult repeatedly to compare items.",
+   "verify": "Re-run the task after a change and compare this observation's frequency across versions.",
+   "tasks": [
+    "gen-4336e8b32f"
+   ],
+   "evidence_origin": "real_model",
+   "detail": {
+    "trials": [
+     "placebo-prp-2f3f998f8a-gen-4336e8b32f-r1"
+    ],
+    "occurrences": [
+     {
+      "page": "/hire",
+      "visits": 4
+     }
+    ]
+   }
+  },
+  {
+   "id": "B-f0b3a4f5a7",
+   "layer": "behavioral",
+   "rule": "revisit",
+   "title": "revisit on task 3 (1/1 trials)",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "low",
+   "impact": "the same page was shown repeatedly",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "trial",
+     "ref": "placebo-prp-2f3f998f8a-gen-660570f215-r1",
+     "detail": "/hire visited 3 times (returned 2 times)"
+    }
+   ],
+   "recommendation": "Check why the agent returned to this page: it may be a listing it must consult repeatedly to compare items.",
+   "verify": "Re-run the task after a change and compare this observation's frequency across versions.",
+   "tasks": [
+    "gen-660570f215"
+   ],
+   "evidence_origin": "real_model",
+   "detail": {
+    "trials": [
+     "placebo-prp-2f3f998f8a-gen-660570f215-r1"
+    ],
+    "occurrences": [
+     {
+      "page": "/hire",
+      "visits": 3
+     }
+    ]
+   }
+  },
+  {
+   "id": "B-0a97c8eb9b",
+   "layer": "behavioral",
+   "rule": "revisit",
+   "title": "revisit on task 4 (1/1 trials)",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "low",
+   "impact": "the same page was shown repeatedly",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "trial",
+     "ref": "placebo-prp-2f3f998f8a-gen-bbf4a34af3-r1",
+     "detail": "/hire visited 4 times (returned 3 times)"
+    }
+   ],
+   "recommendation": "Check why the agent returned to this page: it may be a listing it must consult repeatedly to compare items.",
+   "verify": "Re-run the task after a change and compare this observation's frequency across versions.",
+   "tasks": [
+    "gen-bbf4a34af3"
+   ],
+   "evidence_origin": "real_model",
+   "detail": {
+    "trials": [
+     "placebo-prp-2f3f998f8a-gen-bbf4a34af3-r1"
+    ],
+    "occurrences": [
+     {
+      "page": "/hire",
+      "visits": 4
+     }
+    ]
+   }
+  },
+  {
+   "id": "B-80a6836707",
+   "layer": "behavioral",
+   "rule": "incorrect-answer",
+   "title": "incorrect answer on task 1 (1/1 trials)",
+   "site": "ironbark",
+   "version": "modified",
+   "version_sha256": "40c5d886963c925a7b99ff721d7971d5ebacbc52d0237d9549febe301d74f1ed",
+   "severity": "high",
+   "impact": "the task was not completed correctly",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "trial",
+     "ref": "patched-prp-2f3f998f8a-gen-0a0d1f9340-r1",
+     "detail": "graded not passed by the official grader v1 (post-hoc grader v2: correct; the answer adds consistent detail)"
+    }
+   ],
+   "recommendation": "Compare the agent's answer with the pages it saw (trial steps cited) to see where the needed information was missing or misread.",
+   "verify": "Re-run the task after a change and compare this observation's frequency across versions.",
+   "tasks": [
+    "gen-0a0d1f9340"
+   ],
+   "evidence_origin": "real_model",
+   "detail": {
+    "trials": [
+     "patched-prp-2f3f998f8a-gen-0a0d1f9340-r1"
+    ],
+    "occurrences": [
+     {
+      "v2_passed": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "H-f05dd5fa72",
+   "layer": "hypothesis",
+   "rule": "listing-fact-gap",
+   "title": "Risk only: no evaluated task compares items by 'fits'",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "info",
+   "impact": "a structural risk indicator; nothing measured either way",
+   "status": "unverified",
+   "evidence": [
+    {
+     "type": "finding",
+     "ref": "S-f7ce0a5ad3",
+     "detail": "'fits' is only on item pages, not on the /accessories listing"
+    }
+   ],
+   "recommendation": "State fits on each card of /accessories (visible text next to the item name).",
+   "verify": "Add a task that compares items by this fact, then evaluate.",
+   "tasks": [],
+   "evidence_origin": "real_model",
+   "detail": {}
+  },
+  {
+   "id": "H-dc7701e844",
+   "layer": "hypothesis",
+   "rule": "listing-fact-gap",
+   "title": "Listing cards omit 'delivery and collection': suspected contributor to item-page navigation on task(s) 3",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "high",
+   "impact": "tasks 3 compare items by delivery and collection",
+   "status": "supported_exploratory",
+   "evidence": [
+    {
+     "type": "finding",
+     "ref": "S-74da5c1c65",
+     "detail": "'delivery and collection' is only on item pages, not on the /hire listing"
+    },
+    {
+     "type": "finding",
+     "ref": "B-b7e3dc8c6b",
+     "detail": "budget exhaustion on task 3 (1/1 trials)"
+    },
+    {
+     "type": "finding",
+     "ref": "B-4248cb4bce",
+     "detail": "dead end on task 3 (1/1 trials)"
+    },
+    {
+     "type": "finding",
+     "ref": "B-60a86403f7",
+     "detail": "incorrect answer on task 3 (1/1 trials)"
+    },
+    {
+     "type": "finding",
+     "ref": "B-f0b3a4f5a7",
+     "detail": "revisit on task 3 (1/1 trials)"
+    },
+    {
+     "type": "trial",
+     "ref": "original: 1 trials",
+     "detail": "item pages opened 3, requests 13, evidence-supported 0/1"
+    },
+    {
+     "type": "trial",
+     "ref": "modified: 1 trials",
+     "detail": "item pages opened 1, requests 7, evidence-supported 1/1"
+    },
+    {
+     "type": "comparison",
+     "ref": "paired-signflip-v1 / exploratory-listing-v1",
+     "detail": "frozen inconclusive, exploratory consistent_with_h1"
+    }
+   ],
+   "recommendation": "State delivery and collection on each card of /hire (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'delivery and collection' appears on 16/16 listing cards; then run a paired evaluation on tasks that compare delivery and collection.",
+   "tasks": [
+    "gen-660570f215"
+   ],
+   "evidence_origin": "real_model",
+   "detail": {
+    "per_version": {
+     "original": {
+      "trials": 1,
+      "item_pages_opened_mean": 3,
+      "requests_mean": 13,
+      "evidence_backed": 0,
+      "resolved_here": false
+     },
+     "modified": {
+      "trials": 1,
+      "item_pages_opened_mean": 1,
+      "requests_mean": 7,
+      "evidence_backed": 1,
+      "resolved_here": true
+     }
+    },
+    "status_basis": "exploratory rule exploratory-listing-v1: consistent_with_h1; pre-registered rule paired-signflip-v1: inconclusive; the tested change resolved delivery and collection, minimum hire, refundable deposit together, so support applies to that combined change"
+   }
+  },
+  {
+   "id": "H-a767de20f6",
+   "layer": "hypothesis",
+   "rule": "listing-fact-gap",
+   "title": "Listing cards omit 'minimum hire': suspected contributor to item-page navigation on task(s) 4",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "high",
+   "impact": "tasks 4 compare items by minimum hire",
+   "status": "supported_exploratory",
+   "evidence": [
+    {
+     "type": "finding",
+     "ref": "S-b042572203",
+     "detail": "'minimum hire' is only on item pages, not on the /hire listing"
+    },
+    {
+     "type": "finding",
+     "ref": "B-58d76a395e",
+     "detail": "budget exhaustion on task 4 (1/1 trials)"
+    },
+    {
+     "type": "finding",
+     "ref": "B-3cd0523564",
+     "detail": "incorrect answer on task 4 (1/1 trials)"
+    },
+    {
+     "type": "finding",
+     "ref": "B-0a97c8eb9b",
+     "detail": "revisit on task 4 (1/1 trials)"
+    },
+    {
+     "type": "trial",
+     "ref": "original: 1 trials",
+     "detail": "item pages opened 3, requests 13, evidence-supported 0/1"
+    },
+    {
+     "type": "trial",
+     "ref": "modified: 1 trials",
+     "detail": "item pages opened 1, requests 5, evidence-supported 1/1"
+    },
+    {
+     "type": "comparison",
+     "ref": "paired-signflip-v1 / exploratory-listing-v1",
+     "detail": "frozen inconclusive, exploratory consistent_with_h1"
+    }
+   ],
+   "recommendation": "State minimum hire on each card of /hire (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'minimum hire' appears on 16/16 listing cards; then run a paired evaluation on tasks that compare minimum hire.",
+   "tasks": [
+    "gen-bbf4a34af3"
+   ],
+   "evidence_origin": "real_model",
+   "detail": {
+    "per_version": {
+     "original": {
+      "trials": 1,
+      "item_pages_opened_mean": 3,
+      "requests_mean": 13,
+      "evidence_backed": 0,
+      "resolved_here": false
+     },
+     "modified": {
+      "trials": 1,
+      "item_pages_opened_mean": 1,
+      "requests_mean": 5,
+      "evidence_backed": 1,
+      "resolved_here": true
+     }
+    },
+    "status_basis": "exploratory rule exploratory-listing-v1: consistent_with_h1; pre-registered rule paired-signflip-v1: inconclusive; the tested change resolved delivery and collection, minimum hire, refundable deposit together, so support applies to that combined change"
+   }
+  },
+  {
+   "id": "H-90bc5dd86b",
+   "layer": "hypothesis",
+   "rule": "listing-fact-gap",
+   "title": "Risk only: no evaluated task compares items by 'per week'",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "info",
+   "impact": "a structural risk indicator; nothing measured either way",
+   "status": "unverified",
+   "evidence": [
+    {
+     "type": "finding",
+     "ref": "S-0d2d172c57",
+     "detail": "'per week' is only on item pages, not on the /hire listing"
+    }
+   ],
+   "recommendation": "State per week on each card of /hire (visible text next to the item name).",
+   "verify": "Add a task that compares items by this fact, then evaluate.",
+   "tasks": [],
+   "evidence_origin": "real_model",
+   "detail": {}
+  },
+  {
+   "id": "H-3921bcc5bc",
+   "layer": "hypothesis",
+   "rule": "listing-fact-gap",
+   "title": "Listing cards omit 'refundable deposit': suspected contributor to item-page navigation on task(s) 1, 2",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "high",
+   "impact": "tasks 1, 2 compare items by refundable deposit",
+   "status": "supported_exploratory",
+   "evidence": [
+    {
+     "type": "finding",
+     "ref": "S-fc900d5098",
+     "detail": "'refundable deposit' is only on item pages, not on the /hire listing"
+    },
+    {
+     "type": "finding",
+     "ref": "B-1cad0d65f6",
+     "detail": "budget exhaustion on task 1 (1/1 trials)"
+    },
+    {
+     "type": "finding",
+     "ref": "B-f10a66e7af",
+     "detail": "budget exhaustion on task 2 (1/1 trials)"
+    },
+    {
+     "type": "finding",
+     "ref": "B-292d69f1be",
+     "detail": "incorrect answer on task 1 (1/1 trials)"
+    },
+    {
+     "type": "finding",
+     "ref": "B-b98cd888ca",
+     "detail": "incorrect answer on task 2 (1/1 trials)"
+    },
+    {
+     "type": "finding",
+     "ref": "B-baac85ec6c",
+     "detail": "loop on task 1 (1/1 trials)"
+    },
+    {
+     "type": "finding",
+     "ref": "B-7f529fa8aa",
+     "detail": "retry on task 1 (1/1 trials)"
+    },
+    {
+     "type": "finding",
+     "ref": "B-abdc03bd08",
+     "detail": "revisit on task 1 (1/1 trials)"
+    },
+    {
+     "type": "finding",
+     "ref": "B-731c2075dd",
+     "detail": "revisit on task 2 (1/1 trials)"
+    },
+    {
+     "type": "trial",
+     "ref": "original: 2 trials",
+     "detail": "item pages opened 3, requests 13, evidence-supported 0/2"
+    },
+    {
+     "type": "trial",
+     "ref": "modified: 2 trials",
+     "detail": "item pages opened 1, requests 7, evidence-supported 1/2"
+    },
+    {
+     "type": "comparison",
+     "ref": "paired-signflip-v1 / exploratory-listing-v1",
+     "detail": "frozen inconclusive, exploratory consistent_with_h1"
+    }
+   ],
+   "recommendation": "State refundable deposit on each card of /hire (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'refundable deposit' appears on 16/16 listing cards; then run a paired evaluation on tasks that compare refundable deposit.",
+   "tasks": [
+    "gen-0a0d1f9340",
+    "gen-4336e8b32f"
+   ],
+   "evidence_origin": "real_model",
+   "detail": {
+    "per_version": {
+     "original": {
+      "trials": 2,
+      "item_pages_opened_mean": 3,
+      "requests_mean": 13,
+      "evidence_backed": 0,
+      "resolved_here": false
+     },
+     "modified": {
+      "trials": 2,
+      "item_pages_opened_mean": 1,
+      "requests_mean": 7,
+      "evidence_backed": 1,
+      "resolved_here": true
+     }
+    },
+    "status_basis": "exploratory rule exploratory-listing-v1: consistent_with_h1; pre-registered rule paired-signflip-v1: inconclusive; the tested change resolved delivery and collection, minimum hire, refundable deposit together, so support applies to that combined change"
+   }
+  },
+  {
+   "id": "H-eb1bf8dece",
+   "layer": "hypothesis",
+   "rule": "listing-fact-gap",
+   "title": "Risk only: no evaluated task compares items by 'weekend'",
+   "site": "ironbark",
+   "version": "original",
+   "version_sha256": "d2824b210ed9e9d85dac527eb0b4eeb519540a70a7c59ff8690c204ff677538f",
+   "severity": "info",
+   "impact": "a structural risk indicator; nothing measured either way",
+   "status": "unverified",
+   "evidence": [
+    {
+     "type": "finding",
+     "ref": "S-dcf2f6c941",
+     "detail": "'weekend' is only on item pages, not on the /hire listing"
+    }
+   ],
+   "recommendation": "State weekend on each card of /hire (visible text next to the item name).",
+   "verify": "Add a task that compares items by this fact, then evaluate.",
+   "tasks": [],
+   "evidence_origin": "real_model",
+   "detail": {}
+  }
+ ]
+}

@@ -1,0 +1,770 @@
+{
+ "schema": "diagnostics-report-v1",
+ "site": "larkspur",
+ "source": "scanner-data/framework-runs/fw-larkspur-188ce7e679",
+ "evidence_origin": "dev_fixture",
+ "versions": {
+  "original": "2f9fd2ce09a044547ceb728acb9b85108931d81ca6b01374198144f509fed2eb",
+  "modified": "edb9a5d2884a0e85fff8f9dfc6ed0e8a4bed41f9616e82678fc466864befe69f"
+ },
+ "comparison": null,
+ "structural_changes": {
+  "modified": {
+   "resolved": [
+    "S-0bc157f0a1",
+    "S-74a8c5bd42",
+    "S-772df826eb"
+   ],
+   "introduced": [],
+   "persisting": [
+    "S-1bf982fc4f",
+    "S-201f36d03d",
+    "S-29db5c51b3",
+    "S-e260dd1253"
+   ],
+   "titles": {
+    "S-29db5c51b3": "'class day' is only on item pages, not on the /courses listing",
+    "S-201f36d03d": "'materials' is only on item pages, not on the /courses listing",
+    "S-0bc157f0a1": "'course fee' is only on item pages, not on the /courses listing",
+    "S-74a8c5bd42": "'seats left' is only on item pages, not on the /courses listing",
+    "S-e260dd1253": "'campus' is only on item pages, not on the /courses listing",
+    "S-772df826eb": "'duration' is only on item pages, not on the /courses listing",
+    "S-1bf982fc4f": "none of 14 item pages carries structured data"
+   }
+  }
+ },
+ "summary": {
+  "by_layer_status": {
+   "structural:observed": 11,
+   "behavioral:observed": 2,
+   "hypothesis:hypothesis": 4,
+   "hypothesis:unverified": 2
+  },
+  "findings": 19
+ },
+ "findings": [
+  {
+   "id": "S-e260dd1253",
+   "layer": "structural",
+   "rule": "listing-fact-gap",
+   "title": "'campus' is only on item pages, not on the /courses listing",
+   "site": "larkspur",
+   "version": "original",
+   "version_sha256": "2f9fd2ce09a044547ceb728acb9b85108931d81ca6b01374198144f509fed2eb",
+   "severity": "medium",
+   "impact": "an agent comparing items by campus must open up to 14 item pages",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "listing_field",
+     "ref": "/courses#campus",
+     "detail": "stated on 14/14 item pages (/courses/{}), on 0/14 listing cards"
+    },
+    {
+     "type": "page",
+     "ref": "/courses",
+     "detail": "ul.cards < main#main < body < html"
+    }
+   ],
+   "recommendation": "State campus on each card of /courses (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'campus' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare campus.",
+   "tasks": [],
+   "evidence_origin": "page",
+   "detail": {
+    "listing": "/courses",
+    "template": "/courses/{}",
+    "label": "campus",
+    "items": 14,
+    "detail_pages": 14,
+    "listing_cards": 0
+   }
+  },
+  {
+   "id": "S-29db5c51b3",
+   "layer": "structural",
+   "rule": "listing-fact-gap",
+   "title": "'class day' is only on item pages, not on the /courses listing",
+   "site": "larkspur",
+   "version": "original",
+   "version_sha256": "2f9fd2ce09a044547ceb728acb9b85108931d81ca6b01374198144f509fed2eb",
+   "severity": "medium",
+   "impact": "an agent comparing items by class day must open up to 14 item pages",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "listing_field",
+     "ref": "/courses#class day",
+     "detail": "stated on 14/14 item pages (/courses/{}), on 0/14 listing cards"
+    },
+    {
+     "type": "page",
+     "ref": "/courses",
+     "detail": "ul.cards < main#main < body < html"
+    }
+   ],
+   "recommendation": "State class day on each card of /courses (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'class day' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare class day.",
+   "tasks": [],
+   "evidence_origin": "page",
+   "detail": {
+    "listing": "/courses",
+    "template": "/courses/{}",
+    "label": "class day",
+    "items": 14,
+    "detail_pages": 14,
+    "listing_cards": 0
+   }
+  },
+  {
+   "id": "S-0bc157f0a1",
+   "layer": "structural",
+   "rule": "listing-fact-gap",
+   "title": "'course fee' is only on item pages, not on the /courses listing",
+   "site": "larkspur",
+   "version": "original",
+   "version_sha256": "2f9fd2ce09a044547ceb728acb9b85108931d81ca6b01374198144f509fed2eb",
+   "severity": "medium",
+   "impact": "an agent comparing items by course fee must open up to 14 item pages",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "listing_field",
+     "ref": "/courses#course fee",
+     "detail": "stated on 14/14 item pages (/courses/{}), on 0/14 listing cards"
+    },
+    {
+     "type": "page",
+     "ref": "/courses",
+     "detail": "ul.cards < main#main < body < html"
+    }
+   ],
+   "recommendation": "State course fee on each card of /courses (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'course fee' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare course fee.",
+   "tasks": [],
+   "evidence_origin": "page",
+   "detail": {
+    "listing": "/courses",
+    "template": "/courses/{}",
+    "label": "course fee",
+    "items": 14,
+    "detail_pages": 14,
+    "listing_cards": 0
+   }
+  },
+  {
+   "id": "S-772df826eb",
+   "layer": "structural",
+   "rule": "listing-fact-gap",
+   "title": "'duration' is only on item pages, not on the /courses listing",
+   "site": "larkspur",
+   "version": "original",
+   "version_sha256": "2f9fd2ce09a044547ceb728acb9b85108931d81ca6b01374198144f509fed2eb",
+   "severity": "medium",
+   "impact": "an agent comparing items by duration must open up to 14 item pages",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "listing_field",
+     "ref": "/courses#duration",
+     "detail": "stated on 14/14 item pages (/courses/{}), on 0/14 listing cards"
+    },
+    {
+     "type": "page",
+     "ref": "/courses",
+     "detail": "ul.cards < main#main < body < html"
+    }
+   ],
+   "recommendation": "State duration on each card of /courses (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'duration' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare duration.",
+   "tasks": [],
+   "evidence_origin": "page",
+   "detail": {
+    "listing": "/courses",
+    "template": "/courses/{}",
+    "label": "duration",
+    "items": 14,
+    "detail_pages": 14,
+    "listing_cards": 0
+   }
+  },
+  {
+   "id": "S-201f36d03d",
+   "layer": "structural",
+   "rule": "listing-fact-gap",
+   "title": "'materials' is only on item pages, not on the /courses listing",
+   "site": "larkspur",
+   "version": "original",
+   "version_sha256": "2f9fd2ce09a044547ceb728acb9b85108931d81ca6b01374198144f509fed2eb",
+   "severity": "medium",
+   "impact": "an agent comparing items by materials must open up to 14 item pages",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "listing_field",
+     "ref": "/courses#materials",
+     "detail": "stated on 14/14 item pages (/courses/{}), on 0/14 listing cards"
+    },
+    {
+     "type": "page",
+     "ref": "/courses",
+     "detail": "ul.cards < main#main < body < html"
+    }
+   ],
+   "recommendation": "State materials on each card of /courses (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'materials' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare materials.",
+   "tasks": [],
+   "evidence_origin": "page",
+   "detail": {
+    "listing": "/courses",
+    "template": "/courses/{}",
+    "label": "materials",
+    "items": 14,
+    "detail_pages": 14,
+    "listing_cards": 0
+   }
+  },
+  {
+   "id": "S-74a8c5bd42",
+   "layer": "structural",
+   "rule": "listing-fact-gap",
+   "title": "'seats left' is only on item pages, not on the /courses listing",
+   "site": "larkspur",
+   "version": "original",
+   "version_sha256": "2f9fd2ce09a044547ceb728acb9b85108931d81ca6b01374198144f509fed2eb",
+   "severity": "medium",
+   "impact": "an agent comparing items by seats left must open up to 14 item pages",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "listing_field",
+     "ref": "/courses#seats left",
+     "detail": "stated on 14/14 item pages (/courses/{}), on 0/14 listing cards"
+    },
+    {
+     "type": "page",
+     "ref": "/courses",
+     "detail": "ul.cards < main#main < body < html"
+    }
+   ],
+   "recommendation": "State seats left on each card of /courses (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'seats left' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare seats left.",
+   "tasks": [],
+   "evidence_origin": "page",
+   "detail": {
+    "listing": "/courses",
+    "template": "/courses/{}",
+    "label": "seats left",
+    "items": 14,
+    "detail_pages": 14,
+    "listing_cards": 0
+   }
+  },
+  {
+   "id": "S-1bf982fc4f",
+   "layer": "structural",
+   "rule": "no-structured-data",
+   "title": "none of 14 item pages carries structured data",
+   "site": "larkspur",
+   "version": "original",
+   "version_sha256": "2f9fd2ce09a044547ceb728acb9b85108931d81ca6b01374198144f509fed2eb",
+   "severity": "info",
+   "impact": "agents and tools that read JSON-LD get nothing machine-readable; the visible text is the only source",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "page",
+     "ref": "/courses/advanced-joinery",
+     "detail": "and 13 more item pages"
+    }
+   ],
+   "recommendation": "Describe each item with schema.org JSON-LD (e.g. Product/Offer or Course) using the same values the page shows.",
+   "verify": "Re-run diagnostics: item pages carry structured data whose values match the visible facts.",
+   "tasks": [],
+   "evidence_origin": "page",
+   "detail": {}
+  },
+  {
+   "id": "S-e260dd1253",
+   "layer": "structural",
+   "rule": "listing-fact-gap",
+   "title": "'campus' is only on item pages, not on the /courses listing",
+   "site": "larkspur",
+   "version": "modified",
+   "version_sha256": "edb9a5d2884a0e85fff8f9dfc6ed0e8a4bed41f9616e82678fc466864befe69f",
+   "severity": "medium",
+   "impact": "an agent comparing items by campus must open up to 14 item pages",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "listing_field",
+     "ref": "/courses#campus",
+     "detail": "stated on 14/14 item pages (/courses/{}), on 0/14 listing cards"
+    },
+    {
+     "type": "page",
+     "ref": "/courses",
+     "detail": "ul.cards < main#main < body < html"
+    }
+   ],
+   "recommendation": "State campus on each card of /courses (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'campus' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare campus.",
+   "tasks": [],
+   "evidence_origin": "page",
+   "detail": {
+    "listing": "/courses",
+    "template": "/courses/{}",
+    "label": "campus",
+    "items": 14,
+    "detail_pages": 14,
+    "listing_cards": 0
+   }
+  },
+  {
+   "id": "S-29db5c51b3",
+   "layer": "structural",
+   "rule": "listing-fact-gap",
+   "title": "'class day' is only on item pages, not on the /courses listing",
+   "site": "larkspur",
+   "version": "modified",
+   "version_sha256": "edb9a5d2884a0e85fff8f9dfc6ed0e8a4bed41f9616e82678fc466864befe69f",
+   "severity": "medium",
+   "impact": "an agent comparing items by class day must open up to 14 item pages",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "listing_field",
+     "ref": "/courses#class day",
+     "detail": "stated on 14/14 item pages (/courses/{}), on 0/14 listing cards"
+    },
+    {
+     "type": "page",
+     "ref": "/courses",
+     "detail": "ul.cards < main#main < body < html"
+    }
+   ],
+   "recommendation": "State class day on each card of /courses (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'class day' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare class day.",
+   "tasks": [],
+   "evidence_origin": "page",
+   "detail": {
+    "listing": "/courses",
+    "template": "/courses/{}",
+    "label": "class day",
+    "items": 14,
+    "detail_pages": 14,
+    "listing_cards": 0
+   }
+  },
+  {
+   "id": "S-201f36d03d",
+   "layer": "structural",
+   "rule": "listing-fact-gap",
+   "title": "'materials' is only on item pages, not on the /courses listing",
+   "site": "larkspur",
+   "version": "modified",
+   "version_sha256": "edb9a5d2884a0e85fff8f9dfc6ed0e8a4bed41f9616e82678fc466864befe69f",
+   "severity": "medium",
+   "impact": "an agent comparing items by materials must open up to 14 item pages",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "listing_field",
+     "ref": "/courses#materials",
+     "detail": "stated on 14/14 item pages (/courses/{}), on 0/14 listing cards"
+    },
+    {
+     "type": "page",
+     "ref": "/courses",
+     "detail": "ul.cards < main#main < body < html"
+    }
+   ],
+   "recommendation": "State materials on each card of /courses (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'materials' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare materials.",
+   "tasks": [],
+   "evidence_origin": "page",
+   "detail": {
+    "listing": "/courses",
+    "template": "/courses/{}",
+    "label": "materials",
+    "items": 14,
+    "detail_pages": 14,
+    "listing_cards": 0
+   }
+  },
+  {
+   "id": "S-1bf982fc4f",
+   "layer": "structural",
+   "rule": "no-structured-data",
+   "title": "none of 14 item pages carries structured data",
+   "site": "larkspur",
+   "version": "modified",
+   "version_sha256": "edb9a5d2884a0e85fff8f9dfc6ed0e8a4bed41f9616e82678fc466864befe69f",
+   "severity": "info",
+   "impact": "agents and tools that read JSON-LD get nothing machine-readable; the visible text is the only source",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "page",
+     "ref": "/courses/advanced-joinery",
+     "detail": "and 13 more item pages"
+    }
+   ],
+   "recommendation": "Describe each item with schema.org JSON-LD (e.g. Product/Offer or Course) using the same values the page shows.",
+   "verify": "Re-run diagnostics: item pages carry structured data whose values match the visible facts.",
+   "tasks": [],
+   "evidence_origin": "page",
+   "detail": {}
+  },
+  {
+   "id": "B-1a0a4f1b6a",
+   "layer": "behavioral",
+   "rule": "unnecessary-navigation",
+   "title": "unnecessary navigation on task 2 (1/1 trials)",
+   "site": "larkspur",
+   "version": "modified",
+   "version_sha256": "edb9a5d2884a0e85fff8f9dfc6ed0e8a4bed41f9616e82678fc466864befe69f",
+   "severity": "low",
+   "impact": "steps spent on pages that do not hold the answer",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "trial",
+     "ref": "modified-gen-582c5d8b8c-r1",
+     "detail": "7 pages off the evidence path: ['/courses/beginners-yoga', '/courses/conversational-italian-1', '/courses/japanese-for-travellers', '/courses/life-drawing-studio', '/courses/mindful-meditation']"
+    }
+   ],
+   "recommendation": "Check the pages visited off the evidence path: navigation labels may be misleading the agent.",
+   "verify": "Re-run the task after a change and compare this observation's frequency across versions.",
+   "tasks": [
+    "gen-582c5d8b8c"
+   ],
+   "evidence_origin": "dev_fixture",
+   "detail": {
+    "trials": [
+     "modified-gen-582c5d8b8c-r1"
+    ],
+    "occurrences": [
+     {
+      "pages": [
+       "/courses/beginners-yoga",
+       "/courses/conversational-italian-1",
+       "/courses/japanese-for-travellers",
+       "/courses/life-drawing-studio",
+       "/courses/mindful-meditation",
+       "/courses/spanish-conversation-2",
+       "/courses/spreadsheets-for-small-business"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "B-657b3d9805",
+   "layer": "behavioral",
+   "rule": "unnecessary-navigation",
+   "title": "unnecessary navigation on task 4 (1/1 trials)",
+   "site": "larkspur",
+   "version": "modified",
+   "version_sha256": "edb9a5d2884a0e85fff8f9dfc6ed0e8a4bed41f9616e82678fc466864befe69f",
+   "severity": "low",
+   "impact": "steps spent on pages that do not hold the answer",
+   "status": "observed",
+   "evidence": [
+    {
+     "type": "trial",
+     "ref": "modified-gen-8e067d4141-r1",
+     "detail": "6 pages off the evidence path: ['/courses/beginners-yoga', '/courses/home-electrical-basics', '/courses/mindful-meditation', '/courses/spreadsheets-for-small-business', '/courses/watercolour-foundations']"
+    }
+   ],
+   "recommendation": "Check the pages visited off the evidence path: navigation labels may be misleading the agent.",
+   "verify": "Re-run the task after a change and compare this observation's frequency across versions.",
+   "tasks": [
+    "gen-8e067d4141"
+   ],
+   "evidence_origin": "dev_fixture",
+   "detail": {
+    "trials": [
+     "modified-gen-8e067d4141-r1"
+    ],
+    "occurrences": [
+     {
+      "pages": [
+       "/courses/beginners-yoga",
+       "/courses/home-electrical-basics",
+       "/courses/mindful-meditation",
+       "/courses/spreadsheets-for-small-business",
+       "/courses/watercolour-foundations",
+       "/courses/web-pages-from-scratch"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "H-d92df0a655",
+   "layer": "hypothesis",
+   "rule": "listing-fact-gap",
+   "title": "Listing cards omit 'campus': suspected contributor to item-page navigation on task(s) 3",
+   "site": "larkspur",
+   "version": "original",
+   "version_sha256": "2f9fd2ce09a044547ceb728acb9b85108931d81ca6b01374198144f509fed2eb",
+   "severity": "medium",
+   "impact": "tasks 3 compare items by campus",
+   "status": "hypothesis",
+   "evidence": [
+    {
+     "type": "finding",
+     "ref": "S-e260dd1253",
+     "detail": "'campus' is only on item pages, not on the /courses listing"
+    },
+    {
+     "type": "trial",
+     "ref": "original: 1 trials",
+     "detail": "item pages opened 7, requests 10, evidence-supported 1/1"
+    },
+    {
+     "type": "trial",
+     "ref": "modified: 1 trials",
+     "detail": "item pages opened 7, requests 10, evidence-supported 1/1"
+    }
+   ],
+   "recommendation": "State campus on each card of /courses (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'campus' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare campus.",
+   "tasks": [
+    "gen-72dace7441"
+   ],
+   "evidence_origin": "dev_fixture",
+   "detail": {
+    "per_version": {
+     "original": {
+      "trials": 1,
+      "item_pages_opened_mean": 7,
+      "requests_mean": 10,
+      "evidence_backed": 1,
+      "resolved_here": false
+     },
+     "modified": {
+      "trials": 1,
+      "item_pages_opened_mean": 7,
+      "requests_mean": 10,
+      "evidence_backed": 1,
+      "resolved_here": false
+     }
+    },
+    "status_basis": "untested: no version without this issue has been evaluated"
+   }
+  },
+  {
+   "id": "H-93873c763b",
+   "layer": "hypothesis",
+   "rule": "listing-fact-gap",
+   "title": "Listing cards omit 'class day': suspected contributor to item-page navigation on task(s) 6",
+   "site": "larkspur",
+   "version": "original",
+   "version_sha256": "2f9fd2ce09a044547ceb728acb9b85108931d81ca6b01374198144f509fed2eb",
+   "severity": "medium",
+   "impact": "tasks 6 compare items by class day",
+   "status": "hypothesis",
+   "evidence": [
+    {
+     "type": "finding",
+     "ref": "S-29db5c51b3",
+     "detail": "'class day' is only on item pages, not on the /courses listing"
+    },
+    {
+     "type": "trial",
+     "ref": "original: 1 trials",
+     "detail": "item pages opened 3, requests 6, evidence-supported 1/1"
+    },
+    {
+     "type": "trial",
+     "ref": "modified: 1 trials",
+     "detail": "item pages opened 3, requests 6, evidence-supported 1/1"
+    }
+   ],
+   "recommendation": "State class day on each card of /courses (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'class day' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare class day.",
+   "tasks": [
+    "gen-af08ebd01d"
+   ],
+   "evidence_origin": "dev_fixture",
+   "detail": {
+    "per_version": {
+     "original": {
+      "trials": 1,
+      "item_pages_opened_mean": 3,
+      "requests_mean": 6,
+      "evidence_backed": 1,
+      "resolved_here": false
+     },
+     "modified": {
+      "trials": 1,
+      "item_pages_opened_mean": 3,
+      "requests_mean": 6,
+      "evidence_backed": 1,
+      "resolved_here": false
+     }
+    },
+    "status_basis": "untested: no version without this issue has been evaluated"
+   }
+  },
+  {
+   "id": "H-4d1bd64f93",
+   "layer": "hypothesis",
+   "rule": "listing-fact-gap",
+   "title": "Listing cards omit 'course fee': suspected contributor to item-page navigation on task(s) 1, 2, 7",
+   "site": "larkspur",
+   "version": "original",
+   "version_sha256": "2f9fd2ce09a044547ceb728acb9b85108931d81ca6b01374198144f509fed2eb",
+   "severity": "medium",
+   "impact": "tasks 1, 2, 7 compare items by course fee",
+   "status": "hypothesis",
+   "evidence": [
+    {
+     "type": "finding",
+     "ref": "S-0bc157f0a1",
+     "detail": "'course fee' is only on item pages, not on the /courses listing"
+    },
+    {
+     "type": "trial",
+     "ref": "original: 3 trials",
+     "detail": "item pages opened 3, requests 6, evidence-supported 3/3"
+    },
+    {
+     "type": "trial",
+     "ref": "modified: 3 trials",
+     "detail": "item pages opened 3, requests 6, evidence-supported 3/3"
+    }
+   ],
+   "recommendation": "State course fee on each card of /courses (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'course fee' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare course fee.",
+   "tasks": [
+    "gen-4eb21be379",
+    "gen-582c5d8b8c",
+    "gen-e0218c9820"
+   ],
+   "evidence_origin": "dev_fixture",
+   "detail": {
+    "per_version": {
+     "original": {
+      "trials": 3,
+      "item_pages_opened_mean": 3,
+      "requests_mean": 6,
+      "evidence_backed": 3,
+      "resolved_here": false
+     },
+     "modified": {
+      "trials": 3,
+      "item_pages_opened_mean": 3,
+      "requests_mean": 6,
+      "evidence_backed": 3,
+      "resolved_here": true
+     }
+    },
+    "status_basis": "a version without this issue (modified) was run, but only with dev_fixture behaviour, which cannot support a hypothesis about agents"
+   }
+  },
+  {
+   "id": "H-f350d1b34c",
+   "layer": "hypothesis",
+   "rule": "listing-fact-gap",
+   "title": "Listing cards omit 'duration': suspected contributor to item-page navigation on task(s) 4",
+   "site": "larkspur",
+   "version": "original",
+   "version_sha256": "2f9fd2ce09a044547ceb728acb9b85108931d81ca6b01374198144f509fed2eb",
+   "severity": "medium",
+   "impact": "tasks 4 compare items by duration",
+   "status": "hypothesis",
+   "evidence": [
+    {
+     "type": "finding",
+     "ref": "S-772df826eb",
+     "detail": "'duration' is only on item pages, not on the /courses listing"
+    },
+    {
+     "type": "trial",
+     "ref": "original: 1 trials",
+     "detail": "item pages opened 6, requests 9, evidence-supported 1/1"
+    },
+    {
+     "type": "trial",
+     "ref": "modified: 1 trials",
+     "detail": "item pages opened 6, requests 9, evidence-supported 1/1"
+    }
+   ],
+   "recommendation": "State duration on each card of /courses (visible text next to the item name).",
+   "verify": "Re-run diagnostics: 'duration' appears on 14/14 listing cards; then run a paired evaluation on tasks that compare duration.",
+   "tasks": [
+    "gen-8e067d4141"
+   ],
+   "evidence_origin": "dev_fixture",
+   "detail": {
+    "per_version": {
+     "original": {
+      "trials": 1,
+      "item_pages_opened_mean": 6,
+      "requests_mean": 9,
+      "evidence_backed": 1,
+      "resolved_here": false
+     },
+     "modified": {
+      "trials": 1,
+      "item_pages_opened_mean": 6,
+      "requests_mean": 9,
+      "evidence_backed": 1,
+      "resolved_here": true
+     }
+    },
+    "status_basis": "a version without this issue (modified) was run, but only with dev_fixture behaviour, which cannot support a hypothesis about agents"
+   }
+  },
+  {
+   "id": "H-f6094ac859",
+   "layer": "hypothesis",
+   "rule": "listing-fact-gap",
+   "title": "Risk only: no evaluated task compares items by 'materials'",
+   "site": "larkspur",
+   "version": "original",
+   "version_sha256": "2f9fd2ce09a044547ceb728acb9b85108931d81ca6b01374198144f509fed2eb",
+   "severity": "info",
+   "impact": "a structural risk indicator; nothing measured either way",
+   "status": "unverified",
+   "evidence": [
+    {
+     "type": "finding",
+     "ref": "S-201f36d03d",
+     "detail": "'materials' is only on item pages, not on the /courses listing"
+    }
+   ],
+   "recommendation": "State materials on each card of /courses (visible text next to the item name).",
+   "verify": "Add a task that compares items by this fact, then evaluate.",
+   "tasks": [],
+   "evidence_origin": "dev_fixture",
+   "detail": {}
+  },
+  {
+   "id": "H-efdf6bb080",
+   "layer": "hypothesis",
+   "rule": "listing-fact-gap",
+   "title": "Risk only: no evaluated task compares items by 'seats left'",
+   "site": "larkspur",
+   "version": "original",
+   "version_sha256": "2f9fd2ce09a044547ceb728acb9b85108931d81ca6b01374198144f509fed2eb",
+   "severity": "info",
+   "impact": "a structural risk indicator; nothing measured either way",
+   "status": "unverified",
+   "evidence": [
+    {
+     "type": "finding",
+     "ref": "S-74a8c5bd42",
+     "detail": "'seats left' is only on item pages, not on the /courses listing"
+    }
+   ],
+   "recommendation": "State seats left on each card of /courses (visible text next to the item name).",
+   "verify": "Add a task that compares items by this fact, then evaluate.",
+   "tasks": [],
+   "evidence_origin": "dev_fixture",
+   "detail": {}
+  }
+ ]
+}

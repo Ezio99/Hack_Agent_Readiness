@@ -46,7 +46,14 @@ Fixed the shared dev provider's per-trial script reuse. Limitations and what blo
 
 **Model provenance:** derived from the frozen records into exports and the workspace methodology (on `evaluation-v2`, not deployed): muse-spark-1.3, reasoning_effort low (frozen by owner decision), 4096, profile and hash, official v1 / post-hoc v2.
 
-**Next:** Phase 4 diagnostics (DOM, accessibility, forms, JSON-LD and navigation friction, linked to agent evidence), isolated in the same way. Feature freeze is Wednesday 2026-11-04.
+**Phase 4 diagnostics (isolated, milestone met):** [docs/DIAGNOSTICS.md](docs/DIAGNOSTICS.md). Structural, behavioural and evidence-linked layers share one finding schema (stable id, context, severity, evidence, recommendation, status).
+- Detects exactly the intentional Original→Modified change on both controlled sites.
+- On the real paid trial: 11 structural and 16 behavioural observations (including a real 404 dead end); 3 hypotheses are `supported_exploratory` (the frozen rule was inconclusive; the three facts were changed together); 3 risks are `unverified`.
+- On fixture runs, hypotheses stay `hypothesis` by rule.
+
+Future product architecture (not implemented): [docs/FUTURE_ARCHITECTURE.md](docs/FUTURE_ARCHITECTURE.md).
+
+**Next:** feature freeze. Demo and submission preparation for Wednesday 2026-11-04 (submission deadline 2026-11-05 13:00 Sydney).
 
 ## Budget
 
