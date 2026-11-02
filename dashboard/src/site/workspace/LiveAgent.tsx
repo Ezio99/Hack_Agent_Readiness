@@ -13,7 +13,7 @@ const ICON: Record<string, string> = { Navigate: '↗', Click: '◉', Scroll: '�
 
 const DETAILS = 'ar-ws-timeline-details';
 
-export function TrialView({ jobId, trial, live, scripted, focus, onFocus }: { jobId: string; trial: Trial; live: boolean; scripted: boolean; focus?: boolean; onFocus?: () => void }) {
+export function TrialView({ jobId, trial, live, scripted, focus, onFocus, host = 'ironbark-hire' }: { jobId: string; trial: Trial; live: boolean; scripted: boolean; focus?: boolean; onFocus?: () => void; host?: string }) {
   const [picked, setPicked] = useState<number | null>(null);
   const [details, setDetails] = useState(() => sessionStorage.getItem(DETAILS) !== 'compact');
   const list = useRef<HTMLOListElement>(null);
@@ -55,7 +55,7 @@ export function TrialView({ jobId, trial, live, scripted, focus, onFocus }: { jo
     <div className="ws-agent-body">
       <figure className="ws-browser">
         <div className="frame">
-          <div className="frame-bar"><span className="frame-dots"><i /><i /><i /></span><span className="frame-url">ironbark-hire{shown?.path ?? ''}</span><span>{shown ? `Step ${shown.step}` : 'Starting'}</span></div>
+          <div className="frame-bar"><span className="frame-dots"><i /><i /><i /></span><span className="frame-url">{host}{shown?.path ?? ''}</span><span>{shown ? `Step ${shown.step}` : 'Starting'}</span></div>
           <div className="frame-shot">{shot ? <img src={shot} alt={`Browser at step ${shown!.step}: ${shown!.path ?? 'page'}`} /> : <div className="ws-noshot">{live && !steps.length ? 'Starting a fresh browser…' : 'No screenshot for this step'}</div>}</div>
         </div>
         {steps.length > 0 && <div className="ws-stepbar">
@@ -95,7 +95,7 @@ export function TrialView({ jobId, trial, live, scripted, focus, onFocus }: { jo
 async function get<T>(url: string): Promise<T> { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw new Error('unavailable'); return await r.json() as T; }
 
 /** Follows the trial being executed now; or shows a selected trial (polled while it runs). */
-export function AgentPanel({ jobId, active, selection, scripted, onClear, focus, onFocus }: { jobId: string; active: boolean; selection: Selection | null; scripted: boolean; onClear: () => void; focus?: boolean; onFocus?: () => void }) {
+export function AgentPanel({ jobId, active, selection, scripted, onClear, focus, onFocus , host = 'ironbark-hire' }: { jobId: string; active: boolean; selection: Selection | null; scripted: boolean; onClear: () => void; focus?: boolean; onFocus?: () => void ; host?: string }) {
   const [trial, setTrial] = useState<Trial | null>(null);
   const [missing, setMissing] = useState(false);
   useEffect(() => {
@@ -112,5 +112,5 @@ export function AgentPanel({ jobId, active, selection, scripted, onClear, focus,
   }, [jobId, active, selection?.repetition, selection?.arm, selection?.task]);
   if (!trial) return <div className="ws-empty-note"><p>{missing ? (active ? 'Waiting for the first agent to open a browser…' : 'No agent activity was recorded for this selection.') : 'Loading agent activity…'}</p></div>;
   return <>{selection && <button className="ws-link ws-back" onClick={onClear}>{active ? '← Follow the live agent' : '← Latest run'}</button>}
-    <TrialView jobId={jobId} trial={trial} live={active && !selection ? true : active && trial.state === 'running'} scripted={scripted} focus={focus} onFocus={onFocus} /></>;
+    <TrialView jobId={jobId} trial={trial} live={active && !selection ? true : active && trial.state === 'running'} scripted={scripted} focus={focus} onFocus={onFocus} host={host} /></>;
 }

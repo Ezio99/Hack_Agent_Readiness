@@ -37,11 +37,10 @@ cd /root/agent-readiness && git checkout -q --detach b3121a8 \
 
 ## M8 release candidate (branch `m8-product-integration`; NOT deployed)
 
-M8 adds the evaluation lifecycle to the same image: `/api/lifecycle/*`, the `#/lifecycle` and `#/reports/<id>` pages, and the sanitized M7 dataset
-(`/app/datasets/lifecycle`, validated at startup). No `.env`, secret, ceiling or access change. Without a lifecycle store on the volume the lifecycle is
-view-only (`lifecycle: … store=no launch=disabled paid=disabled web-approval=disabled` in the log). Web approval and paid lifecycle launch are refused
-server-side in this release. Procedure, smoke checks and rollback: [collaboration/reports/lifecycle-m8-product-integration.md §10](../collaboration/reports/lifecycle-m8-product-integration.md).
-Optional, later: operator rehearsals need the store at `/data/hosted/lifecycle/store` (uid 10001; `private/` 0700, files 0400) and a restart.
+The hosted evaluation's engine becomes the lifecycle Stage B runner; the launch API, operator token, admission (US$10 ceiling), slot, jail and
+recovery are unchanged. Evaluations need the lifecycle store at `/data/hosted/lifecycle/store` (else `lifecycle_store_missing`; the site stays up)
+and an owner arming (`docker compose exec -it app python -m agent_readiness.lifecycle.arming arm …`; else `not_armed`). No `.env`, secret, ceiling or
+access change. Procedure, smoke checks, budget fit and rollback: [collaboration/reports/lifecycle-m8-product-integration.md §8–§10](../collaboration/reports/lifecycle-m8-product-integration.md).
 
 ## VM requirements
 

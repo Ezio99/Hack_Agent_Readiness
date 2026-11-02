@@ -86,13 +86,13 @@ Handoff: [collaboration/LIFECYCLE_HANDOFF.md](collaboration/LIFECYCLE_HANDOFF.md
 
 **M8** (below) followed the handoff [collaboration/handoffs/m8-product-integration.md](collaboration/handoffs/m8-product-integration.md).
 
-**M8: lifecycle integrated into the product (branch `m8-product-integration`, release candidate; not merged, not deployed; zero cost):**
-- One evaluation model for recorded and new evaluations: `src/agent_readiness/lifecycle/` (projection, leak audit, Stage A views, datasets, service, jobs, API).
-- Web: `#/lifecycle` (website → tasks → review → evaluate → report → re-evaluate), `#/reports/<id>` (six dimensions, no composite score), side-by-side traces.
-- Preloaded M7: sanitized dataset `datasets/lifecycle/m7-larkspur-browser-1/v1`, re-derived byte-for-byte from the local source artefacts.
-- Enabled: viewing everything; operator-only zero-cost rehearsal launch and re-evaluation (needs the store on the server). Disabled, refused server-side: web approval (owner authentication undecided), paid launch, paid generation, URL onboarding.
-- Prospective, versioned: grader v2.1-contrast, evidence-ranked-subset-2; diagnostics hypotheses-2 / behavioral-2 (either_of fix, v1 format rejections separated, observed vs hypothesis).
-- Report, owner decisions (authentication options), deployment and rollback: [collaboration/reports/lifecycle-m8-product-integration.md](collaboration/reports/lifecycle-m8-product-integration.md).
+**M8: the lifecycle is the product's evaluation engine (branch `m8-product-integration`, release candidate; not merged, not deployed; zero cost):**
+- The hosted evaluation (`#/run`, `POST /api/ironbark/jobs {"repetitions"}` + operator token, unchanged) now runs the lifecycle Stage B runner on the frozen suite the owner ARMED at a terminal (`python -m agent_readiness.lifecycle.arming`); the paired Ironbark engine is retired (historical jobs stay viewable).
+- Each launch reserves its worst case + one request bound in the same admission (US$10 ceiling, one slot), claims its launch number once, and (paid) gets its own write-once PaidAuthorization and ledger; the worker re-checks everything; jailed Chromium; reserve-before-send; no retries.
+- Results = the six-dimension readiness report and trace comparison (`/api/lifecycle/evaluations/<id>`), the same projection as the preloaded M7 dataset `datasets/lifecycle/m7-larkspur-browser-1/v1`.
+- Verified in the candidate container (rehearsal mode, copy of the data): terminal arming, operator launch, 12/12 jailed trials, report, relaunch refused, restart-safe.
+- **Blocking owner decision:** a paid launch of `larkspur-core@v2` reserves US$7.436 but production has US$6.70 left, so it is refused (fail-closed) until the owner raises the ceiling or approves a smaller suite.
+- Report, decisions, deployment and rollback: [collaboration/reports/lifecycle-m8-product-integration.md](collaboration/reports/lifecycle-m8-product-integration.md).
 
 ## Budget
 

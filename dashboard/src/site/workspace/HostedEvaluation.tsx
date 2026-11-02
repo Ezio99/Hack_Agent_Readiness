@@ -327,7 +327,7 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
           {job.engine === 'stage-b' && job.error && <p className="ws-alert">{job.error}</p>}
 
           {tab === 'watch' && <div className="ws-watch" role="tabpanel" id="ws-panel-watch" aria-labelledby="ws-tab-watch">
-            <div ref={agent} className="ws-agent-anchor"><AgentPanel jobId={job.id} active={running} selection={selection} scripted={job.mode === 'rehearsal'} onClear={() => setSelection(null)} focus={focus} onFocus={toggleFocus} /></div>
+            <div ref={agent} className="ws-agent-anchor"><AgentPanel jobId={job.id} active={running} selection={selection} scripted={job.mode === 'rehearsal'} onClear={() => setSelection(null)} focus={focus} onFocus={toggleFocus} host={job.engine === 'stage-b' ? (ev?.site ?? 'website') : 'ironbark-hire'} /></div>
             {(() => {
               const focus = selection?.repetition ?? (job.reps.find(r => ['preparing', 'running'].includes(r.state)) ?? job.reps[job.reps.length - 1])?.index;
               const grid = (rep: Rep) => <article key={rep.index} className="ws-rep">
