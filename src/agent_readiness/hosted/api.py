@@ -27,7 +27,7 @@ import time
 from pathlib import Path
 from typing import Literal, Protocol
 
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict
 
@@ -245,15 +245,10 @@ FRIENDLY = {'evaluation capacity is occupied': 'Another evaluation is already ru
             'rate limit exceeded': 'You started an evaluation a moment ago. Please wait a couple of minutes before starting another.',
             'hosted budget exhausted': 'The budget for new evaluations has been used up. Completed evaluations remain available.',
             'global hosted cap reached': 'The service-wide spending cap does not cover another run.'}
-BUDGET_EXHAUSTED = 'The remaining budget does not cover the maximum cost of another run. Runs that are still settling release their unused reservation when they finish.'
+BUDGET_EXHAUSTED = 'The A$20 evaluation budget has been used. Completed evaluations, their results and traces remain available.'
 
-# Operator sign-in (2026-11): the operator token is exchanged ONCE for a server-side session (random 256-bit id; only its SHA-256 is stored, in its
-# own SQLite file beside the admission database). The cookie is __Host- prefixed, HttpOnly, Secure, SameSite=Strict, Path=/; a cookie-authenticated
-# state change also needs the custom header below (a cross-site page cannot send it without a CORS preflight this API never grants) and, when the
-# browser sends Origin, a same-origin Origin. The token itself is never stored, logged or returned.
-SESSION_COOKIE = '__Host-ar_operator'
-SESSION_SECONDS = 7 * 24 * 3600
-CSRF_HEADER = 'x-agent-readiness'
+# One launch flow (2026-11): any valid evaluation access code (sent once per launch as a Bearer header from the page's memory; never stored, logged or
+# returned) launches the same evaluation. A per-click Idempotency-Key makes a double-click or retry return the run it already started.
 IDEMPOTENCY = re.compile(r'[A-Za-z0-9_-]{16,64}')
 
 
@@ -369,42 +364,19 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
         given = request.headers.get('authorization', '')
         return given[7:].strip().encode() if given.startswith('Bearer ') else None
 
-    sessions_db = root / 'operator-sessions.sqlite'
-    sessions_lock = threading.Lock()
-    login_failures: dict[str, list[float]] = {}
+    launch_db_path = root / 'launch-requests.sqlite'
+    launch_lock = threading.Lock()
+    code_failures: dict[str, list[float]] = {}
 
-    def sessions():
+    def launch_db():
         import sqlite3
-        db = sqlite3.connect(sessions_db, timeout=10, isolation_level=None)
-        db.execute('CREATE TABLE IF NOT EXISTS sessions (hash TEXT PRIMARY KEY, created REAL NOT NULL, expires REAL NOT NULL, revoked INTEGER NOT NULL DEFAULT 0)')
+        db = sqlite3.connect(launch_db_path, timeout=10, isolation_level=None)
         db.execute('CREATE TABLE IF NOT EXISTS launch_requests (key_hash TEXT PRIMARY KEY, job_id TEXT NOT NULL, at REAL NOT NULL)')
         return db
 
-    def session_valid(request: Request) -> float | None:
-        """The session's expiry if the request carries a live operator session cookie, else None."""
-        raw = request.cookies.get(SESSION_COOKIE)
-        if not operator_token or not raw or len(raw) > 200:
-            return None
-        h = hashlib.sha256(raw.encode()).hexdigest()
-        with sessions() as db:
-            row = db.execute('SELECT expires FROM sessions WHERE hash=? AND revoked=0', (h,)).fetchone()
-        return row[0] if row and row[0] > time.time() else None
-
-    def same_origin(request: Request) -> bool:
-        if request.headers.get(CSRF_HEADER) != '1':
-            return False
-        origin = request.headers.get('origin')
-        if origin is None:
-            return True
-        return origin.split('://', 1)[-1].rstrip('/') == request.headers.get('host', '')      # the reverse proxy passes Host through unchanged
-
     def is_operator(request: Request) -> bool:
         given = bearer(request)
-        if given is not None:
-            return bool(operator_token) and hmac.compare_digest(given, operator_token)
-        if session_valid(request) is None:
-            return False
-        return request.method in ('GET', 'HEAD') or same_origin(request)              # a cookie never authorises a cross-site state change
+        return bool(operator_token) and given is not None and hmac.compare_digest(given, operator_token)
 
     def is_judge(request: Request) -> bool:
         """Launch-only: consulted by `start` alone."""
@@ -486,7 +458,7 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
         'arming_invalid': 'The authorised evaluation no longer verifies; the owner must authorise again.',
         'launches_exhausted': 'All live runs available for this demonstration have been used.',
         'arming_total_exhausted': "The authorisation's total reservation has been used.",
-        'budget_exhausted': 'The remaining budget does not cover another live run.',
+        'budget_exhausted': 'The A$20 evaluation budget has been used. Completed evaluations, their results and traces remain available.',
     }
 
     def launch_state(cfg: dict, active: list) -> dict:
@@ -500,70 +472,15 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
             reason = 'service_unavailable'
         elif not cfg.get('armed'):
             reason = cfg.get('reason') or 'not_armed'
-        elif (ev.get('launches') or {}).get('left', 0) <= 0:
+        elif ev.get('launches') is not None and ev['launches'].get('left', 0) <= 0:      # the shared budget's evaluation has no launch count
             reason = 'launches_exhausted'
         elif not any(o.get('available') for o in ev.get('options') or []):
             reason = 'budget_exhausted' if any(o.get('fits_hosted_ceiling') is False for o in ev.get('options') or []) else 'arming_total_exhausted'
         authorized = reason is None
         return {'authorized': authorized, 'ready': authorized and not active, 'reason': reason,
                 'detail': None if authorized else LAUNCH_DETAIL.get(reason, 'No launch is authorised.'),
-                'launches_left': (ev.get('launches') or {}).get('left') if ev else None}
-
-    @app.post('/api/operator/session')
-    def operator_sign_in(request: Request, response: Response):
-        """Exchange the operator token (Authorization: Bearer, sent once) for a server-side session cookie. Nothing secret is returned."""
-        if not operator_token:
-            raise HTTPException(404, 'Not found')
-        if not same_origin(request):
-            raise HTTPException(403, 'Sign-in must come from this site')
-        who = client_identity(request)
-        now = time.time()
-        recent = [t for t in login_failures.get(who, []) if t > now - 600]
-        if len(recent) >= 10:
-            raise HTTPException(429, 'Too many failed sign-in attempts; try again later')
-        given = bearer(request)
-        if given is None or not hmac.compare_digest(given, operator_token):
-            login_failures[who] = recent + [now]
-            raise HTTPException(403, 'The operator token is not valid')
-        login_failures.pop(who, None)
-        raw = secrets.token_urlsafe(32)
-        with sessions() as db:
-            db.execute('DELETE FROM sessions WHERE expires < ?', (now,))
-            db.execute('INSERT INTO sessions VALUES (?,?,?,0)', (hashlib.sha256(raw.encode()).hexdigest(), now, now + SESSION_SECONDS))
-        response.set_cookie(SESSION_COOKIE, raw, max_age=SESSION_SECONDS, path='/', secure=True, httponly=True, samesite='strict')
-        response.headers['Cache-Control'] = 'no-store'
-        return {'signed_in': True, 'expires_at': now + SESSION_SECONDS}
-
-    @app.get('/api/operator/session')
-    def operator_session(request: Request, response: Response):
-        response.headers['Cache-Control'] = 'no-store'
-        exp = session_valid(request)
-        return {'signed_in': exp is not None, 'expires_at': exp, 'available': bool(operator_token)}
-
-    @app.delete('/api/operator/session')
-    def operator_sign_out(request: Request, response: Response):
-        if not same_origin(request):
-            raise HTTPException(403, 'Sign-out must come from this site')
-        raw = request.cookies.get(SESSION_COOKIE)
-        if raw:
-            with sessions() as db:
-                db.execute('UPDATE sessions SET revoked=1 WHERE hash=?', (hashlib.sha256(raw.encode()).hexdigest(),))
-        response.delete_cookie(SESSION_COOKIE, path='/', secure=True, httponly=True, samesite='strict')
-        return {'signed_in': False}
-
-    def budget_launch_state(cfg: dict, active: list) -> dict:
-        """Whether the signed-in operator's one-click launch would be admitted now (display only; `admit` enforces everything again)."""
-        pool = cfg.get('budget_pool')
-        reason = None
-        if not enabled():
-            reason = 'service_unavailable'
-        elif pool is None:
-            reason = cfg.get('budget_pool_reason') or 'no_budget'
-        elif not any(o.get('available') for o in pool.get('options') or []):
-            reason = 'budget_exhausted'
-        detail = {'service_unavailable': 'Evaluations are currently unavailable.', 'no_budget': 'No operator evaluation budget is open.',
-                  'budget_exhausted': BUDGET_EXHAUSTED}.get(reason, 'No launch is possible now.') if reason else None
-        return {'authorized': reason is None, 'ready': reason is None and not active, 'reason': reason, 'detail': detail}
+                'launches_left': (ev.get('launches') or {}).get('left') if ev else None,
+                'covers': ((ev.get('options') or [{}])[0].get('covered')) if ev else None}
 
     programme_cache: dict = {}
 
@@ -608,19 +525,19 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
                            'available_aud': b['available_micro_aud'] / 1e6, 'spent_usd': b['spent_microusd'] / 1e6, 'outstanding_usd': b['outstanding_microusd'] / 1e6,
                            'available_usd': b['available_microusd'] / 1e6, 'jobs': b['jobs'], 'settled_jobs': b['settled_jobs'], 'allocations': b['allocations'],
                            'open_allocations': b['open_allocations']} for b in totals.get('budgets') or []]
-        out['charged_to'] = (ev or {}).get('budget') or None                         # the active arming's budget (None = the programme / hosted ceiling)
+        out['charged_to'] = admission.charge_scope()                                  # the shared budget while one is open (None = the hosted ceiling)
         out['programme'] = programme_block()
         return out
 
     @app.get('/api/ironbark/config')
-    def config(request: Request):
+    def config():
         totals = admission.totals()
         active = admission.active()
         from ..agent import ModelConfig
         if stage_b:
             cfg = executor.configuration()
             ev = cfg.get('evaluation') or {}
-            left = (ev.get('launches') or {}).get('left', 0)
+            left = (ev.get('launches') or {}).get('left', 0) if ev.get('launches') is not None else ((ev.get('capacity') or {}).get('launches_affordable') or 0)
             launch = launch_state(cfg, active)
             return {'engine': stageb.ENGINE, 'worker': worker_state(), 'repetition_duration': {'seconds': 75 * max(1, len(cfg['tasks']) * 2), 'basis': 'paid runs: mean agent time plus browser start per trial', 'samples': 0},
                     'service': {'state': 'operational' if enabled() else 'unavailable', 'reason': None if enabled() else (unavailable_reason or 'disabled')},
@@ -632,9 +549,6 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
                     'agent_settings': ev.get('agent'), 'tasks': cfg['tasks'], 'evaluation': ev or None, 'remaining_repetitions': left,
                     'ceiling': {'ceiling_usd': totals['ceiling_microusd'] / 1e6, 'reserved_usd': totals['reserved_microusd'] / 1e6},
                     'spending': spending_view(totals, ev),
-                    'operator': {'signed_in': session_valid(request) is not None, 'sign_in_available': bool(operator_token)},
-                    'budget_evaluation': cfg.get('budget_pool'), 'budget_tasks': cfg.get('budget_tasks') or [],
-                    'budget_launch': budget_launch_state(cfg, active),
                     'active': active[0] if active else None}
         return {'worker': worker_state(), 'repetition_duration': repetition_seconds(), 'available': enabled(), 'mode': getattr(executor, 'mode', None) if enabled() else None, 'access': 'public' if public_start else 'operator',
                 'reason': None if enabled() else (unavailable_reason or 'disabled'),
@@ -674,12 +588,20 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
     def start(body: StartRequest, request: Request):
         if not enabled():
             raise HTTPException(503, 'Evaluations are currently unavailable')
+        who = client_identity(request)
         operator = is_operator(request)
         judge = not operator and is_judge(request)
         if not public_start and not (operator or judge):
+            # invalid codes only: a valid code is never refused by this limiter
+            now = time.time()
+            recent = [t for t in code_failures.get(who, []) if t > now - 600]
+            if bearer(request) is not None:
+                code_failures[who] = recent + [now]
+            if len(recent) >= 10:
+                raise HTTPException(429, 'Too many attempts with an invalid access code; please try again in a few minutes')
             raise HTTPException(403, 'Starting a live evaluation needs a valid access code' if judge_token else 'New evaluations are not open to the public yet')
-        # the operator is one client; each judge is identified by address, so the per-client rate limit applies to every judge separately
-        client = hmac.new(client_key, b'operator', hashlib.sha256).hexdigest() if operator else client_identity(request)
+        # the operator is one client; each code holder is identified by address, so the per-client rate limit applies to each separately
+        client = hmac.new(client_key, b'operator', hashlib.sha256).hexdigest() if operator else who
         job_id = 'eval-' + secrets.token_hex(16)
         if not stage_b:                                    # the paired Ironbark engine is retired; only the Stage B executor can launch
             raise HTTPException(503, 'Evaluations are currently unavailable')
@@ -689,25 +611,30 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
         # a double-click or a retry of the same launch returns the job it already started (keyed per caller; never a second reservation)
         key_hash = hashlib.sha256(f'{client}:{key}'.encode()).hexdigest() if key else None
         from ..lifecycle.arming import ArmingRefused
-        with sessions_lock:
+        with launch_lock:
             if key_hash:
-                with sessions() as db:
+                with launch_db() as db:
                     row = db.execute('SELECT job_id FROM launch_requests WHERE key_hash=?', (key_hash,)).fetchone()
                 if row:
                     held = admission.get(row[0])
                     return {'id': row[0], 'state': held['state'] if held else 'unknown', 'repetitions': body.repetitions, 'duplicate': True}
             try:
-                # the operator's one-click path is charged to the budget only; judges use the owner's arming only (neither touches the other)
-                out = executor.admit(job_id, client, body.repetitions, **({'charge': 'budget'} if operator else {}))
+                # ONE flow for every valid code: the shared budget's evaluation while it is open (no launch count), else the owner's arming
+                path = executor.launch_path() if hasattr(executor, 'launch_path') else 'arming'
+                out = executor.admit(job_id, client, body.repetitions, **({'charge': 'budget'} if path == 'budget' else {}))
             except Refused as exc:
                 msg = str(exc)
+                if msg == 'evaluation capacity is occupied':      # not a refusal of the code or the budget: one evaluation runs at a time
+                    active = admission.active()
+                    raise HTTPException(409, f"An evaluation is already running{' (' + active[0][:13] + ')' if active else ''}. "
+                                             'You can watch it live; start yours when it finishes.') from exc
                 raise HTTPException(429, BUDGET_EXHAUSTED if msg.startswith('budget ') else FRIENDLY.get(msg, msg)) from exc
             except ArmingRefused as exc:
                 raise HTTPException(exc.status, exc.detail) from exc
             except ValueError as exc:
                 raise HTTPException(503, 'Unable to start evaluation') from exc
             if key_hash:
-                with sessions() as db:
+                with launch_db() as db:
                     db.execute('INSERT OR IGNORE INTO launch_requests VALUES (?,?,?)', (key_hash, job_id, time.time()))
         try:
             with inflight_lock:

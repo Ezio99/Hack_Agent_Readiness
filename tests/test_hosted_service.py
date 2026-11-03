@@ -216,7 +216,7 @@ def test_worker_state_and_busy_feedback(tmp_path):
         assert busy['state'] == 'busy' and busy['job'] == job_id and busy['finished_runs'] == 0
         other = TestClient(client.app, client=('203.0.113.9', 1))
         refused = other.post('/api/ironbark/jobs', json={'repetitions': 1})
-        assert refused.status_code == 429 and refused.json()['detail'].startswith('Another evaluation is already running')
+        assert refused.status_code == 409 and refused.json()['detail'].startswith('An evaluation is already running')
         assert other.get('/api/ironbark/jobs').status_code == 200                       # history stays browsable while busy
     finally:
         release.set()

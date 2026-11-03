@@ -116,9 +116,7 @@ def test_launch_is_refused_without_a_valid_code(env, headers):
 def test_the_judge_code_authorises_nothing_else(env):
     c, _, a = app(env)
     routes = {(m, r.path) for r in c.app.routes for m in getattr(r, "methods", set()) if m not in ("GET", "HEAD")}
-    assert routes == {("POST", "/api/ironbark/jobs"), ("POST", "/api/lifecycle/suites/{sha}/decision"),           # no other write route exists
-                      ("POST", "/api/operator/session"), ("DELETE", "/api/operator/session")}
-    assert c.post("/api/operator/session", headers={**JG, "x-agent-readiness": "1"}).status_code == 403     # the judge code is not an operator sign-in
+    assert routes == {("POST", "/api/ironbark/jobs"), ("POST", "/api/lifecycle/suites/{sha}/decision")}       # no other write route exists
     for h in (JG, OP, {}):                                                                                      # web suite decisions: refused for everyone
         r = c.post("/api/lifecycle/suites/" + "0" * 64 + "/decision", json={"decision": "approved", "attestation": "x"}, headers=h)
         assert r.status_code == 403
@@ -142,9 +140,7 @@ def test_the_code_is_never_returned_or_recorded(env):
 
 def test_operator_token_still_works_and_identities_differ(env):
     c, _, a = app(env)
-    assert launch(c, OP).status_code == 409 and AR.claims("judge-test-1") == []      # the operator never launches the judge pool, even with no budget
-    budget = open_pool(env, a)
-    j1 = launch(c, OP).json()["id"]
+    j1 = launch(c, OP).json()["id"]                                     # before a budget opens: both codes launch the owner's arming (as today)
     settle(a, j1)
     time.sleep(1.05)
     j2 = launch(c, JG).json()["id"]
@@ -152,9 +148,16 @@ def test_operator_token_still_works_and_identities_differ(env):
     import sqlite3
     db = sqlite3.connect(env["tmp"] / "a.sqlite")
     clients = dict(db.execute("SELECT id, client FROM jobs").fetchall())
-    assert clients[j1] != clients[j2]                                    # the operator is one client; a judge is identified by address (rate limit per judge)
-    assert (a.job_budget(j1), a.job_budget(j2)) == (budget, None)       # operator -> its budget; judge -> the programme (arming)
-    assert [x["job"] for x in AR.claims("judge-test-1")] == [j2] and [x["job"] for x in AR.claims(budget)] == [j1]
+    assert clients[j1] != clients[j2]                                    # the operator is one client; a code holder is identified by address
+    budget = open_pool(env, a)                                           # after: both codes launch the shared budget's evaluation
+    time.sleep(1.05)
+    j3 = launch(c, OP).json()["id"]
+    settle(a, j3)
+    time.sleep(1.05)
+    j4 = launch(c, JG).json()["id"]
+    settle(a, j4)
+    assert [a.job_budget(j) for j in (j1, j2, j3, j4)] == [None, None, budget, budget]
+    assert [x["job"] for x in AR.claims("judge-test-1")] == [j1, j2] and [x["job"] for x in AR.claims(budget)] == [j3, j4]
 
 
 @pytest.mark.parametrize("judge", [b"short", OPERATOR, None])

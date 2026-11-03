@@ -48,7 +48,7 @@ def _config(tmp_path, cfg, available=True, active=False):
 def test_authorised_and_idle(tmp_path):
     c = _config(tmp_path, _cfg(ev=_ev()))
     assert c["worker"]["state"] == "idle" and c["service"]["state"] == "operational"
-    assert c["launch"] == {"authorized": True, "ready": True, "reason": None, "detail": None, "launches_left": 1} and c["available"] is True and c["reason"] is None
+    assert c["launch"] == {"authorized": True, "ready": True, "reason": None, "detail": None, "launches_left": 1, "covers": None} and c["available"] is True and c["reason"] is None
 
 
 def test_the_used_launch_is_not_an_available_worker(tmp_path):

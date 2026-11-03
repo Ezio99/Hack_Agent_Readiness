@@ -86,8 +86,10 @@ def usd(m: int) -> str:
 
 # ----------------------------------------------------------------------------------------------------------------------------- open
 def open_text(budget_id: str, limit_micro_aud: int, num: int, den: int, limit_microusd: int, cap_after: int) -> str:
-    return (f"I am the owner and I open budget {budget_id}: limit {aud(limit_micro_aud)} at {num}/{den} A$ per US$ ({usd(limit_microusd)}); it is separate "
-            f"from the A$50 programme and all historical spending; the global hosted cap becomes {usd(cap_after)}")
+    return (f"I am the owner and I open the shared budget {budget_id}: limit {aud(limit_micro_aud)} at {num}/{den} A$ per US$ ({usd(limit_microusd)}); every "
+            f"evaluation launched from now on, by anyone, is charged to it; historical evaluations and the A$50 programme are not; new evaluations start "
+            f"while its actual spending (plus any run not yet reconciled) is below the limit, and the last one may finish above it; the global hosted "
+            f"cap becomes {usd(cap_after)}")
 
 
 def plan_open(admission: Admission, budget_id: str, limit_aud: str, rate: str, *, store=None, frozen: str | None = None, variants: list[str] | None = None,
@@ -106,8 +108,6 @@ def plan_open(admission: Admission, budget_id: str, limit_aud: str, rate: str, *
     if total > MAX_TOTAL_BUDGETS_MICRO_AUD:
         raise BudgetRefused("over_maximum", f"all budgets together would be {aud(total)}, above the reviewed maximum {aud(MAX_TOTAL_BUDGETS_MICRO_AUD)}")
     base = led["global_cap"] if led["global_cap"] is not None else admission.ceiling
-    cap_after = base + limit_usd
-    text = open_text(budget_id, limit, num, den, limit_usd, cap_after)
     pool = None
     if frozen:
         from ..lifecycle import arming as AR
@@ -117,9 +117,14 @@ def plan_open(admission: Admission, budget_id: str, limit_aud: str, rate: str, *
             raise BudgetRefused(exc.code, exc.detail) from None
         if pool["mode"] == "paid" and pool["synthetic"]:
             raise BudgetRefused("synthetic_suite", "a synthetic fixture suite can never be evaluated with a paid model")
+    # soft cap: the last admitted run may finish above the limit, by at most one run's maximum; the hard global cap allows exactly that much more
+    overshoot = max((o["reservation_microusd"] for o in pool["options"]), default=0) if pool and pool["mode"] == "paid" else 0
+    cap_after = base + limit_usd + overshoot
+    text = open_text(budget_id, limit, num, den, limit_usd, cap_after)
+    if pool:
         text = f"{text}. {pool['attestation']}"
-    return {"id": budget_id, "limit_micro_aud": limit, "rate_num": num, "rate_den": den, "limit_microusd": limit_usd, "global_cap_before": led["global_cap"],
-            "global_cap_after": cap_after, "pool": pool, "text": text}
+    return {"id": budget_id, "limit_micro_aud": limit, "rate_num": num, "rate_den": den, "limit_microusd": limit_usd, "overshoot_microusd": overshoot,
+            "global_cap_before": led["global_cap"], "global_cap_after": cap_after, "pool": pool, "text": text}
 
 
 def open_budget(admission: Admission, budget_id: str, limit_aud: str, rate: str, *, actor: str, typed: str, now: float | None = None, store=None,
@@ -141,12 +146,12 @@ def open_budget(admission: Admission, budget_id: str, limit_aud: str, rate: str,
         try:
             led = admission._ledger(db)
             base = led["global_cap"] if led["global_cap"] is not None else admission.ceiling
-            if budget_id in led["budgets"] or base + p["limit_microusd"] != p["global_cap_after"]:
+            if budget_id in led["budgets"] or base + p["limit_microusd"] + p.get("overshoot_microusd", 0) != p["global_cap_after"]:
                 raise BudgetRefused("changed", "the budgets changed meanwhile; nothing was recorded")
             db.execute("INSERT INTO budgets VALUES (?,?,?,?,?,?,?,?)", (budget_id, p["limit_micro_aud"], p["rate_num"], p["rate_den"], p["limit_microusd"], now,
                                                                        actor, p["text"]))
             db.execute("INSERT INTO global_caps (cap, at, actor, reason) VALUES (?,?,?,?)",
-                       (p["global_cap_after"], now, actor, f"budget {budget_id} opened: + {usd(p['limit_microusd'])}"))
+                       (p["global_cap_after"], now, actor, f"budget {budget_id} opened: + {usd(p['limit_microusd'])} + one run's maximum {usd(p.get('overshoot_microusd', 0))}"))
             db.execute("COMMIT")
         except BaseException:
             if db.in_transaction:
@@ -169,7 +174,10 @@ def _plan_with_existing_pool(admission, budget_id, limit_aud, rate, store, froze
          "variants": [list(v) for v in rec.variants], "options": [o.model_dump() for o in rec.options], "agent": rec.agent}
     if rec.attestation != AR.pool_attestation(a) or [n for n, _ in rec.variants] != list(variants or []) or AR.verify(store, rec):
         raise BudgetRefused("pool_differs", "a different budget pool is already recorded for this budget")
-    return {**p, "pool": None, "text": f"{p['text']}. {rec.attestation}"}
+    over = max((o.reservation_microusd for o in rec.options), default=0) if rec.mode == "paid" else 0
+    cap_after = p["global_cap_after"] + over
+    return {**p, "pool": None, "overshoot_microusd": over, "global_cap_after": cap_after,
+            "text": f"{open_text(budget_id, p['limit_micro_aud'], p['rate_num'], p['rate_den'], p['limit_microusd'], cap_after)}. {rec.attestation}"}
 
 
 # ----------------------------------------------------------------------------------------------------------------------------- allocations
@@ -304,8 +312,8 @@ def main(argv=None) -> int:
     s.add_argument("--id", required=True)
     s.add_argument("--limit-aud", required=True)
     s.add_argument("--rate", required=True, help="A$ per US$ (fixed for the budget's life), e.g. 1.50")
-    s.add_argument("--frozen", help="the frozen suite the operator's one-click evaluations run, e.g. larkspur-core@v3")
-    s.add_argument("--variants", nargs=2, help="the two website versions, e.g. original improved")
+    s.add_argument("--frozen", required=True, help="the frozen suite every new evaluation runs, e.g. larkspur-core@v3")
+    s.add_argument("--variants", nargs=2, required=True, help="the two website versions, e.g. original improved")
     s.add_argument("--mode", choices=("paid", "rehearsal"), default="paid")
     s.add_argument("--store", help="lifecycle store (default: AR_LIFECYCLE_STORE)")
     s = sub.add_parser("allocate")

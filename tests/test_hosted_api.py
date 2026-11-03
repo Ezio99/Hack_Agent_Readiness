@@ -121,7 +121,7 @@ def test_concurrent_starts_and_restart_recovery_preserve_capacity(tmp_path):
     try:
         with ThreadPoolExecutor(max_workers=2) as pool:
             responses = list(pool.map(lambda _: client.post('/api/ironbark/jobs', json={}), range(2)))
-        assert sorted(r.status_code for r in responses) == [202, 429]
+        assert sorted(r.status_code for r in responses) == [202, 409]          # the second start is told an evaluation is already running (not a refusal of the caller)
         assert entered.wait(2)
         job_id = next(r.json()['id'] for r in responses if r.status_code == 202)
         assert client.get('/api/ironbark/config').json()['active'] == job_id

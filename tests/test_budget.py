@@ -95,7 +95,7 @@ def test_a_budget_is_opened_once_by_typed_confirmation_and_raises_the_global_cap
     p = BG.plan_open(a, B, "20", "1.50")
     assert (p["limit_micro_aud"], p["rate_num"], p["rate_den"], p["limit_microusd"]) == (20_000_000, 3, 2, 13_333_333)
     assert (p["global_cap_before"], p["global_cap_after"]) == (None, CEIL + 13_333_333)
-    assert "separate from the A$50 programme and all historical spending" in p["text"]
+    assert "every evaluation launched from now on, by anyone, is charged to it; historical evaluations and the A$50 programme are not" in p["text"]
     with pytest.raises(BG.BudgetRefused, match="does not match"):
         BG.open_budget(a, B, "20", "1.50", actor="owner", typed=p["text"].replace("A$20", "A$21"))
     assert a.totals()["budgets"] == [] and a.totals()["global_cap_microusd"] is None                    # nothing recorded
@@ -131,23 +131,25 @@ def test_the_budget_limit_is_exact_in_micro_aud(tmp_path):
     assert a.job_budget(jid(1)) == B and a.job_budget(jid(2)) is None
 
 
-def test_historical_and_programme_jobs_never_touch_the_budget_and_budget_jobs_never_touch_the_ceiling(tmp_path):
+def test_historical_jobs_never_touch_the_shared_budget_and_every_new_reservation_is_charged_to_it(tmp_path):
     a, root = setup(tmp_path, ceiling=10_000_000)
-    launch(a, root, 1, 9_000_000, entries=ok_ledger(), now=10)                        # a historical/programme run under the ceiling
-    launch(a, root, 2, 1_000_000, entries=None, now=20, state="failed")              # an uncertain programme run: held in full
+    old1 = launch(a, root, 1, 9_000_000, entries=ok_ledger(), now=10)                 # historical runs (before the budget opened)
+    old2 = launch(a, root, 2, 1_000_000, entries=None, now=20, state="failed")       # an uncertain historical run: held in full
     before = a.totals()
     open_b20(a)
     b = budget_fig(a)
-    assert (b["spent_micro_aud"], b["outstanding_micro_aud"], b["available_micro_aud"], b["jobs"]) == (0, 0, 20_000_000, 0)
-    with pytest.raises(Refused, match="hosted budget exhausted"):                     # the ceiling is full ...
-        a.reserve_amount(jid(3), CLIENT, 1, now=30)
-    launch(a, root, 4, 3_740_000, entries=ok_ledger(), now=40, budget=B)             # ... but a budget launch is bounded by its budget only
+    assert (b["spent_micro_aud"], b["outstanding_micro_aud"], b["available_micro_aud"], b["jobs"]) == (0, 0, 20_000_000, 0)   # starts fresh
+    assert a.charge_scope() == B and (a.job_budget(old1), a.job_budget(old2)) == (None, None)
+    j = launch(a, root, 3, 3_740_000, entries=ok_ledger(), now=30)                   # no budget named: still charged to the shared budget
+    assert a.job_budget(j) == B                                                       # (the full ceiling would have refused it as a programme job)
     t = a.totals()
     assert {k: t[k] for k in ("committed_microusd", "reserved_microusd", "available_microusd")} == \
-           {k: before[k] for k in ("committed_microusd", "reserved_microusd", "available_microusd")}  # the ceiling's scope is unchanged
+           {k: before[k] for k in ("committed_microusd", "reserved_microusd", "available_microusd")}  # the ceiling's (historical) scope is unchanged
     assert budget_fig(a)["outstanding_micro_aud"] == 5_610_000
-    assert ST.settle_automatic(a, root, jid(1), log=lambda *_: None)["settled_microusd"] == 30_000   # settling a programme run never changes the budget
+    assert ST.settle_automatic(a, root, old1, log=lambda *_: None)["settled_microusd"] == 30_000   # settling a historical run never changes the budget
     assert budget_fig(a)["outstanding_micro_aud"] == 5_610_000 and budget_fig(a)["spent_micro_aud"] == 0
+    with pytest.raises(Refused, match="no such budget"):
+        a.reserve_amount(jid(4), CLIENT, 1, now=40, budget="another-budget")          # nothing can be charged around the shared budget
 
 
 def test_settlement_replaces_a_budget_jobs_reservation_by_its_actual_cost(tmp_path):
@@ -178,20 +180,20 @@ def test_failed_interrupted_or_running_budget_jobs_keep_their_full_reservation(t
     assert out["settled_microusd"] == 40_000 and budget_fig(a)["spent_micro_aud"] == 60_000
 
 
-def test_the_global_cap_bounds_every_commitment_even_if_the_ceiling_is_raised_later(tmp_path):
+def test_the_global_cap_bounds_every_commitment(tmp_path):
     a, root = setup(tmp_path, ceiling=10_000_000)
+    launch(a, root, 1, 10_000_000, entries=None, now=1, state="failed")              # a historical run holding the whole ceiling
     open_b20(a)
     assert a.totals()["global_cap_microusd"] == 23_333_333
-    db = sqlite3.connect(a.path)                                                      # simulate a later ceiling increase (owner migration)
-    db.execute("UPDATE policy SET ceiling=100000000 WHERE id=1")
+    launch(a, root, 2, 13_333_333, entries=None, now=10, state="failed")             # the whole budget
+    t = a.totals()
+    assert t["all_committed_microusd"] == t["global_cap_microusd"] and t["global_available_microusd"] == 0
+    db = sqlite3.connect(a.path)                                                      # even if something bypassed a scope check, the global cap holds
+    db.execute("DELETE FROM budget_jobs")
     db.commit()
     db.close()
-    a2 = Admission.open_existing(a.path)
-    launch(a2, root, 1, 13_333_333, entries=None, now=10, state="failed", budget=B)
-    with pytest.raises(Refused, match="global hosted cap reached"):
-        a2.reserve_amount(jid(2), CLIENT, 10_000_001, now=20)                       # within the raised ceiling, above the global cap
-    a2.reserve_amount(jid(3), CLIENT, 10_000_000, now=30)
-    assert a2.totals()["global_available_microusd"] == 0 and a2.capacity_microusd(None) == 0
+    with pytest.raises(Refused, match="exhausted|global hosted cap reached"):
+        a.reserve_amount(jid(3), CLIENT, 1, now=20)
 
 
 # --------------------------------------------------------------------------------------------------------------- concurrency
@@ -317,7 +319,7 @@ def test_budget_status_is_read_only_and_changes_need_a_terminal(tmp_path, capsys
     st = BG.status(Admission.open_read_only(a.path))
     assert sha(a.path) == before and st["budgets"][0]["available_micro_aud"] == 20_000_000
     assert BG.main(["allocate", "--db", str(a.path), "--budget", B, "--ref", "dev-1", "--max-usd", "1", "--purpose", "x"]) == 2   # stdin is not a TTY
-    assert BG.main(["open", "--db", str(a.path), "--id", "x-budget", "--limit-aud", "1", "--rate", "1.50"]) == 2
+    assert BG.main(["open", "--db", str(a.path), "--id", "x-budget", "--limit-aud", "1", "--rate", "1.50", "--frozen", "x@v1", "--variants", "a", "b"]) == 2
     assert sha(a.path) == before
 
 
@@ -432,29 +434,32 @@ def _open_pool(a, store):
 
 
 @need_prod
-def test_existing_judge_launches_stay_programme_jobs_and_the_operator_pool_never_touches_them(prod, monkeypatch):
+def test_after_opening_every_launch_draws_on_the_shared_budget_and_the_judge_arming_is_unchanged(prod, monkeypatch):
     AR, store, a, ex, sb = _pool_env(prod, monkeypatch)
     claims = {json.loads(p.read_text())["arming_id"]: json.loads(p.read_text())["arming_sha256"] for p in (sb / "launches").glob("*.json")}
-    for aid in ("larkspur-judge-1", "larkspur-live-1"):                              # recorded armings: unchanged hash, still verify
+    files_before = {p: sha(p) for p in sb.rglob("*") if p.is_file()}
+    ST.settle(a, prod / "live", C04, actor="owner terminal", expect_microusd=631_751)
+    assert ex.launch_path() == "arming"                                              # before opening: production's behaviour today
+    p = _open_pool(a, store)
+    assert "no launch count" in p["text"] and "any holder of a valid evaluation access code" in p["text"]
+    assert ex.launch_path() == "budget" and AR.verify(store, AR.load_pool(B)) == []
+    for aid in ("larkspur-judge-1", "larkspur-live-1"):                              # recorded armings: unchanged files, hashes, claims; still verify
         rec = AR.load(aid)
         assert rec.sha256 == claims[aid] and AR.verify(store, rec) == []
-    active_before = (sb / "armings" / "ACTIVE").read_bytes()
-    ST.settle(a, prod / "live", C04, actor="owner terminal", expect_microusd=631_751)
-    p = _open_pool(a, store)
-    assert "no launch count" in p["text"] and "charged ONLY to the separate budget ar-a20-2026-11" in p["text"]
-    pool = AR.load_pool(B)
-    assert AR.verify(store, pool) == [] and (sb / "armings" / "ACTIVE").read_bytes() == active_before    # the judge arming stays active
-    assert a.capacity_microusd(None) == 10_588_249                                   # opening the budget leaves the programme's capacity unchanged
-    op = ex.admit(jid(901), "%064x" % 901, 1, charge="budget")
-    assert a.job_budget(op["id"]) == B and AR.claims("larkspur-judge-1")[-1]["job"] != op["id"]
-    a.transition(op["id"], "reserved", "failed")
-    judge = ex.admit(jid(902), "%064x" % 902, 1)                                      # the judge path: the arming, a programme job
-    assert a.job_budget(judge["id"]) is None and AR.summary(store, AR.active(), a)["launches"]["left"] == 1
-    a.transition(judge["id"], "reserved", "failed")
-    assert budget_fig(a)["outstanding_micro_aud"] == 5_610_000 and a.capacity_microusd(None) == 10_588_249 - 3_740_000
-    with pytest.raises(AR.ArmingRefused, match="already recorded"):                 # one pool per budget, write-once
+    assert all(sha(f) == h for f, h in files_before.items())                          # nothing recorded before was changed (only new files added)
+    cfg = ex.configuration()
+    assert cfg["charge"] == "budget" and cfg["evaluation"]["launches"] is None and cfg["evaluation"]["options"][0]["available"] is True
+    j = ex.admit(jid(901), "%064x" % 901, 1, charge="budget")["id"]
+    assert a.job_budget(j) == B and AR.summary(store, AR.active(), a)["launches"]["left"] == 2    # the judge arming's count is not used
+    a.transition(j, "reserved", "failed")
+    j2 = ex.admit(jid(902), "%064x" % 902, 1)["id"]                                   # even the old arming path, if used, is charged to the budget
+    assert a.job_budget(j2) == B
+    a.transition(j2, "reserved", "failed")
+    assert budget_fig(a)["outstanding_micro_aud"] == 2 * 5_610_000 and a.capacity_microusd(None) == 10_588_249    # historical scope untouched
+    assert all(a.job_budget(x) is None for x in (C04, E529, *IRON))                   # historical jobs never consume the budget
+    with pytest.raises(AR.ArmingRefused, match="already recorded"):                 # one evaluation per budget, write-once
         AR.pool_terms(store, budget=B, mode="paid", frozen_ref="larkspur-core@v3", variants=["original", "improved"], repetitions=[1])
-    with pytest.raises(AR.ArmingRefused, match="is a budget pool"):                  # an arming can never reuse the pool's experiment ids
+    with pytest.raises(AR.ArmingRefused, match="is a budget pool"):                  # an arming can never reuse its experiment ids
         AR.plan(store, arming_id=B, mode="paid", frozen_ref="larkspur-core@v3", variants=["original", "improved"], repetitions=[1], launches=1)
 
 
@@ -479,12 +484,13 @@ def test_operator_launches_have_no_count_limit_only_the_budget_and_settlement_fr
         a.transition(j, "running", "completed")
         assert ST.settle_automatic(a, prod / "live", j, log=lambda *_: None)["settled_microusd"] == 631_755
         done.append(j)
-    # each run reserves A$5.61 before it starts and settles at A$0.947633: 16 runs fit (far beyond the judge pool's 3), then the budget refuses
-    assert len(done) == 16 and refusal == "budget ar-a20-2026-11 exhausted"
+    # soft cap on actual spending: each run settles at A$0.947633; runs are admitted while less than A$20 has been spent (22 runs, far beyond the
+    # judge arming's 3), the last one finishing above A$20; then the budget refuses
+    assert len(done) == 22 and refusal == "budget ar-a20-2026-11 exhausted"
     b = budget_fig(a)
-    assert (b["spent_micro_aud"], b["outstanding_micro_aud"], b["available_micro_aud"]) == (16 * 947_633, 0, 20_000_000 - 16 * 947_633)
-    assert AR.summary(store, AR.active(), a)["launches"]["left"] == 2                 # the judge pool is untouched
-    assert a.capacity_microusd(None) == 7_480_000                                     # and so is the programme's ceiling scope
+    assert (b["spent_micro_aud"], b["outstanding_micro_aud"]) == (22 * 947_633, 0) and 21 * 947_633 < 20_000_000 <= 22 * 947_633
+    assert AR.summary(store, AR.active(), a)["launches"]["left"] == 2                 # the judge arming's record and count are untouched
+    assert a.capacity_microusd(None) == 7_480_000                                     # and so is the historical ceiling scope
 
 
 @need_prod
@@ -500,8 +506,9 @@ def test_failed_or_interrupted_operator_runs_hold_their_full_reservation(prod, m
         a.transition(j, "reserved", "running")
         a.transition(j, "running", "interrupted" if len(held) % 2 else "failed")
         held.append(j)
-    assert len(held) == 3 and ST.reconcile_automatic(a, prod / "live", log=lambda *_: None) == []     # no ledger: nothing released
-    assert budget_fig(a)["available_micro_aud"] == 20_000_000 - 3 * 5_610_000
+    # an unreconciled run counts at its full reservation until its cost is verified: 0, 5.61, 11.22, 16.83 < A$20 admitted; 22.44 >= A$20 refused
+    assert len(held) == 4 and ST.reconcile_automatic(a, prod / "live", log=lambda *_: None) == []     # no ledger: nothing released
+    assert budget_fig(a)["outstanding_micro_aud"] == 4 * 5_610_000
 
 
 @need_prod

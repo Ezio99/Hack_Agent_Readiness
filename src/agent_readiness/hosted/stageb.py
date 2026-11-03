@@ -65,14 +65,21 @@ class StageBExecutor(J.LifecycleExecutor):
             return None, "pool_invalid"
         return pool, None
 
+    def launch_path(self) -> str:
+        """One launch flow for every valid access code: while the shared budget's evaluation is open, launches run it (no launch count; the
+        budget is the limit); before it opens, the owner's arming as before."""
+        return "budget" if self.budget_pool()[0] is not None else "arming"
+
     def configuration(self) -> dict:
+        pool, pwhy = self.budget_pool()
+        if pool is not None:
+            view = AR.pool_summary(self.store(), pool, self.admission)
+            return {"engine": ENGINE, "armed": True, "reason": None, "evaluation": view, "tasks": self.tasks(pool), "charge": "budget",
+                    "repetitions": [o["repetitions"] for o in view["options"] if o["available"]]}
         rec, why = self.arming()
         view = AR.summary(self.store(), rec, self.admission) if rec else None
-        pool, pwhy = self.budget_pool()
-        return {"engine": ENGINE, "armed": rec is not None, "reason": why, "evaluation": view,
-                "tasks": self.tasks(rec) if rec else [], "repetitions": [o["repetitions"] for o in (view or {}).get("options", []) if o["available"]],
-                "budget_pool": AR.pool_summary(self.store(), pool, self.admission) if pool else None, "budget_pool_reason": pwhy,
-                "budget_tasks": self.tasks(pool) if pool else []}
+        return {"engine": ENGINE, "armed": rec is not None, "reason": why, "evaluation": view, "charge": "arming",
+                "tasks": self.tasks(rec) if rec else [], "repetitions": [o["repetitions"] for o in (view or {}).get("options", []) if o["available"]]}
 
     def tasks(self, rec) -> list[dict]:
         return AR.executed_tasks(self.store(), rec.frozen_suite_sha256)
@@ -101,7 +108,7 @@ class StageBExecutor(J.LifecycleExecutor):
             raise AR.ArmingRefused("arming_total_exhausted", "This launch would exceed the armed total.", 409)
         amount = opt.reservation_microusd if rec.mode == "paid" else 0
         # atomic: slot + rate limit + the arming's scope (its separate budget, or the hosted ceiling for programme/legacy armings) + global cap
-        self.admission.reserve_amount(job_id, client, amount, **({"budget": rec.budget} if getattr(rec, "budget", None) else {}))
+        self.admission.reserve_amount(job_id, client, amount)                          # charged to the shared budget if one is open (admission decides)
         at = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime())
         try:
             claim = AR.launch(self.store(), rec, repetitions=repetitions, job_id=job_id, at=at)
@@ -124,7 +131,7 @@ class StageBExecutor(J.LifecycleExecutor):
     def _admit_budget(self, job_id: str, client: str, repetitions: int) -> dict:
         pool, why = self.budget_pool()
         if pool is None:
-            raise AR.ArmingRefused(why, {"no_budget": "No operator evaluation budget is open. The owner opens it once at the server terminal.",
+            raise AR.ArmingRefused(why, {"no_budget": "No evaluation budget is open. The owner opens it once at the server terminal.",
                                          "pool_mode_mismatch": "The budget's evaluation does not match this service's mode.",
                                          "pool_invalid": "The budget's evaluation no longer verifies; nothing can be launched."}.get(why, why), 409)
         opt = pool.option(repetitions)

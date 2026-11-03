@@ -16,11 +16,11 @@ own durable ledger. A failed or interrupted launch is never retried; its number 
     python -m agent_readiness.lifecycle.arming arm     ...same arguments...           # owner, interactive terminal, types the attestation
     python -m agent_readiness.lifecycle.arming status | disarm
 
-Operator budget pool (2026-11): a SEPARATE standing authorisation, recorded once when the owner opens a budget (`hosted.budget open`), that fixes WHAT
-the operator's evaluations run (frozen suite, website variants, exact manifests, model) and that they are charged to that budget. It has no launch
-count and no per-launch attestation: each operator launch derives its own experiment `<budget>-l<N>` (claim, PaidAuthorization whose instruction is the
-owner's pool attestation verbatim, its own ledger), and admission reserves the launch's maximum against the budget, refusing when the budget cannot
-cover it. It lives in `<STAGE_B>/budget-pools/` and never reads or changes the judge arming (`armings/ACTIVE`)."""
+Shared budget evaluation (2026-11): a standing authorisation, recorded once when the owner opens the shared budget (`hosted.budget open`), that fixes
+WHAT every new evaluation runs (frozen suite, website variants, exact manifests, model) for anyone holding a valid access code. It has no launch count
+and no per-launch attestation: each launch derives its own experiment `<budget>-l<N>` (claim, PaidAuthorization whose instruction is the owner's
+confirmation verbatim, its own ledger), and admission reserves the launch's maximum against the budget, refusing when the budget cannot cover it.
+It lives in `<STAGE_B>/budget-pools/`; while it is open the owner's earlier arming (and its launch count) is simply not used, and is never changed."""
 from __future__ import annotations
 
 import argparse
@@ -415,8 +415,11 @@ def summary(store, rec: Arming | None, admission=None) -> dict | None:
     used = claims(rec.arming_id)
     rem = None
     if admission is not None:
-        t = admission.totals()
-        rem = t.get("available_microusd", t["ceiling_microusd"] - t["reserved_microusd"])       # settled + outstanding against the ceiling
+        if hasattr(admission, "capacity_microusd"):
+            rem = admission.capacity_microusd(admission.charge_scope())         # the shared budget while one is open, else the hosted ceiling
+        else:
+            t = admission.totals()
+            rem = t.get("available_microusd", t["ceiling_microusd"] - t["reserved_microusd"])
     try:
         fz = store.get("frozen_suite", rec.frozen_suite_sha256)
         suite = store.get("suite", fz.suite_sha256)
@@ -482,7 +485,8 @@ def pool_attestation(a: dict) -> str:
     opts = "; ".join(f"{o['repetitions']} repetition(s): manifest {o['manifest_sha256']}, {o['trials']} trials, each launch reserves US${o['reservation_microusd'] / 1e6:.6f}"
                      for o in a["options"])
     ag = a["agent"]
-    verb = "authorise operator-launched paid evaluations" if a["mode"] == "paid" else "allow operator-launched zero-cost rehearsals"
+    verb = "authorise paid evaluations launched by any holder of a valid evaluation access code" if a["mode"] == "paid" else \
+        "allow zero-cost rehearsals launched by any holder of a valid evaluation access code"
     return (f"I am the owner and I {verb} charged ONLY to the separate budget {a['budget']}: frozen suite {a['frozen_suite']} {a['frozen_suite_sha256']} on "
             f"{a['site']} ({', '.join(f'{n} {s}' for n, s in a['variants'])}), model {ag['model']} at {ag['endpoint']} (reasoning {ag['reasoning_effort']}, "
             f"{ag['max_completion_tokens']} completion tokens, profile {ag['profile']} {ag['profile_sha256'][:12]}); {opts}; every launch reserves its maximum "
@@ -568,21 +572,23 @@ def pool_launch(store, pool: BudgetPool, *, repetitions: int, job_id: str, at: s
 
 
 def pool_summary(store, pool: BudgetPool | None, admission=None) -> dict | None:
-    """Public view of the operator budget pool: what runs, what each launch reserves, and how many the budget covers now (no launch count)."""
+    """Public view of the shared budget's evaluation, in the arming view's shape (so one launch flow serves both): what runs, what each launch
+    reserves and how many the budget covers now. `launches` is None: there is no launch count."""
     if pool is None:
         return None
     room = admission.capacity_microusd(pool.budget) if admission is not None and hasattr(admission, "capacity_microusd") else None
+    admits = admission.budget_admits(pool.budget) if admission is not None and hasattr(admission, "budget_admits") else True   # soft cap
     try:
         fz = store.get("frozen_suite", pool.frozen_suite_sha256)
         name = f"{store.get('suite', fz.suite_sha256).suite_name} v{store.get('suite', fz.suite_sha256).version}"
     except Exception:
         name = pool.frozen_suite
-    return {"budget": pool.budget, "pool_sha256": pool.sha256, "mode": pool.mode, "site": pool.site, "suite": name, "frozen_suite": pool.frozen_suite,
-            "variants": [n for n, _ in pool.variants], "launches_so_far": len(claims(pool.budget)),
-            "available_usd": None if room is None else room / 1e6,
-            "options": [{"repetitions": o.repetitions, "trials": o.trials, "reservation_usd": o.reservation_microusd / 1e6,
-                         "covered": None if room is None else (room // o.reservation_microusd if o.reservation_microusd else None),
-                         "available": room is None or o.reservation_microusd <= room} for o in pool.options],
+    return {"arming_id": pool.budget, "budget": pool.budget, "pool_sha256": pool.sha256, "mode": pool.mode, "site": pool.site, "suite": name,
+            "frozen_suite": pool.frozen_suite, "frozen_suite_sha256": pool.frozen_suite_sha256, "variants": [n for n, _ in pool.variants],
+            "armed_at": pool.recorded_at, "launches": None, "launches_so_far": len(claims(pool.budget)),
+            "capacity": None if room is None else {"available_usd": room / 1e6, "launches_affordable": None},
+            "options": [{"repetitions": o.repetitions, "trials": o.trials, "reservation_usd": o.reservation_microusd / 1e6, "manifest_sha256": o.manifest_sha256,
+                         "covered": None, "available": admits, "fits_hosted_ceiling": admits} for o in pool.options],
             "agent": {k: pool.agent.get(k) for k in ("model", "reasoning_effort", "max_completion_tokens", "profile")}}
 
 

@@ -293,7 +293,5 @@ button.ws-cell-button:hover{background:var(--paper)}
 .ws-budget dd{margin:0;font-size:14px}.ws-budget dd small{color:var(--ink-3);font-size:12px;margin-left:4px}.ws-budget-note{font-size:12.5px;color:var(--ink-3);line-height:1.5}
 .ws-budget section{border-top:1px solid var(--rule,rgba(0,0,0,.08));padding-top:8px;margin-top:8px}.ws-budget section:first-of-type{border-top:0;margin-top:4px}.ws-budget h4{margin:0;font:600 12.5px/1.4 var(--sans,inherit);color:var(--ink-2,inherit)}
 
-.ws-operator-run{display:grid;gap:8px}.ws-operator-who{margin:0;font-size:13px;display:flex;gap:10px;align-items:baseline}
-.ws-operator-budget{margin:0;font-size:14px}.ws-operator-budget small{display:block;color:var(--ink-3);font-size:12px}
-.ws-signin{margin-top:12px;font-size:13px}.ws-signin summary{cursor:pointer;color:var(--ink-3)}.ws-signin form{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
-.ws-signin input{flex:1;min-width:180px;font:inherit;padding:6px 8px;border:1px solid var(--rule,rgba(0,0,0,.15));border-radius:4px}.ws-cost{font-variant-numeric:tabular-nums}
+.ws-shared-budget{margin:0 0 10px;font-size:14px}.ws-shared-budget small{display:block;color:var(--ink-3);font-size:12px}
+.ws-cost{font-variant-numeric:tabular-nums}

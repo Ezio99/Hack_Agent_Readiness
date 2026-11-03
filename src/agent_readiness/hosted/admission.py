@@ -9,6 +9,8 @@ settlements are write-once rows in their own table, so an older image (which onl
 
 Separate budgets (2026-11, `budget.py`): a job charged to an owner-opened budget (`budget_jobs`, written in the reservation's own transaction) is
 bounded by that budget, in integer micro-A$ at the budget's fixed rate, and NOT by the hosted ceiling, which now scopes the legacy (programme) jobs only.
+While a budget is open it is SHARED: every new evaluation reservation is charged to it, whoever launches it and by whatever path (decided inside the
+reservation's own transaction); jobs reserved before it opened, e.g. eval-c04, keep their scope and never consume it.
 A durable global cap (`global_caps`, raised only when the owner opens a budget, by exactly that budget's limit) bounds every commitment in this
 database together. An older image ignores these tables and counts every job against the ceiling again (more conservative).
 """
@@ -143,11 +145,25 @@ class Admission:
                 'open_allocations': sum(1 for r in allocs if r[3] is None)}
 
     @staticmethod
+    def _shared(led: dict) -> str | None:
+        """The shared evaluation budget: while one is open, EVERY new evaluation reservation is charged to it (judges and operators alike),
+        whatever path made it; jobs reserved before it opened keep their scope. At most one exists (a reviewed maximum)."""
+        return sorted(led['budgets'])[0] if led['budgets'] else None
+
+    def charge_scope(self) -> str | None:
+        """Where the next evaluation would be charged: the shared budget, or None (the hosted ceiling) while none is open."""
+        with self.connect() as db:
+            return self._shared(self._ledger(db))
+
+    @staticmethod
     def _all_committed(led: dict) -> int:
         return sum(r[1] for r in led['jobs']) + sum(r[2] if r[3] is None else r[3] for r in led['allocations'])
 
-    def _check(self, db, microusd: int, budget: str | None) -> None:
-        """Inside BEGIN IMMEDIATE: the new commitment fits its scope (legacy ceiling, or its budget) and the global cap. Raises Refused."""
+    def _check(self, db, microusd: int, budget: str | None, *, soft: bool = False) -> None:
+        """Inside BEGIN IMMEDIATE: the new commitment fits its scope (legacy ceiling, or its budget) and the global cap. Raises Refused.
+        soft (evaluations charged to the shared budget): admitted while the budget's commitments so far (actual settled costs, plus the full
+        reservation of any run not yet reconciled) are BELOW its limit; the new run's own worst case is not counted against what remains, so the
+        last admitted run may finish above the limit. The global cap (raised at opening by the limit plus one run's maximum) stays hard."""
         led = self._ledger(db)
         if budget is None:
             if self._scope(led, None)['committed_microusd'] + microusd > self.ceiling:
@@ -156,7 +172,8 @@ class Admission:
             if budget not in led['budgets']:
                 raise Refused('no such budget: the owner opens a budget at the server terminal')
             sc = self._scope(led, budget)
-            if sc['committed_micro_aud'] + aud_micro(microusd, sc['rate_num'], sc['rate_den']) > sc['limit_micro_aud']:
+            if (sc['committed_micro_aud'] >= sc['limit_micro_aud']) if soft else \
+                    (sc['committed_micro_aud'] + aud_micro(microusd, sc['rate_num'], sc['rate_den']) > sc['limit_micro_aud']):
                 raise Refused(f'budget {budget} exhausted')
         if led['global_cap'] is not None and self._all_committed(led) + microusd > led['global_cap']:
             raise Refused('global hosted cap reached')
@@ -187,8 +204,11 @@ class Admission:
                 last = db.execute('SELECT MAX(created) FROM jobs WHERE client=?', (client,)).fetchone()[0]
                 if last is not None and now - last < self.interval:
                     raise Refused('rate limit exceeded')
-                self._check(db, self.cap * units, None)
+                scope = self._shared(self._ledger(db))
+                self._check(db, self.cap * units, scope, soft=scope is not None)
                 db.execute('INSERT INTO jobs VALUES (?,?,?,?,?)', (job_id, client, now, 'reserved', self.cap * units))
+                if scope is not None:
+                    db.execute('INSERT INTO budget_jobs VALUES (?,?,?)', (job_id, scope, now))
                 db.execute('COMMIT')
             except BaseException:
                 db.execute('ROLLBACK')
@@ -203,8 +223,6 @@ class Admission:
             raise ValueError('invalid admission identity')
         if type(microusd) is not int or microusd < 0:
             raise ValueError('invalid reservation amount')
-        if budget is None and microusd > self.ceiling:
-            raise Refused('hosted budget exhausted')
         if budget is not None and not re.fullmatch(r'[a-z0-9][a-z0-9-]{2,40}', budget):
             raise ValueError('invalid budget id')
         now = time.time() if now is None else now
@@ -215,14 +233,18 @@ class Admission:
             try:
                 if db.execute("SELECT 1 FROM jobs WHERE state IN ('reserved','running') LIMIT 1").fetchone():
                     raise Refused('evaluation capacity is occupied')
-                last = db.execute('SELECT MAX(created) FROM jobs WHERE client=?', (client,)).fetchone()[0]
-                if last is not None and now - last < self.interval:
-                    raise Refused('rate limit exceeded')
-                self._check(db, microusd, budget)
+                scope = budget if budget is not None else self._shared(self._ledger(db))     # an open shared budget takes every new evaluation
+                if scope is None:                                 # the per-client interval applies to the legacy (ceiling) scope only; the shared
+                    last = db.execute('SELECT MAX(created) FROM jobs WHERE client=?', (client,)).fetchone()[0]   # budget's launches need only a
+                    if last is not None and now - last < self.interval:                                          # valid code and an under-budget pool
+                        raise Refused('rate limit exceeded')
+                if scope is not None and budget is not None and scope != budget:
+                    raise Refused('no such budget: the owner opens a budget at the server terminal')
+                self._check(db, microusd, scope, soft=scope is not None)
                 db.execute('INSERT INTO jobs VALUES (?,?,?,?,?)', (job_id, client, now, 'reserved', microusd))
                 db.execute('INSERT INTO auto_settle VALUES (?,?)', (job_id, now))     # settlement-aware admission: may settle automatically once verified
-                if budget is not None:
-                    db.execute('INSERT INTO budget_jobs VALUES (?,?,?)', (job_id, budget, now))
+                if scope is not None:
+                    db.execute('INSERT INTO budget_jobs VALUES (?,?,?)', (job_id, scope, now))
                 db.execute('COMMIT')
             except BaseException:
                 db.execute('ROLLBACK')
@@ -284,6 +306,15 @@ class Admission:
         if led['global_cap'] is not None:
             room = min(room, led['global_cap'] - self._all_committed(led))
         return max(0, room)
+
+    def budget_admits(self, budget: str) -> bool:
+        """Whether the shared budget admits another evaluation now (soft cap: its commitments so far are below its limit)."""
+        with self.connect() as db:
+            led = self._ledger(db)
+        if budget not in led['budgets']:
+            return False
+        sc = self._scope(led, budget)
+        return sc['committed_micro_aud'] < sc['limit_micro_aud']
 
     def job_budget(self, job_id: str) -> str | None:
         with self.connect() as db:

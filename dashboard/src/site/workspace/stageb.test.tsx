@@ -253,69 +253,61 @@ it('a launch charged to a separate budget shows that budget and its own capacity
   const sec = (name: string) => host.querySelector(`.ws-budget section[aria-label="${name}"]`)!.textContent!;
   expect(sec('Separate budgets')).toContain('ar-a20-2026-11A$13.44 available');
   expect(sec('Separate budgets')).toContain('of A$20.00 · spent A$0.95 · held A$5.61 · 2 runs, 1 off-host allocation');
-  expect(sec('Launch authority')).toContain('charged to the separate budget ar-a20-2026-11; each reserves US$3.74; the budget covers 2');
+  expect(sec('Launch authority')).toContain('charged to the shared budget ar-a20-2026-11; each reserves US$3.74; the budget covers 2');
   expect(host.querySelector('.ws-budget section[aria-label="Programme expenditure"]')).toBeNull();
   expect(host.querySelector('.history-table')!.textContent).toContain('US$0.63 ar-a20-2026-11');
 });
 
-// ------------------------------------------------------------------------------------------------ one-click operator evaluations (A$20 budget)
+// ------------------------------------------------------------------------------------------------ one access code, one flow, the shared A$20 budget
 const B = 'ar-a20-2026-11';
-const budgetFig = { id: B, limit_aud: 20, rate_aud_per_usd: 1.5, spent_aud: 0.947633, outstanding_aud: 0, available_aud: 19.052367, spent_usd: 0.631755, outstanding_usd: 0,
+const sharedFig = { id: B, limit_aud: 20, rate_aud_per_usd: 1.5, spent_aud: 0.947633, outstanding_aud: 0, available_aud: 19.052367, spent_usd: 0.631755, outstanding_usd: 0,
   available_usd: 12.701578, jobs: 1, settled_jobs: 1, allocations: 0, open_allocations: 0 };
-const opSpending = { ceiling: 21.956, settled: 0.631751, outstanding: 10.736, committed: 11.367751, available: 10.588249, released: 3.108249, settled_jobs: 1, unsettled_jobs: 3,
-  basis: 'not a bill', global: { cap_usd: 35.289333, committed_usd: 11.999506, available_usd: 23.289827 }, budgets: [budgetFig], charged_to: null, programme: null };
-const budgetEval = { budget: B, mode: 'paid', site: 'larkspur', suite: 'larkspur-core v3', variants: ['original', 'improved'], launches_so_far: 1, available_usd: 12.701578,
-  options: [{ repetitions: 1, trials: 6, reservation_usd: 3.74, covered: 3, available: true }] };
-const opConfig = (over = {}) => config({ judge_access: true, launch: { authorized: true, ready: true, reason: null, detail: null, launches_left: 2 }, spending: opSpending,
-  operator: { signed_in: true, sign_in_available: true }, budget_evaluation: budgetEval, budget_tasks: tasks,
-  budget_launch: { authorized: true, ready: true, reason: null, detail: null }, ...over });
+const sharedSpending = { ceiling: 21.956, settled: 0.631751, outstanding: 10.736, committed: 11.367751, available: 10.588249, released: 3.108249, settled_jobs: 1, unsettled_jobs: 3,
+  basis: 'not a bill', global: { cap_usd: 35.289333, committed_usd: 11.999506, available_usd: 23.289827 }, budgets: [sharedFig], charged_to: B, programme: null };
+const sharedEval = { ...armed, arming_id: B, budget: B, variants: ['original', 'improved'], launches: null, capacity: { available_usd: 12.701578, launches_affordable: 3 },
+  options: [{ repetitions: 1, trials: 6, reservation_usd: 3.74, manifest_sha256: 'd'.repeat(64), available: true, fits_hosted_ceiling: true, covered: 3 }] };
+const sharedConfig = (over = {}) => config({ judge_access: true, launch: { authorized: true, ready: true, reason: null, detail: null, launches_left: null, covers: 3 },
+  spending: sharedSpending, evaluation: sharedEval, remaining_repetitions: 3, ...over });
 
-it('a signed-in operator runs an evaluation with one click: no token in the page, a CSRF header and one idempotency key per click', async () => {
-  const f = server((url, init) => url.endsWith('/config') ? opConfig() : url.endsWith('/jobs') && init?.method === 'POST' ? { id: ID, state: 'reserved', repetitions: 1 }
+it('everyone uses one access code and one Run button; the shared budget is shown and there is no launch count', async () => {
+  const code = 'shared-access-code-0123456789abcdef';
+  const f = server((url, init) => url.endsWith('/config') ? sharedConfig() : url.endsWith('/jobs') && init?.method === 'POST' ? { id: ID, state: 'reserved', repetitions: 1 }
     : url.endsWith('/jobs') ? [] : { ...job, accounting: { reserved_usd: 3.74, cost_usd: 0.631755, settled: true, budget: B } });
   const host = await mount();
-  expect(host.querySelector('#ws-operator-token')).toBeNull();                                   // no token field for the signed-in operator
-  expect(host.querySelector('.ws-operator-budget')!.textContent).toContain('A$19.05 of A$20.00 left in ar-a20-2026-11');
-  expect(host.querySelector('#ws-run-note')!.textContent).toContain('Each run reserves up to A$5.61 until it finishes, then only its actual cost counts · the budget covers 3 more runs now');
-  expect(host.querySelector('.ws-target')!.textContent).toContain('runs while the budget lasts (no launch limit)');
-  const run = button(host, 'Run evaluation');
+  expect(host.querySelector('.ws-shared-budget')!.textContent).toContain('A$19.05 of A$20.00 evaluation budget left');
+  expect(host.querySelector('.ws-shared-budget')!.textContent).toContain('spent A$0.95 · new evaluations start while less than A$20 has been used');
+  expect(host.querySelector('.ws-target')!.textContent).toContain('runs while the budget lasts');
+  expect(host.textContent).not.toMatch(/live runs? left/);
+  expect(host.textContent).not.toMatch(/operator sign-in|Signed in as operator/i);
+  const run = button(host, 'Run live evaluation');
+  expect(run.disabled).toBe(true);                                                              // until a code is entered
+  await typeCode(host, code);
   expect(run.disabled).toBe(false);
   await act(async () => { run.click(); run.click(); });                                         // a double-click
   for (let i = 0; i < 4; i++) await act(async () => { await new Promise(r => setTimeout(r, 0)); });
   const posts = f.mock.calls.filter(c => (c[1] as RequestInit | undefined)?.method === 'POST');
   expect(posts.length).toBe(1);
   const h = (posts[0][1] as RequestInit).headers as Record<string, string>;
-  expect(h['X-Agent-Readiness']).toBe('1');
+  expect(h.Authorization).toBe(`Bearer ${code}`);
   expect(h['Idempotency-Key']).toMatch(/^[A-Za-z0-9_-]{16,64}$/);
-  expect(h.Authorization).toBeUndefined();
   expect(JSON.parse((posts[0][1] as RequestInit).body as string)).toEqual({ repetitions: 1 });
   expect(host.querySelector('.ws-cost')!.textContent).toBe(`Actual cost US$0.63 · ${B}`);
+  expect(JSON.stringify({ ...localStorage }) + JSON.stringify({ ...sessionStorage })).not.toContain(code);
 });
 
-it('the operator signs in once; the token is sent once, then cleared and never stored', async () => {
-  let signedIn = false;
-  const f = server((url, init) => url.endsWith('/api/operator/session') && init?.method === 'POST' ? (signedIn = true, { signed_in: true, expires_at: 9e9 })
-    : url.endsWith('/config') ? opConfig({ operator: { signed_in: signedIn, sign_in_available: true } }) : url.endsWith('/jobs') ? [] : job);
+it('once the shared budget has been used, Run is disabled and the reason is explained', async () => {
+  server(url => url.endsWith('/config') ? sharedConfig({ launch: { authorized: false, ready: false, reason: 'budget_exhausted', detail: 'The A$20 evaluation budget has been used. Completed evaluations, their results and traces remain available.', launches_left: null, covers: null },
+    evaluation: { ...sharedEval, options: [{ ...sharedEval.options[0], available: false, fits_hosted_ceiling: false, covered: 0 }] }, repetitions: [] }) : url.endsWith('/jobs') ? [] : job);
   const host = await mount();
-  expect(host.querySelector('.ws-signin')).not.toBeNull();
-  const input = host.querySelector('#ws-signin-token') as HTMLInputElement;
-  const secret = 'o'.repeat(32);
-  await act(async () => { const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!; set.call(input, secret); input.dispatchEvent(new Event('input', { bubbles: true })); });
-  await act(async () => { (host.querySelector('.ws-signin form') as HTMLFormElement).requestSubmit(); });
-  for (let i = 0; i < 4; i++) await act(async () => { await new Promise(r => setTimeout(r, 0)); });
-  const login = f.mock.calls.find(c => String(c[0]).endsWith('/api/operator/session'))!;
-  expect(((login[1] as RequestInit).headers as Record<string, string>).Authorization).toBe(`Bearer ${secret}`);
-  expect(((login[1] as RequestInit).headers as Record<string, string>)['X-Agent-Readiness']).toBe('1');
-  expect(host.querySelector('.ws-operator-who')!.textContent).toContain('Signed in as operator');
-  expect(host.innerHTML).not.toContain(secret);
-  expect(JSON.stringify({ ...localStorage })).not.toContain(secret);
-  expect(JSON.stringify({ ...sessionStorage })).not.toContain(secret);
+  expect(button(host, 'Run live evaluation').disabled).toBe(true);
+  expect(host.querySelector('#ws-run-note')!.textContent).toContain('The A$20 evaluation budget has been used.');
 });
 
-it('the run button explains a refusal when the budget cannot cover another run', async () => {
-  server(url => url.endsWith('/config') ? opConfig({ budget_launch: { authorized: false, ready: false, reason: 'budget_exhausted', detail: 'The remaining budget does not cover the maximum cost of another run.' } })
+it('while another evaluation runs, visitors see its status and can watch it', async () => {
+  server(url => url.endsWith('/config') ? sharedConfig({ active: 'eval-' + 'd'.repeat(32), worker: { state: 'busy', job: 'eval-' + 'd'.repeat(32), finished_runs: 2, total_runs: 6, estimated_remaining_seconds: 200 } })
     : url.endsWith('/jobs') ? [] : job);
   const host = await mount();
-  expect(button(host, 'Run evaluation').disabled).toBe(true);
-  expect(host.querySelector('#ws-run-note')!.textContent).toContain('The remaining budget does not cover the maximum cost of another run.');
+  expect(host.querySelector('.ws-worker')!.textContent).toContain('Another evaluation is running: 2 of 6 agent runs finished');
+  expect(button(host, 'Watch it live')).toBeTruthy();
+  expect(button(host, 'Run live evaluation').disabled).toBe(true);
 });
