@@ -1,4 +1,4 @@
-# Actual-cost settlement: release candidate, read-only reconciliation and owner procedure (NOT deployed)
+# Actual-cost settlement: release, read-only reconciliation, owner procedure and deployment record
 
 **Date:** 2026-11-03 (Sydney). **Branch:** `final-showcase`. **Release candidate:** `dde7e22` (= the presentation fixes of `a3ad4cd` + settlement `dde7e22`).
 **Production now:** `83be351` (image `f5d9ec46…`). **Cost:** US$0. Nothing was written to production; no ceiling, arming or launch change; no model call.
@@ -92,3 +92,44 @@ Settle only c04 if preferred: then **keep the ceiling at 21.956** (available 10.
 - The Ironbark reservations (US$3.30) stay held; the tool will not attribute a forked ledger.
 - Settled amounts are calculated from provider-reported usage at published prices (not invoices).
 - Paid recovery with `--allow-open-requests` assumes the job can never send again (terminal state); the state machine guarantees this for hosted jobs.
+
+## 6. Minimal-risk path: deployment record (owner-approved, 2026-11-03 UTC)
+
+**Owner decision:** deploy `dde7e22`; take a fresh database backup; settle **only** `eval-c04fdb100d6b1c877de96dabe76eb052` at exactly US$0.631751 with the interactive owner confirmation; **keep the ceiling at US$21.956**; do not settle `eval-e529…` or the Ironbark jobs; no new arming, no paid launch.
+
+### 6.1 Safety verification before execution (zero cost, copies of the production database and real ledgers)
+Copies were byte-identical to the audited snapshot (`280fb9ef…`). The rollback image's code (`83be351`) was run from a detached worktree against the same copies.
+
+| Check | New code `dde7e22` | Rollback code `83be351` |
+|---|---|---|
+| Startup on the database | adds the two empty tables; reconcile settles nothing (all 4 jobs historical); available US$7.480 | accepts the database (`.env` 21.956 = DB 21.956), ignores the new tables |
+| After settling c04 only | settled 0.631751, released 3.108249, outstanding 10.736, committed 11.367751, **available 10.588249**; job rows and ledgers unchanged; same settlement again = no-op; a different amount refused | sees reserved 14.476, **available 7.480** (more conservative); settlement row untouched |
+| Launches | arming `larkspur-judge-1` 2 left; budget covers 2; 2 admitted, the third refused (`launches_exhausted`); after both (kept in full until settled) available 3.108249 < 3.740: **the budget alone could not fund a third** | 2 admitted, third refused; after the new image's two launches the old image sees available 0 and admits nothing |
+| Roll forward after rollback | c04 settlement still recorded; launches admitted by the old image have no `auto_settle` row and are never auto-settled (kept until owner review) | – |
+| Programme (1.50 AUD/USD, A$50) | spend to date US$19.418057 (A$29.13) + available 10.588249 = **US$30.006306 = A$45.01** (≤ A$50; unchanged by the two launches: each reservation moves from available to committed) | 19.418057 + 7.480 = A$40.35 |
+
+Focused tests: `test_settlement`, `test_showcase_presentation`, `test_hosted_ceiling`: 48 passed.
+
+### 6.2 Deployment (`dde7e22`, 2026-11-03 09:15 UTC)
+| Step | Result |
+|---|---|
+| Read-only preflight | **identical to the audited snapshot:** image `f5d9ec46…`, healthy; `admission.sqlite` `280fb9ef…`; ledgers `larkspur-judge-1-l1` `b5b1b4d0…`, `larkspur-live-1-l1` `e4675700…`; tables jobs/policy/policy_migrations; 4 jobs as audited; ceiling 21.956, reserved 14.476, 0 active, migrations #1–#2; `larkspur-judge-1` 2 left, problems []; `.env` live/operator/21.956; worker idle |
+| Backup | `/root/backups/predeploy-st-20261103T091245Z.tgz` (sha256 `f13d6ff7…`, gzip OK), manifest of 2 421 files (archive matches every entry), `.env` copy identical. Versus the 83be351 deploy manifest: 215 files added (suite, arming, c04 run), only `armings/ACTIVE` and `admission.sqlite` changed |
+| Build | clean worktree `/root/agent-readiness-build-st` at `dde7e221…`, 0 untracked; `compose.yaml` identical to production (no compose, secret or `.env` change); image `st-dde7e22` = **`sha256:d40199ef03f0cdba39a626eae65757755c97a2bcecd62595c6de5ee936f0e553`**, user `agent`; frontend `index-Blj5zxRC.js` = local build; snapshots `2f9fd2ce09a0` / `edb9a5d2884a` / `87e715d59c23` |
+| New image, read-only | `ceiling status` adds the settlement line (nothing settled, available 7.480); `settlement audit` on the read-only volume reproduces §2 exactly; DB hash unchanged |
+| Disabled smoke test (loopback, volume copy) | 13/15 as scripted; the 2 misses were checks I wrote wrongly (the config `spending` block exists only when evaluations are enabled; the retired Ironbark history rows keep their old format without `reserved_usd`), both then verified on the live service. c04 grid, equivalent evidence, settled spend, e529, versions, Ironbark jobs, bundle: PASS; 0 tracebacks; copy removed |
+| Switch | `rollback-83be351` = `f5d9ec46…`; `latest` = `d40199ef…`, started 09:15:11Z, healthy, 0 restarts, 0 tracebacks. Log: `budget: ceiling US$21.956000, settled US$0.000000, outstanding US$14.476000, available US$7.480000`; `mode=live access=operator evaluations=enabled jail=verified engine=stage-b armed=larkspur-judge-1 (paid, larkspur-core v3, launches left 2) judge_access=on` |
+| Public verification | **18/18 PASS**: health; worker idle, judge access, 2 left; `spending` ceiling 21.956 / settled 0 / outstanding 14.476 / available 7.48; ceiling block unchanged; POST without a code, with a wrong code, with a Basic header: 403; c04 grid Improved Correct 3/3 (Exact 0/3), Original 0/3, recorded outcomes unchanged; report equivalent evidence Improved 3/3, recorded evidence rule and official grades unchanged, settled US$0.631751 (45/0); e529 report 12 trials, US$1.546226; history 4 jobs; versions; both Ironbark jobs; bundle + HSTS/CSP/nosniff |
+| Evidence | **2 420 of 2 421 files byte-identical** to the backup, no file added or removed (derived caches excluded); the only change is `admission.sqlite`: two new empty tables, job rows (`b337ab49…`) and `policy_migrations` (`73e7d874…`) identical to the backup. New derived caches `*.projection-1+equivalent-page-1.json` beside the kept `*.projection-1.json`. Judge code in no log line or data file; uid 10001, CapEff 0 |
+| Browser (production, GET only) | Home features Original vs Improved (0/3 → 3/3); sticky header opaque; journey "6–9 minutes", version names spaced 14 px; workspace "Budget & capacity", "2 of 3 live runs left"; c04 grid "Correct" ×3 / "Not correct" ×3, "Exact match: no" ×6, no "Not passed"; report equivalent-page row 0/3 → 3/3; 0 console errors; no non-GET request. Cosmetic: at 1 440 px the history table scrolls horizontally (the new Cost column is past the right edge) |
+
+Recorded in `deploy/DEPLOYED.txt`. **Rollback:** `docker tag agent-readiness-app:rollback-83be351 agent-readiness-app:latest && docker compose up -d --no-build --no-deps app` (no compose, secret, `.env` or ceiling change in either direction).
+
+### 6.3 Owner settlement window (pending: owner terminal)
+`/root/settle-c04.sh` (sha256 `91a2a96a…`, root-only) is a guarded wrapper; the owner runs it with `ssh -t root@209.38.84.72 /root/settle-c04.sh`:
+1. read-only pre-checks; **aborts with nothing changed** unless the running image is `d40199ef…`, the worker is idle with 2 launches left, spending is 21.956 / 0 settled / 14.476 outstanding, the job rows hash to `b337ab49…`, no settlement exists, the c04 ledger is `b5b1b4d0…`, and the audit shows c04 eligible at 0.631751 / release 3.108249 (dry run `DRY=1` passed on production; without a terminal it refuses);
+2. stops the app, copies `admission.sqlite` to `/root/backups/admission-pre-settlement-<T>.sqlite` and verifies the copy's sha256 against the live file (aborts and restarts if it differs);
+3. runs `settlement apply --job eval-c04fdb10… --expect-settled 0.631751` at the terminal: **the owner types the printed confirmation line**; the script never supplies it;
+4. restarts the app on exit, whatever the outcome.
+
+Expected afterwards: ceiling **21.956** (unchanged); reserved 14.476 (unchanged, 4 jobs); settled **0.631751** (1 job), released 3.108249; outstanding **10.736** (e529 7.436 + Ironbark 3.300); committed 11.367751; **available 10.588249**; `larkspur-judge-1` **2 left** (the budget covers 2); programme spend to date US$19.418057 (A$29.13), **worst case A$45.01**.
