@@ -16,9 +16,11 @@ own durable ledger. A failed or interrupted launch is never retried; its number 
     python -m agent_readiness.lifecycle.arming arm     ...same arguments...           # owner, interactive terminal, types the attestation
     python -m agent_readiness.lifecycle.arming status | disarm
 
-Separate budgets (2026-11): `--budget <id>` records a `hosted-arming-v2` arming whose launches are charged to that owner-opened budget (admission
-checks the budget, not the hosted ceiling) and whose attestation names it. Without `--budget` the record is `hosted-arming-v1`, byte-identical in
-form to every earlier arming (its hash is unchanged): its launches are programme (legacy) jobs under the hosted ceiling."""
+Operator budget pool (2026-11): a SEPARATE standing authorisation, recorded once when the owner opens a budget (`hosted.budget open`), that fixes WHAT
+the operator's evaluations run (frozen suite, website variants, exact manifests, model) and that they are charged to that budget. It has no launch
+count and no per-launch attestation: each operator launch derives its own experiment `<budget>-l<N>` (claim, PaidAuthorization whose instruction is the
+owner's pool attestation verbatim, its own ledger), and admission reserves the launch's maximum against the budget, refusing when the budget cannot
+cover it. It lives in `<STAGE_B>/budget-pools/` and never reads or changes the judge arming (`armings/ACTIVE`)."""
 from __future__ import annotations
 
 import argparse
@@ -31,14 +33,12 @@ from decimal import ROUND_CEILING, Decimal
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 from ..evalruns import authorization as AU
 from . import sites as S
 
 SCHEMA = "hosted-arming-v1"
-SCHEMA_V2 = "hosted-arming-v2"                                    # + budget: launches are charged to a separate owner-opened budget
-BUDGET_ID = r"^[a-z0-9][a-z0-9-]{2,40}$"
 RECORDED_BY = "owner at an interactive terminal (agent_readiness.lifecycle.arming arm)"
 ARMING_ID = AU.EXPERIMENT_ID                                      # the launch experiment ids append "-l<N>", so ids stay below the experiment-id limit
 REPETITIONS = (1, 3, 5)
@@ -62,7 +62,7 @@ class Option(BaseModel):
 
 class Arming(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
-    schema_: Literal["hosted-arming-v1", "hosted-arming-v2"] = Field(default=SCHEMA, alias="schema")
+    schema_: Literal["hosted-arming-v1"] = Field(default=SCHEMA, alias="schema")
     arming_id: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{2,50}$")
     mode: Literal["paid", "rehearsal"]
     site: str
@@ -76,19 +76,9 @@ class Arming(BaseModel):
     attestation: str
     recorded_at: str
     recorded_by: str
-    budget: str | None = Field(default=None, pattern=BUDGET_ID)
-
-    @model_validator(mode="after")
-    def _budget_matches_schema(self):
-        if (self.schema_ == SCHEMA_V2) != (self.budget is not None):
-            raise ValueError("hosted-arming-v2 names a budget; hosted-arming-v1 never does")
-        return self
 
     def content(self) -> dict:
-        d = self.model_dump(mode="json", by_alias=True)
-        if self.schema_ == SCHEMA:                                      # v1: exactly the fields it was recorded (and hashed) with
-            d.pop("budget", None)
-        return d
+        return self.model_dump(mode="json", by_alias=True)
 
     @property
     def sha256(self) -> str:
@@ -197,15 +187,13 @@ def attestation(a: dict) -> str:
     return (f"I am the owner and I {verb} under arming {a['arming_id']}: frozen suite {a['frozen_suite']} {a['frozen_suite_sha256']} on "
             f"{a['site']} ({', '.join(f'{n} {s}' for n, s in a['variants'])}), model {ag['model']} at {ag['endpoint']} (reasoning {ag['reasoning_effort']}, "
             f"{ag['max_completion_tokens']} completion tokens, profile {ag['profile']} {ag['profile_sha256'][:12]}); {opts}; at most {a['max_launches']} "
-            f"launch(es) reserving at most US${a['total_reservation_microusd'] / 1e6:.6f} in total"
-            + (f"; every launch is charged to the separate budget {a['budget']}, not to the A$50 programme or the hosted ceiling" if a.get("budget") else ""))
+            f"launch(es) reserving at most US${a['total_reservation_microusd'] / 1e6:.6f} in total")
 
 
-def plan(store, *, arming_id: str, mode: str, frozen_ref: str, variants: list[str], repetitions: list[int], launches: int, budget: str | None = None) -> dict:
+def plan(store, *, arming_id: str, mode: str, frozen_ref: str, variants: list[str], repetitions: list[int], launches: int, _pool: bool = False) -> dict:
     arming_path(arming_id)
-    import re as _re
-    if budget is not None and not _re.match(BUDGET_ID, budget):
-        raise ArmingRefused("invalid_budget", "budget ids are 3-41 lowercase letters, digits or hyphens", 422)
+    if not _pool and pool_path(arming_id).exists():
+        raise ArmingRefused("id_in_use", f"{arming_id} is a budget pool; launch experiment ids must stay unique", 409)
     if mode not in ("paid", "rehearsal"):
         raise ArmingRefused("invalid_mode", "mode is paid or rehearsal", 422)
     if not repetitions or any(r not in REPETITIONS for r in repetitions) or len(set(repetitions)) != len(repetitions):
@@ -237,8 +225,7 @@ def plan(store, *, arming_id: str, mode: str, frozen_ref: str, variants: list[st
         bases.append(f"{r}: {basis}")
     total = max(o["reservation_microusd"] for o in options) * launches
     a = {"arming_id": arming_id, "mode": mode, "site": suite.site, "frozen_suite": frozen_ref, "frozen_suite_sha256": frozen_sha,
-         "variants": [list(p) for p in pairs], "options": options, "agent": agent, "max_launches": launches, "total_reservation_microusd": total,
-         **({"budget": budget} if budget else {})}
+         "variants": [list(p) for p in pairs], "options": options, "agent": agent, "max_launches": launches, "total_reservation_microusd": total}
     return {**a, "attestation": attestation(a), "manifest_basis": bases, "approval_sha256": fz.approval_sha256, "approved_at": approval.approved_at, "synthetic": synthetic}
 
 
@@ -252,8 +239,7 @@ def arm(store, *, typed: str, at: str, interactive: bool, **kw) -> Path:
     path = arming_path(p["arming_id"])
     if path.exists():
         raise ArmingRefused("already_armed", f"arming {p['arming_id']} exists (write-once); use a new arming id", 409)
-    rec = Arming(**{"schema": SCHEMA_V2 if p.get("budget") else SCHEMA, **({"budget": p["budget"]} if p.get("budget") else {}),
-                    **{k: p[k] for k in ("arming_id", "mode", "site", "frozen_suite", "frozen_suite_sha256", "max_launches", "total_reservation_microusd", "attestation")},
+    rec = Arming(**{"schema": SCHEMA, **{k: p[k] for k in ("arming_id", "mode", "site", "frozen_suite", "frozen_suite_sha256", "max_launches", "total_reservation_microusd", "attestation")},
                     "variants": tuple(tuple(v) for v in p["variants"]), "options": tuple(Option(**o) for o in p["options"]), "agent": p["agent"],
                     "recorded_at": at, "recorded_by": RECORDED_BY})
     problems = verify(store, rec)
@@ -331,10 +317,14 @@ def verify(store, rec: Arming) -> list[str]:
         pinned = agent_config(m.agent.profile)
         if pinned.content() != m.agent.content():
             problems.append("the armed agent is not the pinned agent configuration")
+    if isinstance(rec, BudgetPool):
+        if rec.attestation != pool_attestation({**rec.content(), "options": [o.model_dump() for o in rec.options], "variants": [list(v) for v in rec.variants]}) \
+                or rec.recorded_by != POOL_RECORDED_BY:
+            problems.append("the budget pool was not recorded by the owner's terminal confirmation of exactly these terms")
+        return problems
     if rec.total_reservation_microusd < max(o.reservation_microusd for o in rec.options):
         problems.append("the total reservation does not cover one launch")
-    if rec.attestation != attestation({**rec.content(), "options": [o.model_dump() for o in rec.options], "variants": [list(v) for v in rec.variants],
-                                       "budget": rec.budget}) or rec.recorded_by != RECORDED_BY:
+    if rec.attestation != attestation({**rec.content(), "options": [o.model_dump() for o in rec.options], "variants": [list(v) for v in rec.variants]}) or rec.recorded_by != RECORDED_BY:
         problems.append("the arming was not recorded by the owner's terminal attestation of exactly these terms")
     return problems
 
@@ -395,9 +385,14 @@ def check_launch(store, job: dict) -> dict:
     claim = json.loads(cp.read_text())
     if claim.get("job") != job["id"] or claim.get("manifest_sha256") != job["manifest_sha256"] or claim.get("mode") != job["mode"]:
         raise ArmingRefused("claim_mismatch", "this job does not hold the launch's claim")
-    rec = load(claim["arming_id"])
-    if rec.sha256 != claim["arming_sha256"]:
-        raise ArmingRefused("arming_changed", "the arming changed after the launch")
+    if claim.get("budget_pool"):
+        rec = load_pool(claim["budget_pool"])
+        if rec.sha256 != claim["pool_sha256"]:
+            raise ArmingRefused("pool_changed", "the budget pool changed after the launch")
+    else:
+        rec = load(claim["arming_id"])
+        if rec.sha256 != claim["arming_sha256"]:
+            raise ArmingRefused("arming_changed", "the arming changed after the launch")
     problems = verify(store, rec)
     if problems:
         raise ArmingRefused("arming_invalid", "; ".join(problems))
@@ -420,11 +415,8 @@ def summary(store, rec: Arming | None, admission=None) -> dict | None:
     used = claims(rec.arming_id)
     rem = None
     if admission is not None:
-        if hasattr(admission, "capacity_microusd"):
-            rem = admission.capacity_microusd(rec.budget)               # the arming's scope: its separate budget, or the hosted ceiling (legacy)
-        else:
-            t = admission.totals()
-            rem = t.get("available_microusd", t["ceiling_microusd"] - t["reserved_microusd"])
+        t = admission.totals()
+        rem = t.get("available_microusd", t["ceiling_microusd"] - t["reserved_microusd"])       # settled + outstanding against the ceiling
     try:
         fz = store.get("frozen_suite", rec.frozen_suite_sha256)
         suite = store.get("suite", fz.suite_sha256)
@@ -436,13 +428,162 @@ def summary(store, rec: Arming | None, admission=None) -> dict | None:
     return {"arming_id": rec.arming_id, "arming_sha256": rec.sha256, "mode": rec.mode, "site": rec.site, "suite": name, "frozen_suite": rec.frozen_suite,
             "frozen_suite_sha256": rec.frozen_suite_sha256, "variants": [n for n, _ in rec.variants], "armed_at": rec.recorded_at,
             "launches": {"max": rec.max_launches, "used": len(used), "left": left},
-            "budget": rec.budget, "charged_to": f"budget {rec.budget}" if rec.budget else "A$50 programme (hosted ceiling)",
             # authorised launches (the owner's arming) and financial capacity (the hosted ceiling) are separate limits; a launch needs both
             "capacity": None if rem is None else {"available_usd": rem / 1e6, "launches_affordable": [rem // o.reservation_microusd if o.reservation_microusd else None for o in rec.options][0]},
             "options": [{"repetitions": o.repetitions, "trials": o.trials, "reservation_usd": o.reservation_microusd / 1e6, "manifest_sha256": o.manifest_sha256,
                          "available": left > 0 and o.reservation_microusd <= budget_left and (rem is None or o.reservation_microusd <= rem),
                          "fits_hosted_ceiling": None if rem is None else o.reservation_microusd <= rem} for o in rec.options],
             "agent": {k: rec.agent.get(k) for k in ("model", "reasoning_effort", "max_completion_tokens", "profile")}}
+
+
+# ------------------------------------------------------------------------------------------------------------------------------- operator budget pool
+POOL_SCHEMA = "hosted-budget-pool-v1"
+POOL_RECORDED_BY = "owner at an interactive terminal (agent_readiness.hosted.budget open)"
+
+
+class BudgetPool(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    schema_: Literal["hosted-budget-pool-v1"] = Field(default=POOL_SCHEMA, alias="schema")
+    budget: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{2,40}$")                     # also the pool id and the launch-experiment prefix
+    mode: Literal["paid", "rehearsal"]
+    site: str
+    frozen_suite: str
+    frozen_suite_sha256: str
+    variants: tuple[tuple[str, str], ...]
+    options: tuple[Option, ...]
+    agent: dict
+    attestation: str
+    recorded_at: str
+    recorded_by: str
+
+    def content(self) -> dict:
+        return self.model_dump(mode="json", by_alias=True)
+
+    @property
+    def sha256(self) -> str:
+        from ..suite.core import canonical_hash
+        return canonical_hash(self.content())
+
+    def option(self, repetitions: int) -> Option | None:
+        return next((o for o in self.options if o.repetitions == repetitions), None)
+
+
+def pools_root() -> Path:
+    return AU.STAGE_B / "budget-pools"
+
+
+def pool_path(budget: str) -> Path:
+    if not ARMING_ID.match(budget or "") or len(budget) > 41:
+        raise ArmingRefused("invalid_budget", "budget ids are 3-41 lowercase letters, digits or hyphens", 422)
+    return pools_root() / f"{budget}.json"
+
+
+def pool_attestation(a: dict) -> str:
+    opts = "; ".join(f"{o['repetitions']} repetition(s): manifest {o['manifest_sha256']}, {o['trials']} trials, each launch reserves US${o['reservation_microusd'] / 1e6:.6f}"
+                     for o in a["options"])
+    ag = a["agent"]
+    verb = "authorise operator-launched paid evaluations" if a["mode"] == "paid" else "allow operator-launched zero-cost rehearsals"
+    return (f"I am the owner and I {verb} charged ONLY to the separate budget {a['budget']}: frozen suite {a['frozen_suite']} {a['frozen_suite_sha256']} on "
+            f"{a['site']} ({', '.join(f'{n} {s}' for n, s in a['variants'])}), model {ag['model']} at {ag['endpoint']} (reasoning {ag['reasoning_effort']}, "
+            f"{ag['max_completion_tokens']} completion tokens, profile {ag['profile']} {ag['profile_sha256'][:12]}); {opts}; every launch reserves its maximum "
+            f"before it starts and settles at its verified actual cost; launches continue only while the budget covers a reservation (no launch count)")
+
+
+def pool_terms(store, *, budget: str, mode: str, frozen_ref: str, variants: list[str], repetitions: list[int]) -> dict:
+    """The pool's exact terms and confirmation text (read-only)."""
+    if pool_path(budget).exists():
+        raise ArmingRefused("pool_exists", f"the budget pool {budget} is already recorded (write-once)", 409)
+    if (root() / f"{budget}.json").exists() or claims(budget):
+        raise ArmingRefused("id_in_use", f"{budget} is already an arming id; launch experiment ids must stay unique", 409)
+    p = plan(store, arming_id=budget, mode=mode, frozen_ref=frozen_ref, variants=variants, repetitions=repetitions, launches=1, _pool=True)
+    a = {"budget": budget, **{k: p[k] for k in ("mode", "site", "frozen_suite", "frozen_suite_sha256", "variants", "options", "agent")}}
+    return {**a, "attestation": pool_attestation(a), "manifest_basis": p["manifest_basis"], "synthetic": p["synthetic"]}
+
+
+def record_pool(store, terms: dict, *, at: str) -> BudgetPool:
+    """Write-once (exclusive create). Called by `hosted.budget open` after the owner's typed confirmation, which includes the pool text."""
+    rec = BudgetPool(**{"schema": POOL_SCHEMA, **{k: terms[k] for k in ("budget", "mode", "site", "frozen_suite", "frozen_suite_sha256", "attestation")},
+                        "variants": tuple(tuple(v) for v in terms["variants"]), "options": tuple(Option(**o) for o in terms["options"]), "agent": terms["agent"],
+                        "recorded_at": at, "recorded_by": POOL_RECORDED_BY})
+    problems = verify(store, rec)
+    if problems:
+        raise ArmingRefused("verification_failed", "; ".join(problems))
+    pools_root().mkdir(parents=True, exist_ok=True)
+    path = pool_path(rec.budget)
+    with open(path, "x") as f:
+        f.write(json.dumps(rec.content(), indent=1, sort_keys=True))
+    os.chmod(path, 0o444)
+    return rec
+
+
+def load_pool(budget: str) -> BudgetPool:
+    return BudgetPool.model_validate(json.loads(pool_path(budget).read_text()))
+
+
+def pools() -> list[BudgetPool]:
+    d = pools_root()
+    out = []
+    for p in sorted(d.glob("*.json")) if d.is_dir() else []:
+        try:
+            out.append(BudgetPool.model_validate(json.loads(p.read_text())))
+        except Exception:
+            continue
+    return out
+
+
+def pool_launch(store, pool: BudgetPool, *, repetitions: int, job_id: str, at: str) -> dict:
+    """Derive ONE operator launch under the budget pool: the next launch number (exclusive create; no count limit) and, for paid pools, its
+    PaidAuthorization (instruction = the owner's pool confirmation verbatim). The budget itself is enforced by admission, before this is called."""
+    problems = verify(store, pool)
+    if problems:
+        raise ArmingRefused("pool_invalid", "; ".join(problems))
+    opt = pool.option(repetitions)
+    if opt is None:
+        raise ArmingRefused("repetitions_not_armed", f"{repetitions} repetition(s) are not part of the budget evaluation", 409)
+    n = len(claims(pool.budget)) + 1
+    experiment = f"{pool.budget}-l{n}"
+    claims_dir().mkdir(parents=True, exist_ok=True)
+    cp = claims_dir() / f"{experiment}.json"
+    claim = {"budget_pool": pool.budget, "pool_sha256": pool.sha256, "launch": n, "experiment_id": experiment, "job": job_id, "repetitions": repetitions,
+             "manifest_sha256": opt.manifest_sha256, "reservation_microusd": opt.reservation_microusd, "mode": pool.mode, "claimed_at": at}
+    try:
+        with open(cp, "x") as f:
+            f.write(json.dumps(claim, sort_keys=True))
+    except FileExistsError:
+        raise ArmingRefused("launch_conflict", "another launch took this launch number at the same moment; try again", 409) from None
+    os.chmod(cp, 0o444)
+    auth_path = None
+    if pool.mode == "paid":
+        led = AU.ledger_dir(experiment) / "ledger.jsonl"
+        if led.exists() and led.stat().st_size:
+            raise ArmingRefused("ledger_used", "the launch's experiment ledger already has entries; it is never re-run", 409)
+        auth = AU.PaidAuthorization(experiment_id=experiment, frozen_suite_sha256=pool.frozen_suite_sha256, manifest_sha256=opt.manifest_sha256,
+                                    max_trials=opt.trials, cap_usd=opt.cap_usd, instruction=pool.attestation, recorded_at=at,
+                                    recorded_by=f"server, under the owner's budget pool {pool.budget} ({pool.sha256[:12]}), operator launch {n}")
+        probs = AU.verify(auth, store, opt.manifest_sha256, planned_trials=opt.trials)
+        if probs:
+            raise ArmingRefused("verification_failed", "; ".join(probs))
+        auth_path = AU.write(auth, AU.STAGE_B / "authorizations")
+    return {**claim, "authorization": str(auth_path) if auth_path else None, "trials": opt.trials, "cap_usd": opt.cap_usd, "worst_case_usd": opt.worst_case_usd}
+
+
+def pool_summary(store, pool: BudgetPool | None, admission=None) -> dict | None:
+    """Public view of the operator budget pool: what runs, what each launch reserves, and how many the budget covers now (no launch count)."""
+    if pool is None:
+        return None
+    room = admission.capacity_microusd(pool.budget) if admission is not None and hasattr(admission, "capacity_microusd") else None
+    try:
+        fz = store.get("frozen_suite", pool.frozen_suite_sha256)
+        name = f"{store.get('suite', fz.suite_sha256).suite_name} v{store.get('suite', fz.suite_sha256).version}"
+    except Exception:
+        name = pool.frozen_suite
+    return {"budget": pool.budget, "pool_sha256": pool.sha256, "mode": pool.mode, "site": pool.site, "suite": name, "frozen_suite": pool.frozen_suite,
+            "variants": [n for n, _ in pool.variants], "launches_so_far": len(claims(pool.budget)),
+            "available_usd": None if room is None else room / 1e6,
+            "options": [{"repetitions": o.repetitions, "trials": o.trials, "reservation_usd": o.reservation_microusd / 1e6,
+                         "covered": None if room is None else (room // o.reservation_microusd if o.reservation_microusd else None),
+                         "available": room is None or o.reservation_microusd <= room} for o in pool.options],
+            "agent": {k: pool.agent.get(k) for k in ("model", "reasoning_effort", "max_completion_tokens", "profile")}}
 
 
 # ------------------------------------------------------------------------------------------------------------------------------- CLI
@@ -471,18 +612,7 @@ def _print(p: dict, adm) -> None:
     for o, b in zip(p["options"], p["manifest_basis"]):
         print(f"repetitions {o['repetitions']}   manifest {o['manifest_sha256']} ({b.split(': ', 1)[1]}); {o['trials']} trials; worst case US${o['worst_case_usd']}; reserves US${o['reservation_microusd'] / 1e6:.6f}")
     print(f"launches        at most {p['max_launches']}, reserving at most US${p['total_reservation_microusd'] / 1e6:.6f}")
-    print(f"charged to      " + (f"the separate budget {p['budget']} (hosted-arming-v2)" if p.get("budget") else "the A$50 programme: hosted ceiling scope (hosted-arming-v1)"))
-    if adm is not None and p.get("budget"):
-        b = next((x for x in adm.totals()["budgets"] if x["budget"] == p["budget"]), None)
-        if b is None:
-            raise ArmingRefused("no_budget", f"budget {p['budget']} is not open in this admission database; the owner opens it first (agent_readiness.hosted.budget open)")
-        rem = adm.capacity_microusd(p["budget"])
-        afford = min((rem // o["reservation_microusd"] for o in p["options"] if o["reservation_microusd"]), default=None)
-        print(f"budget          {p['budget']}: limit A${b['limit_micro_aud'] / 1e6:.2f}; spent A${b['spent_micro_aud'] / 1e6:.6f}; outstanding A${b['outstanding_micro_aud'] / 1e6:.6f}; "
-              f"available A${b['available_micro_aud'] / 1e6:.6f} (US${rem / 1e6:.6f} within the global cap)")
-        if afford is not None:
-            print(f"capacity        the budget covers {afford} launch(es) of this size now; this arming authorises at most {p['max_launches']}")
-    elif adm is not None:
+    if adm is not None:
         t = adm.totals()
         rem = t.get("available_microusd", t["ceiling_microusd"] - t["reserved_microusd"])
         fit = [o["repetitions"] for o in p["options"] if o["reservation_microusd"] <= rem]
@@ -505,7 +635,6 @@ def main(argv=None) -> int:
         s.add_argument("--variants", nargs=2, required=True)
         s.add_argument("--repetitions", nargs="+", type=int, default=[1])
         s.add_argument("--launches", type=int, default=1)
-        s.add_argument("--budget", help="charge every launch to this separate owner-opened budget (hosted-arming-v2)")
     sub.add_parser("status")
     sub.add_parser("disarm")
     for s in sub.choices.values():
@@ -522,7 +651,7 @@ def main(argv=None) -> int:
             rec = active()
             print(json.dumps({"active": summary(store, rec, _admission(a.admission, rec.mode if rec else "live")), "problems": verify(store, rec) if rec else None}, indent=1))
             return 0
-        kw = dict(arming_id=a.arming, mode=a.mode, frozen_ref=a.frozen, variants=a.variants, repetitions=a.repetitions, launches=a.launches, budget=a.budget)
+        kw = dict(arming_id=a.arming, mode=a.mode, frozen_ref=a.frozen, variants=a.variants, repetitions=a.repetitions, launches=a.launches)
         p = plan(store, **kw)
         _print(p, _admission(a.admission, a.mode))
         if a.cmd == "prepare":

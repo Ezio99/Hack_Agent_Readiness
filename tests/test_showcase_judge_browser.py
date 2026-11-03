@@ -98,3 +98,35 @@ def test_a_judge_runs_the_featured_original_vs_improved_evaluation(tmp_path, mon
     for f in list(root.rglob("*")) + list((tmp_path / "stage-b").rglob("*")):
         if f.is_file():
             assert JUDGE not in f.read_bytes()
+
+    # ---- the operator's one-click budget path on the same service: sign in once, click, the real jailed worker re-checks the POOL launch
+    from agent_readiness.hosted import budget as BG
+    active_before = (tmp_path / "stage-b" / "armings" / "ACTIVE").read_bytes()
+    bkw = dict(store=st, frozen="larkspur-core@v3", variants=["original", "improved"], mode="rehearsal")
+    bp = BG.plan_open(a, "ar-a20-2026-11", "20", "1.50", **bkw)
+    BG.open_budget(a, "ar-a20-2026-11", "20", "1.50", actor="owner (test copy)", typed=bp["text"], **bkw)
+    oc = TestClient(c.app, base_url="https://testserver")
+    assert oc.post("/api/operator/session", headers={"x-agent-readiness": "1", "authorization": "Bearer " + OPERATOR.decode()}).status_code == 200
+    cfg = oc.get("/api/ironbark/config").json()
+    assert cfg["operator"]["signed_in"] and cfg["budget_launch"]["authorized"] and len(cfg["budget_tasks"]) == 3
+    r = oc.post("/api/ironbark/jobs", json={"repetitions": 1}, headers={"x-agent-readiness": "1", "idempotency-key": "operator-click-000001"})
+    assert r.status_code == 202, r.text
+    job2 = r.json()["id"]
+    deadline = time.time() + 1200
+    while time.time() < deadline:
+        s2 = oc.get(f"/api/ironbark/jobs/{job2}").json()
+        if s2["state"] not in ("reserved", "running"):
+            break
+        time.sleep(3)
+    assert s2["state"] == "completed" and s2["execution"]["trials_completed"] == 6, (s2.get("error"), s2.get("stopped"))
+    assert s2["accounting"]["budget"] == "ar-a20-2026-11" and a.job_budget(job2) == "ar-a20-2026-11"
+    for _ in range(20):
+        if a.settlement(job2) is not None:
+            break
+        time.sleep(0.5)
+    assert a.settlement(job2)["settled_microusd"] == 0                                 # settled automatically (a rehearsal spends nothing)
+    assert c.get("/api/ironbark/config").json()["evaluation"]["launches"]["left"] == 2   # the judge pool is untouched
+    assert (tmp_path / "stage-b" / "armings" / "ACTIVE").read_bytes() == active_before
+    for f in list(root.rglob("*")) + list((tmp_path / "stage-b").rglob("*")):
+        if f.is_file():
+            assert OPERATOR not in f.read_bytes()

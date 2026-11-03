@@ -51,19 +51,41 @@ class StageBExecutor(J.LifecycleExecutor):
             return None, "arming_invalid"
         return rec, None
 
+    def budget_pool(self) -> tuple[AR.BudgetPool | None, str | None]:
+        """The operator's budget pool: recorded by the owner when the budget was opened, its budget open in THIS admission database, its mode this
+        service's mode, and still verifying. Independent of the judge arming."""
+        open_ = {b["budget"] for b in (self.admission.totals().get("budgets") or [])} if hasattr(self.admission, "capacity_microusd") else set()
+        cands = [p for p in AR.pools() if p.budget in open_]
+        if not cands:
+            return None, "no_budget"
+        pool = cands[0]
+        if pool.mode != ("paid" if self.mode == "live" else "rehearsal"):
+            return None, "pool_mode_mismatch"
+        if AR.verify(self.store(), pool):
+            return None, "pool_invalid"
+        return pool, None
+
     def configuration(self) -> dict:
         rec, why = self.arming()
         view = AR.summary(self.store(), rec, self.admission) if rec else None
+        pool, pwhy = self.budget_pool()
         return {"engine": ENGINE, "armed": rec is not None, "reason": why, "evaluation": view,
-                "tasks": self.tasks(rec) if rec else [], "repetitions": [o["repetitions"] for o in (view or {}).get("options", []) if o["available"]]}
+                "tasks": self.tasks(rec) if rec else [], "repetitions": [o["repetitions"] for o in (view or {}).get("options", []) if o["available"]],
+                "budget_pool": AR.pool_summary(self.store(), pool, self.admission) if pool else None, "budget_pool_reason": pwhy,
+                "budget_tasks": self.tasks(pool) if pool else []}
 
     def tasks(self, rec) -> list[dict]:
         return AR.executed_tasks(self.store(), rec.frozen_suite_sha256)
 
     # ---------------------------------------------------------------------------------------------- launch
-    def admit(self, job_id: str, client: str, repetitions: int) -> dict:
+    def admit(self, job_id: str, client: str, repetitions: int, *, charge: str = "arming") -> dict:
         """Steps 1-3. Raises AR.ArmingRefused or admission.Refused before anything is reserved; after the reservation, any failure leaves it
-        reserved (conservative, as for hosted repetitions) and the launch number used."""
+        reserved (conservative, as for hosted repetitions) and the launch number used. `charge="budget"`: the operator's one-click launch against
+        the budget pool (no launch count; the budget is the limit); `"arming"`: the owner's judge arming (unchanged)."""
+        if charge == "budget":
+            return self._admit_budget(job_id, client, repetitions)
+        if charge != "arming":
+            raise ValueError("unknown launch path")
         rec, why = self.arming()
         if rec is None:
             raise AR.ArmingRefused(why or "not_armed", {"not_armed": "No evaluation is armed. The owner arms one at the server terminal.",
@@ -98,6 +120,37 @@ class StageBExecutor(J.LifecycleExecutor):
                            "variants": [n for n, _ in rec.variants], "manifest_basis": "the owner-armed manifest", "reservation_usd": amount / 1e6})
         J.update_job(self.runs_root, job_id, launch=claim, engine=ENGINE, repetitions=repetitions)
         return {"id": job_id, "state": "reserved", "repetitions": repetitions}
+
+    def _admit_budget(self, job_id: str, client: str, repetitions: int) -> dict:
+        pool, why = self.budget_pool()
+        if pool is None:
+            raise AR.ArmingRefused(why, {"no_budget": "No operator evaluation budget is open. The owner opens it once at the server terminal.",
+                                         "pool_mode_mismatch": "The budget's evaluation does not match this service's mode.",
+                                         "pool_invalid": "The budget's evaluation no longer verifies; nothing can be launched."}.get(why, why), 409)
+        opt = pool.option(repetitions)
+        if opt is None:
+            raise AR.ArmingRefused("repetitions_not_armed", f"{repetitions} repetition(s) are not part of the budget evaluation.", 409)
+        amount = opt.reservation_microusd if pool.mode == "paid" else 0
+        # atomic: single slot + rate limit + the budget (its maximum against what remains) + the global cap; refused with nothing written otherwise
+        self.admission.reserve_amount(job_id, client, amount, budget=pool.budget)
+        at = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime())
+        try:
+            claim = AR.pool_launch(self.store(), pool, repetitions=repetitions, job_id=job_id, at=at)
+        except Exception:
+            self.admission.transition(job_id, "reserved", "failed")                    # nothing ran; the reservation is kept (conservative)
+            raise
+        mode = "paid" if pool.mode == "paid" else "rehearsal"
+        from ..lifecycle.sites import site_view
+        try:
+            where = site_view(pool.site)["label"]
+        except Exception:
+            where = pool.site
+        label = f"{'Live' if mode == 'paid' else 'Rehearsal'} evaluation · {where} · {pool.variants[0][0].capitalize()} vs {pool.variants[1][0].capitalize()}"
+        J.new_job(self.runs_root, job_id, manifest_sha=opt.manifest_sha256, mode=mode, label=label,
+                  request={"repetitions": repetitions, "budget": pool.budget, "experiment": claim["experiment_id"], "frozen_suite": pool.frozen_suite,
+                           "variants": [n for n, _ in pool.variants], "manifest_basis": "the owner's budget pool", "reservation_usd": amount / 1e6})
+        J.update_job(self.runs_root, job_id, launch=claim, engine=ENGINE, repetitions=repetitions)
+        return {"id": job_id, "state": "reserved", "repetitions": repetitions, "budget": pool.budget}
 
 
 # ---------------------------------------------------------------------------------------------- views for the hosted routes

@@ -78,6 +78,15 @@ def settle(a, job):
     return a.get(job)["state"]
 
 
+def open_pool(env, a, budget="op-budget-test"):
+    """The owner's one-time budget opening with its operator pool (the same suite and versions as the judge arming; a separate path)."""
+    from agent_readiness.hosted import budget as BG
+    kw = dict(store=env["store"], frozen=REF, variants=["original", "modified"])
+    p = BG.plan_open(a, budget, "20", "1.50", **kw)
+    BG.open_budget(a, budget, "20", "1.50", actor="owner (test)", typed=p["text"], **kw)
+    return budget
+
+
 def launch(c, headers=JG):
     return c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers=headers)
 
@@ -107,7 +116,9 @@ def test_launch_is_refused_without_a_valid_code(env, headers):
 def test_the_judge_code_authorises_nothing_else(env):
     c, _, a = app(env)
     routes = {(m, r.path) for r in c.app.routes for m in getattr(r, "methods", set()) if m not in ("GET", "HEAD")}
-    assert routes == {("POST", "/api/ironbark/jobs"), ("POST", "/api/lifecycle/suites/{sha}/decision")}       # no other write route exists
+    assert routes == {("POST", "/api/ironbark/jobs"), ("POST", "/api/lifecycle/suites/{sha}/decision"),           # no other write route exists
+                      ("POST", "/api/operator/session"), ("DELETE", "/api/operator/session")}
+    assert c.post("/api/operator/session", headers={**JG, "x-agent-readiness": "1"}).status_code == 403     # the judge code is not an operator sign-in
     for h in (JG, OP, {}):                                                                                      # web suite decisions: refused for everyone
         r = c.post("/api/lifecycle/suites/" + "0" * 64 + "/decision", json={"decision": "approved", "attestation": "x"}, headers=h)
         assert r.status_code == 403
@@ -131,6 +142,8 @@ def test_the_code_is_never_returned_or_recorded(env):
 
 def test_operator_token_still_works_and_identities_differ(env):
     c, _, a = app(env)
+    assert launch(c, OP).status_code == 409 and AR.claims("judge-test-1") == []      # the operator never launches the judge pool, even with no budget
+    budget = open_pool(env, a)
     j1 = launch(c, OP).json()["id"]
     settle(a, j1)
     time.sleep(1.05)
@@ -140,14 +153,17 @@ def test_operator_token_still_works_and_identities_differ(env):
     db = sqlite3.connect(env["tmp"] / "a.sqlite")
     clients = dict(db.execute("SELECT id, client FROM jobs").fetchall())
     assert clients[j1] != clients[j2]                                    # the operator is one client; a judge is identified by address (rate limit per judge)
+    assert (a.job_budget(j1), a.job_budget(j2)) == (budget, None)       # operator -> its budget; judge -> the programme (arming)
+    assert [x["job"] for x in AR.claims("judge-test-1")] == [j2] and [x["job"] for x in AR.claims(budget)] == [j1]
 
 
 @pytest.mark.parametrize("judge", [b"short", OPERATOR, None])
 def test_a_short_or_reused_or_absent_code_leaves_judge_access_off(env, judge):
-    c, _, _ = app(env, judge=judge)
+    c, _, a = app(env, judge=judge)
     assert c.get("/api/ironbark/config").json()["judge_access"] is False
     assert launch(c, {"authorization": "Bearer short"}).status_code == 403
-    assert launch(c, OP).status_code == 202                                                                     # operator unaffected
+    open_pool(env, a)
+    assert launch(c, OP).status_code == 202                                                                     # operator unaffected (its budget path)
 
 
 def test_public_access_does_not_advertise_a_judge_code(env):

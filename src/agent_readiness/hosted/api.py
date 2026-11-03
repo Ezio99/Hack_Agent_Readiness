@@ -27,7 +27,7 @@ import time
 from pathlib import Path
 from typing import Literal, Protocol
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict
 
@@ -243,7 +243,18 @@ def recover(root: Path, admission: Admission) -> list[str]:
 ARM_KEYS = {'original': 'placebo', 'modified': 'patched'}
 FRIENDLY = {'evaluation capacity is occupied': 'Another evaluation is already running. You can watch it live and start a new one when it finishes.',
             'rate limit exceeded': 'You started an evaluation a moment ago. Please wait a couple of minutes before starting another.',
-            'hosted budget exhausted': 'The budget for new evaluations has been used up. Completed evaluations remain available.'}
+            'hosted budget exhausted': 'The budget for new evaluations has been used up. Completed evaluations remain available.',
+            'global hosted cap reached': 'The service-wide spending cap does not cover another run.'}
+BUDGET_EXHAUSTED = 'The remaining budget does not cover the maximum cost of another run. Runs that are still settling release their unused reservation when they finish.'
+
+# Operator sign-in (2026-11): the operator token is exchanged ONCE for a server-side session (random 256-bit id; only its SHA-256 is stored, in its
+# own SQLite file beside the admission database). The cookie is __Host- prefixed, HttpOnly, Secure, SameSite=Strict, Path=/; a cookie-authenticated
+# state change also needs the custom header below (a cross-site page cannot send it without a CORS preflight this API never grants) and, when the
+# browser sends Origin, a same-origin Origin. The token itself is never stored, logged or returned.
+SESSION_COOKIE = '__Host-ar_operator'
+SESSION_SECONDS = 7 * 24 * 3600
+CSRF_HEADER = 'x-agent-readiness'
+IDEMPOTENCY = re.compile(r'[A-Za-z0-9_-]{16,64}')
 
 
 def create_app(root: Path, admission: Admission, *, client_key: bytes, executor: Executor | None = None, trusted_proxies=(), static_dir: Path | None = None,
@@ -358,9 +369,42 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
         given = request.headers.get('authorization', '')
         return given[7:].strip().encode() if given.startswith('Bearer ') else None
 
+    sessions_db = root / 'operator-sessions.sqlite'
+    sessions_lock = threading.Lock()
+    login_failures: dict[str, list[float]] = {}
+
+    def sessions():
+        import sqlite3
+        db = sqlite3.connect(sessions_db, timeout=10, isolation_level=None)
+        db.execute('CREATE TABLE IF NOT EXISTS sessions (hash TEXT PRIMARY KEY, created REAL NOT NULL, expires REAL NOT NULL, revoked INTEGER NOT NULL DEFAULT 0)')
+        db.execute('CREATE TABLE IF NOT EXISTS launch_requests (key_hash TEXT PRIMARY KEY, job_id TEXT NOT NULL, at REAL NOT NULL)')
+        return db
+
+    def session_valid(request: Request) -> float | None:
+        """The session's expiry if the request carries a live operator session cookie, else None."""
+        raw = request.cookies.get(SESSION_COOKIE)
+        if not operator_token or not raw or len(raw) > 200:
+            return None
+        h = hashlib.sha256(raw.encode()).hexdigest()
+        with sessions() as db:
+            row = db.execute('SELECT expires FROM sessions WHERE hash=? AND revoked=0', (h,)).fetchone()
+        return row[0] if row and row[0] > time.time() else None
+
+    def same_origin(request: Request) -> bool:
+        if request.headers.get(CSRF_HEADER) != '1':
+            return False
+        origin = request.headers.get('origin')
+        if origin is None:
+            return True
+        return origin.split('://', 1)[-1].rstrip('/') == request.headers.get('host', '')      # the reverse proxy passes Host through unchanged
+
     def is_operator(request: Request) -> bool:
         given = bearer(request)
-        return bool(operator_token) and given is not None and hmac.compare_digest(given, operator_token)
+        if given is not None:
+            return bool(operator_token) and hmac.compare_digest(given, operator_token)
+        if session_valid(request) is None:
+            return False
+        return request.method in ('GET', 'HEAD') or same_origin(request)              # a cookie never authorises a cross-site state change
 
     def is_judge(request: Request) -> bool:
         """Launch-only: consulted by `start` alone."""
@@ -465,6 +509,62 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
                 'detail': None if authorized else LAUNCH_DETAIL.get(reason, 'No launch is authorised.'),
                 'launches_left': (ev.get('launches') or {}).get('left') if ev else None}
 
+    @app.post('/api/operator/session')
+    def operator_sign_in(request: Request, response: Response):
+        """Exchange the operator token (Authorization: Bearer, sent once) for a server-side session cookie. Nothing secret is returned."""
+        if not operator_token:
+            raise HTTPException(404, 'Not found')
+        if not same_origin(request):
+            raise HTTPException(403, 'Sign-in must come from this site')
+        who = client_identity(request)
+        now = time.time()
+        recent = [t for t in login_failures.get(who, []) if t > now - 600]
+        if len(recent) >= 10:
+            raise HTTPException(429, 'Too many failed sign-in attempts; try again later')
+        given = bearer(request)
+        if given is None or not hmac.compare_digest(given, operator_token):
+            login_failures[who] = recent + [now]
+            raise HTTPException(403, 'The operator token is not valid')
+        login_failures.pop(who, None)
+        raw = secrets.token_urlsafe(32)
+        with sessions() as db:
+            db.execute('DELETE FROM sessions WHERE expires < ?', (now,))
+            db.execute('INSERT INTO sessions VALUES (?,?,?,0)', (hashlib.sha256(raw.encode()).hexdigest(), now, now + SESSION_SECONDS))
+        response.set_cookie(SESSION_COOKIE, raw, max_age=SESSION_SECONDS, path='/', secure=True, httponly=True, samesite='strict')
+        response.headers['Cache-Control'] = 'no-store'
+        return {'signed_in': True, 'expires_at': now + SESSION_SECONDS}
+
+    @app.get('/api/operator/session')
+    def operator_session(request: Request, response: Response):
+        response.headers['Cache-Control'] = 'no-store'
+        exp = session_valid(request)
+        return {'signed_in': exp is not None, 'expires_at': exp, 'available': bool(operator_token)}
+
+    @app.delete('/api/operator/session')
+    def operator_sign_out(request: Request, response: Response):
+        if not same_origin(request):
+            raise HTTPException(403, 'Sign-out must come from this site')
+        raw = request.cookies.get(SESSION_COOKIE)
+        if raw:
+            with sessions() as db:
+                db.execute('UPDATE sessions SET revoked=1 WHERE hash=?', (hashlib.sha256(raw.encode()).hexdigest(),))
+        response.delete_cookie(SESSION_COOKIE, path='/', secure=True, httponly=True, samesite='strict')
+        return {'signed_in': False}
+
+    def budget_launch_state(cfg: dict, active: list) -> dict:
+        """Whether the signed-in operator's one-click launch would be admitted now (display only; `admit` enforces everything again)."""
+        pool = cfg.get('budget_pool')
+        reason = None
+        if not enabled():
+            reason = 'service_unavailable'
+        elif pool is None:
+            reason = cfg.get('budget_pool_reason') or 'no_budget'
+        elif not any(o.get('available') for o in pool.get('options') or []):
+            reason = 'budget_exhausted'
+        detail = {'service_unavailable': 'Evaluations are currently unavailable.', 'no_budget': 'No operator evaluation budget is open.',
+                  'budget_exhausted': BUDGET_EXHAUSTED}.get(reason, 'No launch is possible now.') if reason else None
+        return {'authorized': reason is None, 'ready': reason is None and not active, 'reason': reason, 'detail': detail}
+
     programme_cache: dict = {}
 
     def programme_block() -> dict | None:
@@ -513,7 +613,7 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
         return out
 
     @app.get('/api/ironbark/config')
-    def config():
+    def config(request: Request):
         totals = admission.totals()
         active = admission.active()
         from ..agent import ModelConfig
@@ -532,6 +632,9 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
                     'agent_settings': ev.get('agent'), 'tasks': cfg['tasks'], 'evaluation': ev or None, 'remaining_repetitions': left,
                     'ceiling': {'ceiling_usd': totals['ceiling_microusd'] / 1e6, 'reserved_usd': totals['reserved_microusd'] / 1e6},
                     'spending': spending_view(totals, ev),
+                    'operator': {'signed_in': session_valid(request) is not None, 'sign_in_available': bool(operator_token)},
+                    'budget_evaluation': cfg.get('budget_pool'), 'budget_tasks': cfg.get('budget_tasks') or [],
+                    'budget_launch': budget_launch_state(cfg, active),
                     'active': active[0] if active else None}
         return {'worker': worker_state(), 'repetition_duration': repetition_seconds(), 'available': enabled(), 'mode': getattr(executor, 'mode', None) if enabled() else None, 'access': 'public' if public_start else 'operator',
                 'reason': None if enabled() else (unavailable_reason or 'disabled'),
@@ -580,15 +683,32 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
         job_id = 'eval-' + secrets.token_hex(16)
         if not stage_b:                                    # the paired Ironbark engine is retired; only the Stage B executor can launch
             raise HTTPException(503, 'Evaluations are currently unavailable')
+        key = request.headers.get('idempotency-key')
+        if key is not None and not IDEMPOTENCY.fullmatch(key):
+            raise HTTPException(422, 'Invalid Idempotency-Key')
+        # a double-click or a retry of the same launch returns the job it already started (keyed per caller; never a second reservation)
+        key_hash = hashlib.sha256(f'{client}:{key}'.encode()).hexdigest() if key else None
         from ..lifecycle.arming import ArmingRefused
-        try:
-            out = executor.admit(job_id, client, body.repetitions)
-        except Refused as exc:
-            raise HTTPException(429, FRIENDLY.get(str(exc), str(exc))) from exc
-        except ArmingRefused as exc:
-            raise HTTPException(exc.status, exc.detail) from exc
-        except ValueError as exc:
-            raise HTTPException(503, 'Unable to start evaluation') from exc
+        with sessions_lock:
+            if key_hash:
+                with sessions() as db:
+                    row = db.execute('SELECT job_id FROM launch_requests WHERE key_hash=?', (key_hash,)).fetchone()
+                if row:
+                    held = admission.get(row[0])
+                    return {'id': row[0], 'state': held['state'] if held else 'unknown', 'repetitions': body.repetitions, 'duplicate': True}
+            try:
+                # the operator's one-click path is charged to the budget only; judges use the owner's arming only (neither touches the other)
+                out = executor.admit(job_id, client, body.repetitions, **({'charge': 'budget'} if operator else {}))
+            except Refused as exc:
+                msg = str(exc)
+                raise HTTPException(429, BUDGET_EXHAUSTED if msg.startswith('budget ') else FRIENDLY.get(msg, msg)) from exc
+            except ArmingRefused as exc:
+                raise HTTPException(exc.status, exc.detail) from exc
+            except ValueError as exc:
+                raise HTTPException(503, 'Unable to start evaluation') from exc
+            if key_hash:
+                with sessions() as db:
+                    db.execute('INSERT OR IGNORE INTO launch_requests VALUES (?,?,?)', (key_hash, job_id, time.time()))
         try:
             with inflight_lock:
                 inflight.add(job_id)
@@ -615,9 +735,20 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
                 return {'state': 'withheld', 'detail': 'the report did not pass the publication leak audit and is withheld (fail-closed)'}
             return {'state': 'unavailable', 'detail': getattr(exc, 'detail', None) or 'the report could not be built'}
 
+    def accounting(job_id: str, held: dict) -> dict:
+        """Where the run's cost is accounted and what it costs: its reservation until settled, then its verified actual cost (never cached)."""
+        st = admission.settlement(job_id)
+        return {'reserved_usd': held['reserved_microusd'] / 1e6, 'cost_usd': st['settled_microusd'] / 1e6 if st else None, 'settled': st is not None,
+                'budget': admission.job_budget(job_id)}
+
     @app.get('/api/ironbark/jobs/{job_id}')
     def status(job_id: str):
         held = checked_job(job_id)
+        if is_sb(job_id):
+            return {**sb_status(job_id, held), 'accounting': accounting(job_id, held)}
+        return legacy_status(job_id, held)
+
+    def sb_status(job_id: str, held: dict):
         if job_id in cache and 'status' in cache[job_id]:
             return cache[job_id]['status']
         with inflight_lock:
@@ -643,6 +774,12 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
             if held['state'] in TERMINAL:
                 cache.setdefault(job_id, {})['status'] = out
             return out
+
+    def legacy_status(job_id: str, held: dict):
+        if job_id in cache and 'status' in cache[job_id]:
+            return cache[job_id]['status']
+        with inflight_lock:
+            recovery_required = held['state'] in ('reserved', 'running') and job_id not in inflight
         try:
             job = paired.load_job(root, job_id)
         except (OSError, ValueError):

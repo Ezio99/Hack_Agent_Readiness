@@ -411,8 +411,7 @@ def test_the_copied_ledger_rule_refuses_anything_it_cannot_prove(prod):
     assert ST.assess(a, prod / "live", job)["reason"] == "ledger_malformed"          # the remainder may not touch an imported request
 
 
-@need_prod
-def test_existing_judge_launches_stay_programme_jobs_and_a_v2_arming_is_charged_to_its_budget(prod, monkeypatch):
+def _pool_env(prod, monkeypatch):
     from agent_readiness.evalruns import authorization as AU
     from agent_readiness.hosted.stageb import StageBExecutor
     from agent_readiness.lifecycle import arming as AR
@@ -421,47 +420,88 @@ def test_existing_judge_launches_stay_programme_jobs_and_a_v2_arming_is_charged_
     monkeypatch.setattr(AU, "STAGE_B", sb)
     AR.set_stage_b_root(sb)
     store = WriteOnceStore(prod / "lifecycle" / "store")
+    a = Admission.open_existing(prod / "live" / "admission.sqlite")
+    return AR, store, a, StageBExecutor(prod / "live", prod / "lifecycle" / "store", a, mode="live"), sb
+
+
+def _open_pool(a, store):
+    kw = dict(store=store, frozen="larkspur-core@v3", variants=["original", "improved"])
+    p = BG.plan_open(a, B, "20", "1.50", **kw)
+    BG.open_budget(a, B, "20", "1.50", actor="owner terminal (test)", typed=p["text"], **kw)
+    return p
+
+
+@need_prod
+def test_existing_judge_launches_stay_programme_jobs_and_the_operator_pool_never_touches_them(prod, monkeypatch):
+    AR, store, a, ex, sb = _pool_env(prod, monkeypatch)
     claims = {json.loads(p.read_text())["arming_id"]: json.loads(p.read_text())["arming_sha256"] for p in (sb / "launches").glob("*.json")}
-    for aid in ("larkspur-judge-1", "larkspur-live-1"):                              # recorded v1 armings: unchanged hash, still verify
+    for aid in ("larkspur-judge-1", "larkspur-live-1"):                              # recorded armings: unchanged hash, still verify
         rec = AR.load(aid)
-        assert rec.schema_ == AR.SCHEMA and rec.budget is None and "budget" not in rec.content()
         assert rec.sha256 == claims[aid] and AR.verify(store, rec) == []
-    db = prod / "live" / "admission.sqlite"
-    a = Admission.open_existing(db)
+    active_before = (sb / "armings" / "ACTIVE").read_bytes()
     ST.settle(a, prod / "live", C04, actor="owner terminal", expect_microusd=631_751)
-    legacy_before = a.capacity_microusd(None)
-    open_b20(a)
-    assert a.capacity_microusd(None) == legacy_before == 10_588_249                  # opening the budget does not change the programme's capacity
-    ex = StageBExecutor(prod / "live", prod / "lifecycle" / "store", a, mode="live")
-    first = ex.admit(jid(900), "%064x" % 900, 1)["id"]                                # larkspur-judge-1 (v1): a programme job
-    assert a.job_budget(first) is None and budget_fig(a)["jobs"] == 0
-    a.transition(first, "reserved", "failed")
-    assert a.capacity_microusd(None) == 10_588_249 - 3_740_000
-    kw = dict(arming_id="budget-pool-1", mode="paid", frozen_ref="larkspur-core@v3", variants=["original", "improved"], repetitions=[1], launches=3, budget=B)
-    p = AR.plan(store, **kw)
-    assert p["attestation"].endswith(f"every launch is charged to the separate budget {B}, not to the A$50 programme or the hosted ceiling")
-    AR.arm(store, typed=p["attestation"], at="2026-11-04T00:00:00+00:00", interactive=True, **kw)
-    rec = AR.active()
-    assert (rec.schema_, rec.budget, AR.verify(store, rec)) == (AR.SCHEMA_V2, B, [])
-    summ = AR.summary(store, rec, a)
-    assert summ["charged_to"] == f"budget {B}" and summ["capacity"]["launches_affordable"] == 3       # A$20 / A$5.61
-    admitted = []
-    for n in range(4):
+    p = _open_pool(a, store)
+    assert "no launch count" in p["text"] and "charged ONLY to the separate budget ar-a20-2026-11" in p["text"]
+    pool = AR.load_pool(B)
+    assert AR.verify(store, pool) == [] and (sb / "armings" / "ACTIVE").read_bytes() == active_before    # the judge arming stays active
+    assert a.capacity_microusd(None) == 10_588_249                                   # opening the budget leaves the programme's capacity unchanged
+    op = ex.admit(jid(901), "%064x" % 901, 1, charge="budget")
+    assert a.job_budget(op["id"]) == B and AR.claims("larkspur-judge-1")[-1]["job"] != op["id"]
+    a.transition(op["id"], "reserved", "failed")
+    judge = ex.admit(jid(902), "%064x" % 902, 1)                                      # the judge path: the arming, a programme job
+    assert a.job_budget(judge["id"]) is None and AR.summary(store, AR.active(), a)["launches"]["left"] == 1
+    a.transition(judge["id"], "reserved", "failed")
+    assert budget_fig(a)["outstanding_micro_aud"] == 5_610_000 and a.capacity_microusd(None) == 10_588_249 - 3_740_000
+    with pytest.raises(AR.ArmingRefused, match="already recorded"):                 # one pool per budget, write-once
+        AR.pool_terms(store, budget=B, mode="paid", frozen_ref="larkspur-core@v3", variants=["original", "improved"], repetitions=[1])
+    with pytest.raises(AR.ArmingRefused, match="is a budget pool"):                  # an arming can never reuse the pool's experiment ids
+        AR.plan(store, arming_id=B, mode="paid", frozen_ref="larkspur-core@v3", variants=["original", "improved"], repetitions=[1], launches=1)
+
+
+@need_prod
+def test_operator_launches_have_no_count_limit_only_the_budget_and_settlement_frees_capacity(prod, monkeypatch):
+    AR, store, a, ex, sb = _pool_env(prod, monkeypatch)
+    _open_pool(a, store)
+    lines = ok_ledger(15, 0.036, 0.0421167333)                                        # 15 requests settled: US$0.631755 (a run like eval-c04)
+    done, refusal = [], None
+    for n in range(40):                                                               # one-click runs that complete: each settles and releases the rest
         try:
-            admitted.append(ex.admit(jid(910 + n), "%064x" % (910 + n), 1)["id"])
-        except AR.ArmingRefused:
+            j = ex.admit(jid(2000 + n), "%064x" % (2000 + n), 1, charge="budget")["id"]
+        except Refused as exc:
+            refusal = str(exc)
             break
-        a.transition(admitted[-1], "reserved", "failed")
-    assert len(admitted) == 3 and all(a.job_budget(j) == B for j in admitted)
+        claim = next(c for c in AR.claims(B) if c["job"] == j)
+        assert claim["launch"] == n + 1 and (sb / "authorizations" / f"{claim['experiment_id']}.json").is_file()   # its own write-once authorisation
+        led = sb / "ledgers" / claim["experiment_id"] / "ledger.jsonl"
+        led.parent.mkdir(parents=True, exist_ok=True)
+        led.write_text("".join(json.dumps({"ts": "t", "kind": k, "id": i, "usd": u}) + "\n" for k, i, u in lines))
+        a.transition(j, "reserved", "running")
+        a.transition(j, "running", "completed")
+        assert ST.settle_automatic(a, prod / "live", j, log=lambda *_: None)["settled_microusd"] == 631_755
+        done.append(j)
+    # each run reserves A$5.61 before it starts and settles at A$0.947633: 16 runs fit (far beyond the judge pool's 3), then the budget refuses
+    assert len(done) == 16 and refusal == "budget ar-a20-2026-11 exhausted"
     b = budget_fig(a)
-    assert (b["outstanding_micro_aud"], b["available_micro_aud"]) == (3 * 5_610_000, 20_000_000 - 3 * 5_610_000)
-    assert a.capacity_microusd(None) == 10_588_249 - 3_740_000                       # the programme scope is untouched by budget launches
-    t = a.totals()
-    assert t["all_committed_microusd"] <= t["global_cap_microusd"] == CEIL + 13_333_333
-    with pytest.raises(Exception):                                                    # a v2 arming without a budget, or a v1 with one, is invalid
-        AR.Arming.model_validate({**rec.content(), "budget": None})
-    with pytest.raises(Exception):
-        AR.Arming.model_validate({**AR.load("larkspur-judge-1").content(), "budget": B})
+    assert (b["spent_micro_aud"], b["outstanding_micro_aud"], b["available_micro_aud"]) == (16 * 947_633, 0, 20_000_000 - 16 * 947_633)
+    assert AR.summary(store, AR.active(), a)["launches"]["left"] == 2                 # the judge pool is untouched
+    assert a.capacity_microusd(None) == 7_480_000                                     # and so is the programme's ceiling scope
+
+
+@need_prod
+def test_failed_or_interrupted_operator_runs_hold_their_full_reservation(prod, monkeypatch):
+    AR, store, a, ex, sb = _pool_env(prod, monkeypatch)
+    _open_pool(a, store)
+    held = []
+    while True:
+        try:
+            j = ex.admit(jid(1000 + len(held)), "%064x" % (1000 + len(held)), 1, charge="budget")["id"]
+        except Refused:
+            break
+        a.transition(j, "reserved", "running")
+        a.transition(j, "running", "interrupted" if len(held) % 2 else "failed")
+        held.append(j)
+    assert len(held) == 3 and ST.reconcile_automatic(a, prod / "live", log=lambda *_: None) == []     # no ledger: nothing released
+    assert budget_fig(a)["available_micro_aud"] == 20_000_000 - 3 * 5_610_000
 
 
 @need_prod

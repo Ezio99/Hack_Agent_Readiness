@@ -233,9 +233,10 @@ def test_the_hosted_launch_api_admits_the_exact_m7_manifest_only_after_the_migra
         a = Admission.open_existing(db)
         ex = NoRun(db.parent, store_copy, a, mode="live")
         svc = LifecycleService(store_root=store_copy, runs_root=db.parent / "stageb", executor=ex, admission=a, log=lambda *_: None)
-        return TestClient(create_app(db.parent, a, client_key=b"k" * 32, executor=ex, operator_token=b"t" * 32, public_start=False, mode="live", lifecycle=svc)), a
+        return TestClient(create_app(db.parent, a, client_key=b"k" * 32, executor=ex, operator_token=b"t" * 32, public_start=False, mode="live", lifecycle=svc,
+                                     judge_token=b"judge-code-for-arming-launches-0123456789")), a
 
-    op = {"authorization": "Bearer " + "t" * 32}
+    op = {"authorization": "Bearer judge-code-for-arming-launches-0123456789"}   # armed launches are the judge path (the operator's path is its budget)
     c, a = app()
     cfg = c.get("/api/ironbark/config").json()
     assert cfg["evaluation"]["options"][0]["fits_hosted_ceiling"] is False and cfg["repetitions"] == []

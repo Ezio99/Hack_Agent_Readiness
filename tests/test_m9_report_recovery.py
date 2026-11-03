@@ -136,12 +136,13 @@ class _Lifecycle:
 def _app(tmp_path, lifecycle):
     root = tmp_path / "live"
     a = Admission(root / "admission.sqlite", ceiling_microusd=10_000_000, job_cap_microusd=1_650_000, min_interval_seconds=1)
-    c = TestClient(create_app(root, a, client_key=b"k" * 32, executor=_Exec(root, a), operator_token=b"t" * 32, public_start=False, mode="live", lifecycle=lifecycle))
+    c = TestClient(create_app(root, a, client_key=b"k" * 32, executor=_Exec(root, a), operator_token=b"t" * 32, public_start=False, mode="live", lifecycle=lifecycle,
+                                judge_token=b"judge-code-for-arming-launches-0123456789"))
     return root, a, c
 
 
 def _launch_and_wait(c, a):
-    job = c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers={"authorization": "Bearer " + "t" * 32}).json()["id"]
+    job = c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers={"authorization": "Bearer judge-code-for-arming-launches-0123456789"}).json()["id"]
     for _ in range(200):
         if a.get(job)["state"] not in ("reserved", "running"):
             break

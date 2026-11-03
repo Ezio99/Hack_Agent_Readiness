@@ -25,7 +25,7 @@ type ArmV2 = { completed: number; evidence_supported_passes: number; strict_pass
 interface ArmSummary { planned: number; completed: number; failed: number; evidence_supported_passes: number; strict_passes: number; requests_total: number; requests_mean: number | null; page_views_mean: number | null; steps_mean: number | null; elapsed_mean: number | null }
 export interface Execution { state: string; trials_planned: number | null; trials_completed: number; trials_failed: number; trials_void: number }
 export interface ReportStatus { state: 'available' | 'withheld' | 'pending' | 'unavailable' | 'unknown'; detail?: string }
-export interface Job { engine?: 'stage-b'; execution?: Execution; report_status?: ReportStatus; record_note?: string | null; report?: string | null; error?: string | null; stopped?: string | null; id: string; state: string; mode: 'live' | 'rehearsal' | null; repetitions: number | null; recovery_required?: boolean; created_at: number; started_at: number | null; finished_at: number | null; reps: Rep[]; summary: Record<'Original' | 'Modified', ArmSummary>; arm_display?: Record<'Original' | 'Modified', string> | null; summary_v2?: ({ label: string; repetitions: number } & Record<'Original' | 'Modified', ArmV2>) | null }
+export interface Job { engine?: 'stage-b'; execution?: Execution; report_status?: ReportStatus; record_note?: string | null; report?: string | null; error?: string | null; stopped?: string | null; id: string; state: string; mode: 'live' | 'rehearsal' | null; repetitions: number | null; recovery_required?: boolean; created_at: number; started_at: number | null; finished_at: number | null; reps: Rep[]; summary: Record<'Original' | 'Modified', ArmSummary>; arm_display?: Record<'Original' | 'Modified', string> | null; accounting?: { reserved_usd: number; cost_usd: number | null; settled: boolean; budget: string | null }; summary_v2?: ({ label: string; repetitions: number } & Record<'Original' | 'Modified', ArmV2>) | null }
 interface Worker { state: 'idle' | 'busy' | 'unavailable'; job: string | null; started_at?: number | null; repetitions?: number; finished_runs?: number; total_runs?: number | null; estimated_remaining_seconds?: number | null }
 interface ArmedEvaluation { arming_id: string; mode: 'paid' | 'rehearsal'; site: string; suite: string; frozen_suite: string; frozen_suite_sha256: string; variants: string[]; armed_at: string;
   launches: { max: number; used: number; left: number }; budget?: string | null; options: { repetitions: number; trials: number; reservation_usd: number; manifest_sha256: string; available: boolean; fits_hosted_ceiling: boolean | null }[];
@@ -36,9 +36,12 @@ interface Programme { spent_usd: number; spent_aud: number; recorded_usd: number
  *  each separately allocated budget. Top-level figures are the ceiling's scope. */
 interface Spending { ceiling: number; settled: number; outstanding: number; committed: number; available: number; released: number; settled_jobs: number; unsettled_jobs: number; basis: string; scope?: string;
   global?: { cap_usd: number; committed_usd: number; available_usd: number } | null; budgets?: SeparateBudget[]; charged_to?: string | null; programme?: Programme | null | { error: string } }
+interface BudgetEvaluation { budget: string; mode: 'paid' | 'rehearsal'; site: string; suite: string; variants: string[]; launches_so_far: number; available_usd: number | null;
+  options: { repetitions: number; trials: number; reservation_usd: number; covered: number | null; available: boolean }[] }
 interface LaunchState { authorized: boolean; ready: boolean; reason: string | null; detail: string | null; launches_left: number | null }
 interface Config { engine?: 'stage-b'; launch?: LaunchState; judge_access?: boolean; service?: { state: 'operational' | 'unavailable'; reason: string | null }; evaluation?: ArmedEvaluation | null; ceiling?: { ceiling_usd: number; reserved_usd: number };
-  spending?: Spending;
+  spending?: Spending; operator?: { signed_in: boolean; sign_in_available: boolean }; budget_evaluation?: BudgetEvaluation | null;
+  budget_tasks?: { task: number; question: string }[]; budget_launch?: { authorized: boolean; ready: boolean; reason: string | null; detail: string | null };
   agent_settings?: { profile: string; profile_file_sha256: string; reasoning_effort: string | null; max_completion_tokens: number | null } | null; worker?: Worker; repetition_duration?: { seconds: number; basis: 'measured' | 'first genuine run' | 'default'; samples: number }; available: boolean; mode: 'live' | 'rehearsal' | null; access?: 'public' | 'operator'; reason?: string | null; repetitions: number[]; model: string; agent_profile: string; tasks: { task: number; question: string; capability?: string; limits?: { max_steps?: number; timeout_seconds?: number; max_model_requests?: number } }[]; remaining_repetitions: number; active: string | null }
 
 const ACTIVE = ['reserved', 'running'];
@@ -191,6 +194,9 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
   const [tab, setTab] = useState<'watch' | 'results' | 'insights'>('watch');
   const [selection, setSelection] = useState<Selection | null>(null);
   const [token, setToken] = useState('');   // memory only: never written to browser storage; re-entered after a reload
+  const [signInToken, setSignInToken] = useState('');   // the operator token, only while signing in; cleared at once (the server keeps an HttpOnly session)
+  const clickKey = useRef<string | null>(null);         // one idempotency key per click: a double-click or retry returns the same run
+  const inFlight = useRef(false);                       // synchronous guard: a second click before re-render sends nothing
   useEffect(() => { sessionStorage.removeItem(LEGACY_TOKEN); }, []);
   const current = useRef<string | null>(null);
   const top = useRef<HTMLDivElement>(null);
@@ -250,6 +256,37 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
     }
     finally { setBusy(false); }
   }
+  const newKey = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`).replace(/[^A-Za-z0-9_-]/g, '');
+  async function runOperator() {
+    if (inFlight.current) return;                         // the button is also disabled; the server-side key covers retries and races
+    inFlight.current = true; setBusy(true); setMessage('');
+    clickKey.current = clickKey.current ?? newKey();
+    try {
+      const data = await getJSON<{ id: string }>('/api/ironbark/jobs', { method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-Agent-Readiness': '1', 'Idempotency-Key': clickKey.current }, body: JSON.stringify({ repetitions: 1 }) });
+      clickKey.current = null;
+      localStorage.setItem(STORE, data.id);
+      history.replaceState(null, '', `#/run/${data.id}`);
+      await load(data.id); setTab('watch'); void refreshConfig(); void refreshList();
+    } catch (e) {
+      const status = (e as { status?: number }).status;
+      if (status && status < 500) clickKey.current = null;    // a definite refusal: the next click is a new launch
+      setMessage(status === 403 ? 'Your operator session has ended. Sign in again.' : e instanceof Error ? e.message : 'Evaluation unavailable.');
+      void refreshConfig();
+    } finally { inFlight.current = false; setBusy(false); }
+  }
+  async function signIn() {
+    const t = signInToken; setSignInToken('');
+    if (t.length < 24) { setMessage('Enter the operator token to sign in.'); return; }
+    try {
+      await getJSON('/api/operator/session', { method: 'POST', credentials: 'same-origin', headers: { 'X-Agent-Readiness': '1', Authorization: `Bearer ${t}` } });
+      setMessage(''); void refreshConfig();
+    } catch (e) { setMessage((e as { status?: number }).status === 429 ? 'Too many failed sign-in attempts. Try again later.' : 'That operator token was not accepted.'); }
+  }
+  async function signOut() {
+    try { await getJSON('/api/operator/session', { method: 'DELETE', credentials: 'same-origin', headers: { 'X-Agent-Readiness': '1' } }); } catch { /* the session is gone either way */ }
+    void refreshConfig();
+  }
   async function open(rep: Rep) {
     if (!job) return;
     try { onOpen(await getJSON(`/api/ironbark/jobs/${job.id}/repetitions/${rep.index}/export`), `Evaluation ${job.id.slice(5, 13)} · repetition ${rep.index}`); }
@@ -282,6 +319,15 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
   const budgetOk = stageB ? (config?.repetitions ?? []).includes(reps) && (config?.remaining_repetitions ?? 0) > 0 : (config?.remaining_repetitions ?? 0) >= reps;
   const canRun = !!config?.available && !busy && !running && !othersRunning && budgetOk && (!operatorOnly || token.length >= 24);
   const judgeAccess = !!config?.judge_access;
+  const signedIn = !!config?.operator?.signed_in;
+  const be = config?.budget_evaluation ?? null;
+  const beBudget = be ? (config?.spending?.budgets ?? []).find(b => b.id === be.budget) ?? null : null;
+  const beRate = beBudget?.rate_aud_per_usd ?? 1.5;
+  const beReserve = be?.options[0]?.reservation_usd ?? null;
+  const canRunOperator = signedIn && !!config?.budget_launch?.authorized && !busy && !running && !othersRunning;
+  const operatorNote = !signedIn ? '' : !config?.budget_launch?.authorized ? (config?.budget_launch?.detail ?? 'No launch is possible now.')
+    : othersRunning ? 'Another evaluation is running. Yours can start when it finishes.'
+    : `Each run reserves up to A$${((beReserve ?? 0) * beRate).toFixed(2)} until it finishes, then only its actual cost counts${be?.options[0]?.covered != null ? ` · the budget covers ${be.options[0].covered} more run${be.options[0].covered === 1 ? '' : 's'} now` : ''}.`;
   const liveRun = stageB && ev?.mode === 'paid';
   const perRep = config?.repetition_duration?.seconds ?? 560;
   const worker = config?.worker;
@@ -322,18 +368,28 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
         <div className="ws-compose-head"><h2>New evaluation</h2>{mode && <span className={`ws-mode ${mode}`}>{MODE_LABEL[mode]}</span>}</div>
         <ol className="ws-steps">
           <li><span className="ws-step">01 · Website</span>
-            {stageB ? <div className="ws-target" aria-label="Selected website">{ev ? <><strong>{ev.site === 'larkspur' ? 'Larkspur Community College' : ev.site === 'ironbark' ? 'Ironbark Hire Co.' : ev.site}</strong>
+            {stageB && signedIn && be ? <div className="ws-target" aria-label="Selected website"><strong>{be.site === 'larkspur' ? 'Larkspur Community College' : be.site}</strong>
+                <small>{config?.budget_tasks?.length ?? 0} customer tasks · {be.variants.map(v => cap(v, v)).join(' vs ')} site · runs while the budget lasts (no launch limit)</small></div>
+              : stageB ? <div className="ws-target" aria-label="Selected website">{ev ? <><strong>{ev.site === 'larkspur' ? 'Larkspur Community College' : ev.site === 'ironbark' ? 'Ironbark Hire Co.' : ev.site}</strong>
                 <small>{nTasks} customer task{nTasks === 1 ? '' : 's'} · {armedNames.Original} vs {armedNames.Modified} site · {ev.launches.left} of {ev.launches.max} live run{ev.launches.max === 1 ? '' : 's'} left</small></>
                 : <><strong>No evaluation armed</strong><small>The owner selects and authorises the frozen suite at the server terminal.</small></>}</div>
               : <div className="ws-target" aria-label="Selected website"><strong>No evaluation available</strong><small>New evaluations are not available on this server right now; recorded evaluations remain available.</small></div>}</li>
           {stageB && (config?.repetitions?.length ?? 0) <= 1
             ? <li><span className="ws-step">02 · What runs</span>
-                <p className="ws-run-summary">{ev ? `${runsPerRep} browser agents, one per task on each site · ${minutes(perRep)}` : 'Nothing to run right now.'}</p>
-                {ev && (config?.tasks?.length ?? 0) > 0 && <ol className="ws-task-list">{config!.tasks.map(t => <li key={t.task}><q>{t.question}</q></li>)}</ol>}</li>
+                <p className="ws-run-summary">{ev || (signedIn && be) ? `${signedIn && be ? (be.options[0]?.trials ?? runsPerRep) : runsPerRep} browser agents, one per task on each site · ${minutes(perRep)}` : 'Nothing to run right now.'}</p>
+                {signedIn && be ? (config?.budget_tasks?.length ?? 0) > 0 && <ol className="ws-task-list">{config!.budget_tasks!.map(t => <li key={t.task}><q>{t.question}</q></li>)}</ol>
+                  : ev && (config?.tasks?.length ?? 0) > 0 && <ol className="ws-task-list">{config!.tasks.map(t => <li key={t.task}><q>{t.question}</q></li>)}</ol>}</li>
             : <li><span className="ws-step">02 · Repetitions</span>
             <div className="ws-reps" role="radiogroup" aria-label="Paired repetitions">{(config?.repetitions ?? [1, 3, 5]).map(n =>
               <button key={n} role="radio" aria-checked={reps === n} disabled={running} onClick={() => setReps(n)}><strong>{n}</strong><small>{n * (stageB ? runsPerRep : 8)} agent runs</small><small>{minutes(perRep * n)}</small></button>)}</div></li>}
           <li><span className="ws-step">03 · Run</span>
+            {signedIn ? <div className="ws-operator-run" aria-label="Operator evaluation">
+              <p className="ws-operator-who"><strong>Signed in as operator</strong> <button type="button" className="ws-link" onClick={() => void signOut()}>Sign out</button></p>
+              {beBudget && <p className="ws-operator-budget"><strong>A${beBudget.available_aud.toFixed(2)}</strong> of A${beBudget.limit_aud.toFixed(2)} left in {beBudget.id} <small>spent A${beBudget.spent_aud.toFixed(2)} · held A${beBudget.outstanding_aud.toFixed(2)} for running or unsettled runs</small></p>}
+              {be && <p className="ws-run-summary">{be.options[0]?.trials ?? ''} browser agents · {be.variants.map(v => cap(v, v)).join(' vs ')} · {be.suite}</p>}
+              <button className="btn btn-signal ws-run" disabled={!canRunOperator} aria-describedby="ws-run-note" onClick={() => void runOperator()}>{busy ? 'Starting…' : running ? 'Evaluation running' : 'Run evaluation'}</button>
+              <p className="ws-note" id="ws-run-note">{operatorNote}</p>
+            </div> : <>
             {operatorOnly && config?.available && <div className="ws-operator">
               <label htmlFor="ws-operator-token">{judgeAccess ? 'Access code' : 'Operator token'} <span className="ws-operator-badge">{judgeAccess ? 'judges and operators' : 'operators only'}</span></label>
               <div className="ws-operator-row">
@@ -344,7 +400,15 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
               <p id="ws-operator-help" className="ws-operator-help">Held in this page's memory only (never saved; re-enter it after a reload) and sent only as an authorization header when you start. The server checks it.</p>
             </div>}
             <button className="btn btn-signal ws-run" disabled={!canRun} aria-describedby="ws-run-note" onClick={() => void start()}>{busy ? 'Starting…' : running ? 'Evaluation running' : liveRun ? 'Run live evaluation' : 'Run evaluation'}</button>
-            <p className="ws-note" id="ws-run-note">{note}</p></li>
+            <p className="ws-note" id="ws-run-note">{note}</p>
+            {config?.operator?.sign_in_available && <details className="ws-signin"><summary>Operator sign-in</summary>
+              <form onSubmit={e => { e.preventDefault(); void signIn(); }}>
+                <label htmlFor="ws-signin-token">Operator token</label>
+                <input id="ws-signin-token" type="password" autoComplete="off" spellCheck={false} value={signInToken} onChange={e => setSignInToken(e.target.value.trim())} />
+                <button type="submit" className="btn">Sign in</button>
+              </form>
+              <p className="ws-operator-help">Once per browser: the server keeps a secure session (an HttpOnly cookie this page cannot read), so the token is not stored or entered again.</p>
+            </details>}</>}</li>
         </ol>
         {stageB && config?.spending && <Budget s={config.spending} ev={ev} history={recent} />}
         {stageB && <details className="ws-method"><summary>Methodology &amp; provenance</summary>
@@ -381,7 +445,8 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
           <header className="ws-job-head">
             <div className="ws-status" aria-live="polite"><span className={`ws-dot ${shown}`} aria-hidden="true" /><strong>{label(shown)}</strong>
               {shown !== job.state && <span className="ws-record" title="The job record is kept exactly as it was written">Job record: {label(job.state).toLowerCase()}</span>}
-              <span>{done} / {total || '–'} agent runs finished</span>{job.started_at && <span>{clock(elapsed)} elapsed</span>}</div>
+              <span>{done} / {total || '–'} agent runs finished</span>{job.started_at && <span>{clock(elapsed)} elapsed</span>}
+              {job.accounting && job.mode === 'live' && <span className="ws-cost">{job.accounting.cost_usd != null ? `Actual cost US$${job.accounting.cost_usd.toFixed(2)}` : `Reserved up to US$${job.accounting.reserved_usd.toFixed(2)} until settled`}{job.accounting.budget ? ` · ${job.accounting.budget}` : ''}</span>}</div>
             <div className="ws-job-meta"><span>{job.repetitions} repetition{job.repetitions === 1 ? '' : 's'} · started {when(job.created_at)}</span><code title={job.id}>{job.id.slice(0, 13)}</code></div>
           </header>
           <div className="ws-bar" role="progressbar" aria-label="Agent runs finished" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}><i style={{ width: `${total ? 100 * done / total : 0}%` }} /></div>

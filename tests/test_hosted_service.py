@@ -24,7 +24,7 @@ class StageB:
         return {'engine': 'stage-b', 'armed': True, 'reason': None, 'tasks': [], 'repetitions': [1, 3, 5],
                 'evaluation': {'launches': {'left': 9, 'max': 9, 'used': 0}, 'agent': {'model': 'muse-spark-1.3', 'profile': 'suite-v2-compat2'}, 'options': []}}
 
-    def admit(self, job_id, client, repetitions):
+    def admit(self, job_id, client, repetitions, **_):
         from agent_readiness.lifecycle import jobs as J
         self.admission.reserve_amount(job_id, client, CAP * repetitions)
         J.new_job(self.root / 'stageb', job_id, manifest_sha='a' * 64, mode='rehearsal', request={'repetitions': repetitions}, label='test')

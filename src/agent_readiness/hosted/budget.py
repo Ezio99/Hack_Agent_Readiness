@@ -3,8 +3,10 @@
 A budget (write-once row `budgets`) has a fixed limit in integer micro-A$ and a fixed exchange rate (A$ per US$ as an integer ratio, 1.50 = 3/2).
 Only spending explicitly charged to it counts:
 
-  * hosted jobs launched under an owner arming that names the budget (`hosted-arming-v2`; `budget_jobs` row written in the reservation's own
-    transaction). Each job counts at its full reservation until it settles at its ledger-verified actual cost (`settlements`, unchanged rules);
+  * hosted evaluations launched by the signed-in OPERATOR (one click; no launch count, no per-run attestation). What they run is fixed once, when the
+    owner opens the budget: the budget pool (`lifecycle.arming.BudgetPool`: frozen suite, website versions, exact manifests, model), part of the same
+    typed confirmation. Each launch's `budget_jobs` row is written in the reservation's own transaction; it counts at its full reservation until it
+    settles automatically at its ledger-verified actual cost (`settlements`, unchanged rules). The judge arming and the A$50 programme are untouched;
   * off-host work (development, task generation, local experiments): the owner first records an ALLOCATION (its maximum is held before anything is
     sent); afterwards its durable request ledger settles it at the verified actual cost (`allocation_settlements`, write-once; one ledger can be
     charged once, and never if it already settled a hosted job).
@@ -20,7 +22,7 @@ exceed MAX_TOTAL_BUDGETS_MICRO_AUD (a reviewed code constant).
 
 Owner commands (interactive terminal, typed confirmation):
     python -m agent_readiness.hosted.budget status   --db /data/hosted/live/admission.sqlite [--json]
-    python -m agent_readiness.hosted.budget open     --db ... --id ar-a20-2026-11 --limit-aud 20 --rate 1.50
+    python -m agent_readiness.hosted.budget open     --db ... --id ar-a20-2026-11 --limit-aud 20 --rate 1.50 --frozen larkspur-core@v3 --variants original improved
     python -m agent_readiness.hosted.budget allocate --db ... --budget ar-a20-2026-11 --ref dev-2026-11-04-taskgen --max-usd 0.50 --purpose "..."
     python -m agent_readiness.hosted.budget settle-allocation --db ... --ref ... --ledger <ledger.jsonl> [...] --expect-settled 0.123456 [--allow-open-requests]
 """
@@ -88,7 +90,9 @@ def open_text(budget_id: str, limit_micro_aud: int, num: int, den: int, limit_mi
             f"from the A$50 programme and all historical spending; the global hosted cap becomes {usd(cap_after)}")
 
 
-def plan_open(admission: Admission, budget_id: str, limit_aud: str, rate: str) -> dict:
+def plan_open(admission: Admission, budget_id: str, limit_aud: str, rate: str, *, store=None, frozen: str | None = None, variants: list[str] | None = None,
+              repetitions: list[int] | None = None, mode: str = "paid") -> dict:
+    """Read-only: the budget, the new global cap and (with `frozen`) the operator budget pool it funds; `text` is the one confirmation to type."""
     if not BUDGET_ID.match(budget_id or ""):
         raise BudgetRefused("invalid_id", "budget ids are 3-41 lowercase letters, digits or hyphens")
     limit = _amount(limit_aud, "the limit")
@@ -103,16 +107,35 @@ def plan_open(admission: Admission, budget_id: str, limit_aud: str, rate: str) -
         raise BudgetRefused("over_maximum", f"all budgets together would be {aud(total)}, above the reviewed maximum {aud(MAX_TOTAL_BUDGETS_MICRO_AUD)}")
     base = led["global_cap"] if led["global_cap"] is not None else admission.ceiling
     cap_after = base + limit_usd
+    text = open_text(budget_id, limit, num, den, limit_usd, cap_after)
+    pool = None
+    if frozen:
+        from ..lifecycle import arming as AR
+        try:
+            pool = AR.pool_terms(store, budget=budget_id, mode=mode, frozen_ref=frozen, variants=list(variants or []), repetitions=list(repetitions or [1]))
+        except AR.ArmingRefused as exc:
+            raise BudgetRefused(exc.code, exc.detail) from None
+        if pool["mode"] == "paid" and pool["synthetic"]:
+            raise BudgetRefused("synthetic_suite", "a synthetic fixture suite can never be evaluated with a paid model")
+        text = f"{text}. {pool['attestation']}"
     return {"id": budget_id, "limit_micro_aud": limit, "rate_num": num, "rate_den": den, "limit_microusd": limit_usd, "global_cap_before": led["global_cap"],
-            "global_cap_after": cap_after, "text": open_text(budget_id, limit, num, den, limit_usd, cap_after)}
+            "global_cap_after": cap_after, "pool": pool, "text": text}
 
 
-def open_budget(admission: Admission, budget_id: str, limit_aud: str, rate: str, *, actor: str, typed: str, now: float | None = None) -> dict:
-    """Write-once, in one transaction: the budget row and the new global cap. Refuses unless `typed` is the exact confirmation."""
-    p = plan_open(admission, budget_id, limit_aud, rate)
+def open_budget(admission: Admission, budget_id: str, limit_aud: str, rate: str, *, actor: str, typed: str, now: float | None = None, store=None,
+                frozen: str | None = None, variants: list[str] | None = None, repetitions: list[int] | None = None, mode: str = "paid") -> dict:
+    """Write-once: the operator budget pool record (if any), then, in one transaction, the budget row and the new global cap. Refuses unless
+    `typed` is the exact confirmation. A pool without its budget row (a crash in between) launches nothing: admission refuses an unknown budget,
+    and re-running `open` with the same terms completes it."""
+    p = plan_open(admission, budget_id, limit_aud, rate, store=store, frozen=frozen, variants=variants, repetitions=repetitions, mode=mode) \
+        if not (frozen and _pool_exists(budget_id)) else _plan_with_existing_pool(admission, budget_id, limit_aud, rate, store, frozen, variants, repetitions, mode)
     if typed.strip() != p["text"]:
         raise BudgetRefused("confirmation_mismatch", "the typed confirmation does not match; nothing was recorded")
     now = time.time() if now is None else now
+    if p["pool"] is not None and not _pool_exists(budget_id):
+        from ..lifecycle import arming as AR
+        from datetime import datetime, timezone
+        AR.record_pool(store, p["pool"], at=datetime.fromtimestamp(now, timezone.utc).isoformat(timespec="seconds"))
     with admission.connect() as db:
         db.execute("BEGIN IMMEDIATE")
         try:
@@ -130,6 +153,23 @@ def open_budget(admission: Admission, budget_id: str, limit_aud: str, rate: str,
                 db.execute("ROLLBACK")
             raise
     return p
+
+
+def _pool_exists(budget_id: str) -> bool:
+    from ..lifecycle import arming as AR
+    return AR.pool_path(budget_id).exists()
+
+
+def _plan_with_existing_pool(admission, budget_id, limit_aud, rate, store, frozen, variants, repetitions, mode) -> dict:
+    """Completing an interrupted `open`: the recorded pool must be exactly what would be recorded now."""
+    from ..lifecycle import arming as AR
+    rec = AR.load_pool(budget_id)
+    p = plan_open(admission, budget_id, limit_aud, rate)
+    a = {"budget": budget_id, "mode": mode, "site": rec.site, "frozen_suite": frozen, "frozen_suite_sha256": rec.frozen_suite_sha256,
+         "variants": [list(v) for v in rec.variants], "options": [o.model_dump() for o in rec.options], "agent": rec.agent}
+    if rec.attestation != AR.pool_attestation(a) or [n for n, _ in rec.variants] != list(variants or []) or AR.verify(store, rec):
+        raise BudgetRefused("pool_differs", "a different budget pool is already recorded for this budget")
+    return {**p, "pool": None, "text": f"{p['text']}. {rec.attestation}"}
 
 
 # ----------------------------------------------------------------------------------------------------------------------------- allocations
@@ -264,6 +304,10 @@ def main(argv=None) -> int:
     s.add_argument("--id", required=True)
     s.add_argument("--limit-aud", required=True)
     s.add_argument("--rate", required=True, help="A$ per US$ (fixed for the budget's life), e.g. 1.50")
+    s.add_argument("--frozen", help="the frozen suite the operator's one-click evaluations run, e.g. larkspur-core@v3")
+    s.add_argument("--variants", nargs=2, help="the two website versions, e.g. original improved")
+    s.add_argument("--mode", choices=("paid", "rehearsal"), default="paid")
+    s.add_argument("--store", help="lifecycle store (default: AR_LIFECYCLE_STORE)")
     s = sub.add_parser("allocate")
     s.add_argument("--budget", required=True)
     s.add_argument("--ref", required=True)
@@ -288,10 +332,16 @@ def main(argv=None) -> int:
         adm = Admission.open_existing(a.db)
         actor = f"{TERMINAL_ACTOR} (uid {os.getuid()})"
         if a.cmd == "open":
-            p = plan_open(adm, a.id, a.limit_aud, a.rate)
+            store = None
+            if a.frozen:
+                from ..lifecycle import arming as AR                           # the store only through the lifecycle layer
+                store = AR.open_store(Path(a.store or os.environ.get("AR_LIFECYCLE_STORE") or "/data/hosted/lifecycle/store"))
+            kw = dict(store=store, frozen=a.frozen, variants=a.variants, mode=a.mode)
+            p = plan_open(adm, a.id, a.limit_aud, a.rate, **kw) if not (a.frozen and _pool_exists(a.id)) else \
+                _plan_with_existing_pool(adm, a.id, a.limit_aud, a.rate, store, a.frozen, a.variants, [1], a.mode)
             print(p["text"])
             typed = input("Type the line above exactly to confirm: ")
-            open_budget(adm, a.id, a.limit_aud, a.rate, actor=actor, typed=typed)
+            open_budget(adm, a.id, a.limit_aud, a.rate, actor=actor, typed=typed, **kw)
             print(f"opened {a.id}: available {aud(p['limit_micro_aud'])}; global hosted cap {usd(p['global_cap_after'])}")
             return 0
         if a.cmd == "allocate":

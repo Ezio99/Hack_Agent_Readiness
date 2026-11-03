@@ -22,6 +22,8 @@ from agent_readiness.lifecycle.service import LifecycleService
 
 TOKEN = b"t" * 32
 OP = {"authorization": "Bearer " + TOKEN.decode()}
+JUDGE = b"judge-code-for-arming-launches-0123456789"
+JG = {"authorization": "Bearer " + JUDGE.decode()}                      # armed launches are the judge path; the operator's one-click path is its budget
 AT = "2026-11-04T02:00:00+00:00"
 REF = "larkspur-hosted-test@v1"
 
@@ -59,7 +61,8 @@ def _app(env, *, mode="live", ceiling=10_000_000):
     a = Admission(env["tmp"] / f"a-{mode}.sqlite", ceiling_microusd=ceiling, job_cap_microusd=1_650_000, min_interval_seconds=60)
     ex = NoRun(env["root"], env["store"].root, a, mode=mode)
     svc = LifecycleService(store_root=env["store"].root, runs_root=env["root"] / "stageb", executor=ex, admission=a, log=lambda *_: None)
-    c = TestClient(create_app(env["root"], a, client_key=b"k" * 32, executor=ex, operator_token=TOKEN, public_start=False, mode=mode, lifecycle=svc))
+    c = TestClient(create_app(env["root"], a, client_key=b"k" * 32, executor=ex, operator_token=TOKEN, public_start=False, mode=mode, lifecycle=svc,
+                              judge_token=JUDGE))
     return c, ex, a
 
 
@@ -120,7 +123,7 @@ def test_without_an_arming_nothing_can_launch(env):
     c, _, a = _app(env)
     cfg = c.get("/api/ironbark/config").json()
     assert cfg["engine"] == "stage-b" and cfg["available"] is False and cfg["reason"] == "not_armed"
-    assert c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers=OP).status_code == 409 and a.recent() == []
+    assert c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers=JG).status_code == 409 and a.recent() == []
 
 
 def test_a_paid_launch_reserves_the_worst_case_claims_once_and_writes_its_own_authorisation(env):
@@ -130,9 +133,9 @@ def test_a_paid_launch_reserves_the_worst_case_claims_once_and_writes_its_own_au
     assert cfg["available"] and cfg["repetitions"] == [1] and len(cfg["tasks"]) == 3 and "attestation" not in json.dumps(cfg)
     assert c.post("/api/ironbark/jobs", json={"repetitions": 1}).status_code == 403                                            # operator only
     for body in ({"repetitions": 1, "url": "https://x"}, {"repetitions": 1, "model": "m"}, {"repetitions": 1, "tasks": []}, {"repetitions": 1, "cap_usd": 1}):
-        assert c.post("/api/ironbark/jobs", json=body, headers=OP).status_code == 422
-    assert c.post("/api/ironbark/jobs", json={"repetitions": 3}, headers=OP).status_code == 409                                 # not armed for 3
-    r = c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers=OP)
+        assert c.post("/api/ironbark/jobs", json=body, headers=JG).status_code == 422
+    assert c.post("/api/ironbark/jobs", json={"repetitions": 3}, headers=JG).status_code == 409                                 # not armed for 3
+    r = c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers=JG)
     assert r.status_code == 202, r.text
     job = r.json()["id"]
     assert a.get(job)["reserved_microusd"] == p["options"][0]["reservation_microusd"]
@@ -143,7 +146,7 @@ def test_a_paid_launch_reserves_the_worst_case_claims_once_and_writes_its_own_au
     rec = J.load_job(env["root"] / "stageb", job)
     assert rec["mode"] == "paid" and rec["launch"]["experiment_id"] == "hosted-test-1-l1"
     _wait(a, job)
-    again = c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers=OP)
+    again = c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers=JG)
     assert again.status_code == 409 and "launches have been used" in again.json()["detail"]
     assert a.totals()["reserved_microusd"] == p["options"][0]["reservation_microusd"]                                            # never doubled, never released
 
@@ -151,7 +154,7 @@ def test_a_paid_launch_reserves_the_worst_case_claims_once_and_writes_its_own_au
 def test_a_launch_that_does_not_fit_the_hosted_ceiling_reserves_and_claims_nothing(env):
     p = _arm(env)
     c, _, a = _app(env, ceiling=p["options"][0]["reservation_microusd"] - 1)
-    r = c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers=OP)
+    r = c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers=JG)
     assert r.status_code == 429 and a.recent() == [] and AR.claims("hosted-test-1") == []
 
 
@@ -159,13 +162,13 @@ def test_the_arming_mode_must_match_the_service_mode(env):
     _arm(env)                                                                    # paid arming
     c, _, a = _app(env, mode="rehearsal")
     assert c.get("/api/ironbark/config").json()["reason"] == "arming_mode_mismatch"
-    assert c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers=OP).status_code == 409 and a.recent() == []
+    assert c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers=JG).status_code == 409 and a.recent() == []
 
 
 def test_a_rehearsal_reserves_nothing_and_writes_no_paid_authorisation(env, tmp_path):
     _arm(env, mode="rehearsal", arming="rehearsal-test-1")
     c, _, a = _app(env, mode="rehearsal")
-    r = c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers=OP)
+    r = c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers=JG)
     assert r.status_code == 202 and a.get(r.json()["id"])["reserved_microusd"] == 0
     assert not (AU.STAGE_B / "authorizations").exists() and J.load_job(env["root"] / "stageb", r.json()["id"])["mode"] == "rehearsal"
 
@@ -176,7 +179,7 @@ def test_restart_recovery_interrupts_the_job_and_never_reuses_its_launch(env):
     import threading
     gate = threading.Event()
     ex.run = lambda job_id: gate.wait(5)
-    job = c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers=OP).json()["id"]
+    job = c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers=JG).json()["id"]
     try:
         assert recover(env["root"], a) == [job]
         assert a.get(job)["state"] == "interrupted" and J.load_job(env["root"] / "stageb", job)["state"] == "interrupted"
@@ -185,7 +188,7 @@ def test_restart_recovery_interrupts_the_job_and_never_reuses_its_launch(env):
     finally:
         gate.set()
     c2, _, _ = _app(env)
-    second = c2.post("/api/ironbark/jobs", json={"repetitions": 1}, headers={**OP, "x-client": "2"})
+    second = c2.post("/api/ironbark/jobs", json={"repetitions": 1}, headers={**JG, "x-client": "2"})
     assert second.status_code in (202, 429)                                      # the same operator client may be rate-limited; never launch 1 again
     assert [x["launch"] for x in AR.claims("hosted-test-1")][0] == 1 and len({x["job"] for x in AR.claims("hosted-test-1")}) == len(AR.claims("hosted-test-1"))
 
@@ -248,7 +251,7 @@ def test_hosted_status_of_a_stage_b_job_before_its_runs_exist(env):
     import threading
     gate = threading.Event()
     ex.run = lambda job_id: gate.wait(5)
-    job = c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers=OP).json()["id"]
+    job = c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers=JG).json()["id"]
     try:
         st = c.get(f"/api/ironbark/jobs/{job}").json()
         assert st["engine"] == "stage-b" and st["mode"] == "live" and st["repetitions"] == 1 and st["reps"][0]["state"] == "preparing"
@@ -266,7 +269,7 @@ def test_m9_config_reports_the_used_launch_as_not_authorised_and_the_launch_path
     c, ex, a = _app(env, ceiling=10_736_000)
     before = c.get("/api/ironbark/config").json()
     assert before["launch"]["authorized"] and before["launch"]["ready"] and before["available"] and before["worker"]["state"] == "idle"
-    job = c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers=OP).json()["id"]
+    job = c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers=JG).json()["id"]
     _wait(a, job)
     after = c.get("/api/ironbark/config").json()
     assert after["worker"]["state"] == "idle" and after["service"]["state"] == "operational"

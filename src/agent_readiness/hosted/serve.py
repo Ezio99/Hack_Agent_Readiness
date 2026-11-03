@@ -246,6 +246,9 @@ def build():
                      static_dir=Path(static) if static else None, operator_token=operator_token,
                      public_start=(access == 'public'), unavailable_reason=reason, mode=mode, lifecycle=lifecycle, judge_token=judge_token)
     app.state.lock = lock
+    if executor is not None:
+        pool, why = executor.budget_pool()
+        log(f'operator budget evaluation: {pool.budget + " (" + pool.frozen_suite + ", " + " vs ".join(n for n, _ in pool.variants) + "; no launch count; the budget is the limit)" if pool else "none (" + str(why) + ")"}')
     log(f'mode={mode} access={access} evaluations={"enabled" if executor else "disabled"}'
         f'{" reason=" + reason if reason else ""} jail={"verified" if executor else "unused"} engine={"stage-b" if executor else "none"} armed={arming_state(executor)} judge_access={"on" if judge_token else "off"}')
     return app
