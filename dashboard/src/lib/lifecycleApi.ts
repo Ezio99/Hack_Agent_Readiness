@@ -4,7 +4,7 @@
 export interface StepInfo { id: string; label: string; available: boolean; action_available?: boolean; detail: string }
 export interface Unavailable { available: boolean; reason: string; detail: string }
 export interface ArmedEvaluation { arming_id: string; arming_sha256: string; mode: 'paid' | 'rehearsal'; site: string; suite: string; frozen_suite: string; frozen_suite_sha256: string;
-  variants: string[]; armed_at: string; launches: { max: number; used: number; left: number };
+  variants: string[]; armed_at: string; launches: { max: number; used: number; left: number } | null;   // null: the shared budget's evaluation (no launch count)
   options: { repetitions: number; trials: number; reservation_usd: number; manifest_sha256: string; available: boolean; fits_hosted_ceiling: boolean | null }[];
   agent: { model: string; reasoning_effort: string | null; max_completion_tokens: number; profile: string } }
 export interface Overview { steps: StepInfo[]; onboarding: Unavailable; approval: Unavailable; sources: { datasets: string[]; store: boolean; jobs: boolean };

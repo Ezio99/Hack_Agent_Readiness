@@ -242,7 +242,7 @@ function ImproveStep() {
 // --------------------------------------------------------------------------------------------------------------- 07 re-evaluate
 function ReevaluateStep({ ov }: { ov: Overview | null }) {
   const ev = ov?.evaluation?.evaluation ?? null;
-  const ready = !!ev && ev.launches.left > 0 && ev.mode === 'paid';
+  const ready = !!ev && (ev.launches === null || ev.launches.left > 0) && ev.mode === 'paid';     // launches null: the shared budget's evaluation
   return <>
     <p className="lede sm">The same frozen tasks run again on Original and Improved, with fresh agents, the same model and the same limits. The product re-checks
       every task on the new site first: a task whose correct answer changed would be set aside, with the reason.</p>
@@ -250,7 +250,7 @@ function ReevaluateStep({ ov }: { ov: Overview | null }) {
       <div>
         <h3>{ready ? 'Ready for a live run' : 'Live runs'}</h3>
         {ev ? <p>{ev.variants.map(v => <VariantName key={v} v={v} />)} · {ev.suite} · {ev.options[0]?.trials ?? '–'} browser agents per run ·{' '}
-          <strong>{ev.launches.left} of {ev.launches.max} live run{ev.launches.max === 1 ? '' : 's'} left</strong></p>
+          <strong>{ev.launches ? `${ev.launches.left} of ${ev.launches.max} live run${ev.launches.max === 1 ? '' : 's'} left` : 'runs while the A$20 evaluation budget lasts'}</strong></p>
           : <p>No live run is open right now. The owner opens a set number of runs; completed evaluations stay available to everyone.</p>}
         <p className="muted">Start it in the workspace with your access code, watch every agent work live, and the report appears when they finish (about 6–9 minutes for {ev?.options[0]?.trials ?? 6} agents).</p>
         <p>Latest live run, {FEATURED.liveDate}: correct answers {LIVE.correct.original}/{LIVE.tasks.length} on Original → <strong>{LIVE.correct.improved}/{LIVE.tasks.length} on Improved</strong>, {LIVE.totals.original.requests} → {LIVE.totals.improved.requests} model requests. <a className="link" href={`#/reports/${LIVE.id}`}>Open its report</a></p>
