@@ -152,6 +152,15 @@ verification of the M8 release candidate. Report: [collaboration/reports/m9-rele
 - Grading policy unchanged (official v1 stays the grade of record).
 - **Presentation patch `352f262`** (I1 replication disclosure, I2 retrospective audit note, I3 latest live link, C1 wording, C2 trace race): tested (dashboard 209, build CHECK PASSED); **NOT deployed, awaiting owner approval**.
 
+**M9 judge-triggered live evaluation (release candidate; code `4841166`; NOT deployed; zero cost):** [collaboration/reports/m9-judge-live.md](collaboration/reports/m9-judge-live.md).
+- **Judge access:** a separate launch-only judge access code (`/run/secrets/judge_token`), accepted only by `POST /api/ironbark/jobs`, through the unchanged arming / admission / claim / ledger path.
+- **Suite:** `larkspur-core@v3` = v2 tasks `gen-23f1802ee0-n` + `gen-f302fa8fe2-n` (suite `f45694788ea9…`, reproducible; v2 unchanged).
+- **Workspace:** judge-facing ("Access code", "Run live evaluation", live runs left).
+- **Cost per launch:** about US$0.42–0.45 expected, US$2.508 reserved, about 4–6 min.
+- **4-launch pool:** reserves US$10.032 and needs the ceiling 10.736 → 20.768 (worst case A$43.23).
+- **Tests:** judge access 19, judge browser e2e, no-network paid rehearsal on production copies, broad 422, critical 214, dashboard 212.
+- **Awaiting owner approval:** deploy, owner suite approval and freeze, judge secret, ceiling migration, paid arming.
+
 ## Budget
 
 - Hosted admission: US$10 ceiling, US$3.30 reserved, US$1.65 per repetition. Reservations are never released, even for completed jobs, so the remaining capacity is 4 repetitions.
