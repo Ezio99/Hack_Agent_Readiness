@@ -19,6 +19,8 @@ Authoritative current handoff. Check it against the repository and production be
 > - **Deadline:** **2026-11-05 13:00 AEDT**.
 > - **Owner approval:** deploys, paid runs, `budget evaluation-add/use`, settlements and ledger appends need explicit owner approval.
 
+> **2026-11-04 (in progress): Polished Larkspur.** `larkspur@polished` (Polished v1, `1053ce18…`) and single-version budget evaluations are committed (`60c0746`), tested and rehearsed at zero cost; NOT deployed. Plan, approvals needed and results: [collaboration/reports/polished-larkspur-evaluations.md](collaboration/reports/polished-larkspur-evaluations.md).
+
 Everything below this line is earlier state, kept as history; where it disagrees with the handoff, the handoff and production win.
 
 ## Earlier state (2026-11-03 Sydney; superseded, history)
