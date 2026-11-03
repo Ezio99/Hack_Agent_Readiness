@@ -5,6 +5,7 @@ import { Insights } from './Insights';
 import { History, type HistoryItem } from './History';
 import { Report } from '../lifecycle/Report';
 import { VARIANT_LABEL, type Evaluation } from '../../lib/lifecycleApi';
+import { showcaseFrame } from '../showcase';
 
 /** Hosted evaluation workspace: compose (website, repetitions, run) → live progress → results → history.
  *  Every number shown here comes from the server's job status; nothing is simulated in the browser.
@@ -346,6 +347,8 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
         <ol className="ws-steps">
           <li><span className="ws-step">01 · Website</span>
             {stageB ? <div className="ws-target" aria-label="Selected website">{ev ? <><strong>{ev.site === 'larkspur' ? 'Larkspur Community College' : ev.site === 'ironbark' ? 'Ironbark Hire Co.' : ev.site}</strong>
+                {armedVariants.map(v => showcaseFrame(`site-${v}-courses`) ? <figure key={v} className="ws-site-preview"><img src={showcaseFrame(`site-${v}-courses`)} alt={`The ${VARIANT_LABEL(v)} Larkspur course catalogue (frozen snapshot the agents use)`} loading="lazy" />
+                  <figcaption>{VARIANT_LABEL(v)} · <code>/courses</code> · the frozen copy the agents browse</figcaption></figure> : null)}
                 <small>{nTasks} customer task{nTasks === 1 ? '' : 's'} · {single ? `${armedNames.Original} site` : `${armedNames.Original} vs ${armedNames.Modified} site`} · {ev.launches ? `${ev.launches.left} of ${ev.launches.max} live run${ev.launches.max === 1 ? '' : 's'} left` : 'runs while the budget lasts'}</small></>
                 : <><strong>No evaluation armed</strong><small>The owner selects and authorises the frozen suite at the server terminal.</small></>}</div>
               : <div className="ws-target" aria-label="Selected website"><strong>No evaluation available</strong><small>New evaluations are not available on this server right now; recorded evaluations remain available.</small></div>}</li>

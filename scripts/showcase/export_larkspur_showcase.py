@@ -28,7 +28,8 @@ OUT = ROOT / "dashboard" / "src" / "site" / "showcase"
 RUNS = {"live": ("eval-c04fdb100d6b1c877de96dabe76eb052", {("original", 2): (2, 9, 13), ("improved", 2): (1, 2), ("original", 1): (13,), ("improved", 1): (2,)}),
         "first_live": ("eval-e529db2aafecbfddd21e5c571eb85243", {("original", 1): (2, 12, 13), ("modified", 1): (2,)})}
 PREVIEWS = [("original", "/courses"), ("modified", "/courses"), ("improved", "/courses"), ("improved", "/courses?level=Beginner&campus=&day=Weekend"),
-            ("improved", "/courses/compare"), ("improved", "/courses/intro-to-python")]
+            ("improved", "/courses/compare"), ("improved", "/courses/intro-to-python"), ("polished", "/courses"), ("polished", "/"),
+            ("polished", "/courses/wheel-thrown-pottery")]
 
 
 def _get(base: str, path: str):
@@ -84,7 +85,7 @@ async def _previews() -> dict:
     out = {}
     async with async_playwright() as p:
         b = await p.chromium.launch()
-        for variant in ("original", "modified", "improved"):
+        for variant in dict.fromkeys(v for v, _ in PREVIEWS):
             snap = render.snapshot(variant)
             async with serve_app(Mirror(snap)) as base:
                 page = await b.new_page(viewport={"width": 1280, "height": 960})
@@ -92,7 +93,7 @@ async def _previews() -> dict:
                     if v != variant:
                         continue
                     await page.goto(base + path)
-                    name = f"site-{variant}-{'courses' if path == '/courses' else path.strip('/').replace('/', '-').split('?')[0] + ('-filter' if '?' in path else '')}"
+                    name = f"site-{variant}-{'courses' if path == '/courses' else 'home' if path == '/' else path.strip('/').replace('/', '-').split('?')[0] + ('-filter' if '?' in path else '')}"
                     (OUT / "frames" / f"{name}.webp").write_bytes(_webp(await page.screenshot()))
                     out[name] = {"variant": variant, "path": path, "snapshot_sha256": snap.sha256}
                 await page.close()

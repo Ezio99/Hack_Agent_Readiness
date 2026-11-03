@@ -21,7 +21,9 @@ VARIANT_TEXT = {
                              "redirects for every dead end agents hit.",
                  "polished": "Polished v1: a human-centred visual redesign of the college site (identity, illustrations, layout, responsive cards with "
                              "every fact labelled, a course finder, subject and campus sections), keeping the filter, browse pages, comparison table, "
-                             "structured data and redirects."},
+                             "structured data and redirects.",
+                 "polished2": "Polished v2: Polished v1 plus the changes its live evaluation justified: every result list names all matching courses "
+                              "before the first card, and listing pages use a compact header and slimmer card images so more results fit on screen."},
     "ironbark": {"original": "The control hire site: deposit, minimum hire and delivery are stated on item pages only.",
                  "modified": "Listing cards also show refundable deposit, minimum hire and delivery (the owner-selected change used by the hosted evaluation)."},
 }

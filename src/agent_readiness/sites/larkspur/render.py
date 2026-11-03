@@ -11,7 +11,7 @@ from ...investigate.inspect.crawl import Limits, MappingFetcher, crawl
 from ...investigate.sitemodel.snapshot import Snapshot
 from . import data as D
 
-VARIANTS = ("original", "modified", "improved", "polished")
+VARIANTS = ("original", "modified", "improved", "polished", "polished2")
 NAV = [("/courses", "Courses"), ("/enrolment-policy", "Enrolment and refunds"), ("/about", "About")]
 CSS = """body{font:16px/1.5 system-ui,sans-serif;margin:0;color:#1d2433;background:#fbfaf7}header,main,footer{max-width:980px;margin:0 auto;padding:16px}
 nav a{margin-right:16px}.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;list-style:none;padding:0}
@@ -42,6 +42,9 @@ def pages(variant: str = "original") -> dict[str, str]:
     if variant == "polished":
         from . import polished
         return polished.pages()
+    if variant == "polished2":
+        from . import polished2
+        return polished2.pages()
     mod = variant == "modified"
     out = {"/": _page("Short courses", f'<h1>{e(D.COLLEGE["tagline"])}</h1><p>{len(D.COURSES)} courses this term across {len(D.CATEGORIES)} subject areas, '
                                        f'taught at our Northside and Riverside campuses.</p><p><a href="/courses">Browse all courses</a></p>'
@@ -74,6 +77,9 @@ def snapshot(variant: str = "original") -> Snapshot:
     if variant == "polished":
         from . import polished
         return polished.snapshot()
+    if variant == "polished2":
+        from . import polished2
+        return polished2.snapshot()
     mapping = {path: html for path, html in pages(variant).items()}
     mapping["/assets/site.css"] = (200, "text/css", CSS.encode())
     return crawl(MappingFetcher(mapping), LIMITS)
