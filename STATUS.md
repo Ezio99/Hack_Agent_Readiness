@@ -2,7 +2,26 @@
 
 Authoritative current handoff. Check it against the repository and production before you rely on it. The full dated history up to 2026-11-02 is preserved verbatim in [docs/archive/STATUS-2026-10-29-to-2026-11-02.md](docs/archive/STATUS-2026-10-29-to-2026-11-02.md); earlier history is in [docs/archive/STATUS-through-2026-10-29.md](docs/archive/STATUS-through-2026-10-29.md).
 
-## Current state (2026-11-03 Sydney)
+## START HERE (2026-11-04 Sydney): next agent
+
+**Handoff:** [collaboration/handoffs/final-visual-showcase-handoff.md](collaboration/handoffs/final-visual-showcase-handoff.md). It covers production state, architecture, immutable evidence, spending and security, the next phase, operations, and risks. Read it, then `AGENTS.md`.
+
+> **PRODUCTION = `final-showcase` @ `fdc3f43`** (journey hotfix on `9ac4485`)
+> - **Image:** `hotfix-fdc3f43` = `sha256:a2a3792a35f3…`; rollbacks `rollback-9ac4485` (has the journey crash) and `rollback-dde7e22` (pre-budget).
+> - **Access:** one access code + Run for everyone (judge code on the VM; never printed).
+> - **Budget:** the fresh **A$20** shared budget `ar-a20-2026-11` is **open**, A$20.00 available. It is a soft cap: launches start while commitments are below A$20, and the last run may finish above it by at most A$5.61. Global cap US$39.029333.
+> - **Selected evaluation:** `larkspur-core@v3` **Original vs Improved**.
+> - **A$50 programme:** A$29.13 spent, unchanged.
+> - **Verification:** 2026-11-03 21:20 UTC (public 19/19, evidence identical, every route in a real browser).
+> - **Records:** [evaluation-launch-final.md §8, §8.1](collaboration/reports/evaluation-launch-final.md).
+>
+> **Next agent's starting point:** handoff §5. Build Polished Larkspur as a NEW immutable registered snapshot `larkspur@polished` (`sites/larkspur/polished.py`, `render.VARIANTS`, `SITES["larkspur"].releases`, a hash-pinning test like `tests/test_larkspur_improved.py`), then the cinematic, consistent showcase, the owner-approved Original vs Polished run, the video and the submission.
+> - **Deadline:** **2026-11-05 13:00 AEDT**.
+> - **Owner approval:** deploys, paid runs, `budget evaluation-add/use`, settlements and ledger appends need explicit owner approval.
+
+Everything below this line is earlier state, kept as history; where it disagrees with the handoff, the handoff and production win.
+
+## Earlier state (2026-11-03 Sydney; superseded, history)
 
 > **PRODUCTION = `final-showcase` @ `dde7e22`** (deployed with owner approval 2026-11-03 09:15 UTC, minimal-risk path; image `st-dde7e22` = `sha256:d40199ef…`; rollback `rollback-83be351` (= `f5d9ec46…`); backup `predeploy-st-20261103T091245Z` (2 421 files); presentation fixes + actual-cost settlement live; judge access on; `larkspur-judge-1` 2 of 3 launches left. **2026-11-03 10:49 UTC: owner settled ONLY `eval-c04fdb10…` at US$0.631751** (one write-once settlement row; backup `admission-pre-settlement-20261103T104926Z`): ceiling US$21.956 (unchanged), reserved US$14.476 (as written), settled US$0.631751, outstanding US$10.736 (e529 + Ironbark, not settled by decision), **available US$10.588249** (the budget covers 2 launches = the arming's 2). Programme spend to date US$19.418057 = A$29.13 (c04 not yet appended to the programme ledger); worst case A$45.01 of A$50. Ledgers and 2 420/2 421 evidence files unchanged. Record: [hosted-settlement.md §6](collaboration/reports/hosted-settlement.md)).
 >
