@@ -15,7 +15,10 @@ from ..framework.site import get
 
 VARIANT_TEXT = {
     "larkspur": {"original": "Course cards show name, category and summary only; fee, duration, level and seats left are on each course page.",
-                 "modified": "The same cards also state course fee, duration, level and seats left (one listing-information change)."},
+                 "modified": "The same cards also state course fee, duration, level and seats left (one listing-information change).",
+                 "improved": "Every recommendation applied: each card states fee, duration, level, class day, campus, seats left and materials; browse "
+                             "pages by campus, day, level and subject; a working catalogue filter; a comparison table; schema.org course data; and "
+                             "redirects for every dead end agents hit."},
     "ironbark": {"original": "The control hire site: deposit, minimum hire and delivery are stated on item pages only.",
                  "modified": "Listing cards also show refundable deposit, minimum hire and delivery (the owner-selected change used by the hosted evaluation)."},
 }
@@ -32,7 +35,7 @@ def context_for(site_id: str) -> dict | None:
     return None
 
 
-@lru_cache(maxsize=4)
+@lru_cache(maxsize=8)
 def _snapshot_sha(site_id: str, variant: str) -> str:
     return get(site_id).snapshot(variant).sha256
 
@@ -48,7 +51,7 @@ def site_view(site_id: str, *, with_hashes: bool = True) -> dict:
     return {"id": s.id, "label": s.label, "domain": s.domain, "controlled": s.controlled, "oracle": True, "start_path": s.start_path,
             "listings": list(s.listings), "noun": list(s.noun) if s.noun else None,
             "variants": [{"name": v, "label": v.capitalize(), "description": VARIANT_TEXT.get(site_id, {}).get(v),
-                          **({"snapshot_sha256": _snapshot_sha(site_id, v)} if with_hashes else {})} for v in s.variants],
+                          **({"snapshot_sha256": _snapshot_sha(site_id, v)} if with_hashes else {})} for v in s.registered],
             "context": ctx, "context_label": (ctx or {}).get("label"), "note": HOSTED_NOTE.get(site_id),
             "source": "frozen snapshots rendered from the site's own source data (no crawl on request)"}
 

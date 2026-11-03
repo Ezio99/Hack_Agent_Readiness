@@ -34,9 +34,10 @@ def from_framework_run(run_dir: Path) -> dict:
     site = get(run.state["config"]["site"])
     _, private = freezer.load(run)
     versions = []
-    for v in site.variants:
+    names = [v for v in (run.state["config"].get("variants") or site.variants) if v in site.registered] or list(site.variants)   # the run's own pair
+    for v in names:
         snap = site.snapshot(v)
-        priv = private if v == site.variants[0] else {**private, **still_valid(run, snap)[2]}
+        priv = private if v == names[0] else {**private, **still_valid(run, snap)[2]}
         versions.append({"name": v, "snapshot": snap, "private": priv, "trials": _trials(run, v)})
     return {"site": site.id, "source": str(run.dir), "origin": "dev_fixture" if run.has_artifact("dev-provider") else "scripted", "versions": versions, "comparison": None,
             "alias": {t: str(i + 1) for i, t in enumerate(sorted(private))}}

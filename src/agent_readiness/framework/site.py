@@ -27,6 +27,13 @@ class SiteDefinition:
     listings: tuple[str, ...] = ()                   # catalogue pages tasks are generated from (empty = every listing the profiler finds)
     noun: tuple[str, str] | None = None              # (singular, plural) entity noun used to phrase questions, e.g. ("course", "courses")
     kinds: tuple[str, ...] = field(default=("page_fact", "item_set", "extremum"))
+    releases: tuple[str, ...] = ()                   # later website versions, registered as RE-EVALUATION targets only: never used to generate or
+                                                     # validate tasks (that is `variants`), so recorded generations and datasets re-derive unchanged
+
+    @property
+    def registered(self) -> tuple[str, ...]:
+        """Every registered website version: the generation pair, then later releases."""
+        return self.variants + self.releases
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------- Ironbark
@@ -96,8 +103,8 @@ SITES: dict[str, SiteDefinition] = {
                                listings=("/hire",), noun=("hire machine", "hire machines"),
                                notes="Production evaluation site; source data sites/ironbark/data.py."),
     "larkspur": SiteDefinition("larkspur", "Larkspur Community College", "short-course catalogue", True, ("original", "modified"), _larkspur_snapshot, oracle=_larkspur_oracle,
-                               listings=("/courses",), noun=("course", "courses"),
-                               notes="Second controlled site; source data sites/larkspur/data.py."),
+                               listings=("/courses",), noun=("course", "courses"), releases=("improved",),
+                               notes="Second controlled site; source data sites/larkspur/data.py. `improved` applies every recommendation."),
     **{f"zoo-{s}": SiteDefinition(f"zoo-{s}", f"Investigation zoo {s}", "synthetic (sealed diagnoses)", False, ("original",), _zoo(s),
                                   notes="Uncontrolled for this framework: no oracle, so tasks are human-review only.") for s in ("site-1", "site-2", "site-3", "site-4")},
 }

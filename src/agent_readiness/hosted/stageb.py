@@ -110,8 +110,15 @@ def _runs(runs_root: Path, job: dict):
 
 
 def _arm_labels(job: dict) -> dict:
+    """Positional arm KEYS (first and second website version): they name the hosted routes (`trials/original|modified/<n>`) and the status shape,
+    so they never change. What each arm SHOWS is `arm_display` (e.g. Original vs Improved)."""
     v = (job.get("request") or {}).get("variants") or ["original", "modified"]
     return {v[0]: "Original", v[1]: "Modified"}
+
+
+def arm_display(job: dict) -> dict:
+    v = (job.get("request") or {}).get("variants") or ["original", "modified"]
+    return {"Original": v[0].capitalize(), "Modified": v[1].capitalize()}
 
 
 def _outcome(rec: dict) -> str:
@@ -199,6 +206,7 @@ def job_status(runs_root: Path, job_id: str, held_state: str, *, recovery_requir
             "record_note": record_note(held_state, exec_state, report_status["state"], execution["trials_completed"], planned),
             "reps": reps, "summary": summary, "summary_v2": v2, "report": job_id if report_status["state"] == "available" else None,
             "evaluation": {k: (job.get("request") or {}).get(k) for k in ("frozen_suite", "variants", "repetitions")},
+            "arm_display": arm_display(job),
             "error": job.get("error"), "stopped": job.get("stopped"), "tasks_planned": len(tasks) * reps_n * 2 if tasks else None}
 
 

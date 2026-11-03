@@ -1,0 +1,371 @@
+{
+ "live": {
+  "id": "eval-e529db2aafecbfddd21e5c571eb85243",
+  "title": "Live evaluation · larkspur-core@v2 · original vs modified",
+  "started_at": "2026-11-02T23:38:58.912105+00:00",
+  "finished_at": "2026-11-02T23:53:40.674083+00:00",
+  "agent": {
+   "model": "muse-spark-1.3",
+   "reasoning_effort": "low",
+   "max_completion_tokens": 4096,
+   "profile": "suite-v2-compat2"
+  },
+  "cost_usd": 1.546229,
+  "tasks": [
+   {
+    "n": 1,
+    "task_id": "gen-23f1802ee0-n",
+    "wording": "I need a course that costs $250 or less and still has at least 5 seats left. What qualifies?",
+    "capability": "multi_condition_filter"
+   },
+   {
+    "n": 2,
+    "task_id": "gen-4cb59bf627-n",
+    "wording": "I like the sound of Life drawing studio but need to watch spending. What is the course fee for Life drawing studio?",
+    "capability": "lookup"
+   },
+   {
+    "n": 3,
+    "task_id": "gen-8334922e62-n",
+    "wording": "I work full-time on weekdays, so I can only do Saturday or Sunday. List Beginner courses that meet on Saturday or Sunday.",
+    "capability": "either_of"
+   },
+   {
+    "n": 4,
+    "task_id": "gen-ae6c23b20b-n",
+    "wording": "I want to push beyond basics. Show me Intermediate courses at Northside.",
+    "capability": "multi_condition_filter"
+   },
+   {
+    "n": 5,
+    "task_id": "gen-f090b4b9bc-n",
+    "wording": "I want an Intermediate course at Riverside for after work. Among those, which one has the most seats left?",
+    "capability": "ranked_subset"
+   },
+   {
+    "n": 6,
+    "task_id": "gen-f302fa8fe2-n",
+    "wording": "I just graduated and need a cheap, quick skill for my CV. Find courses costing $180 or less that last 6 weeks or less.",
+    "capability": "multi_condition_filter"
+   }
+  ],
+  "totals": {
+   "original": {
+    "requests": 68,
+    "seconds": 543,
+    "cost_usd": 0.95823
+   },
+   "modified": {
+    "requests": 44,
+    "seconds": 329,
+    "cost_usd": 0.587999
+   }
+  },
+  "passed": {
+   "original": 1,
+   "modified": 2
+  },
+  "correct": {
+   "original": 2,
+   "modified": 4
+  },
+  "trials": [
+   {
+    "task": 1,
+    "variant": "original",
+    "passed": false,
+    "correct": false,
+    "requests": 13,
+    "limit": 14,
+    "seconds": 104.1,
+    "cost_usd": 0.186224,
+    "dead_end": true
+   },
+   {
+    "task": 1,
+    "variant": "modified",
+    "passed": false,
+    "correct": true,
+    "requests": 3,
+    "limit": 14,
+    "seconds": 16.6,
+    "cost_usd": 0.038476,
+    "dead_end": false
+   },
+   {
+    "task": 2,
+    "variant": "original",
+    "passed": true,
+    "correct": true,
+    "requests": 3,
+    "limit": 14,
+    "seconds": 14.4,
+    "cost_usd": 0.03534,
+    "dead_end": false
+   },
+   {
+    "task": 2,
+    "variant": "modified",
+    "passed": false,
+    "correct": true,
+    "requests": 2,
+    "limit": 14,
+    "seconds": 26.7,
+    "cost_usd": 0.024641,
+    "dead_end": false
+   },
+   {
+    "task": 3,
+    "variant": "original",
+    "passed": false,
+    "correct": false,
+    "requests": 13,
+    "limit": 14,
+    "seconds": 111.9,
+    "cost_usd": 0.193963,
+    "dead_end": true
+   },
+   {
+    "task": 3,
+    "variant": "modified",
+    "passed": false,
+    "correct": false,
+    "requests": 13,
+    "limit": 14,
+    "seconds": 117.6,
+    "cost_usd": 0.189578,
+    "dead_end": true
+   },
+   {
+    "task": 4,
+    "variant": "original",
+    "passed": false,
+    "correct": false,
+    "requests": 13,
+    "limit": 14,
+    "seconds": 117.2,
+    "cost_usd": 0.182979,
+    "dead_end": true
+   },
+   {
+    "task": 4,
+    "variant": "modified",
+    "passed": true,
+    "correct": true,
+    "requests": 12,
+    "limit": 14,
+    "seconds": 69.5,
+    "cost_usd": 0.152632,
+    "dead_end": true
+   },
+   {
+    "task": 5,
+    "variant": "original",
+    "passed": false,
+    "correct": true,
+    "requests": 13,
+    "limit": 14,
+    "seconds": 79.3,
+    "cost_usd": 0.177395,
+    "dead_end": false
+   },
+   {
+    "task": 5,
+    "variant": "modified",
+    "passed": false,
+    "correct": false,
+    "requests": 11,
+    "limit": 14,
+    "seconds": 75.0,
+    "cost_usd": 0.144397,
+    "dead_end": true
+   },
+   {
+    "task": 6,
+    "variant": "original",
+    "passed": false,
+    "correct": false,
+    "requests": 13,
+    "limit": 14,
+    "seconds": 116.1,
+    "cost_usd": 0.182329,
+    "dead_end": false
+   },
+   {
+    "task": 6,
+    "variant": "modified",
+    "passed": true,
+    "correct": true,
+    "requests": 3,
+    "limit": 14,
+    "seconds": 23.1,
+    "cost_usd": 0.038275,
+    "dead_end": false
+   }
+  ],
+  "journeys": {
+   "original-1": {
+    "answer": [
+     "Unable to complete full check within step limit. Checked 3 of 14 courses: Watercolour foundations ($260, 7 seats) fails price >$250, Life drawing studio ($210, 3 seats) fails seats <5, Wheel-thrown pottery ($395, 2 seats) fails both. Remaining 11 courses (including Introduction to Python, Spreadsheets for small business, Web pages from scratch, Conversational Italian 1, Japanese for travellers, Spanish conversation 2, Beginners yoga, Mindful meditation, Home electrical basics, Furniture restoration, Advanced joinery) not yet checked for $250 or less and >=5 seats. No confirmed qualifying course found in checked subset."
+    ],
+    "steps": [
+     {
+      "step": 1,
+      "path": "/",
+      "memory": "Homepage shows 14 courses. Need to browse all to filter by price and seats.",
+      "goal": "Navigate to all courses listing",
+      "frame": null
+     },
+     {
+      "step": 2,
+      "path": "/courses",
+      "memory": "On /courses page listing 14 courses. Need to visit each detail page for price and seats.",
+      "goal": "Get links to all course detail pages",
+      "frame": "original-t1-s2"
+     },
+     {
+      "step": 3,
+      "path": "/courses",
+      "memory": "Have 14 course slugs. Starting detail visits with watercolour.",
+      "goal": "Visit first course detail to see price/seats format",
+      "frame": null
+     },
+     {
+      "step": 4,
+      "path": "/courses/watercolour-foundations",
+      "memory": "Watercolour $260/7 seats does NOT qualify. Need to check remaining 13 courses for <=$250 and >=5 seats.",
+      "goal": "Return to courses list to get all course links",
+      "frame": null
+     },
+     {
+      "step": 5,
+      "path": "/courses",
+      "memory": "Watercolour $260 fails. Need hrefs for remaining 13 courses.",
+      "goal": "Extract hrefs for all course detail links",
+      "frame": null
+     },
+     {
+      "step": 6,
+      "path": "/courses",
+      "memory": "Watercolour $260 fails. Have 14 slugs. Checking life-drawing next. Need price <=250 and seats >=5 for each.",
+      "goal": "Visit life-drawing-studio detail to get price and seats",
+      "frame": null
+     },
+     {
+      "step": 7,
+      "path": "/courses/life-drawing-studio",
+      "memory": "Checked 2/14: watercolour $260/7 fail price, life-drawing $210/3 fail seats. Need efficient check of remaining 12 in limited steps.",
+      "goal": "Return to courses list to find bulk price/seats data",
+      "frame": null
+     },
+     {
+      "step": 8,
+      "path": "/courses",
+      "memory": "2/14 checked: watercolour $260/7 fail price, life-drawing $210/3 fail seats. Need faster method for remaining 12 with only 6 steps left.",
+      "goal": "Get all course hrefs and check for any price data on listing page.",
+      "frame": null
+     },
+     {
+      "step": 9,
+      "path": "/courses",
+      "memory": "14 slugs known. Checked 2 fail. Need to check remaining 12 but only ~4 visits left. Will sample sequentially starting with pottery.",
+      "goal": "Visit wheel-thrown pottery detail to get price and seats",
+      "frame": null
+     },
+     {
+      "step": 10,
+      "path": "/courses/wheel-thrown-pottery",
+      "memory": "Checked 3/14 fail: watercolour $260/7, life-drawing $210/3, pottery $395/2. Need <=250 and >=5 seats. Returning to list.",
+      "goal": "Return to courses list to continue checking remaining courses.",
+      "frame": null
+     },
+     {
+      "step": 11,
+      "path": "/courses",
+      "memory": "3/14 checked fail. Only 3 steps left. Will check high-likelihood cheap courses: python and yoga.",
+      "goal": "Visit Introduction to Python detail for price and seats.",
+      "frame": null
+     },
+     {
+      "step": 12,
+      "path": "/courses/introduction-to-python",
+      "memory": "Checked 3/14 fail. Slug guess failed. Need correct list from /courses page with 2 steps left.",
+      "goal": "Return to courses list to get correct slugs",
+      "frame": "original-t1-s12"
+     },
+     {
+      "step": 13,
+      "path": "/courses",
+      "memory": "Checked 3/14 fail, 11 unchecked, out of steps must report partial.",
+      "goal": "Report partial results via done.",
+      "frame": "original-t1-s13"
+     }
+    ]
+   },
+   "modified-1": {
+    "answer": [
+     "Spreadsheets for small business - $180, 9 seats left",
+     "Conversational Italian 1 - $230, 6 seats left",
+     "Spanish conversation 2 - $230, 8 seats left",
+     "Beginners yoga - $150, 12 seats left",
+     "Mindful meditation - $120, 15 seats left"
+    ],
+    "steps": [
+     {
+      "step": 1,
+      "path": "/",
+      "memory": "Homepage shows 14 courses. Need to browse all courses to check price and seats.",
+      "goal": "Navigate to browse all courses page",
+      "frame": null
+     },
+     {
+      "step": 2,
+      "path": "/courses",
+      "memory": "Found 5 qualifying courses on listing page: Spreadsheets ($180,9), Italian1 ($230,6), Spanish2 ($230,8), Yoga ($150,12), Meditation ($120,15). Need to verify bottom of page.",
+      "goal": "Scroll to verify remaining courses at bottom of page.",
+      "frame": "modified-t1-s2"
+     },
+     {
+      "step": 3,
+      "path": "/courses",
+      "memory": "Reviewed all 14 courses on /courses page. 5 courses meet criteria cost <=$250 and seats >=5.",
+      "goal": "Return qualifying courses in required format.",
+      "frame": null
+     }
+    ]
+   }
+  }
+ },
+ "previews": {
+  "site-original-courses": {
+   "variant": "original",
+   "path": "/courses",
+   "snapshot_sha256": "2f9fd2ce09a044547ceb728acb9b85108931d81ca6b01374198144f509fed2eb"
+  },
+  "site-modified-courses": {
+   "variant": "modified",
+   "path": "/courses",
+   "snapshot_sha256": "edb9a5d2884a0e85fff8f9dfc6ed0e8a4bed41f9616e82678fc466864befe69f"
+  },
+  "site-improved-courses": {
+   "variant": "improved",
+   "path": "/courses",
+   "snapshot_sha256": "87e715d59c2376f82b23f33007496edf193812eb574a65a8629109bbe35e63b5"
+  },
+  "site-improved-courses-filter": {
+   "variant": "improved",
+   "path": "/courses?level=Beginner&campus=&day=Weekend",
+   "snapshot_sha256": "87e715d59c2376f82b23f33007496edf193812eb574a65a8629109bbe35e63b5"
+  },
+  "site-improved-courses-compare": {
+   "variant": "improved",
+   "path": "/courses/compare",
+   "snapshot_sha256": "87e715d59c2376f82b23f33007496edf193812eb574a65a8629109bbe35e63b5"
+  },
+  "site-improved-courses-intro-to-python": {
+   "variant": "improved",
+   "path": "/courses/intro-to-python",
+   "snapshot_sha256": "87e715d59c2376f82b23f33007496edf193812eb574a65a8629109bbe35e63b5"
+  }
+ }
+}

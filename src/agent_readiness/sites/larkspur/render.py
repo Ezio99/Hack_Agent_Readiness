@@ -1,6 +1,7 @@
-"""Render the Larkspur site from `data.py`. Two variants: `original` (course cards show name, category and summary only; the fee, duration, level and seats
-are on each course page) and `modified` (the same cards also state fee, duration, level and seats left: a listing-information change). Nothing else
-differs between the variants. Plain, semantic HTML with one stylesheet; deterministic output."""
+"""Render the Larkspur site from `data.py`. Variants: `original` (course cards show name, category and summary only; the fee, duration, level and seats
+are on each course page) and `modified` (the same cards also state fee, duration, level and seats left: a listing-information change; nothing else
+differs). `improved` applies every actionable recommendation from the Larkspur evaluations (see `improved.py`); `original` and `modified` are
+unchanged, byte for byte, because recorded evaluations refer to their snapshot hashes. Plain, semantic HTML with one stylesheet; deterministic output."""
 from __future__ import annotations
 
 from functools import lru_cache
@@ -10,7 +11,7 @@ from ...investigate.inspect.crawl import Limits, MappingFetcher, crawl
 from ...investigate.sitemodel.snapshot import Snapshot
 from . import data as D
 
-VARIANTS = ("original", "modified")
+VARIANTS = ("original", "modified", "improved")
 NAV = [("/courses", "Courses"), ("/enrolment-policy", "Enrolment and refunds"), ("/about", "About")]
 CSS = """body{font:16px/1.5 system-ui,sans-serif;margin:0;color:#1d2433;background:#fbfaf7}header,main,footer{max-width:980px;margin:0 auto;padding:16px}
 nav a{margin-right:16px}.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;list-style:none;padding:0}
@@ -35,6 +36,9 @@ def _card(c: D.Course, modified: bool) -> str:
 def pages(variant: str = "original") -> dict[str, str]:
     if variant not in VARIANTS:
         raise ValueError(f"unknown Larkspur variant {variant!r}")
+    if variant == "improved":
+        from . import improved
+        return improved.pages()
     mod = variant == "modified"
     out = {"/": _page("Short courses", f'<h1>{e(D.COLLEGE["tagline"])}</h1><p>{len(D.COURSES)} courses this term across {len(D.CATEGORIES)} subject areas, '
                                        f'taught at our Northside and Riverside campuses.</p><p><a href="/courses">Browse all courses</a></p>'
@@ -61,6 +65,9 @@ LIMITS = Limits(max_pages=60, max_depth=4, max_query_variants=2, max_assets=5, m
 @lru_cache(maxsize=None)
 def snapshot(variant: str = "original") -> Snapshot:
     """Crawl the rendered variant with the pipeline's own crawler (offline), exactly as any other site is captured."""
+    if variant == "improved":
+        from . import improved
+        return improved.snapshot()
     mapping = {path: html for path, html in pages(variant).items()}
     mapping["/assets/site.css"] = (200, "text/css", CSS.encode())
     return crawl(MappingFetcher(mapping), LIMITS)

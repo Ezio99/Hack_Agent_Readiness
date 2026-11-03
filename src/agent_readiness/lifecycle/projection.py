@@ -283,8 +283,8 @@ def _diagnostics(run: InvestigationRun, variants: list[str], paid: bool, task_n:
         from ..diagnostics import run as D
         from ..framework.site import get
         site = get(run.state["config"]["site"])
-        if list(site.variants) != variants:
-            return {"available": False, "reason": "diagnostics compare the site's registered variants; this evaluation uses other snapshots"}
+        if len(variants) != 2 or any(v not in site.registered for v in variants):
+            return {"available": False, "reason": "diagnostics compare two of the site's registered versions; this evaluation uses other snapshots"}
         bundle = D.from_framework_run(run.dir)
         bundle["origin"] = "real_model" if paid else "dev_fixture"
         d = D.diagnose(bundle)

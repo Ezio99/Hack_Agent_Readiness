@@ -63,7 +63,7 @@ def resolve_variants(site, manifest, extra: dict[str, Snapshot] | None = None, r
         snap = (extra or {}).get(name)
         if snap is None and run_dir is not None and (Path(run_dir) / "variants" / name / "index.json").exists():
             snap = Snapshot.load(Path(run_dir) / "variants" / name)
-        if snap is None and name in site.variants:
+        if snap is None and name in site.registered:
             snap = site.snapshot(name)
         if snap is None:
             raise ValueError(f"no snapshot available for variant {name!r}")
@@ -147,7 +147,7 @@ def prepare(store: WriteOnceStore, manifest_sha: str, root: Path, *, mode: str =
         if mode == "rehearsal":
             run.write_artifact("dev-provider", {"loopback_stand_in": True})
         for n, s in snaps.items():
-            if n not in site.variants:
+            if n not in site.registered:
                 s.save(run.dir / "variants" / n)
         run.write_artifact("snapshot-manifests", snapshot_manifests)
         run.write_artifact("evalrun-provenance", {"schema": SCHEMA, "manifest_sha256": manifest_sha, "frozen_suite_sha256": manifest.frozen_suite_sha256,
@@ -384,8 +384,8 @@ def _diagnostics(run: InvestigationRun, variants: list[str]) -> dict:
     try:
         from ..diagnostics import run as D
         site = get(run.state["config"]["site"])
-        if list(site.variants) != variants:
-            return {"available": False, "reason": "diagnostics compare the site's registered variants; this manifest uses other snapshots"}
+        if len(variants) != 2 or any(v not in site.registered for v in variants):
+            return {"available": False, "reason": "diagnostics compare two of the site's registered versions; this manifest uses other snapshots"}
         bundle = D.from_framework_run(run.dir)
         bundle["origin"] = "dev_fixture" if run.state["config"]["mode"] == "rehearsal" else "real_model"
         d = D.diagnose(bundle)
