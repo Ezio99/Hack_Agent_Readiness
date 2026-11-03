@@ -132,3 +132,21 @@ Approval covered deployment steps 1–5 and verification only: **not** the suite
 Recorded in `deploy/DEPLOYED.txt` on the VM. **Rollback:** `cp compose.yaml.pre-judge compose.yaml && docker tag agent-readiness-app:rollback-f36db53 agent-readiness-app:latest && docker compose up -d --no-build --no-deps app`.
 
 **Next checkpoint (needs separate owner approval):** §5 steps 2–5: revise (must print `0e46a1ef…`), review, decide (owner types the attestation), freeze; ceiling 10.736 → 21.956 (+ `.env`); arm `larkspur-judge-1` (3 launches, Original vs Improved); pre-flight. Then, separately, the first paid launch.
+
+## 9. Production configuration record (owner-approved, 2026-11-03 UTC; no paid launch)
+
+| Step | Result |
+|---|---|
+| Revise | `revise` printed exactly `0e46a1efe0a628ff2fb69c72ce0c0eb2323919570e4e3fbde1ac296d93460360` (`larkspur-core` v3); its three records are the frozen v2 records `b431adea…` (`gen-23f1802ee0-n`), `6b13fdd4…` (`gen-8334922e62-n`), `f6593d42…` (`gen-f302fa8fe2-n`), private outcomes unchanged |
+| Owner decision | typed by the owner at an interactive terminal: approval `59c866ba56c6d2e458a4bf535a1db9f343f8a7da3e31c77e4b16f2412c3ff74e`, role owner, 2026-11-03T04:17:00Z |
+| Freeze | `larkspur-core@v3` → frozen `db2eb1cb64eb62448ded0168d849f8a0dad8ab6f2796db4aa4bacbe25a6fb045` → suite `0e46a1ef…`, approval `59c866ba…`; tasks exactly 1, 3, 6 |
+| Ceiling | migration #2 typed by the owner: 2026-11-03T04:18:52Z, US$10.736 → **US$21.956**; reserved US$10.736 by the same 3 jobs (job-rows fingerprint `ded90f80…` unchanged); **remaining US$11.220**. `.env` `AR_HOSTED_CEILING_USD=21.956` (previous `.env` copied to `/root/backups/env-pre-ceiling-21.956-…`); app restarted 04:19:19Z on `f5d9ec46…`, healthy |
+| Prepare | manifest **`c32cfc6fa1a0a6d329e57adc3197967a3317ef274162fd5a0b5e5e429f567c71`**: frozen v3, original `2f9fd2ce…` vs improved `87e715d5…`, 1 repetition, seed 7, natural condition, 3 tasks × 14 requests, per-request cap US$0.044, hard cap US$3.696, reserves US$3.740; muse-spark-1.3, low, 4096, `suite-v2-compat2` `d18a2b7e2666` |
+| Arm | typed by the owner: `larkspur-judge-1`, paid, recorded 2026-11-03T04:21:54Z, max 3 launches, US$11.220 total |
+| Post-arming | `arming status`: active `larkspur-judge-1`, problems [], launches 3 / used 0 / left 3, option 6 trials US$3.740 available and fits. Config: `judge_access true`, `launch.authorized true`, 3 left, variants original/improved, the 3 task questions. POST without a code, with a wrong code, with a Basic header: **403**. Ceiling 21.956 / 10.736 reserved / 11.220 remaining, 0 active. **No new launch claim, authorisation or ledger** (only `larkspur-live-1-l1` exists; its ledger sha256 `e4675700…` unchanged). Evidence: 2 202 of 2 204 backed-up files byte-identical; the 2 others are the expected `armings/ACTIVE` pointer and `admission.sqlite` (migration #2). New files: the suite, approval, frozen record, v3 ref, manifest and the `larkspur-judge-1` arming record only. Historical reports 200. Browser: workspace "3 customer tasks · Original vs Improved site · 3 of 3 live runs left", "Worker available"; journey "Ready for a live run … 3 of 3 live runs left"; 0 console errors |
+
+Programme: known spend unchanged at US$18.786306 (A$28.18); reservation-based worst case with the pool A$45.01 of A$50.
+
+**Next (separate owner authorisation):** the first paid judge launch from `#/run` with the access code (reserves US$3.740; expected about US$0.65–0.85 and 6–9 minutes).
+
+Cosmetic follow-ups for any later deploy (need approval; not done): the journey's re-evaluate card says "about 4–6 minutes" (the workspace's own estimate for 6 agents reads about 8 minutes); two version names render without a space between them in the journey; the sticky header is translucent over scrolled content. The service's startup log line still names the earlier arming because it was written before arming; the live config and `arming status` show `larkspur-judge-1`.
