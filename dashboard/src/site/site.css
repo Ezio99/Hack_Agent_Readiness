@@ -77,7 +77,7 @@
 .brand-mark{width:18px;height:18px;flex:none}
 
 /* Header */
-.site-head{position:sticky;top:0;z-index:40;background:color-mix(in srgb,var(--paper) 86%,transparent);backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px);border-bottom:1px solid transparent;transition:border-color .3s}
+.site-head{position:sticky;top:0;z-index:40;background:var(--paper);border-bottom:1px solid transparent;transition:border-color .3s}   /* opaque: content never shows through on scrolled pages */
 .site-head.scrolled{border-bottom-color:var(--rule)}
 .site-head .wrap{display:flex;align-items:center;gap:28px;height:64px}
 .site-nav{display:flex;gap:4px;margin-left:auto}

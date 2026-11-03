@@ -8,7 +8,7 @@ import { Lifecycle } from './Lifecycle';
 import { ReportPage } from './Report';
 import { useLoad } from './parts';
 import { parse } from '../router';
-import { LIVE } from '../showcase';
+import { FIRST_LIVE, LIVE } from '../showcase';
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 afterEach(() => { vi.unstubAllGlobals(); document.body.innerHTML = ''; window.location.hash = ''; });
 
@@ -144,7 +144,7 @@ it('shows the recorded task generation: proposed, accepted and its model cost; n
 });
 
 it('maps every recommendation of the live report to the change on the Improved site that applies it', async () => {
-  server({ [`/api/lifecycle/evaluations/${LIVE.id}`]: { ...EV, id: LIVE.id } });
+  server({ [`/api/lifecycle/evaluations/${FIRST_LIVE.id}`]: { ...EV, id: FIRST_LIVE.id } });                    // the run the recommendations came from
   await mount(<Lifecycle step="recommendations" />);
   const sec = document.querySelector('#lc-recommendations')!;
   const items = [...sec.querySelectorAll('.lc-rec-list li')];
@@ -168,6 +168,17 @@ it('compares the live evaluations and says when the Improved site has not had a 
   expect(sec.textContent).not.toContain('has not had a live run yet');
   expect(sec.querySelector(`a[href="#/reports/${imp}"]`)).not.toBeNull();
   expect(sec.querySelectorAll('tbody tr')).toHaveLength(2);                                                   // rehearsals are not live results
+});
+
+it('features the live Original vs Improved run in Compare and Re-evaluate, with the 6–9 minute estimate', async () => {
+  server({ '/api/lifecycle/evaluations': [] });
+  await mount(<Lifecycle step="compare" />);
+  const f = document.querySelector('#lc-compare .lc-featured')!;
+  expect(f.textContent).toContain('Original vs Improved'); expect(f.textContent).toContain('0/3'); expect(f.textContent).toContain('3/3');
+  expect(f.querySelector(`a[href="#/reports/${LIVE.id}/tasks/2"]`)).not.toBeNull();
+  expect(f.querySelectorAll('img')).toHaveLength(2);
+  expect(document.querySelector('#lc-reevaluate')!.textContent).toContain('about 6–9 minutes');
+  expect(document.querySelector('#lc-reevaluate')!.textContent).toContain('3/3 on Improved');
 });
 
 it('labels the recorded first evaluation and a live run in this product differently, and shows the finished agent runs', async () => {
@@ -204,4 +215,26 @@ it('C2: useLoad never returns the previous key\'s data while the next key loads'
   await act(async () => { release('data-b'); await new Promise(r => setTimeout(r, 0)); });
   expect(seen.at(-1)).toBe('b:data-b');
   act(() => root.unmount());
+});
+
+it('the production run eval-c04fdb10: correct 0/3 -> 3/3, exact match 0/3 both, and the comparison table counted as equivalent evidence', async () => {
+  const C04 = JSON.parse(readFileSync(resolve(__dirname, '../../fixtures/live/eval-c04fdb10-report.json'), 'utf8'));
+  server({ [`/api/lifecycle/evaluations/${C04.id}`]: C04 });
+  const host = await mount(<ReportPage id={C04.id} />);
+  const row = (k: string) => [...host.querySelectorAll('tr')].find(r => r.textContent?.startsWith(k))!.textContent!;
+  expect(row('Correct answers')).toBe('Correct answers0/33/3');
+  expect(row('Exact match')).toBe('Exact match (official grader)0/30/3');
+  expect(row('Shown the pages that hold the answer')).toContain('0/3');                                      // the recorded rule, unchanged
+  expect(row('…or an equivalent page')).toBe('…or an equivalent page that states every deciding fact for every course (e.g. a comparison table)0/33/3');
+  expect(host.textContent).toContain('Original vs Improved');
+});
+
+it('the trace view names the equivalent page the agent read the facts from', async () => {
+  const C04 = JSON.parse(readFileSync(resolve(__dirname, '../../fixtures/live/eval-c04fdb10-report.json'), 'utf8'));
+  const tl = { id: 'x', steps: [], errors: [], screenshots: [] };
+  server({ [`/api/lifecycle/evaluations/${C04.id}`]: C04, '/trials/original-gen-8334922e62-n-r1': tl, '/trials/improved-gen-8334922e62-n-r1': tl });
+  const host = await mount(<ReportPage id={C04.id} task={2} />);
+  const imp = host.querySelector('.lc-side.i')!.textContent!;
+  expect(imp).toContain('every deciding fact shown on /courses/compare');
+  expect(host.querySelector('.lc-side.o')!.textContent).toContain('required page(s) not shown');
 });

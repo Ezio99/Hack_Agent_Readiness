@@ -8,7 +8,7 @@ import App from '../App';
 import { parse } from './router';
 import { evidence, headline, trial, isItemPage, replication } from './evidence';
 import { LATEST_LIVE } from './LatestLive';
-import { FEATURED, IMPROVEMENTS, LIVE } from './showcase';
+import { FEATURED, FIRST_LIVE, IMPROVEMENTS, LIVE } from './showcase';
 import { Home } from './Home';
 import { Demo } from './demo/Demo';
 import { Workspace } from './workspace/Workspace';
@@ -82,23 +82,27 @@ describe('homepage (the featured Larkspur story)', () => {
     const hrefs = [...host.querySelectorAll('a')].map(a => a.getAttribute('href'));
     for (const h of ['#/run', '#/lifecycle', `#/reports/${LIVE.id}`, '#/lifecycle/improve']) expect(hrefs).toContain(h);
     const text = host.textContent!;
-    const O = LIVE.totals.original, M = LIVE.totals.modified;
-    for (const s of [`${O.requests}`, `${M.requests}`, `${Math.round(100 * (O.requests - M.requests) / O.requests)}% fewer on Modified`, `${LIVE.correct.original}/6`, `${LIVE.correct.modified}/6`,
-                     'Larkspur Community College', 'Run Original vs Improved', ...IMPROVEMENTS.map(i => i.title)]) expect(text).toContain(s);
-    expect(text).toContain(LIVE.journeys['original-1'].steps.at(-1)!.memory!);                     // the agent's own words, unedited
+    const O = LIVE.totals.original, M = LIVE.totals.improved;
+    for (const s of [`${O.requests}`, `${M.requests}`, `${Math.round(100 * (O.requests - M.requests) / O.requests)}% fewer on Improved`, '0/3', '3/3',
+                     'Larkspur Community College', 'Run Original vs Improved', 'Measured live', ...IMPROVEMENTS.map(i => i.title)]) expect(text).toContain(s);
+    expect(text).toContain(LIVE.journeys['original-2'].steps.at(-1)!.memory!);                     // the agent's own words, unedited
+    expect(text).toContain(`${FIRST_LIVE.totals.original.requests} → ${FIRST_LIVE.totals.modified.requests}`);   // the first live run, kept as context
+    for (const h of [`#/reports/${FIRST_LIVE.id}`]) expect(hrefs).toContain(h);
     for (const s of ['post-hoc', 'inconclusive', 'p =', 'xploratory', 'verified', 'pre-registered']) expect(text).not.toContain(s);
     expect(host.querySelector('main')!.textContent).not.toContain('Ironbark');                                // the earlier case study is only linked from the footer
     expect(f).not.toHaveBeenCalled();
   });
   it('the recorded showcase numbers are internally consistent with the per-agent records', () => {
-    expect(LIVE.trials).toHaveLength(12);
-    for (const v of ['original', 'modified']) {
-      const ts = LIVE.trials.filter(t => t.variant === v);
-      expect(ts.reduce((a, t) => a + t.requests, 0)).toBe(LIVE.totals[v].requests);
-      expect(ts.filter(t => t.correct).length).toBe(LIVE.correct[v]);
-      expect(ts.filter(t => t.passed).length).toBe(LIVE.passed[v]);
+    expect(LIVE.id).toBe('eval-c04fdb100d6b1c877de96dabe76eb052');                                   // the featured run: Original vs Improved, live
+    expect(LIVE.trials).toHaveLength(6); expect(FIRST_LIVE.trials).toHaveLength(12);
+    for (const [run, vs] of [[LIVE, ['original', 'improved']], [FIRST_LIVE, ['original', 'modified']]] as const) for (const v of vs) {
+      const ts = run.trials.filter(t => t.variant === v);
+      expect(ts.reduce((a, t) => a + t.requests, 0)).toBe(run.totals[v].requests);
+      expect(ts.filter(t => t.correct).length).toBe(run.correct[v]);
+      expect(ts.filter(t => t.passed).length).toBe(run.passed[v]);
     }
-    expect(LIVE.cost_usd).toBeCloseTo(LIVE.totals.original.cost_usd + LIVE.totals.modified.cost_usd, 4);
+    expect([LIVE.correct.original, LIVE.correct.improved, LIVE.totals.original.requests, LIVE.totals.improved.requests]).toEqual([0, 3, 39, 6]);
+    expect(LIVE.cost_usd).toBeCloseTo(LIVE.totals.original.cost_usd + LIVE.totals.improved.cost_usd, 4);
     expect(LATEST_LIVE.id).toBe(FEATURED.liveEvaluation);
     for (const x of IMPROVEMENTS) if (x.preview) expect(existsSync(join(__dirname, 'showcase', 'frames', `${x.preview}.webp`))).toBe(true);
   });

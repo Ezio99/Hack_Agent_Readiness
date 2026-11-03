@@ -23,9 +23,10 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "dashboard" / "src" / "site" / "showcase"
-EVAL = "eval-e529db2aafecbfddd21e5c571eb85243"
-# the steps the story shows: task 1 on Original (the agent runs out of requests) and on Modified (answered from the listing)
-FRAMES = {("original", 1): (2, 12, 13), ("modified", 1): (2,)}
+# the featured live evaluation (Original vs Improved, the three-task judge suite) and the first live evaluation (Original vs Modified, six tasks).
+# Frames: the steps the story shows (suite-local task numbers).
+RUNS = {"live": ("eval-c04fdb100d6b1c877de96dabe76eb052", {("original", 2): (2, 9, 13), ("improved", 2): (1, 2), ("original", 1): (13,), ("improved", 1): (2,)}),
+        "first_live": ("eval-e529db2aafecbfddd21e5c571eb85243", {("original", 1): (2, 12, 13), ("modified", 1): (2,)})}
 PREVIEWS = [("original", "/courses"), ("modified", "/courses"), ("improved", "/courses"), ("improved", "/courses?level=Beginner&campus=&day=Weekend"),
             ("improved", "/courses/compare"), ("improved", "/courses/intro-to-python")]
 
@@ -44,7 +45,7 @@ def _webp(png: bytes, width: int = 960) -> bytes:
     return buf.getvalue()
 
 
-def export_live(base: str) -> dict:
+def export_live(base: str, EVAL: str, FRAMES: dict) -> dict:
     ev = json.loads(_get(base, f"/api/lifecycle/evaluations/{EVAL}"))
     nav = ev["dimensions"]["navigation_efficiency"]["variants"]
     trials, journeys = [], {}
@@ -52,7 +53,7 @@ def export_live(base: str) -> dict:
         m = t["metrics"]
         trials.append({"task": t["task"], "variant": t["variant"], "passed": bool(t["grades"]["v1"]["passed"]), "correct": bool(t["grades"]["v2"]["passed"]),
                        "requests": m["model_requests"], "limit": m["request_limit"], "seconds": round(m["elapsed_seconds"], 1), "cost_usd": m["cost_usd"],
-                       "dead_end": bool(t["reliability"].get("dead_end"))})
+                       "dead_end": bool(t["reliability"].get("dead_end")), "path": t["navigation"]["visits"]})
         key = (t["variant"], t["task"])
         if key in FRAMES:
             tl = json.loads(_get(base, f"/api/lifecycle/evaluations/{EVAL}/trials/{t['id']}"))
@@ -60,7 +61,7 @@ def export_live(base: str) -> dict:
             for s in tl["steps"]:
                 frame = None
                 if s.get("step") in FRAMES[key] and s.get("screenshot"):
-                    frame = f"{t['variant']}-t{t['task']}-s{s['step']}"
+                    frame = f"{EVAL[5:9]}-{t['variant']}-t{t['task']}-s{s['step']}"
                     (OUT / "frames" / f"{frame}.webp").write_bytes(_webp(_get(base, f"/api/lifecycle/evaluations/{EVAL}/trials/{t['id']}/screenshots/{s['screenshot']}")))
                 steps.append({"step": s.get("step"), "path": s.get("path"), "memory": s.get("memory"), "goal": s.get("goal"), "frame": frame})
             journeys[f"{t['variant']}-{t['task']}"] = {"answer": t["answer"], "steps": steps}
@@ -115,7 +116,10 @@ def main(argv=None) -> int:
     target = OUT / "larkspur.json"
     data = json.loads(target.read_text()) if target.exists() else {}
     if a.service:
-        data["live"] = export_live(a.service.rstrip("/"))
+        for f in (OUT / "frames").glob("*-t*-s*.webp"):
+            f.unlink()                                                   # run frames are re-exported below
+        for key, (ev_id, frames) in RUNS.items():
+            data[key] = export_live(a.service.rstrip("/"), ev_id, frames)
     data["previews"] = asyncio.run(_previews())
     data["page_audit"] = page_audit()
     target.write_text(json.dumps(data, indent=1, ensure_ascii=False) + "\n")

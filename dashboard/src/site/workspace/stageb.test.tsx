@@ -201,3 +201,21 @@ it('history shows each Stage B evaluation\'s own number of agent runs (not the r
   expect(rows.some(r => r.includes('1 × 4'))).toBe(true);
   expect(rows.some(r => r.includes('1 × 8'))).toBe(true);                                                      // a historical Ironbark job
 });
+
+// Final presentation fix: the real production run eval-c04fdb10 (Original vs Improved). The grid reads like the readiness report.
+const C04_STATUS = JSON.parse(readFileSync(resolve(__dirname, '../../fixtures/live/eval-c04fdb10-status.json'), 'utf8'));
+const C04_REPORT = JSON.parse(readFileSync(resolve(__dirname, '../../fixtures/live/eval-c04fdb10-report.json'), 'utf8'));
+it('the Agent runs grid shows Correct / Not correct as the report counts it, with exact match kept as its own line (production run)', async () => {
+  server(url => url.endsWith('/config') ? config({ evaluation: { ...armed, variants: ['original', 'improved'] }, tasks: tasks.slice(0, 3) })
+    : url.endsWith('/jobs') ? [] : url.includes('/live') || url.includes('/trials/') ? { active: false, trial: null }
+    : url.includes('/api/lifecycle/') ? C04_REPORT : C04_STATUS);
+  const host = await mount({ initialJob: C04_STATUS.id });
+  await act(async () => { button(host, 'Agent runs').click(); });
+  const head = [...host.querySelectorAll('.ws-grid thead th')].map(th => th.textContent);
+  expect(head).toEqual(['Task', 'Original', 'Improved']);
+  const rows = [...host.querySelectorAll('.ws-grid tbody tr')].map(r => [...r.querySelectorAll('td')].map(td => td.querySelector('strong')!.textContent));
+  expect(rows).toEqual([['Not correct', 'Correct'], ['Not correct', 'Correct'], ['Not correct', 'Correct']]);
+  expect(host.querySelector('.ws-grid')!.textContent).not.toContain('Not passed');
+  expect([...host.querySelectorAll('.ws-exact')].map(x => x.textContent)).toEqual(Array(6).fill('Exact match: no'));
+  expect(host.querySelector('.ws-grid')!.textContent).toContain('2 requests');
+});

@@ -32,6 +32,10 @@ from ..taskeval.v2 import kinds as KD
 
 SCHEMA = "lifecycle-evaluation-v1"
 VERSION = "projection-1"
+EQUIVALENT_RULE = "equivalent-page-1"
+# Derived-cache key: the projection output format is still projection-1 (recorded datasets re-derive byte for byte); the equivalent-page check is
+# added beside the recorded evidence, so caches written before it are not reused.
+CACHE_KEY = f"{VERSION}+{EQUIVALENT_RULE}"
 MODES = {"paid": {"label": "Paid evaluation", "provider": "real model", "notice": None},
          "rehearsal": {"label": "Rehearsal", "provider": "loopback dev provider (scripted stand-in, NOT a model)",
                        "notice": "ZERO-COST REHEARSAL: the agent's replies came from a scripted stand-in built from the frozen tasks, not from a model. "
@@ -148,6 +152,28 @@ def _labels(criterion: dict) -> list[str]:
     return [x for x in dict.fromkeys(labels) if x]
 
 
+# ------------------------------------------------------------------------------------------------------------------------------- equivalent evidence
+def equivalent_pages(site, snap, labels: list[str]) -> list[str]:
+    """Pages of this snapshot that state, as labelled values, every deciding fact of EVERY catalogue record exactly as the site's own records
+    (the oracle) hold it: e.g. a comparison table with the fee and seats of every course. Such a page holds everything the required pages hold for
+    the task, so an agent that opened it was shown the evidence. Only for controlled sites; computed beside the recorded evidence rule, which
+    stays the evidence of record (`equivalent-page-1`)."""
+    from ..investigate.inspect.pagemodel import norm, parse_page
+    if site is None or site.oracle is None or not labels:
+        return []
+    o = site.oracle()
+    fields = {lab.lower(): o.fields.get(lab.lower()) for lab in labels}
+    if any(f is None for f in fields.values()):
+        return []
+    want = {(norm(r.name).lower(), lab, norm(f.show(r.values[f.name])).lower()) for rs in o.listings.values() for r in rs for lab, f in fields.items()}
+    out = []
+    for r in snap.pages():
+        stated = {(norm(x["term"]).lower(), (x.get("label") or "").lower(), norm(x["value"]).lower()) for x in parse_page(r.path, r.text())["term_values"]}
+        if want <= stated:
+            out.append(r.path)
+    return out
+
+
 # ------------------------------------------------------------------------------------------------------------------------------- per trial
 def _trial_row(run: InvestigationRun, name: str, t: dict, graded: dict, task_n: dict, priv: dict, vpriv: dict | None, key: G2.AnswerKey | None,
                profile: dict, paid: bool) -> dict:
@@ -240,6 +266,10 @@ def dimensions(rows: list[dict], tasks: list[dict], variants: list[str], placeme
                              "ranked_subset_rule_2": [{"task": r["task"], **{k: r["evidence"]["ranked_subset_rule_2"][k] for k in ("required_pages", "shown_pages", "satisfied")}}
                                                       for r in rs if r["evidence"]["ranked_subset_rule_2"].get("applies")]} for v, rs in by_v.items()},
             "prospective_rule": {"id": ER.RULE_ID, "status": ER.STATUS}}
+    if any("equivalent" in r["evidence"] for r in rows):                   # only where it applies (earlier projections unchanged)
+        for v, rs in by_v.items():
+            evid["variants"][v]["evidence_satisfied_or_equivalent"] = sum(r["evidence"]["satisfied"] or "equivalent" in r["evidence"] for r in rs)
+        evid["equivalent_rule"] = {"id": EQUIVALENT_RULE, "basis": "a visited page states every deciding fact for every item, as the site's own records hold them"}
     access = {"basis": "measured from each variant's frozen snapshot: on how many listing cards and item pages each fact is stated; per task, where the facts its question depends on are placed",
               "facts": placements,
               "tasks": [{"task": t["n"], "facts": t["facts"], "placement": {v: {f: ("listing cards" if (placements.get(v, {}).get(f) or {}).get("on_listing_cards", 0) >= 0.8 * (placements.get(v, {}).get(f) or {}).get("items", 1)
@@ -369,6 +399,7 @@ def project(store: WriteOnceStore, runs: dict[str, InvestigationRun], *, evaluat
     ordered = sorted(task_records, key=lambda t: t.task_id)
     task_n = {t.task_id: i + 1 for i, t in enumerate(ordered)}
     tasks, rows, analyses, execution = [], [], {}, {}
+    equiv: dict[tuple, list[str]] = {}
     min_hops: dict[str, dict] = {}
     for cond, run in sorted(runs.items()):
         if run.state["config"]["mode"] != mode:
@@ -391,6 +422,15 @@ def project(store: WriteOnceStore, runs: dict[str, InvestigationRun], *, evaluat
             vpriv = (per_variant.get(v) or {}).get(tid)
             min_hops.setdefault(tid, {})[v] = (vpriv or {}).get("min_hops")
             row = _trial_row(run, path.stem, t, graded.get(path.stem), task_n, privs.get(tid), vpriv, keys.get(tid), profiles[v], paid)
+            if not row["evidence"]["satisfied"] and privs.get(tid):
+                labels = _labels(privs[tid]["criterion"])
+                ek = (v, tuple(labels))
+                if ek not in equiv:
+                    equiv[ek] = equivalent_pages(site, snaps[v], labels)
+                via = sorted(set(equiv[ek]) & set(row["navigation"]["visits"]))
+                if via:                                                   # added only where it applies, so earlier projections are unchanged
+                    row["evidence"]["equivalent"] = {"rule": EQUIVALENT_RULE, "satisfied": True, "via": via,
+                                                     "note": "the agent opened a page that states every deciding fact for every item, as the site's own records hold them"}
             if row["grades"]["v2"] is not None and keys.get(tid) is not None:
                 g = G2.grade(keys[tid], _answer(t.get("outcome")) if t["evaluation"].get("answer_valid") else None)     # the raw answer, as graded
                 row["grades"]["v2"]["review"] = g.review

@@ -73,6 +73,7 @@ def test_a_judge_runs_the_featured_original_vs_improved_evaluation(tmp_path, mon
     assert st_["execution"] == {"state": "completed", "trials_planned": 6, "trials_completed": 6, "trials_failed": 0, "trials_void": 0}
     assert st_["report_status"]["state"] == "available" and seen_live
     assert st_["arm_display"] == {"Original": "Original", "Modified": "Improved"} and st_["evaluation"]["variants"] == ["original", "improved"]
+    assert all(isinstance(t.get("correct"), bool) and isinstance(t.get("exact_match"), bool) for t in st_["reps"][0]["tasks"])   # the grid reads like the report
     tr = c.get(f"/api/ironbark/jobs/{job}/repetitions/1/trials/modified/1").json()
     assert tr["steps"]
     assert c.get(f"/api/ironbark/jobs/{job}/repetitions/1/trials/modified/1/screenshots/{tr['steps'][0]['screenshot']}").status_code == 200

@@ -144,7 +144,8 @@ def record_note(held_state: str, execution_state: str, report_state: str, done: 
             "The original record is kept unchanged.")
 
 
-def job_status(runs_root: Path, job_id: str, held_state: str, *, recovery_required: bool, v2: dict | None = None, publication: dict | None = None) -> dict:
+def job_status(runs_root: Path, job_id: str, held_state: str, *, recovery_required: bool, v2: dict | None = None, publication: dict | None = None,
+               grades: dict | None = None) -> dict:
     """The hosted status shape (reps x tasks x arms) computed from Stage B trial records; per repetition, every planned trial with its state.
     M9: `state` is the preserved admission record; `execution` is what ran (from the trial records and the worker's job record); `report_status` is
     whether the readiness report may be published (from `publication`, the service's own check); `record_note` explains any difference."""
@@ -173,7 +174,8 @@ def job_status(runs_root: Path, job_id: str, held_state: str, *, recovery_requir
                     m = rec.get("metrics") or {}
                     done = rec["outcome"]["run_status"] == "completed"
                     out.append({"arm": arm, "task": alias[tid], "state": "completed" if done else "failed", "outcome": _outcome(rec) if done else rec["outcome"]["run_status"],
-                                "requests": m.get("model_requests"), "page_views": m.get("page_views"), "steps": m.get("steps"), "elapsed_seconds": m.get("elapsed_seconds")})
+                                "requests": m.get("model_requests"), "page_views": m.get("page_views"), "steps": m.get("steps"), "elapsed_seconds": m.get("elapsed_seconds"),
+                                **((grades or {}).get((arm, alias[tid])) or {} if done else {})})
                 else:
                     state = "running" if name == running else ("pending" if held_state in ("reserved", "running") else "incomplete")
                     out.append({"arm": arm, "task": alias[tid], "state": state, "outcome": state, "requests": None, "page_views": None, "steps": None, "elapsed_seconds": None})

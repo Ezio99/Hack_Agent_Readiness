@@ -142,7 +142,9 @@ function Evidence({ ev, vs }: { ev: Evaluation; vs: string[] }) {
   const e = ev.dimensions.evidence_quality;
   return <div className="lc-table-wrap"><table className="lc-table"><thead><tr><th scope="col">Agents</th>{vs.map(v => <th scope="col" key={v}><VariantName v={v} /></th>)}</tr></thead><tbody>
     <tr><th scope="row">Shown the pages that hold the answer</th>{vs.map(v => <td key={v}>{e.variants[v].evidence_satisfied}/{e.variants[v].trials}</td>)}</tr>
-    <tr><th scope="row">Correct without having seen every page the answer needs</th>{vs.map(v => <td key={v}>{e.variants[v].correct_but_unsupported_v2}</td>)}</tr>
+    {vs.some(v => e.variants[v].evidence_satisfied_or_equivalent !== undefined) && <tr><th scope="row">…or an equivalent page that states every deciding fact for every course (e.g. a comparison table)</th>
+      {vs.map(v => <td key={v}><strong>{e.variants[v].evidence_satisfied_or_equivalent ?? e.variants[v].evidence_satisfied}/{e.variants[v].trials}</strong></td>)}</tr>}
+    <tr><th scope="row">Correct without having seen the pages the answer needs (recorded rule)</th>{vs.map(v => <td key={v}>{e.variants[v].correct_but_unsupported_v2}</td>)}</tr>
     <tr><th scope="row">Answer pages not shown (total)</th>{vs.map(v => <td key={v}>{e.variants[v].missing_pages_total}</td>)}</tr>
   </tbody></table></div>;
 }

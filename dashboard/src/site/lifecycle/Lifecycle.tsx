@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { SiteFooter, SiteHeader } from '../Shell';
 import { api, fmtUsd, words, type EvaluationSummary, type Finding, type Generation, type Overview, type Suite } from '../../lib/lifecycleApi';
-import { CARD_FACTS, FEATURED, IMPROVEMENTS, JOURNEY, LIVE, PAGE_AUDIT, VERSIONS, fewerPct, journeyOf, showcaseFrame, trialOf } from '../showcase';
+import { CARD_FACTS, FEATURED, FEATURED_TASK, FIRST_LIVE, IMPROVEMENTS, JOURNEY, LIVE, PAGE_AUDIT, VERSIONS, fewerPct, journeyOf, showcaseFrame, trialOf, type LiveRecord } from '../showcase';
 import { Failed, Loading, useLoad, VariantName } from './parts';
 import './lifecycle.css';
 
@@ -150,28 +150,29 @@ function SuiteView({ s }: { s: Suite }) {
 
 // --------------------------------------------------------------------------------------------------------------- 04 evaluate
 function EvaluateStep() {
-  const o = LIVE.totals.original, m = LIVE.totals.modified;
-  const a = journeyOf('original', 1), b = journeyOf('modified', 1);
+  const R = FIRST_LIVE;
+  const o = R.totals.original, m = R.totals.modified;
+  const a = journeyOf('original', 1, R), b = journeyOf('modified', 1, R);
   const shot = (j: typeof a, n: number) => j.steps.find(x => x.step === n);
   return <>
     <p className="lede sm">Each task goes to a fresh Muse Spark browser agent on each version of the site, in a browser that can reach nothing but the frozen copy.
       Every page, screenshot, action and the agent’s own notes are recorded, and the answer is graded against the course records.</p>
     <dl className="lc-kpis">
-      <div><dt>Agents</dt><dd>{LIVE.trials.length}</dd><small>{LIVE.tasks.length} tasks × Original and Modified · {FEATURED.liveDate}</small></div>
+      <div><dt>Agents</dt><dd>{R.trials.length}</dd><small>first live evaluation · {R.tasks.length} tasks × Original and Modified (the first fix) · {FEATURED.liveDate}</small></div>
       <div><dt>Model requests</dt><dd>{o.requests} <span className="lc-arrow">→</span> {m.requests}</dd><small>Original → Modified · {fewerPct(o.requests, m.requests)}% fewer</small></div>
-      <div><dt>Correct answers</dt><dd>{LIVE.correct.original} <span className="lc-arrow">→</span> {LIVE.correct.modified}</dd><small>of {LIVE.tasks.length} tasks</small></div>
-      <div><dt>Model cost</dt><dd>{fmtUsd(LIVE.cost_usd, 2)}</dd><small>{LIVE.agent.model} · all {LIVE.trials.length} agents</small></div>
+      <div><dt>Correct answers</dt><dd>{R.correct.original} <span className="lc-arrow">→</span> {R.correct.modified}</dd><small>of {R.tasks.length} tasks</small></div>
+      <div><dt>Model cost</dt><dd>{fmtUsd(R.cost_usd, 2)}</dd><small>{R.agent.model} · all {R.trials.length} agents</small></div>
     </dl>
     <div className="lc-sbs">
-      {[['original', a, 13], ['modified', b, 2]].map(([v, j, n]) => { const jj = j as typeof a; const st = shot(jj, n as number) ?? jj.steps[jj.steps.length - 1]; const tr = trialOf(v as string, 1)!;
+      {[['original', a, 13], ['modified', b, 2]].map(([v, j, n]) => { const jj = j as typeof a; const st = shot(jj, n as number) ?? jj.steps[jj.steps.length - 1]; const tr = trialOf(v as string, 1, R)!;
         return <figure key={v as string} className={`lc-side ${v === 'original' ? 'o' : 'm'}`}>
           <figcaption><VariantName v={v as string} /> · task 1 · {tr.requests} requests · {Math.round(tr.seconds)} s</figcaption>
           <img src={showcaseFrame(st.frame)} alt={`Recorded screenshot: ${v} site, step ${st.step}, ${st.path}.`} loading="lazy" />
           <blockquote>“{jj.steps[jj.steps.length - 1].memory}”</blockquote>
         </figure>; })}
     </div>
-    <p className="lc-cta-row"><a className="btn btn-signal" href={`#/reports/${LIVE.id}/tasks/1`}>Replay task 1 side by side <span className="arr" aria-hidden="true">→</span></a>
-      <a className="btn btn-ghost" href={`#/reports/${LIVE.id}`}>Open the live report</a></p>
+    <p className="lc-cta-row"><a className="btn btn-signal" href={`#/reports/${R.id}/tasks/1`}>Replay task 1 side by side <span className="arr" aria-hidden="true">→</span></a>
+      <a className="btn btn-ghost" href={`#/reports/${R.id}`}>Open the first live report</a></p>
   </>;
 }
 
@@ -187,7 +188,7 @@ function appliedBy(f: Finding): string | null {
 }
 
 function RecommendationsStep() {
-  const ev = useLoad(() => api.evaluation(LIVE.id), LIVE.id);
+  const ev = useLoad(() => api.evaluation(FIRST_LIVE.id), FIRST_LIVE.id);
   const d = ev.data ? Object.values(ev.data.diagnostics)[0] : null;
   const fs = d?.findings ?? [];
   const causes = fs.filter(f => f.basis === 'hypothesis' && f.severity !== 'info');
@@ -210,7 +211,7 @@ function RecommendationsStep() {
             <small>{f.basis === 'hypothesis' ? `Likely cause of the extra navigation on task ${f.tasks.join(', ')}` : f.title}</small>
             {imp && <a className="tag tag-pass" href="#/lifecycle/improve">✓ Applied: {imp.title}</a>}</li>; })}</ul></div>
     </div>}
-    <p className="lc-cta-row"><a className="btn btn-ghost" href={`#/reports/${LIVE.id}#diagnostics`}>Every finding, with its evidence</a></p>
+    <p className="lc-cta-row"><a className="btn btn-ghost" href={`#/reports/${FIRST_LIVE.id}#diagnostics`}>Every finding, with its evidence</a></p>
   </>;
 }
 
@@ -251,7 +252,8 @@ function ReevaluateStep({ ov }: { ov: Overview | null }) {
         {ev ? <p>{ev.variants.map(v => <VariantName key={v} v={v} />)} · {ev.suite} · {ev.options[0]?.trials ?? '–'} browser agents per run ·{' '}
           <strong>{ev.launches.left} of {ev.launches.max} live run{ev.launches.max === 1 ? '' : 's'} left</strong></p>
           : <p>No live run is open right now. The owner opens a set number of runs; completed evaluations stay available to everyone.</p>}
-        <p className="muted">Start it in the workspace with your access code, watch every agent work live, and the report appears when they finish (about 4–6 minutes).</p>
+        <p className="muted">Start it in the workspace with your access code, watch every agent work live, and the report appears when they finish (about 6–9 minutes for {ev?.options[0]?.trials ?? 6} agents).</p>
+        <p>Latest live run, {FEATURED.liveDate}: correct answers {LIVE.correct.original}/{LIVE.tasks.length} on Original → <strong>{LIVE.correct.improved}/{LIVE.tasks.length} on Improved</strong>, {LIVE.totals.original.requests} → {LIVE.totals.improved.requests} model requests. <a className="link" href={`#/reports/${LIVE.id}`}>Open its report</a></p>
       </div>
       <a className="btn btn-signal" href="#/run">{ready ? 'Run Original vs Improved' : 'Open the workspace'} <span className="arr" aria-hidden="true">→</span></a>
     </div>
@@ -259,6 +261,30 @@ function ReevaluateStep({ ov }: { ov: Overview | null }) {
 }
 
 // --------------------------------------------------------------------------------------------------------------- 08 compare
+/** The featured result: Original vs Improved, live, on the class-day task (recorded; showcase.ts). */
+function FeaturedResult({ r }: { r: LiveRecord }) {
+  const T = FEATURED_TASK, o = r.totals.original, i = r.totals.improved;
+  const side = (v: 'original' | 'improved') => { const j = journeyOf(v, T, r), tr = trialOf(v, T, r)!; const last = j.steps[j.steps.length - 1];
+    const st = v === 'original' ? last : j.steps.find(x => x.path === '/courses/compare') ?? last;
+    return <figure key={v} className={`lc-side ${v === 'original' ? 'o' : 'i'}`}>
+      <figcaption><VariantName v={v} /> · {tr.correct ? '✓ correct' : '✕ not correct'} · {tr.requests} requests · {Math.round(tr.seconds)} s</figcaption>
+      <img src={showcaseFrame(st.frame)} alt={`Recorded screenshot: ${v} site, step ${st.step}, ${st.path}.`} loading="lazy" />
+      <blockquote>“{last.memory}”</blockquote></figure>; };
+  return <div className="lc-featured">
+    <p className="eyebrow">Live evaluation · {FEATURED.liveDate} · Original vs Improved</p>
+    <dl className="lc-kpis">
+      <div><dt>Correct answers</dt><dd>{r.correct.original}/{r.tasks.length} <span className="lc-arrow">→</span> {r.correct.improved}/{r.tasks.length}</dd><small>the same {r.tasks.length} customer tasks</small></div>
+      <div><dt>Model requests</dt><dd>{o.requests} <span className="lc-arrow">→</span> {i.requests}</dd><small>{fewerPct(o.requests, i.requests)}% fewer on Improved</small></div>
+      <div><dt>Agent time</dt><dd>{o.seconds} s <span className="lc-arrow">→</span> {i.seconds} s</dd><small>all tasks</small></div>
+      <div><dt>Model cost (US$)</dt><dd>${o.cost_usd.toFixed(2)} <span className="lc-arrow">→</span> ${i.cost_usd.toFixed(2)}</dd><small>{r.trials.length} agents · {r.agent.model}</small></div>
+    </dl>
+    <p className="lc-note">Task {T}: “{r.tasks[T - 1].wording}”</p>
+    <div className="lc-sbs">{side('original')}{side('improved')}</div>
+    <p className="lc-cta-row"><a className="btn btn-signal" href={`#/reports/${r.id}/tasks/${T}`}>Replay this task side by side <span className="arr" aria-hidden="true">→</span></a>
+      <a className="btn btn-ghost" href={`#/reports/${r.id}`}>Open the live report</a></p>
+  </div>;
+}
+
 const versionsOf = (e: EvaluationSummary) => e.variants ?? [];
 
 function CompareStep() {
@@ -267,7 +293,9 @@ function CompareStep() {
   const day = (s?: string | null) => s ? new Date(s).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Australia/Sydney' }) : '';
   const improved = list.filter(e => versionsOf(e).includes('improved'));
   return <>
-    <p className="lede sm">Every completed live evaluation of {FEATURED.short}, side by side. Each opens its full report with every agent’s trace.</p>
+    <FeaturedResult r={LIVE} />
+    <h3>Every live evaluation of {FEATURED.short}</h3>
+    <p className="lede sm">Each opens its full report with every agent’s trace.</p>
     {evs.error && <Failed error={evs.error} what="Evaluations" />}
     {evs.data && <div className="lc-table-wrap"><table className="lc-table lc-compare"><caption>Live evaluations of {FEATURED.name}</caption>
       <thead><tr><th scope="col">Evaluation</th><th scope="col">Versions</th><th scope="col">Correct answers</th><th scope="col">Model requests</th><th scope="col"><span className="sr-only">Report</span></th></tr></thead>

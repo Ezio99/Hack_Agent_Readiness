@@ -228,11 +228,11 @@ class LifecycleService:
                 "success": ts, "requests": {v: n["model_requests_total"] for v, n in nav.items()}, "cost_usd": ev["cost"]["total_usd"]}
 
     def _job_doc(self, job: dict) -> dict:
-        key = f"{job['id']}:{P.VERSION}"
+        key = f"{job['id']}:{P.CACHE_KEY}"
         with self._lock:
             if key in self._cache:
                 return self._cache[key]
-        cache = self.runs_root / "derived" / f"{job['id']}.{P.VERSION}.json"
+        cache = self.runs_root / "derived" / f"{job['id']}.{P.CACHE_KEY}.json"
         if cache.is_file():
             doc = json.loads(cache.read_text())
         else:

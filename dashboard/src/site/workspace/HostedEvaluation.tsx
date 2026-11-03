@@ -11,7 +11,9 @@ import type { Evaluation } from '../../lib/lifecycleApi';
  *  Admission, budget and operator-only access are enforced by the server; the UI only reflects them. */
 
 type Outcome = 'evidence_supported_pass' | 'strict_pass' | 'not_passed' | string;
-export interface TaskRow { arm: 'Original' | 'Modified'; task: number; state: string; outcome: Outcome; requests: number | null; page_views: number | null; steps: number | null; elapsed_seconds: number | null }
+export interface TaskRow { arm: 'Original' | 'Modified'; task: number; state: string; outcome: Outcome; requests: number | null; page_views: number | null; steps: number | null; elapsed_seconds: number | null;
+  /** the readiness report's grades for this agent run (Stage B, once the report is published): correct = as the report counts it; exact match = official grader */
+  correct?: boolean; exact_match?: boolean }
 export interface GradingV2 { label: string; faithful: boolean; tasks: { arm: 'Original' | 'Modified'; task: number; outcome: string; reasons: string[] }[]; assessment: { frozen_rule: string | null; exploratory: string | null } | null }
 type Setting = { value: string | number | (string | number)[] | null; consistent: boolean };
 export interface Provenance { trials: number; model_requests_recorded: number; model: Setting; reasoning_effort: Setting; max_completion_tokens: Setting; consistent: boolean;
@@ -54,6 +56,7 @@ function cell(t: TaskRow | undefined) {
   if (!t) return { cls: 'pending', glyph: '·', text: 'Pending' };
   if (t.state === 'running') return { cls: 'running', glyph: '◌', text: 'Agent working' };
   if (t.state !== 'completed') return { cls: t.state === 'failed' ? 'failed' : 'pending', glyph: t.state === 'failed' ? '!' : '·', text: label(t.state) };
+  if (t.correct !== undefined) return t.correct ? { cls: 'pass', glyph: '✓', text: 'Correct' } : { cls: 'miss', glyph: '✕', text: 'Not correct' };   // as in the readiness report
   if (t.outcome === 'evidence_supported_pass') return { cls: 'pass', glyph: '✓', text: 'Evidence-supported pass' };
   if (t.outcome === 'strict_pass') return { cls: 'partial', glyph: '≈', text: 'Correct, evidence not observed' };
   return { cls: 'miss', glyph: '✕', text: 'Not passed' };
@@ -87,6 +90,7 @@ export function ProgressGrid({ rep, questions, onSelect, selected, names = { Ori
         const isSel = selected?.repetition === rep.index && selected.arm === key && selected.task === n;
         const body = <><span className="ws-glyph" aria-hidden="true">{c.glyph}</span><span className="ws-cell-text"><strong>{c.text}</strong>
           {t?.state === 'completed' && <small>{t.requests ?? '–'} requests · {t.page_views ?? '–'} pages{t.elapsed_seconds != null ? ` · ${Math.round(t.elapsed_seconds)} s` : ''}</small>}
+          {t?.state === 'completed' && t.exact_match !== undefined && <small className="ws-exact">Exact match: {t.exact_match ? 'yes' : 'no'}</small>}
           {(() => { const d = v2(arm, n); return d && t?.state === 'completed' && d.outcome !== t.outcome ? <small className="ws-v2-diff">Grader v2 (post-hoc): {V2_TEXT[d.outcome] ?? d.outcome}</small> : null; })()}</span></>;
         return <td key={arm} className={`ws-cell ${c.cls}${isSel ? ' selected' : ''}`}>
           {onSelect && t && t.state !== 'pending' ? <button className="ws-cell-button" aria-label={`Watch ${names[arm]} task ${n}, repetition ${rep.index}: ${c.text}`} aria-pressed={isSel} onClick={() => onSelect({ repetition: rep.index, arm: key, task: n })}>{body}</button> : <div className="ws-cell-button static">{body}</div>}</td>; })}

@@ -48,6 +48,8 @@ export interface Trial { id: string; task_id: string; task: number; variant: str
   grades: { v1: Grade; v2: Grade | null; v2_1_contrast: Grade | null };
   answer_coverage: { expected_items: number; named_expected: number; named_other: number; unrecognised: number } | null;
   evidence: { satisfied: boolean; required_pages: number; missing_pages: number; missing_texts: number;
+    /** report-time check beside the recorded rule (equivalent-page-1): a visited page states every deciding fact for every item */
+    equivalent?: { rule: string; satisfied: boolean; via: string[]; note: string };
     ranked_subset_rule_2: { applies: boolean; required_pages?: number; shown_pages?: number; satisfied?: boolean; status?: string } };
   metrics: { model_requests: number | null; request_limit: number | null; steps: number | null; page_views: number | null; elapsed_seconds: number | null; prompt_tokens: number | null; completion_tokens: number | null; cost_usd: number | null };
   navigation: { visits: string[]; distinct_pages: number; revisits: number; item_pages_opened: number };
@@ -64,7 +66,7 @@ export interface Dimensions {
   task_success: ByVariant<{ trials: number; v1_passed: number; v1_evidence_backed: number; v2_passed: number; v2_evidence_backed: number; v2_1_contrast_review_passes: number }>;
   navigation_efficiency: ByVariant<{ model_requests_total: number | null; model_requests_mean: number | null; steps_mean: number | null; page_views_mean: number | null; elapsed_seconds_total: number | null;
     elapsed_seconds_mean: number | null; revisits_total: number | null; item_pages_opened_mean: number | null; cost_usd_total: number | null }>;
-  evidence_quality: ByVariant<{ evidence_satisfied: number; trials: number; correct_but_unsupported_v2: number; missing_pages_total: number;
+  evidence_quality: ByVariant<{ evidence_satisfied: number; evidence_satisfied_or_equivalent?: number; trials: number; correct_but_unsupported_v2: number; missing_pages_total: number;
     ranked_subset_rule_2: { task: number; required_pages: number; shown_pages: number; satisfied: boolean }[] }> & { prospective_rule: { id: string; status: string } };
   information_accessibility: { basis: string; facts: Record<string, Record<string, { items: number; on_listing_cards: number; on_item_pages: number }>>;
     tasks: { task: number; facts: string[]; placement: Record<string, Record<string, string>>; min_link_steps: Record<string, number | null> | null }[] };

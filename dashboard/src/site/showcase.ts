@@ -6,7 +6,7 @@ import data from './showcase/larkspur.json';
 const frameUrls = import.meta.glob('./showcase/frames/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 export const showcaseFrame = (name: string | null | undefined): string | undefined => name ? frameUrls[`./showcase/frames/${name}.webp`] : undefined;
 
-export interface LiveTrial { task: number; variant: string; passed: boolean; correct: boolean; requests: number; limit: number; seconds: number; cost_usd: number; dead_end: boolean }
+export interface LiveTrial { task: number; variant: string; passed: boolean; correct: boolean; requests: number; limit: number; seconds: number; cost_usd: number; dead_end: boolean; path?: string[] }
 export interface LiveStep { step: number; path: string | null; memory: string | null; goal: string | null; frame: string | null }
 export interface LiveRecord {
   id: string; title: string; started_at: string; finished_at: string; cost_usd: number;
@@ -18,8 +18,10 @@ export interface LiveRecord {
   journeys: Record<string, { answer: string | string[]; steps: LiveStep[] }>;
 }
 
-/** The paid live evaluation of the featured site (Original vs Modified, six tasks, 12 agent runs), as the product's report states it. */
+/** The featured result: the live evaluation of Original vs IMPROVED (the three judge tasks, six agents), as the product's report states it. */
 export const LIVE = data.live as unknown as LiveRecord;
+/** The first live evaluation (Original vs Modified, six tasks, 12 agents): the run the recommendations came from. Kept as history. */
+export const FIRST_LIVE = data.first_live as unknown as LiveRecord;
 
 /** The product's own page audit (the readiness report's structural rules) of each version: what is still wrong with the pages themselves. */
 export const PAGE_AUDIT = data.page_audit as Record<'original' | 'modified' | 'improved', string[]>;
@@ -30,9 +32,11 @@ export const FEATURED = {
   short: 'Larkspur',
   kind: 'short-course catalogue',
   host: 'larkspur-college',
-  /** the reference live evaluation and its report */
+  /** the featured live evaluation (Original vs Improved) and its report */
   liveEvaluation: LIVE.id,
   liveDate: '3 Nov 2026',
+  /** the first live evaluation (Original vs Modified), where the recommendations came from */
+  firstLiveEvaluation: FIRST_LIVE.id,
   /** the earlier pre-recorded research run of the same suite */
   researchRun: 'm7-larkspur-browser-1',
   /** the frozen tasks judges run live: fee and seats; weekend class day and level (needs the Improved cards); fee and duration */
@@ -77,7 +81,7 @@ export const IMPROVEMENTS: Improvement[] = [
   { id: 'compare', title: 'One comparison table',
     problem: 'Original agents used 12–13 of 14 requests on five of six tasks, revisiting the catalogue between course pages.',
     recommendation: 'Put the facts a comparison needs on one page.',
-    change: 'Every course and all seven facts in one table, cheapest first.', tryPath: '/courses/compare', preview: 'site-improved-courses-compare' },
+    change: 'Every course and all seven facts in one table, cheapest first. In the live re-evaluation every Improved agent answered from this table, in 2 requests.', tryPath: '/courses/compare', preview: 'site-improved-courses-compare' },
   { id: 'dead-ends', title: 'No dead ends',
     problem: 'Agents guessed course URLs from course names and hit 404s: /courses/introduction-to-python (the page is /courses/intro-to-python), /courses/yoga-for-beginners, and /courses/ with a trailing slash.',
     recommendation: 'Fix or remove the failing link or control; make course URLs predictable.',
@@ -99,9 +103,11 @@ export const JOURNEY = [
   { id: 'recommendations', n: '05', label: 'Recommendations', blurb: 'What slowed agents down, and what to change' },
   { id: 'improve', n: '06', label: 'Improve', blurb: 'The website, changed' },
   { id: 'reevaluate', n: '07', label: 'Re-evaluate', blurb: 'The same tasks on the new site' },
-  { id: 'compare', n: '08', label: 'Compare', blurb: 'Before and after' },
+  { id: 'compare', n: '08', label: 'Compare', blurb: 'Before and after, live' },
 ] as const;
 
-export const trialOf = (variant: string, task: number) => LIVE.trials.find(t => t.variant === variant && t.task === task);
-export const journeyOf = (variant: string, task: number) => LIVE.journeys[`${variant}-${task}`];
+export const trialOf = (variant: string, task: number, run: LiveRecord = LIVE) => run.trials.find(t => t.variant === variant && t.task === task);
+export const journeyOf = (variant: string, task: number, run: LiveRecord = LIVE) => run.journeys[`${variant}-${task}`];
+/** The featured task: the class-day question that failed on Original and on the first fix, and that only the Improved site answers on its cards. */
+export const FEATURED_TASK = 2;
 export const fewerPct = (a: number, b: number) => Math.round(100 * (a - b) / a);

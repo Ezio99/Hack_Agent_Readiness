@@ -1,21 +1,26 @@
 import { useEffect, useRef } from 'react';
 import { SiteFooter, SiteHeader } from './Shell';
-import { CARD_FACTS, FEATURED, IMPROVEMENTS, JOURNEY, LIVE, PAGE_AUDIT, fewerPct, journeyOf, showcaseFrame, trialOf, type LiveStep } from './showcase';
+import { CARD_FACTS, FEATURED, FEATURED_TASK, FIRST_LIVE, IMPROVEMENTS, JOURNEY, LIVE, PAGE_AUDIT, fewerPct, journeyOf, showcaseFrame, trialOf, type LiveStep } from './showcase';
 import { LatestLive } from './LatestLive';
 import './home.css';
 
 /** The product homepage. It tells the featured Larkspur story end to end with the recorded evidence of the paid live evaluation (showcase.ts);
  *  it calls no API, so it renders even when the evaluation service is unavailable. */
 
-const lost = journeyOf('original', 1);
-const found = journeyOf('modified', 1);
+const T = FEATURED_TASK;                                     // the class-day question: Original vs Improved, live
+const lost = journeyOf('original', T);
+const found = journeyOf('improved', T);
 const lastLost = lost.steps[lost.steps.length - 1];
-const deadEnd = lost.steps.find(s => s.path === '/courses/introduction-to-python');
-const t1o = trialOf('original', 1)!, t1m = trialOf('modified', 1)!;
-const O = LIVE.totals.original, M = LIVE.totals.modified;
-const isCourse = (p: string | null) => !!p && /^\/courses\/[^/?]+$/.test(p);
+const midLost = lost.steps.find(s => s.step === 9) ?? lastLost;
+const t1o = trialOf('original', T)!, t1m = trialOf('improved', T)!;
+const O = LIVE.totals.original, M = LIVE.totals.improved;
+const F = FIRST_LIVE.totals;
+const isCourse = (p: string | null) => !!p && /^\/courses\/(?!compare$)[^/?]+$/.test(p);
 const answerCount = Array.isArray(found.answer) ? found.answer.length : 1;
+const lostCount = Array.isArray(lost.answer) ? lost.answer.length : 1;
 const usd = (n: number) => `$${n.toFixed(2)}`;
+const cents = (n: number) => `${Math.round(n * 100)}¢`;
+const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
 
 /** Fades sections in as they enter the viewport. Purely presentational; content is in the DOM from the start. */
 function useReveal(root: React.RefObject<HTMLElement | null>) {
@@ -39,8 +44,8 @@ function HeroNote() {
     <StepTicks steps={lost.steps} label="Original journey: catalogue, course pages and answer" />
     <p className="plate-legend"><span><i className="t-list" />Catalogue</span><span><i className="t-item" />Course page</span><span><i className="t-done" />Answer</span></p>
     <div className="plate-verdicts">
-      <div><span className="tag tag-fail">✕ Ran out of requests</span><small><span className="swatch o" aria-hidden="true" />Original · {t1o.requests} requests · {Math.round(t1o.seconds)} s</small></div>
-      <div><span className="tag tag-pass">✓ All {answerCount} courses found</span><small><span className="swatch m" aria-hidden="true" />Modified · {t1m.requests} requests · {Math.round(t1m.seconds)} s</small></div>
+      <div><span className="tag tag-fail">✕ {lostCount} of {answerCount} courses found</span><small><span className="swatch o" aria-hidden="true" />Original · {t1o.requests} requests · {Math.round(t1o.seconds)} s</small></div>
+      <div><span className="tag tag-pass">✓ All {answerCount} courses found</span><small><span className="swatch i" aria-hidden="true" />Improved · {t1m.requests} requests · {Math.round(t1m.seconds)} s</small></div>
     </div>
   </aside>;
 }
@@ -49,19 +54,19 @@ function HeroFigure() {
   return <figure className="hero-fig">
     <div className="frame">
       <div className="frame-bar"><span className="frame-dots"><i /><i /><i /></span><span className="frame-url">{FEATURED.host}{lastLost.path}</span><span className="hero-fig-arm">Original · step {lastLost.step}</span></div>
-      <div className="frame-shot"><img src={showcaseFrame(lastLost.frame)} alt="Recorded screenshot: the Original Larkspur course catalogue, where cards show a name and a summary but no fee or seats." fetchPriority="high" /></div>
+      <div className="frame-shot"><img src={showcaseFrame(lastLost.frame)} alt="Recorded screenshot: the Original Larkspur course catalogue, where cards show a name and a summary but no level or class day." fetchPriority="high" /></div>
     </div>
-    <figcaption className="figcap"><b>Fig. 1</b><span>Live evaluation, {FEATURED.liveDate}. Task: “{LIVE.tasks[0].wording}” The catalogue hides every fee and seat count one click deep, so the agent opened course pages one at a time and ran out of requests after checking 3 of 14. Screenshot and memory are unedited.</span></figcaption>
+    <figcaption className="figcap"><b>Fig. 1</b><span>Live evaluation, {FEATURED.liveDate}. Task: “{LIVE.tasks[T - 1].wording}” The Original catalogue hides every class day one click deep, so the agent opened course pages one at a time and stopped at {t1o.requests} requests with {lostCount} of the {answerCount} courses. On the Improved site the agent opened the comparison table and found all {answerCount} in {t1m.requests}. Screenshot and memory are unedited.</span></figcaption>
   </figure>;
 }
 
 function TaskBars() {
   const max = Math.max(...LIVE.trials.map(t => t.requests));
-  return <figure className="task-bars" aria-label="Model requests per task, Original and Modified">
-    <p className="tb-legend"><span><i className="o" />Original</span><span><i className="m" />Modified</span><span className="tb-limit">limit {t1o.limit} per task</span></p>
-    <ol>{LIVE.tasks.map(t => { const o = trialOf('original', t.n), m = trialOf('modified', t.n);
+  return <figure className="task-bars" aria-label="Model requests per task, Original and Improved">
+    <p className="tb-legend"><span><i className="o" />Original</span><span><i className="i" />Improved</span><span className="tb-limit">limit {t1o.limit} per task</span></p>
+    <ol>{LIVE.tasks.map(t => { const o = trialOf('original', t.n), m = trialOf('improved', t.n);
       return <li key={t.n}><span className="tb-q"><b>Task {t.n}</b> {t.wording}</span>
-        <span className="tb-rows">{[['o', o], ['m', m]].map(([c, x]) => { const tr = x as typeof o; return <span key={c as string} className="tb-row">
+        <span className="tb-rows">{[['o', o], ['i', m]].map(([c, x]) => { const tr = x as typeof o; return <span key={c as string} className="tb-row">
           <span className={`tb-bar ${c}`} style={{ width: `${100 * (tr?.requests ?? 0) / max}%` }} /><span className="tb-v">{tr?.requests ?? '–'}</span></span>; })}</span></li>; })}</ol>
   </figure>;
 }
@@ -74,7 +79,6 @@ export function Home({ section }: { section?: string }) {
     const el = document.getElementById(section);
     el?.scrollIntoView({ behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
   }, [section]);
-  const stillDeep = LIVE.tasks.filter(t => [3, 4, 5].includes(t.n)).map(t => trialOf('modified', t.n)!.requests);
   return <div className="ar home" ref={root}>
     <a className="ar-skip" href="#main" onClick={e => { e.preventDefault(); document.getElementById('main')?.focus(); }}>Skip to content</a>
     <SiteHeader active="home" />
@@ -100,12 +104,12 @@ export function Home({ section }: { section?: string }) {
         <div className="sec-head" data-reveal><p className="eyebrow"><b>01</b> — The agentic web</p>
           <h2 id="problem-h" className="h2">A page that’s easy for people can be <em>expensive</em> for agents.</h2></div>
         <div className="problem-cols" data-reveal>
-          <p>A person scans the course catalogue, opens a course or two and books. An agent does the same work one model request at a time: read, decide, navigate. On {FEATURED.name}’s catalogue every fee, class day and seat count sat one click deep, on fourteen separate pages. The agent’s budget ran out before the work did.</p>
+          <p>A person scans the course catalogue, opens a course or two and books. An agent does the same work one model request at a time: read, decide, navigate. On {FEATURED.name}’s original catalogue every fee, class day and seat count sat one click deep, on fourteen separate pages. The agent’s budget ran out before the work did.</p>
           <p>Analytics won’t show you this. The pages load, nothing throws an error, and the agent leaves with a partial answer — or a guess. Agent Readiness shows what analytics can’t: whether the answer was right, which pages the agent saw, where it got stuck, and what it cost.</p>
         </div>
         <figure className="quote" data-reveal>
-          <blockquote>“{deadEnd?.memory ?? lastLost.memory}”</blockquote>
-          <figcaption className="figcap"><b>Muse Spark, working memory</b><span>Original site · task 1 · step {deadEnd?.step ?? lastLost.step} of {lost.steps.length}. The agent guessed a course address from the course name (<code>/courses/introduction-to-python</code>) and hit a page that does not exist.</span></figcaption>
+          <blockquote>“{midLost.memory}”</blockquote>
+          <figcaption className="figcap"><b>Muse Spark, working memory</b><span>Original site · the weekend-courses task · step {midLost.step} of {lost.steps.length}, after checking 3 of 14 course pages. It stopped four steps later with {lostCount} of the {answerCount} courses.</span></figcaption>
         </figure>
       </section>
 
@@ -122,11 +126,11 @@ export function Home({ section }: { section?: string }) {
                 website: `${FEATURED.name} · 14 courses · 2 campuses`,
                 tasks: '24 customer questions proposed by Muse Spark · each checked against the course records',
                 review: `${LIVE.tasks.length} tasks approved and frozen by the owner`,
-                evaluate: `${LIVE.trials.length} live browser agents · isolated Chromium · ${t1o.limit} requests per task`,
+                evaluate: `${FIRST_LIVE.trials.length} live browser agents · isolated Chromium · ${t1o.limit} requests per task`,
                 recommendations: 'campus, class day, fee, duration, seats on the cards · fix dead ends · structured data',
                 improve: `${IMPROVEMENTS.length} changes on the Improved site`,
                 reevaluate: 'the same frozen tasks · Original vs Improved · judges can start it',
-                compare: `${O.requests} → ${M.requests} requests after the first fix`,
+                compare: `live: correct ${LIVE.correct.original}/${LIVE.tasks.length} → ${LIVE.correct.improved}/${LIVE.tasks.length} · ${O.requests} → ${M.requests} requests`,
               } as Record<string, string>)[s.id]}</p>
             </li>)}
           </ol>
@@ -136,17 +140,18 @@ export function Home({ section }: { section?: string }) {
       <section id="evidence" className="evidence" aria-labelledby="evidence-h">
         <div className="wrap">
           <div className="sec-head" data-reveal><p className="eyebrow"><b>03</b> — Results</p>
-            <h2 id="evidence-h" className="h2">Four facts on a card. <em>Measured.</em></h2>
-            <p className="lede">The first fix (Modified) copied fee, duration, level and seats left from each course page onto its catalogue card. Same {LIVE.tasks.length} tasks, same model, fresh agents.</p></div>
+            <h2 id="evidence-h" className="h2">Every recommendation applied. <em>Measured live.</em></h2>
+            <p className="lede">The same {LIVE.tasks.length} customer tasks on the Original and the Improved site: fee and seats, weekend class day, fee and duration. Same model, fresh agents, {FEATURED.liveDate}.</p></div>
           <dl className="numbers" data-reveal>
-            <div><dt>Model requests, all six tasks</dt><dd><span className="n-o">{O.requests}</span><span className="n-arrow" aria-hidden="true">→</span><span className="n-m">{M.requests}</span></dd><p>{fewerPct(O.requests, M.requests)}% fewer on Modified</p></div>
-            <div><dt>Agent time, all six tasks</dt><dd><span className="n-o">{Math.round(O.seconds / 60)}m</span><span className="n-arrow" aria-hidden="true">→</span><span className="n-m">{Math.round(M.seconds / 60)}m</span></dd><p>{O.seconds} s → {M.seconds} s of browsing</p></div>
-            <div><dt>Correct answers</dt><dd><span className="n-o">{LIVE.correct.original}/{LIVE.tasks.length}</span><span className="n-arrow" aria-hidden="true">→</span><span className="n-m">{LIVE.correct.modified}/{LIVE.tasks.length}</span></dd><p>Checked against the course records</p></div>
-            <div><dt>Model cost</dt><dd><span className="n-o">{usd(O.cost_usd)}</span><span className="n-arrow" aria-hidden="true">→</span><span className="n-m">{usd(M.cost_usd)}</span></dd><p>US dollars, calculated from the provider’s token counts</p></div>
+            <div><dt>Correct answers</dt><dd><span className="n-o">{LIVE.correct.original}/{LIVE.tasks.length}</span><span className="n-arrow" aria-hidden="true">→</span><span className="n-i">{LIVE.correct.improved}/{LIVE.tasks.length}</span></dd><p>Checked against the course records</p></div>
+            <div><dt>Model requests, all tasks</dt><dd><span className="n-o">{O.requests}</span><span className="n-arrow" aria-hidden="true">→</span><span className="n-i">{M.requests}</span></dd><p>{fewerPct(O.requests, M.requests)}% fewer on Improved</p></div>
+            <div><dt>Agent time, all tasks</dt><dd><span className="n-o">{mmss(O.seconds)}</span><span className="n-arrow" aria-hidden="true">→</span><span className="n-i">{mmss(M.seconds)}</span></dd><p>Minutes of browsing: {O.seconds} s → {M.seconds} s</p></div>
+            <div><dt>Model cost</dt><dd><span className="n-o">{cents(O.cost_usd)}</span><span className="n-arrow" aria-hidden="true">→</span><span className="n-i">{cents(M.cost_usd)}</span></dd><p>US cents ({usd(O.cost_usd)} → {usd(M.cost_usd)}), calculated from the provider’s token counts</p></div>
           </dl>
           <div data-reveal><TaskBars /></div>
-          <p className="honest" data-reveal>Tasks 1 and 6 asked about fee, seats and duration. With those facts on the cards they dropped from 13 requests to 3, and the agents found every qualifying course. Tasks 3–5 asked about <strong>class day</strong> and <strong>campus</strong>, which the Modified cards still didn’t show, and they still took {Math.min(...stillDeep)}–{Math.max(...stillDeep)} requests. The report recommended fixing exactly that.</p>
-          <a className="btn" href={`#/reports/${LIVE.id}`} data-reveal>Open the full live report <span className="arr" aria-hidden="true">→</span></a>
+          <p className="honest" data-reveal>Every Improved agent went from the home page straight to the new comparison table and answered from it, in 2 requests. Every Original agent opened course pages one at a time and stopped at 13 of 14 requests with a partial answer.</p>
+          <p className="honest" data-reveal>The first live evaluation tested only the first fix (fee, duration, level and seats on the cards) on six tasks: requests fell {F.original.requests} → {F.modified.requests}, but the class-day and campus questions stayed hard. That is what the report recommended fixing next. <a className="link" href={`#/reports/${FIRST_LIVE.id}`}>The first live evaluation</a></p>
+          <a className="btn" href={`#/reports/${LIVE.id}`} data-reveal>Open the live report <span className="arr" aria-hidden="true">→</span></a>
         </div>
       </section>
 

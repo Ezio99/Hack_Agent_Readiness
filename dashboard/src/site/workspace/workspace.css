@@ -288,3 +288,4 @@ button.ws-cell-button:hover{background:var(--paper)}
 .ws-provenance{font-size:13px;line-height:1.55;color:var(--ink-2)}.ws-provenance code{font:400 12px var(--mono)}
 .ws-task-list{display:grid;gap:6px;margin-top:10px;padding-left:18px;list-style:decimal;font-size:13px;line-height:1.45;color:var(--ink-2)}
 .ws-task-list q{quotes:'“' '”'}
+.ws-exact{display:block;font-size:11.5px;color:var(--ink-3)}

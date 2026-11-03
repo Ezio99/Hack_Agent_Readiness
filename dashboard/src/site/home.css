@@ -82,9 +82,10 @@
 .numbers>div+div{padding-left:24px}
 .numbers>div:last-child{border-right:0}
 .numbers dt{font:500 11.5px/1.4 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:#9d9a92;min-height:3em}
-.numbers dd{margin:18px 0 10px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;font:300 clamp(40px,4.4vw,68px)/1 var(--serif);letter-spacing:-.03em}
+.numbers dd{margin:18px 0 10px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font:300 clamp(34px,3.5vw,54px)/1 var(--serif);letter-spacing:-.03em}
 .numbers .n-o{color:#D86C45}
 .numbers .n-m{color:#8F9BFF}
+.numbers .n-i{color:#5FBF88}
 .numbers .n-arrow{font:300 .5em/1 var(--sans);color:#8f8b83}
 .numbers p{font-size:14px;color:#B9B5AC}
 .honest{max-width:780px;color:#C9C5BC;font-size:16px;line-height:1.65;margin-bottom:36px}
@@ -117,12 +118,12 @@
 .task-bars{margin:8px 0 40px;max-width:1040px}
 .tb-legend{display:flex;gap:18px;font:400 12px/1 var(--mono);color:#B9B5AC;margin-bottom:14px}
 .tb-legend span{display:inline-flex;align-items:center;gap:6px}.tb-legend i{width:10px;height:10px;border-radius:2px}
-.tb-legend i.o{background:#D86C45}.tb-legend i.m{background:#8F9BFF}.tb-limit{margin-left:auto}
+.tb-legend i.o{background:#D86C45}.tb-legend i.m{background:#8F9BFF}.tb-legend i.i{background:#5FBF88}.tb-limit{margin-left:auto}
 .task-bars ol{display:grid;gap:14px;border-top:1px solid rgba(242,240,235,.12);padding-top:14px}
 .task-bars li{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px;align-items:center}
 .tb-q{font-size:14px;line-height:1.45;color:#C9C5BC}.tb-q b{color:var(--paper);font-weight:500;margin-right:6px}
 .tb-rows{display:grid;gap:5px}.tb-row{display:flex;align-items:center;gap:8px}
-.tb-bar{height:10px;border-radius:2px;min-width:3px}.tb-bar.o{background:#D86C45}.tb-bar.m{background:#8F9BFF}
+.tb-bar{height:10px;border-radius:2px;min-width:3px}.tb-bar.o{background:#D86C45}.tb-bar.m{background:#8F9BFF}.tb-bar.i{background:#5FBF88}
 .tb-v{font:400 12px/1 var(--mono);color:#B9B5AC}
 @media (max-width:760px){.task-bars li{grid-template-columns:1fr;gap:8px}}
 
@@ -135,3 +136,4 @@
 .how-journey h3 .link{color:inherit}
 .audit-line{font-size:15px;color:var(--ink-2);line-height:1.5}.audit-line .mono{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-right:8px}
 .audit-line b{font:400 22px/1 var(--serif);color:var(--ink)}.audit-line b.n-o{color:var(--original)}.audit-line b.n-i{color:var(--improved)}
+.evidence .honest .link{color:#EDEAE3;text-decoration:underline;text-underline-offset:3px}

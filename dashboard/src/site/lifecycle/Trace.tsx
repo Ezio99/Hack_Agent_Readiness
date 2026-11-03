@@ -48,7 +48,8 @@ function Side({ ev, t }: { ev: Evaluation; t: Trial }) {
       <div><dt>Time</dt><dd>{fmtSec(m.elapsed_seconds)}</dd></div>
       <div><dt>Model cost</dt><dd>{ev.mode === 'paid' ? fmtUsd(m.cost_usd) : 'US$0'}</dd></div>
       <div><dt>Pages</dt><dd>{t.navigation.distinct_pages} distinct · {t.navigation.revisits} revisits</dd></div>
-      <div><dt>Evidence</dt><dd>{t.evidence.satisfied ? 'answer pages shown' : `${t.evidence.missing_pages} required page(s) not shown`}</dd></div>
+      <div><dt>Evidence</dt><dd>{t.evidence.satisfied ? 'answer pages shown' : t.evidence.equivalent?.satisfied
+        ? <>every deciding fact shown on <code>{t.evidence.equivalent.via.join(', ')}</code></> : `${t.evidence.missing_pages} required page(s) not shown`}</dd></div>
     </dl>
     <blockquote className="lc-answer"><span className="eyebrow">{t.answer_withheld ? 'Answer' : "Agent's answer, as recorded"}</span><p>{answerText(t)}</p></blockquote>
     {(t.reliability.http_errors.length > 0 || t.reliability.near_request_limit || t.reliability.partial_answer || t.reliability.empty_answer) &&

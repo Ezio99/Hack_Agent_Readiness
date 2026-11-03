@@ -570,18 +570,23 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
         with inflight_lock:
             recovery_required = held['state'] in ('reserved', 'running') and job_id not in inflight
         if is_sb(job_id):
-            v2 = None
+            v2, grades = None, None
             publication = report_publication(job_id, held['state'])
             if publication['state'] == 'available':
                 try:
-                    ts = lifecycle.evaluation(job_id)['dimensions']['task_success']['variants']
-                    names = list(ts)
+                    ev = lifecycle.evaluation(job_id)
+                    ts = ev['dimensions']['task_success']['variants']
+                    names = [v['name'] for v in ev['manifest']['variants']] or list(ts)
                     lab = {names[0]: 'Original', names[1]: 'Modified'} if len(names) == 2 else {}
+                    # the report's grades per agent run, so the workspace grid reads like the report: correct (v2, else v1) and exact match (v1)
+                    grades = {(lab[t['variant']], t['task']): {'correct': bool((t['grades']['v2'] or t['grades']['v1'])['passed']),
+                                                               'exact_match': bool(t['grades']['v1']['passed'])}
+                              for t in ev['trials'] if t['variant'] in lab}
                     v2 = {'label': GRADING_V2_LABEL, 'repetitions': None,
                           **{lab[v]: {'completed': x['trials'], 'evidence_supported_passes': x['v2_evidence_backed'], 'strict_passes': x['v2_passed']} for v, x in ts.items() if v in lab}}
                 except Exception:
                     v2 = None
-            out = stageb.job_status(sb_root, job_id, held['state'], recovery_required=recovery_required, v2=v2, publication=publication)
+            out = stageb.job_status(sb_root, job_id, held['state'], recovery_required=recovery_required, v2=v2, publication=publication, grades=grades)
             if held['state'] in TERMINAL:
                 cache.setdefault(job_id, {})['status'] = out
             return out
