@@ -74,6 +74,13 @@ def test_a_judge_runs_the_featured_original_vs_improved_evaluation(tmp_path, mon
     assert st_["report_status"]["state"] == "available" and seen_live
     assert st_["arm_display"] == {"Original": "Original", "Modified": "Improved"} and st_["evaluation"]["variants"] == ["original", "improved"]
     assert all(isinstance(t.get("correct"), bool) and isinstance(t.get("exact_match"), bool) for t in st_["reps"][0]["tasks"])   # the grid reads like the report
+    for _ in range(20):                                                            # actual-cost settlement runs when the job thread ends
+        if a.settlement(job) is not None:
+            break
+        time.sleep(0.5)
+    s_ = a.settlement(job)
+    assert s_ is not None and s_["settled_microusd"] == 0 and s_["actor"].startswith("service (automatic")   # rehearsal: nothing reserved, nothing spent
+    assert c.get("/api/ironbark/config").json()["spending"]["settled_jobs"] == 1
     tr = c.get(f"/api/ironbark/jobs/{job}/repetitions/1/trials/modified/1").json()
     assert tr["steps"]
     assert c.get(f"/api/ironbark/jobs/{job}/repetitions/1/trials/modified/1/screenshots/{tr['steps'][0]['screenshot']}").status_code == 200

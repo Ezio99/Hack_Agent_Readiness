@@ -31,7 +31,9 @@ interface ArmedEvaluation { arming_id: string; mode: 'paid' | 'rehearsal'; site:
   launches: { max: number; used: number; left: number }; options: { repetitions: number; trials: number; reservation_usd: number; manifest_sha256: string; available: boolean; fits_hosted_ceiling: boolean | null }[];
   agent: { model: string; reasoning_effort: string | null; max_completion_tokens: number; profile: string } }
 interface LaunchState { authorized: boolean; ready: boolean; reason: string | null; detail: string | null; launches_left: number | null }
-interface Config { engine?: 'stage-b'; launch?: LaunchState; judge_access?: boolean; service?: { state: 'operational' | 'unavailable'; reason: string | null }; evaluation?: ArmedEvaluation | null; ceiling?: { ceiling_usd: number; reserved_usd: number }; agent_settings?: { profile: string; profile_file_sha256: string; reasoning_effort: string | null; max_completion_tokens: number | null } | null; worker?: Worker; repetition_duration?: { seconds: number; basis: 'measured' | 'first genuine run' | 'default'; samples: number }; available: boolean; mode: 'live' | 'rehearsal' | null; access?: 'public' | 'operator'; reason?: string | null; repetitions: number[]; model: string; agent_profile: string; tasks: { task: number; question: string; capability?: string; limits?: { max_steps?: number; timeout_seconds?: number; max_model_requests?: number } }[]; remaining_repetitions: number; active: string | null }
+interface Config { engine?: 'stage-b'; launch?: LaunchState; judge_access?: boolean; service?: { state: 'operational' | 'unavailable'; reason: string | null }; evaluation?: ArmedEvaluation | null; ceiling?: { ceiling_usd: number; reserved_usd: number };
+  spending?: { ceiling: number; settled: number; outstanding: number; committed: number; available: number; released: number; settled_jobs: number; unsettled_jobs: number; basis: string };
+  agent_settings?: { profile: string; profile_file_sha256: string; reasoning_effort: string | null; max_completion_tokens: number | null } | null; worker?: Worker; repetition_duration?: { seconds: number; basis: 'measured' | 'first genuine run' | 'default'; samples: number }; available: boolean; mode: 'live' | 'rehearsal' | null; access?: 'public' | 'operator'; reason?: string | null; repetitions: number[]; model: string; agent_profile: string; tasks: { task: number; question: string; capability?: string; limits?: { max_steps?: number; timeout_seconds?: number; max_model_requests?: number } }[]; remaining_repetitions: number; active: string | null }
 
 const ACTIVE = ['reserved', 'running'];
 const STORE = 'ironbark-hosted-job';
@@ -135,6 +137,23 @@ function StageBReport({ job }: { job: Job }) {
   if (err) return <p className="ws-alert">The readiness report is unavailable: {err}</p>;
   if (!ev) return <p className="ws-empty-note">Loading the readiness report…</p>;
   return <div className="ws-report"><Report ev={ev} /><p className="ws-note"><a className="ws-link" href={`#/reports/${job.id}`}>Open the report on its own page →</a> · <a className="ws-link" href={`/api/ironbark/jobs/${job.id}/repetitions/1/export`} download={`${job.id.slice(0, 13)}.json`}>Export JSON</a></p></div>;
+}
+
+/** Operator diagnostics: what has actually been spent, what is still held, and what the owner has authorised (two separate limits). */
+function Budget({ s, ev, history }: { s: NonNullable<Config['spending']>; ev: ArmedEvaluation | null; history: HistoryItem[] }) {
+  const usd = (n: number) => `US$${n.toFixed(2)}`;
+  const costs = history.filter(h => h.cost_usd != null && h.mode === 'live').map(h => h.cost_usd as number);
+  const per = ev?.options[0]?.reservation_usd ?? null;
+  return <details className="ws-method ws-budget"><summary>Budget &amp; capacity</summary>
+    <dl>
+      <div><dt>Actual model spend</dt><dd>{usd(s.settled)} <small>settled, {s.settled_jobs} evaluation{s.settled_jobs === 1 ? '' : 's'}</small></dd></div>
+      <div><dt>Held for unsettled runs</dt><dd>{usd(s.outstanding)} <small>{s.unsettled_jobs} evaluation{s.unsettled_jobs === 1 ? '' : 's'}, kept at their full reservation</small></dd></div>
+      <div><dt>Available</dt><dd>{usd(s.available)} <small>of the {usd(s.ceiling)} hosted budget</small></dd></div>
+      {ev && <div><dt>Live runs authorised</dt><dd>{ev.launches.left} of {ev.launches.max} left <small>{per ? `each reserves ${usd(per)}; the budget covers ${Math.floor(s.available / per + 1e-9)}` : ''}</small></dd></div>}
+      {costs.length > 0 && <div><dt>Cost per completed evaluation</dt><dd>{costs.map(usd).join(' · ')}</dd></div>}
+    </dl>
+    <p className="ws-budget-note">A run reserves its worst case before it starts. When it has finished and every model request is settled in its durable ledger, only its actual cost stays committed and the rest is released; runs with unsettled requests keep their full reservation. {s.basis}.</p>
+  </details>;
 }
 
 export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unknown, label: string) => void; initialJob?: string | null }) {
@@ -303,6 +322,7 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
             <button className="btn btn-signal ws-run" disabled={!canRun} aria-describedby="ws-run-note" onClick={() => void start()}>{busy ? 'Starting…' : running ? 'Evaluation running' : liveRun ? 'Run live evaluation' : 'Run evaluation'}</button>
             <p className="ws-note" id="ws-run-note">{note}</p></li>
         </ol>
+        {stageB && config?.spending && <Budget s={config.spending} ev={ev} history={recent} />}
         {stageB && <details className="ws-method"><summary>Methodology &amp; provenance</summary>
           <p><strong>Tasks.</strong> {ev ? <>The frozen task set <code>{ev.frozen_suite}</code> (<code>{ev.frozen_suite_sha256.slice(0, 12)}…</code>), approved by the owner; the questions are the customers’ own words, generated and checked in the <a className="ws-link" href="#/lifecycle">journey</a>.</> : 'none open.'}</p>
           <p><strong>Agent.</strong> Browser Use agent driven by <code>{ev?.agent.model ?? config?.model}</code>, reasoning <code>{show(ev?.agent.reasoning_effort)}</code>, {show(ev?.agent.max_completion_tokens)} completion tokens, profile <code>{ev?.agent.profile}</code>; each task limited to {config?.tasks[0]?.limits?.max_model_requests ?? 14} model requests; no retries.</p>

@@ -398,7 +398,7 @@ def summary(store, rec: Arming | None, admission=None) -> dict | None:
     rem = None
     if admission is not None:
         t = admission.totals()
-        rem = t["ceiling_microusd"] - t["reserved_microusd"]
+        rem = t.get("available_microusd", t["ceiling_microusd"] - t["reserved_microusd"])       # settled + outstanding against the ceiling
     try:
         fz = store.get("frozen_suite", rec.frozen_suite_sha256)
         suite = store.get("suite", fz.suite_sha256)
@@ -410,6 +410,8 @@ def summary(store, rec: Arming | None, admission=None) -> dict | None:
     return {"arming_id": rec.arming_id, "arming_sha256": rec.sha256, "mode": rec.mode, "site": rec.site, "suite": name, "frozen_suite": rec.frozen_suite,
             "frozen_suite_sha256": rec.frozen_suite_sha256, "variants": [n for n, _ in rec.variants], "armed_at": rec.recorded_at,
             "launches": {"max": rec.max_launches, "used": len(used), "left": left},
+            # authorised launches (the owner's arming) and financial capacity (the hosted ceiling) are separate limits; a launch needs both
+            "capacity": None if rem is None else {"available_usd": rem / 1e6, "launches_affordable": [rem // o.reservation_microusd if o.reservation_microusd else None for o in rec.options][0]},
             "options": [{"repetitions": o.repetitions, "trials": o.trials, "reservation_usd": o.reservation_microusd / 1e6, "manifest_sha256": o.manifest_sha256,
                          "available": left > 0 and o.reservation_microusd <= budget_left and (rem is None or o.reservation_microusd <= rem),
                          "fits_hosted_ceiling": None if rem is None else o.reservation_microusd <= rem} for o in rec.options],
@@ -444,10 +446,13 @@ def _print(p: dict, adm) -> None:
     print(f"launches        at most {p['max_launches']}, reserving at most US${p['total_reservation_microusd'] / 1e6:.6f}")
     if adm is not None:
         t = adm.totals()
-        rem = t["ceiling_microusd"] - t["reserved_microusd"]
+        rem = t.get("available_microusd", t["ceiling_microusd"] - t["reserved_microusd"])
         fit = [o["repetitions"] for o in p["options"] if o["reservation_microusd"] <= rem]
-        print(f"hosted ceiling  US${t['ceiling_microusd'] / 1e6:.6f}; reserved US${t['reserved_microusd'] / 1e6:.6f}; remaining US${rem / 1e6:.6f} -> "
-              + (f"fits for repetitions {fit}" if fit else "NO option fits: launches will be refused"))
+        afford = min((rem // o["reservation_microusd"] for o in p["options"] if o["reservation_microusd"]), default=None)
+        print(f"hosted ceiling  US${t['ceiling_microusd'] / 1e6:.6f}; settled US${t.get('settled_microusd', 0) / 1e6:.6f}; outstanding US${t.get('outstanding_microusd', t['reserved_microusd']) / 1e6:.6f}; "
+              f"available US${rem / 1e6:.6f} -> " + (f"fits for repetitions {fit}" if fit else "NO option fits: launches will be refused"))
+        if afford is not None:
+            print(f"capacity        the hosted budget covers {afford} launch(es) of this size now; this arming authorises at most {p['max_launches']}")
     print(f"attestation     {p['attestation']}")
 
 

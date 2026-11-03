@@ -73,7 +73,9 @@ def test_the_fail_closed_policy_check_still_holds_after_migration(tmp_path):
     with pytest.raises(ValueError, match="durable policy"):
         Admission(db, ceiling_microusd=10_000_000, job_cap_microusd=1_650_000, min_interval_seconds=120)    # old setting: refused
     a = Admission(db, ceiling_microusd=10_736_000, job_cap_microusd=1_650_000, min_interval_seconds=120)     # new setting: opens
-    assert a.totals() == {"ceiling_microusd": 10_736_000, "reserved_microusd": 3_300_000, "per_repetition_microusd": 1_650_000}
+    t = a.totals()
+    assert {k: t[k] for k in ("ceiling_microusd", "reserved_microusd", "per_repetition_microusd")} == {"ceiling_microusd": 10_736_000, "reserved_microusd": 3_300_000, "per_repetition_microusd": 1_650_000}
+    assert (t["settled_microusd"], t["outstanding_microusd"], t["committed_microusd"], t["available_microusd"]) == (0, 3_300_000, 3_300_000, 7_436_000)   # nothing settled
 
 
 def test_after_migration_exactly_one_full_evaluation_fits_and_nothing_more(tmp_path):

@@ -188,6 +188,13 @@ def build():
     interrupted = recover(root, admission)
     if interrupted:
         log(f'marked {len(interrupted)} unfinished evaluation(s) interrupted; their reservations are kept')
+    from . import settlement                                            # settle any settlement-aware job that ended before a crash or restart
+    settled = settlement.reconcile_automatic(admission, root, log=log)
+    if settled:
+        log(f'settled {len(settled)} finished evaluation(s) at their verified actual cost')
+    t = admission.totals()
+    log(f'budget: ceiling US${t["ceiling_microusd"] / 1e6:.6f}, settled US${t["settled_microusd"] / 1e6:.6f}, outstanding US${t["outstanding_microusd"] / 1e6:.6f}, '
+        f'available US${t["available_microusd"] / 1e6:.6f}')
 
     executor, operator_token = None, None
     if mode == 'disabled':

@@ -219,3 +219,15 @@ it('the Agent runs grid shows Correct / Not correct as the report counts it, wit
   expect([...host.querySelectorAll('.ws-exact')].map(x => x.textContent)).toEqual(Array(6).fill('Exact match: no'));
   expect(host.querySelector('.ws-grid')!.textContent).toContain('2 requests');
 });
+
+it('operator diagnostics show actual spend, held reservations, available budget, authorised launches and cost per evaluation separately', async () => {
+  const spending = { ceiling: 21.956, settled: 2.177977, outstanding: 3.3, committed: 5.477977, available: 16.478023, released: 8.998023, settled_jobs: 2, unsettled_jobs: 2, basis: 'calculated from provider-reported usage; not a bill' };
+  const pool = { ...armed, variants: ['original', 'improved'], launches: { max: 3, used: 1, left: 2 }, options: [{ repetitions: 1, trials: 6, reservation_usd: 3.74, manifest_sha256: 'd'.repeat(64), available: true, fits_hosted_ceiling: true }] };
+  const hist = [{ id: ID, engine: 'stage-b', state: 'completed', repetitions: 1, mode: 'live', created_at: 1, summary: job.summary, cost_usd: 0.631751, reserved_usd: 3.74, arm_display: { Original: 'Original', Modified: 'Improved' } }];
+  server(url => url.endsWith('/config') ? config({ evaluation: pool, spending }) : url.endsWith('/jobs') ? hist : job);
+  const host = await mount();
+  const b = host.querySelector('.ws-budget')!.textContent!;
+  for (const s of ['Actual model spendUS$2.18', 'settled, 2 evaluations', 'Held for unsettled runsUS$3.30', 'AvailableUS$16.48', 'of the US$21.96 hosted budget',
+                   'Live runs authorised2 of 3 left', 'each reserves US$3.74; the budget covers 4', 'Cost per completed evaluationUS$0.63']) expect(b).toContain(s);
+  expect(host.querySelector('.history-table')!.textContent).toContain('US$0.63');
+});

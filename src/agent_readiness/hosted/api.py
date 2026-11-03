@@ -350,6 +350,9 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
         finally:
             with inflight_lock:
                 inflight.discard(job_id)
+            if is_sb(job_id):                                   # actual-cost settlement: only a verified, fully settled ledger releases capacity
+                from . import settlement
+                settlement.settle_automatic(admission, root, job_id)
 
     def bearer(request: Request) -> bytes | None:
         given = request.headers.get('authorization', '')
@@ -481,6 +484,9 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
                     'repetitions': cfg['repetitions'], 'model': (ev.get('agent') or {}).get('model') or ModelConfig().model, 'agent_profile': (ev.get('agent') or {}).get('profile') or AGENT_PROFILE,
                     'agent_settings': ev.get('agent'), 'tasks': cfg['tasks'], 'evaluation': ev or None, 'remaining_repetitions': left,
                     'ceiling': {'ceiling_usd': totals['ceiling_microusd'] / 1e6, 'reserved_usd': totals['reserved_microusd'] / 1e6},
+                    'spending': {k: totals[f'{k}_microusd'] / 1e6 for k in ('ceiling', 'settled', 'outstanding', 'committed', 'available', 'released')}
+                                | {'settled_jobs': totals['settled_jobs'], 'unsettled_jobs': totals['unsettled_jobs'],
+                                   'basis': 'calculated from provider-reported usage in each job\'s durable request ledger; not a bill'},
                     'active': active[0] if active else None}
         return {'worker': worker_state(), 'repetition_duration': repetition_seconds(), 'available': enabled(), 'mode': getattr(executor, 'mode', None) if enabled() else None, 'access': 'public' if public_start else 'operator',
                 'reason': None if enabled() else (unavailable_reason or 'disabled'),
@@ -501,7 +507,9 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
                             'runs_per_repetition': (st.get('tasks_planned') or 0) // max(1, st['repetitions'] or 1) or None,
                             'report_state': st['report_status']['state'], 'repetitions': st['repetitions'], 'mode': st['mode'], 'created_at': st['created_at'],
                             'finished_at': st.get('finished_at'), 'completed_repetitions': sum(r['state'] == 'completed' for r in st['reps']),
-                            'summary': st['summary'] if j['state'] in TERMINAL else None, 'arm_display': st.get('arm_display')})
+                            'summary': st['summary'] if j['state'] in TERMINAL else None, 'arm_display': st.get('arm_display'),
+                            'cost_usd': (lambda x: x['settled_microusd'] / 1e6 if x else None)(admission.settlement(j['id'])),
+                            'reserved_usd': j['reserved_microusd'] / 1e6})
                 continue
             try:
                 data = paired.load_job(root, j['id'])

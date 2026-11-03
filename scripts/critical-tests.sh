@@ -10,4 +10,5 @@ PY=python
 [ -x .venv/bin/python ] && PY=.venv/bin/python
 exec "$PY" -m pytest -m "not browser and not slow" -q -p no:cacheprovider \
   tests/test_live.py tests/test_live_m1.py tests/test_live_smoke.py tests/test_live_quality.py tests/test_diagnostic_demo.py tests/test_investigator_validation.py tests/test_owner_insights.py tests/test_replay_investigator.py tests/test_context_pack.py tests/test_goal_binding.py tests/test_reach_target.py \
-  tests/test_scanner_live_guards.py tests/test_configuration_budget.py tests/test_env.py tests/test_investigate_llm.py tests/test_markers.py tests/test_sharding.py "$@"
+  tests/test_scanner_live_guards.py tests/test_configuration_budget.py tests/test_env.py tests/test_investigate_llm.py tests/test_markers.py tests/test_sharding.py \
+  tests/test_settlement.py "$@"
