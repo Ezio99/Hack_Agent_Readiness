@@ -153,3 +153,56 @@ def test_the_judge_path_is_unchanged_and_cannot_use_the_budget(env):
     assert r.status_code == 202
     job = r.json()["id"]
     assert a.job_budget(job) is None and AR.claims("judge-test-1")[0]["job"] == job    # the arming, a programme job
+
+
+def test_a_session_expires_after_seven_days_and_expired_rows_are_purged(env, monkeypatch):
+    import time as T
+    c, _, a = client(env)
+    r = sign_in(c)
+    assert "max-age=604800" in r.headers["set-cookie"].lower()
+    M.open_pool(env, a)
+    real = T.time
+    monkeypatch.setattr(T, "time", lambda: real() + 7 * 24 * 3600 + 1)               # the server's clock, a week later
+    assert c.get("/api/operator/session").json()["signed_in"] is False
+    assert run(c, key="late-click-0123456789").status_code == 403 and a.recent() == []
+    monkeypatch.setattr(T, "time", real)
+    import sqlite3
+    db = sqlite3.connect(env["root"] / "operator-sessions.sqlite")
+    db.execute("UPDATE sessions SET expires = 0")
+    db.commit()
+    sign_in(c)                                                                        # a new sign-in purges expired sessions
+    assert db.execute("SELECT COUNT(*) FROM sessions").fetchone()[0] == 1
+
+
+def test_concurrent_operator_launches_never_exceed_the_budget(env):
+    """Distinct clicks racing (different idempotency keys): the single slot admits one at a time, and across a run of launches the A$20 budget is
+    never exceeded; the launch that would exceed it is refused with the budget message and reserves nothing."""
+    c, ex, a = client(env, interval=1)
+    budget = M.open_pool(env, a)
+    sign_in(c)
+    import time as T
+    res = []
+    for wave in range(8):
+        out, bar = [], threading.Barrier(5)
+
+        def click(n):
+            bar.wait()
+            out.append(run(c, key=f"wave{wave}-click{n}-0123456789"))
+
+        ts = [threading.Thread(target=click, args=(n,)) for n in range(5)]
+        [t.start() for t in ts]
+        [t.join() for t in ts]
+        ok = [r for r in out if r.status_code == 202]
+        assert len(ok) <= 1                                                           # never two runs at once
+        b = next(x for x in a.totals()["budgets"] if x["budget"] == budget)
+        assert b["committed_micro_aud"] <= b["limit_micro_aud"]
+        for r in ok:
+            M.settle(a, r.json()["id"])                                               # the stand-in run ends without results: kept in full (failed)
+            res.append(r.json()["id"])
+        if not ok and any(r.status_code == 429 and "remaining budget" in r.json()["detail"] for r in out):
+            break
+        T.sleep(1.05)                                                                 # the operator's per-client rate limit
+    b = next(x for x in a.totals()["budgets"] if x["budget"] == budget)
+    reserve_aud = b["outstanding_micro_aud"] // max(1, len(res))
+    assert len(res) == 20_000_000 // reserve_aud and b["committed_micro_aud"] <= 20_000_000 < b["committed_micro_aud"] + reserve_aud
+    assert all(a.job_budget(j) == budget for j in res) and AR.claims("judge-test-1") == []
