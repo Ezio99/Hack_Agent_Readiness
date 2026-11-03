@@ -4,6 +4,12 @@ Authoritative current handoff. Check it against the repository and production be
 
 ## Current state (2026-11-03 Sydney)
 
+> **Final showcase handoff (2026-11-03):** [collaboration/handoffs/final-showcase-handoff.md](collaboration/handoffs/final-showcase-handoff.md) is the entry point for the next agent: repository and production state, architecture map, Larkspur recommendation matrix, judge-launch status, budget, risks, implementation order and owner checkpoints.
+> - **Production:** `f36db53`; no launch capacity left.
+> - **Undeployed on `m9-release-readiness`:** `352f262` (presentation) and `4841166` (judge launch).
+> - **The owner's final requirements** (handoff §9): an improved Larkspur with all recommendations, one consistent product story for a single featured site (not yet chosen), judge launch of that site, and showcase framing.
+
+
 **Production:** https://209-38-84-72.sslip.io (DigitalOcean, Sydney). It serves **`m9-release-readiness` @ `b563a33`** (image `m9-b563a33` = `cc97e0049042`), deployed with owner approval on 2026-11-02 ~23:00 UTC (= 2026-11-03 Sydney). The hosted evaluation engine is now the lifecycle Stage B runner. Record: [M9 report §9](collaboration/reports/m9-release-readiness.md).
 
 - Mode live, access **operator-only**. **Nothing is armed** (`not_armed`), so no evaluation can start until the owner arms one.
