@@ -4,7 +4,9 @@ Authoritative current handoff. Check it against the repository and production be
 
 ## Current state (2026-11-03 Sydney)
 
-> **Final showcase release candidate (2026-11-03; branch `final-showcase`; NOT deployed; zero cost):** [collaboration/reports/final-showcase-release.md](collaboration/reports/final-showcase-release.md).
+> **PRODUCTION = `final-showcase` @ `83be351`** (deployed with owner approval 2026-11-03 04:09 UTC; image `fs-83be351` = `sha256:f5d9ec46…`; rollback `rollback-f36db53`; backup `predeploy-fs-20261103T040754Z`; judge access on; nothing new armed, ceiling still 10.736; record: [three-task report §8](collaboration/reports/final-showcase-three-task-suite.md)).
+>
+> **Final showcase release (2026-11-03; branch `final-showcase`):** [collaboration/reports/final-showcase-release.md](collaboration/reports/final-showcase-release.md).
 > - **Featured site: Larkspur** (owner decision). One story across Home, `#/lifecycle` (= `#/demo`), the workspace and reports: Website → Generate tasks → Review → Evaluate → Recommendations → Improve → Re-evaluate → Compare. Ironbark is archived at `#/demo/ironbark`.
 > - **New website version `larkspur@improved`** (`87e715d5…`): every actionable recommendation (all seven facts on every card, a working GET filter, browse pages, a comparison table, schema.org JSON-LD, redirects for every dead end), captured into the snapshot so it works through the jailed mirror. `original`/`modified` unchanged byte for byte. Registered as a re-evaluation target (`SiteDefinition.releases`); all six frozen tasks keep their answers. Page audit: Original 7 → Modified 4 → Improved 0.
 > - **Judge launch** unchanged from `4841166`; the featured pool is `larkspur-core@v3` on `--variants original improved` (US$2.508 per launch, 4 launches US$10.032, ceiling 10.736 → 20.768). Rehearsed at zero cost end to end (test, and the real service in rehearsal mode in a browser).

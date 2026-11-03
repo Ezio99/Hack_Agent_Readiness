@@ -114,3 +114,21 @@ Stop launches at any time: `docker compose exec app python -m agent_readiness.li
 - "Exact match" (official grader v1) rejects correct answers that add details such as fees; "Correct" is the recorded v2 grade. Grading is unchanged.
 - Three launches only. A provider or VM failure consumes a launch and its reservation (no retry).
 - Revise **only** this suite in production. The version number is part of the hash: if the two-task suite (`f4569478…`) or any other revision were made first, this one would become v4 with a different hash and `revise` would not print `$V3`. Stop and re-check if it does not.
+
+## 8. Deployment record (owner-approved, 2026-11-03; deployment only)
+
+Approval covered deployment steps 1–5 and verification only: **not** the suite, the ceiling, the arming or any paid call.
+
+| Step | Result |
+|---|---|
+| Read-only VM preflight | Image `m9s-f36db53` (`6fa8b107…`), healthy, 0 restarts; `.env` live/operator/10.736; ceiling 10.736 fully reserved by 3 jobs, 0 active, migration #1; arming `larkspur-live-1` 0 left, problems []; store and stage-b files **byte-identical** to the copy that produced `0e46a1ef…`; secrets 10001:10001 0400; 67 GB free |
+| 1 Backup (outside the volume) | `/root/backups/predeploy-fs-20261103T040754Z.tgz` (sha256 `294d7de7…`, gzip OK), manifest `.sha256` of 2 206 files (extracted archive matches every entry), `env-predeploy-fs-…` (identical). Versus the previous deploy's manifest: only two `.service.lock` files added; 2 204 common files unchanged |
+| 2 Build | clean worktree `/root/agent-readiness-build-fs` at `83be351d7ec5…`, 0 untracked; image `agent-readiness-app:fs-83be351` = **`sha256:f5d9ec46d28369b54423043d0e0437af293bde739d096d88563e4266b67e6744`**; frontend `index-CYC27dEE.js` identical to the local build; snapshots `2f9fd2ce09a0` / `edb9a5d2884a` / `87e715d59c23`; uid 10001 |
+| 3 Pre-flight and smoke | `ceiling status` with the new image unchanged; disabled smoke test on a volume copy (loopback): **15/15 PASS**, 0 tracebacks; copy removed |
+| 4 Judge secret, compose | `secrets/judge_token` 10001:10001 0400, 40 characters, differs from the operator token (never printed); `compose.yaml` adds only the judge secret; previous kept as `compose.yaml.pre-judge`; `docker compose config` valid |
+| 5 Switch | `rollback-f36db53` = `6fa8b107…`; `latest` = `f5d9ec46…`, started 2026-11-03T04:09:50Z, healthy, 0 restarts; log `mode=live access=operator evaluations=enabled jail=verified engine=stage-b armed=larkspur-live-1 (paid, larkspur-core v2, launches left 0) judge_access=on`; 0 tracebacks |
+| Verification | Public **15/15 PASS**: health; config `judge_access true`, `launches_exhausted`, ceiling 10.736/10.736; POST without a code 403, with a wrong code 403; frontend hash; HSTS, CSP, nosniff; HTTP→HTTPS 308; versions incl. `improved 87e715d59c23`; no v3 suite; `eval-e529…` report (12 trials, US$1.546226 settled), job (record `failed`, execution completed, note), export; M7 report; both Ironbark jobs; a trace screenshot. VM: ceiling and arming unchanged; **2 204 evidence files byte-identical** to the backup, no new files; the judge code in no log line or data file; container uid 10001, CapEff 0. Browser (GET only): Home, journey (deep links), workspace, live report, Ironbark archive: 0 console errors |
+
+Recorded in `deploy/DEPLOYED.txt` on the VM. **Rollback:** `cp compose.yaml.pre-judge compose.yaml && docker tag agent-readiness-app:rollback-f36db53 agent-readiness-app:latest && docker compose up -d --no-build --no-deps app`.
+
+**Next checkpoint (needs separate owner approval):** §5 steps 2–5: revise (must print `0e46a1ef…`), review, decide (owner types the attestation), freeze; ceiling 10.736 → 21.956 (+ `.env`); arm `larkspur-judge-1` (3 launches, Original vs Improved); pre-flight. Then, separately, the first paid launch.
