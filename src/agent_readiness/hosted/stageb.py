@@ -86,7 +86,12 @@ class StageBExecutor(J.LifecycleExecutor):
             self.admission.transition(job_id, "reserved", "failed")
             raise
         mode = "paid" if rec.mode == "paid" else "rehearsal"
-        label = f"{'Live' if mode == 'paid' else 'Rehearsal'} evaluation · {rec.frozen_suite} · {rec.variants[0][0]} vs {rec.variants[1][0]}"
+        from ..lifecycle.sites import site_view                                       # hosted reaches the evaluation code only through the lifecycle
+        try:
+            where = site_view(rec.site)["label"]                                       # e.g. "Larkspur Community College" (judge-facing title)
+        except Exception:
+            where = rec.site
+        label = f"{'Live' if mode == 'paid' else 'Rehearsal'} evaluation · {where} · {rec.variants[0][0].capitalize()} vs {rec.variants[1][0].capitalize()}"
         J.new_job(self.runs_root, job_id, manifest_sha=opt.manifest_sha256, mode=mode, label=label,
                   request={"repetitions": repetitions, "arming_id": rec.arming_id, "experiment": claim["experiment_id"], "frozen_suite": rec.frozen_suite,
                            "variants": [n for n, _ in rec.variants], "manifest_basis": "the owner-armed manifest", "reservation_usd": amount / 1e6})

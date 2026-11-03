@@ -14,11 +14,11 @@ export const LATEST_LIVE = {
   postHoc: { original: 2, modified: 4 },
 } as const;
 
-/** A prominent link to the latest live evaluation, beside (not instead of) the earlier Ironbark story. Read-only: it only links to the report. */
+/** A prominent link to the complete live evaluation (all six tasks; judges' shorter live runs appear in the workspace history), beside (not instead of) the earlier Ironbark story. Read-only: it only links to the report. */
 export function LatestLive({ className = '' }: { className?: string }) {
   const e = LATEST_LIVE;
   return <a className={`latest-live ${className}`} href={`#/reports/${e.id}`}>
-    <span className="latest-live-eyebrow">Latest live evaluation · {e.date}</span>
+    <span className="latest-live-eyebrow">Complete live evaluation · all six tasks · {e.date}</span>
     <strong>{e.site} · {e.suite} · Original vs Modified</strong>
     <span>{e.runs} agent runs finished with a real model · official grader v1: {e.official.original}/{e.of} → {e.official.modified}/{e.of} passed · post-hoc grader v2: {e.postHoc.original}/{e.of} → {e.postHoc.modified}/{e.of}</span>
     <span className="latest-live-go">Open the readiness report <span aria-hidden="true">→</span></span>

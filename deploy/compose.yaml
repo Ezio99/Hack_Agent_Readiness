@@ -14,7 +14,8 @@ services:
       AR_TRUSTED_PROXIES: 172.30.0.2                          # only Caddy may set X-Forwarded-For
       META_MODEL_API_KEY_FILE: /run/secrets/meta_model_api_key
       AR_OPERATOR_TOKEN_FILE: /run/secrets/operator_token
-    secrets: [meta_model_api_key, operator_token]
+      AR_JUDGE_TOKEN_FILE: /run/secrets/judge_token          # launch-only judge access code (>= 24 chars; shorter = judge access off)
+    secrets: [meta_model_api_key, operator_token, judge_token]
     volumes:
       - data:/data
       - ${AR_SOURCE_RUN:?path to the private live-2d58a80e14 source run}:/app/scanner-data/live/live-2d58a80e14:ro
@@ -46,6 +47,7 @@ services:
 secrets:
   meta_model_api_key: {file: ./secrets/meta_model_api_key}
   operator_token: {file: ./secrets/operator_token}
+  judge_token: {file: ./secrets/judge_token}
 volumes: {data: {}, caddy: {}}
 networks:
   edge: {ipam: {config: [{subnet: 172.30.0.0/24}]}}

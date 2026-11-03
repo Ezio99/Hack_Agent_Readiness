@@ -29,7 +29,7 @@ interface ArmedEvaluation { arming_id: string; mode: 'paid' | 'rehearsal'; site:
   launches: { max: number; used: number; left: number }; options: { repetitions: number; trials: number; reservation_usd: number; manifest_sha256: string; available: boolean; fits_hosted_ceiling: boolean | null }[];
   agent: { model: string; reasoning_effort: string | null; max_completion_tokens: number; profile: string } }
 interface LaunchState { authorized: boolean; ready: boolean; reason: string | null; detail: string | null; launches_left: number | null }
-interface Config { engine?: 'stage-b'; launch?: LaunchState; service?: { state: 'operational' | 'unavailable'; reason: string | null }; evaluation?: ArmedEvaluation | null; ceiling?: { ceiling_usd: number; reserved_usd: number }; agent_settings?: { profile: string; profile_file_sha256: string; reasoning_effort: string | null; max_completion_tokens: number | null } | null; worker?: Worker; repetition_duration?: { seconds: number; basis: 'measured' | 'first genuine run' | 'default'; samples: number }; available: boolean; mode: 'live' | 'rehearsal' | null; access?: 'public' | 'operator'; reason?: string | null; repetitions: number[]; model: string; agent_profile: string; tasks: { task: number; question: string; capability?: string; limits?: { max_steps?: number; timeout_seconds?: number; max_model_requests?: number } }[]; remaining_repetitions: number; active: string | null }
+interface Config { engine?: 'stage-b'; launch?: LaunchState; judge_access?: boolean; service?: { state: 'operational' | 'unavailable'; reason: string | null }; evaluation?: ArmedEvaluation | null; ceiling?: { ceiling_usd: number; reserved_usd: number }; agent_settings?: { profile: string; profile_file_sha256: string; reasoning_effort: string | null; max_completion_tokens: number | null } | null; worker?: Worker; repetition_duration?: { seconds: number; basis: 'measured' | 'first genuine run' | 'default'; samples: number }; available: boolean; mode: 'live' | 'rehearsal' | null; access?: 'public' | 'operator'; reason?: string | null; repetitions: number[]; model: string; agent_profile: string; tasks: { task: number; question: string; capability?: string; limits?: { max_steps?: number; timeout_seconds?: number; max_model_requests?: number } }[]; remaining_repetitions: number; active: string | null }
 
 const ACTIVE = ['reserved', 'running'];
 const STORE = 'ironbark-hosted-job';
@@ -197,7 +197,7 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
       history.replaceState(null, '', `#/run/${data.id}`);
       await load(data.id); setTab('watch'); void refreshConfig(); void refreshList();
     } catch (e) {
-      if (operatorOnly && (e as { status?: number }).status === 403) { setToken(''); setMessage('The operator token was not accepted. Re-enter it to start an evaluation.'); }
+      if (operatorOnly && (e as { status?: number }).status === 403) { setToken(''); setMessage(config?.judge_access ? 'That access code was not accepted. Check it and try again.' : 'The operator token was not accepted. Re-enter it to start an evaluation.'); }
       else setMessage(e instanceof Error ? e.message : 'Evaluation unavailable.');
       void refreshConfig();
     }
@@ -229,7 +229,8 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
   const mode = job?.mode ?? config?.mode;
   const budgetOk = stageB ? (config?.repetitions ?? []).includes(reps) && (config?.remaining_repetitions ?? 0) > 0 : (config?.remaining_repetitions ?? 0) >= reps;
   const canRun = !!config?.available && !busy && !running && !othersRunning && budgetOk && (!operatorOnly || token.length >= 24);
-  const option = ev?.options.find(o => o.repetitions === reps);
+  const judgeAccess = !!config?.judge_access;
+  const liveRun = stageB && ev?.mode === 'paid';
   const perRep = config?.repetition_duration?.seconds ?? 560;
   const worker = config?.worker;
   const basis = config?.repetition_duration?.basis === 'measured' ? `measured over ${config.repetition_duration.samples} completed evaluation${config.repetition_duration.samples > 1 ? 's' : ''}` : 'based on the first genuine Muse Spark run';
@@ -239,8 +240,8 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
     : !config.available ? 'New evaluations are currently unavailable. Recorded and previous evaluations remain available.'
     : othersRunning ? 'Another evaluation is running. Start yours when the worker is available again.'
     : !budgetOk ? (stageB ? (ev && ev.launches.left <= 0 ? 'Every armed launch has been used. The owner arms a new evaluation at the server terminal.' : 'This number of repetitions is not armed, or its reservation does not fit the remaining hosted budget.') : 'The hosted budget for new evaluations is exhausted.')
-    : operatorOnly && token.length < 24 ? 'New evaluations are not open to the public yet: starting one needs the operator token (above). Anyone can watch and inspect existing evaluations.'
-    : stageB ? `${reps * runsPerRep} fresh agent runs · ${minutes(perRep * reps)}, varies with the agent${option && ev?.mode === 'paid' ? ` · reserves US$${option.reservation_usd.toFixed(2)} of the hosted budget (worst case)` : ''}`
+    : operatorOnly && token.length < 24 ? (judgeAccess ? 'Enter your access code to start a live evaluation. Anyone can watch running and completed evaluations.' : 'New evaluations are not open to the public yet: starting one needs the operator token (above). Anyone can watch and inspect existing evaluations.')
+    : stageB ? `${reps * runsPerRep} browser agents · ${minutes(perRep * reps)}, varies with the agent`
     : `${reps * 8} fresh agent runs · ${minutes(perRep * reps)}, varies with the agent`;
   const latest = recent.find(r => r.id !== job?.id && r.summary);
 
@@ -250,14 +251,14 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
         <p className="eyebrow">Evaluation workspace</p>
         <h1 className="ws-title">Run real agents on a website.</h1>
         <p className="ws-lede">Agent Readiness evaluates an existing website: fresh browser agents attempt realistic customer tasks, an independent grader checks every answer against the site's own data, and the report shows where agents get stuck and what to change. After you change your site, re-evaluate it to measure the effect.</p>
-        <p className="ws-lede-note">{stageB && ev ? <>The armed suite has {nTasks} owner-approved tasks, run on the <strong>Original</strong> and a <strong>Modified</strong> version: {runsPerRep} agent runs per repetition. </> : null}In this demonstration, Modified is a manually prepared version of the controlled Larkspur site; Agent Readiness does not change websites itself.</p>
+        <p className="ws-lede-note">{stageB && ev ? <>This live evaluation gives {nTasks} customer task{nTasks === 1 ? '' : 's'} to browser agents on the <strong>Original</strong> and the <strong>Modified</strong> version of the site. </> : null}In this demonstration, Modified is a manually prepared version of the controlled Larkspur site; Agent Readiness does not change websites itself.</p>
       </div>
       {config && <div className={`ws-worker ${worker?.state === 'idle' && stageB && config.launch && !config.launch.authorized ? 'blocked' : worker?.state ?? 'unavailable'}`} role="status">
         <span className="ws-dot" aria-hidden="true" />
         <div>
           {worker?.state === 'idle' && stageB && config.launch && !config.launch.authorized ? <><strong>Worker ready · no launch authorised</strong><span>{config.launch.detail} Completed evaluations remain available.</span></>
-          : worker?.state === 'idle' ? <><strong>Worker available</strong><span>Ready to start a new evaluation · one evaluation runs at a time · {minutes(perRep)} per repetition ({basis})</span></>
-          : worker?.state === 'busy' ? <><strong>Evaluation running</strong><span>{worker.job === job?.id ? 'Running your selected evaluation' : 'Another evaluation is running'}: {worker.finished_runs ?? 0} of {worker.total_runs ?? '–'} agent runs finished{worker.estimated_remaining_seconds ? `, ${minutes(worker.estimated_remaining_seconds)} left (estimate)` : ''}. Completed evaluations below remain available.</span>
+          : worker?.state === 'idle' ? <><strong>Worker available</strong><span>{stageB ? `Ready to start ${liveRun ? 'a live evaluation' : 'an evaluation'} · one runs at a time · ${minutes(perRep)}` : `Ready to start a new evaluation · one evaluation runs at a time · ${minutes(perRep)} per repetition (${basis})`}</span></>
+          : worker?.state === 'busy' ? <><strong>Evaluation running</strong><span>{worker.job === job?.id ? 'Running your selected evaluation' : 'Another evaluation is running'}: {worker.finished_runs ?? 0} of {worker.total_runs ?? (worker.job === job?.id && total ? total : ev?.options[0]?.trials ?? '–')} agent runs finished{worker.estimated_remaining_seconds ? `, ${minutes(worker.estimated_remaining_seconds)} left (estimate)` : ''}. Completed evaluations below remain available.</span>
               {worker.job && worker.job !== job?.id && <button className="ws-link" onClick={() => select(worker.job!)}>Watch it live →</button>}</>
           : <><strong>Evaluations unavailable</strong><span>New evaluations are paused. Recorded and completed evaluations remain available.</span></>}
         </div>
@@ -270,24 +271,26 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
         <ol className="ws-steps">
           <li><span className="ws-step">01 · Website</span>
             {stageB ? <div className="ws-target" aria-label="Selected website">{ev ? <><strong>{ev.site === 'larkspur' ? 'Larkspur Community College' : ev.site === 'ironbark' ? 'Ironbark Hire Co.' : ev.site}</strong>
-                <small>Frozen suite {ev.suite} (owner-approved, {nTasks} tasks) · {ev.variants.join(' vs ')} · armed {ev.armed_at.slice(0, 10)} · {ev.launches.left} of {ev.launches.max} launch{ev.launches.max === 1 ? '' : 'es'} left</small></>
+                <small>{nTasks} customer task{nTasks === 1 ? '' : 's'} · Original vs Modified site · {ev.launches.left} of {ev.launches.max} live run{ev.launches.max === 1 ? '' : 's'} left</small></>
                 : <><strong>No evaluation armed</strong><small>The owner selects and authorises the frozen suite at the server terminal.</small></>}</div>
               : <div className="ws-target" aria-label="Selected website"><strong>No evaluation available</strong><small>New evaluations are not available on this server right now; recorded evaluations remain available.</small></div>}</li>
-          <li><span className="ws-step">02 · Repetitions</span>
+          {stageB && (config?.repetitions?.length ?? 0) <= 1
+            ? <li><span className="ws-step">02 · What runs</span>
+                <p className="ws-run-summary">{ev ? `${runsPerRep} browser agents, one per task on each site · ${minutes(perRep)}` : 'Nothing to run right now.'}</p></li>
+            : <li><span className="ws-step">02 · Repetitions</span>
             <div className="ws-reps" role="radiogroup" aria-label="Paired repetitions">{(config?.repetitions ?? [1, 3, 5]).map(n =>
-              <button key={n} role="radio" aria-checked={reps === n} disabled={running} onClick={() => setReps(n)}><strong>{n}</strong><small>{n * (stageB ? runsPerRep : 8)} agent runs</small><small>{minutes(perRep * n)}</small>
-                {stageB && ev?.mode === 'paid' && (() => { const o = ev.options.find(x => x.repetitions === n); return o ? <small>reserves US${o.reservation_usd.toFixed(2)}</small> : null; })()}</button>)}</div></li>
+              <button key={n} role="radio" aria-checked={reps === n} disabled={running} onClick={() => setReps(n)}><strong>{n}</strong><small>{n * (stageB ? runsPerRep : 8)} agent runs</small><small>{minutes(perRep * n)}</small></button>)}</div></li>}
           <li><span className="ws-step">03 · Run</span>
             {operatorOnly && config?.available && <div className="ws-operator">
-              <label htmlFor="ws-operator-token">Operator token <span className="ws-operator-badge">operators only</span></label>
+              <label htmlFor="ws-operator-token">{judgeAccess ? 'Access code' : 'Operator token'} <span className="ws-operator-badge">{judgeAccess ? 'judges and operators' : 'operators only'}</span></label>
               <div className="ws-operator-row">
-                <input id="ws-operator-token" type="password" aria-label="Operator token" aria-describedby="ws-operator-help" autoComplete="off" spellCheck={false} value={token}
-                  placeholder="Paste the operator token" onChange={e => setToken(e.target.value.trim())} />
+                <input id="ws-operator-token" type="password" aria-label={judgeAccess ? 'Access code' : 'Operator token'} aria-describedby="ws-operator-help" autoComplete="off" spellCheck={false} value={token}
+                  placeholder={judgeAccess ? 'Paste your access code' : 'Paste the operator token'} onChange={e => setToken(e.target.value.trim())} />
                 {token && <button type="button" className="ws-link" onClick={() => setToken('')}>Clear</button>}
               </div>
               <p id="ws-operator-help" className="ws-operator-help">Held in this page's memory only (never saved; re-enter it after a reload) and sent only as an authorization header when you start. The server checks it.</p>
             </div>}
-            <button className="btn btn-signal ws-run" disabled={!canRun} aria-describedby="ws-run-note" onClick={() => void start()}>{busy ? 'Starting…' : running ? 'Evaluation running' : 'Run evaluation'}</button>
+            <button className="btn btn-signal ws-run" disabled={!canRun} aria-describedby="ws-run-note" onClick={() => void start()}>{busy ? 'Starting…' : running ? 'Evaluation running' : liveRun ? 'Run live evaluation' : 'Run evaluation'}</button>
             <p className="ws-note" id="ws-run-note">{note}</p></li>
         </ol>
         {stageB && <details className="ws-method"><summary>Methodology &amp; provenance</summary>

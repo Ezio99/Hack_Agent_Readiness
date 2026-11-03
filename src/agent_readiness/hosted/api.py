@@ -248,7 +248,7 @@ FRIENDLY = {'evaluation capacity is occupied': 'Another evaluation is already ru
 
 def create_app(root: Path, admission: Admission, *, client_key: bytes, executor: Executor | None = None, trusted_proxies=(), static_dir: Path | None = None,
                operator_token: bytes | None = None, public_start: bool = True, unavailable_reason: str | None = None, mode: str | None = None,
-               lifecycle=None) -> FastAPI:
+               lifecycle=None, judge_token: bytes | None = None) -> FastAPI:
     if len(client_key) < 32:
         raise ValueError('client identity key must be at least 32 bytes')
     root = Path(root)
@@ -261,6 +261,10 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
     if not public_start and not operator_token:
         executor = None                                   # operator-only access without a token: nobody can start
         unavailable_reason = unavailable_reason or 'missing_operator_token'
+    # M9: the judge access code is a SEPARATE secret that authorises exactly one thing: POST /api/ironbark/jobs (launching the evaluation the owner
+    # armed). It is never accepted anywhere else (not by the lifecycle routes, which only know the operator check), never returned, never logged.
+    if judge_token is not None and (len(judge_token) < 24 or (operator_token is not None and hmac.compare_digest(judge_token, operator_token))):
+        judge_token = None                                # too short, or identical to the operator token: judge access stays off
 
     def enabled():
         return executor is not None and getattr(executor, 'available', False) is True
@@ -347,9 +351,18 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
             with inflight_lock:
                 inflight.discard(job_id)
 
-    def is_operator(request: Request) -> bool:
+    def bearer(request: Request) -> bytes | None:
         given = request.headers.get('authorization', '')
-        return bool(operator_token) and given.startswith('Bearer ') and hmac.compare_digest(given[7:].strip().encode(), operator_token)
+        return given[7:].strip().encode() if given.startswith('Bearer ') else None
+
+    def is_operator(request: Request) -> bool:
+        given = bearer(request)
+        return bool(operator_token) and given is not None and hmac.compare_digest(given, operator_token)
+
+    def is_judge(request: Request) -> bool:
+        """Launch-only: consulted by `start` alone."""
+        given = bearer(request)
+        return bool(judge_token) and given is not None and hmac.compare_digest(given, judge_token)
 
     @app.get('/api/health')
     def health():
@@ -421,12 +434,12 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
 
     LAUNCH_DETAIL = {
         'service_unavailable': 'The evaluation service is unavailable; recorded evaluations remain available.',
-        'not_armed': 'No evaluation is authorised. The owner authorises one at the server terminal.',
+        'not_armed': 'No live evaluation is open at the moment.',
         'arming_mode_mismatch': "The authorised evaluation does not match this service's mode.",
         'arming_invalid': 'The authorised evaluation no longer verifies; the owner must authorise again.',
-        'launches_exhausted': 'The authorised launch has been used. A new launch needs a new owner authorisation.',
+        'launches_exhausted': 'All live runs available for this demonstration have been used.',
         'arming_total_exhausted': "The authorisation's total reservation has been used.",
-        'budget_exhausted': 'The remaining hosted budget does not cover another launch.',
+        'budget_exhausted': 'The remaining budget does not cover another live run.',
     }
 
     def launch_state(cfg: dict, active: list) -> dict:
@@ -459,10 +472,11 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
             ev = cfg.get('evaluation') or {}
             left = (ev.get('launches') or {}).get('left', 0)
             launch = launch_state(cfg, active)
-            return {'engine': stageb.ENGINE, 'worker': worker_state(), 'repetition_duration': {'seconds': 50 * max(1, len(cfg['tasks']) * 2), 'basis': 'M7 mean agent time per trial', 'samples': 0},
+            return {'engine': stageb.ENGINE, 'worker': worker_state(), 'repetition_duration': {'seconds': 75 * max(1, len(cfg['tasks']) * 2), 'basis': 'paid runs: mean agent time plus browser start per trial', 'samples': 0},
                     'service': {'state': 'operational' if enabled() else 'unavailable', 'reason': None if enabled() else (unavailable_reason or 'disabled')},
                     'launch': launch,
                     'available': launch['authorized'], 'mode': getattr(executor, 'mode', None) if enabled() else None, 'access': 'public' if public_start else 'operator',
+                    'judge_access': bool(judge_token) and not public_start,
                     'reason': None if launch['authorized'] else launch['reason'],
                     'repetitions': cfg['repetitions'], 'model': (ev.get('agent') or {}).get('model') or ModelConfig().model, 'agent_profile': (ev.get('agent') or {}).get('profile') or AGENT_PROFILE,
                     'agent_settings': ev.get('agent'), 'tasks': cfg['tasks'], 'evaluation': ev or None, 'remaining_repetitions': left,
@@ -484,6 +498,7 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
                 except Exception:
                     continue
                 out.append({'id': j['id'], 'engine': stageb.ENGINE, 'state': j['state'], 'execution_state': st['execution']['state'],
+                            'runs_per_repetition': (st.get('tasks_planned') or 0) // max(1, st['repetitions'] or 1) or None,
                             'report_state': st['report_status']['state'], 'repetitions': st['repetitions'], 'mode': st['mode'], 'created_at': st['created_at'],
                             'finished_at': st.get('finished_at'), 'completed_repetitions': sum(r['state'] == 'completed' for r in st['reps']),
                             'summary': st['summary'] if j['state'] in TERMINAL else None})
@@ -504,8 +519,10 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
         if not enabled():
             raise HTTPException(503, 'Evaluations are currently unavailable')
         operator = is_operator(request)
-        if not public_start and not operator:
-            raise HTTPException(403, 'New evaluations are not open to the public yet')
+        judge = not operator and is_judge(request)
+        if not public_start and not (operator or judge):
+            raise HTTPException(403, 'Starting a live evaluation needs a valid access code' if judge_token else 'New evaluations are not open to the public yet')
+        # the operator is one client; each judge is identified by address, so the per-client rate limit applies to every judge separately
         client = hmac.new(client_key, b'operator', hashlib.sha256).hexdigest() if operator else client_identity(request)
         job_id = 'eval-' + secrets.token_hex(16)
         if not stage_b:                                    # the paired Ironbark engine is retired; only the Stage B executor can launch

@@ -41,11 +41,11 @@ it('shows the armed frozen suite and posts only the repetitions with the operato
   const f = server((url, init) => init?.method === 'POST' ? { id: ID, state: 'reserved', repetitions: 1 } : url.endsWith('/config') ? config() : url.endsWith('/jobs') ? [] : { ...job, state: 'running' });
   const host = await mount();
   const t = host.textContent ?? '';
-  expect(t).toContain('Larkspur Community College'); expect(t).toContain('Frozen suite larkspur-core v2 (owner-approved, 6 tasks)'); expect(t).toContain('2 of 2 launches left');
-  expect(t).toContain('12 agent runs'); expect(t).toContain('reserves US$7.44');
+  expect(t).toContain('Larkspur Community College'); expect(t).toContain('6 customer tasks · Original vs Modified site · 2 of 2 live runs left');
+  expect(t).toContain('12 browser agents, one per task on each site'); expect(t).not.toContain('reserves US$');                   // judge-facing: no reservation figures
   const input = host.querySelector('#ws-operator-token') as HTMLInputElement;
   await act(async () => { const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!; set.call(input, 't'.repeat(32)); input.dispatchEvent(new Event('input', { bubbles: true })); });
-  await act(async () => { button(host, 'Run evaluation').click(); });
+  await act(async () => { button(host, 'Run live evaluation').click(); });
   const post = f.mock.calls.find(c => (c[1] as RequestInit | undefined)?.method === 'POST')!;
   expect(post[0]).toBe('/api/ironbark/jobs');
   expect(JSON.parse(String((post[1] as RequestInit).body))).toEqual({ repetitions: 1 });                 // the launch contract is unchanged
@@ -104,18 +104,18 @@ it('keeps a withheld report withheld while showing that every agent run finished
 // M9 final sprint: worker health, launch authorisation and a running evaluation are distinct; the intro describes the product, not Ironbark.
 const used = { ...armed, launches: { max: 1, used: 1, left: 0 }, options: armed.options.map(o => ({ ...o, available: false })) };
 const exhausted = config({ evaluation: used, available: false, repetitions: [], reason: 'launches_exhausted', remaining_repetitions: 0,
-  launch: { authorized: false, ready: false, reason: 'launches_exhausted', detail: 'The authorised launch has been used. A new launch needs a new owner authorisation.', launches_left: 0 } });
+  launch: { authorized: false, ready: false, reason: 'launches_exhausted', detail: 'All live runs available for this demonstration have been used.', launches_left: 0 } });
 
 it('does not call the worker "available" when the authorised launch has been used', async () => {
   server(url => url.endsWith('/config') ? exhausted : []);
   const host = await mount();
   const banner = host.querySelector('.ws-worker')!;
   expect(banner.textContent).toContain('Worker ready · no launch authorised');
-  expect(banner.textContent).toContain('The authorised launch has been used');
+  expect(banner.textContent).toContain('All live runs available for this demonstration have been used');
   expect(banner.textContent).not.toContain('Ready to start a new evaluation');
   expect(banner.className).toContain('blocked');
-  expect(button(host, 'Run evaluation').disabled).toBe(true);
-  expect(host.querySelector('#ws-run-note')!.textContent).toContain('A new launch needs a new owner authorisation');
+  expect(button(host, 'Run live evaluation').disabled).toBe(true);
+  expect(host.querySelector('#ws-run-note')!.textContent).toContain('All live runs available');
 });
 
 it('says "Worker available" only when a launch is authorised', async () => {
@@ -135,4 +135,49 @@ it('describes the product generically and says Modified is a manually prepared d
   expect(intro).toContain('does not change websites');
   for (const old of ['Ironbark', 'four frozen tasks', 'eight new agent runs', '4 owner-approved']) expect(intro).not.toContain(old);
   expect(host.textContent).not.toContain('Ironbark Hire');
+});
+
+// M9: judges start the armed live evaluation with a separate, launch-only access code.
+const typeCode = async (host: HTMLElement, code: string) => {
+  const input = host.querySelector('#ws-operator-token') as HTMLInputElement;
+  await act(async () => { const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!; set.call(input, code); input.dispatchEvent(new Event('input', { bubbles: true })); });
+};
+const judgeConfig = () => config({ judge_access: true, launch: { authorized: true, ready: true, reason: null, detail: null, launches_left: 2 } });
+
+it('judges see an access-code field and "Run live evaluation", which posts only the repetitions with their code', async () => {
+  const f = server((url, init) => init?.method === 'POST' ? { id: ID, state: 'reserved', repetitions: 1 } : url.endsWith('/config') ? judgeConfig() : url.endsWith('/jobs') ? [] : { ...job, state: 'running' });
+  const host = await mount();
+  expect(host.querySelector('label[for="ws-operator-token"]')!.textContent).toContain('Access code');
+  expect((host.querySelector('#ws-operator-token') as HTMLInputElement).placeholder).toBe('Paste your access code');
+  expect(host.querySelector('#ws-run-note')!.textContent).toContain('Enter your access code to start a live evaluation');
+  expect(host.querySelector('.ws-worker')!.textContent).toContain('Ready to start a live evaluation');
+  expect(host.querySelector('.ws-worker')!.textContent).not.toContain('Muse Spark run');
+  const code = 'judge-access-code-0123456789abcdef';
+  await typeCode(host, code);
+  await act(async () => { button(host, 'Run live evaluation').click(); });
+  const post = f.mock.calls.find(c => (c[1] as RequestInit | undefined)?.method === 'POST')!;
+  expect(post[0]).toBe('/api/ironbark/jobs');
+  expect(JSON.parse(String((post[1] as RequestInit).body))).toEqual({ repetitions: 1 });
+  expect(((post[1] as RequestInit).headers as Record<string, string>).Authorization).toBe('Bearer ' + code);
+  expect(f.mock.calls.every(c => !String(c[0]).includes(code))).toBe(true);                               // never in a URL
+});
+
+it('a refused access code gets a judge-worded message and is cleared', async () => {
+  server((url, init) => init?.method === 'POST' ? { ok: false, status: 403, json: async () => ({ detail: 'Starting a live evaluation needs a valid access code' }) } : url.endsWith('/config') ? judgeConfig() : []);
+  const host = await mount();
+  await typeCode(host, 'wrong-code-wrong-code-wrong-code');
+  await act(async () => { button(host, 'Run live evaluation').click(); });
+  for (let i = 0; i < 3; i++) await act(async () => { await new Promise(r => setTimeout(r, 0)); });
+  expect(host.querySelector('[role="alert"]')!.textContent).toContain('That access code was not accepted');
+  expect((host.querySelector('#ws-operator-token') as HTMLInputElement).value).toBe('');
+});
+
+it('history shows each Stage B evaluation\'s own number of agent runs (not the retired engine\'s 8)', async () => {
+  const hist = [{ id: ID, engine: 'stage-b', runs_per_repetition: 4, state: 'completed', execution_state: 'completed', report_state: 'available', repetitions: 1, mode: 'live', created_at: 1, summary: job.summary },
+                { id: 'eval-' + 'd'.repeat(32), state: 'completed', repetitions: 1, mode: 'live', created_at: 0, summary: job.summary }];
+  server(url => url.endsWith('/config') ? config() : url.endsWith('/jobs') ? hist : job);
+  const host = await mount();
+  const rows = [...host.querySelectorAll('tbody tr')].map(r => r.textContent ?? '');
+  expect(rows.some(r => r.includes('1 × 4'))).toBe(true);
+  expect(rows.some(r => r.includes('1 × 8'))).toBe(true);                                                      // a historical Ironbark job
 });

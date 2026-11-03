@@ -13,7 +13,11 @@
 
     python -m agent_readiness.suites.stage_a.approval review STORE SUITE_SHA [--markdown]
     python -m agent_readiness.suites.stage_a.approval decide STORE SUITE_SHA approved|rejected [--notes TEXT]     # owner, interactive terminal
-    python -m agent_readiness.suites.stage_a.approval freeze STORE SUITE_SHA APPROVAL_SHA"""
+    python -m agent_readiness.suites.stage_a.approval freeze STORE SUITE_SHA APPROVAL_SHA
+    python -m agent_readiness.suites.stage_a.approval revise STORE SUITE_SHA --keep TASK_ID [TASK_ID ...] --context-site larkspur --at ISO --by owner --notes TEXT
+                                    (M9) a new suite version keeping only the named tasks (a proposal: it still needs `decide` and `freeze`; the old
+                                    version is unchanged). With the same inputs and --at the new hash is reproducible, so the owner can check it
+                                    before approving."""
 from __future__ import annotations
 
 import argparse
@@ -154,6 +158,9 @@ def main(argv=None) -> int:
     r = sub.add_parser("review"); r.add_argument("store", type=Path); r.add_argument("suite"); r.add_argument("--markdown", action="store_true")
     d = sub.add_parser("decide"); d.add_argument("store", type=Path); d.add_argument("suite"); d.add_argument("decision", choices=("approved", "rejected")); d.add_argument("--notes", default="")
     f = sub.add_parser("freeze"); f.add_argument("store", type=Path); f.add_argument("suite"); f.add_argument("approval")
+    v = sub.add_parser("revise"); v.add_argument("store", type=Path); v.add_argument("suite"); v.add_argument("--keep", nargs="+", required=True, metavar="TASK_ID")
+    ctx = v.add_mutually_exclusive_group(required=True); ctx.add_argument("--context-site", choices=("larkspur",)); ctx.add_argument("--context", type=Path)
+    v.add_argument("--at", required=True); v.add_argument("--by", default="system", choices=("system", "owner")); v.add_argument("--notes", required=True)
     a = ap.parse_args(argv)
     from datetime import datetime, timezone
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -167,9 +174,28 @@ def main(argv=None) -> int:
             return 2
         print(f"Type exactly: {attestation_text(a.suite, a.decision)}")
         print(decide(store, a.suite, decision=a.decision, attestation=input("> "), at=now, notes=a.notes))
+    elif a.cmd == "revise":
+        print(revise_keep(store, a.suite, keep=a.keep, context=_context(a), at=a.at, by=a.by, notes=a.notes))
     else:
         print(freeze(store, a.suite, a.approval, at=now))
     return 0
+
+
+def _context(a) -> dict:
+    if a.context:
+        return json.loads(Path(a.context).read_text())
+    from ...research.taskplan.context import CONTEXT          # the Larkspur business context the suite was generated against (Stage A input)
+    return json.loads(json.dumps(CONTEXT))
+
+
+def revise_keep(store: WriteOnceStore, suite_sha: str, *, keep: list[str], context: dict, at: str, by: str, notes: str) -> str:
+    """(M9) `revise` that KEEPS the named tasks (by task id) and removes the rest. Every named id must be a task of the suite."""
+    old = store.get("suite", suite_sha)
+    ids = {store.get("task", sha).task_id: sha for sha in old.task_sha256s}
+    unknown = sorted(set(keep) - set(ids))
+    if unknown or not keep:
+        raise ValueError(f"not tasks of suite {suite_sha[:12]}: {', '.join(unknown) or '(none named)'}")
+    return revise(store, suite_sha, context, remove=tuple(sha for tid, sha in ids.items() if tid not in set(keep)), at=at, notes=notes, by=by)
 
 
 if __name__ == "__main__":

@@ -165,7 +165,7 @@ describe('M9 presentation patch (I1, I3)', () => {
     for (const s of ['1/4', '4/4', 'inconclusive']) expect(text).toContain(s);                     // the earlier Ironbark story is kept
     const link = [...host.querySelectorAll('a')].find(a => a.getAttribute('href') === `#/reports/${LATEST_LIVE.id}`)!;
     expect(link).toBeTruthy();
-    expect(link.textContent).toContain('Latest live evaluation');
+    expect(link.textContent).toContain('Complete live evaluation');
     expect(link.textContent).toContain('12 agent runs finished');
     expect(link.textContent).toContain('official grader v1: 1/6 → 2/6 passed');
     expect(link.textContent).toContain('post-hoc grader v2: 2/6 → 4/6');

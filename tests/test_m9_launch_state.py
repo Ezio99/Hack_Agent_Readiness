@@ -55,7 +55,7 @@ def test_the_used_launch_is_not_an_available_worker(tmp_path):
     """Production after the paid run: the worker is healthy, but the single authorised launch is used."""
     c = _config(tmp_path, _cfg(ev=_ev(left=0, available=False)))
     assert c["worker"]["state"] == "idle" and c["service"]["state"] == "operational"
-    assert c["launch"]["authorized"] is False and c["launch"]["reason"] == "launches_exhausted" and "new owner authorisation" in c["launch"]["detail"]
+    assert c["launch"]["authorized"] is False and c["launch"]["reason"] == "launches_exhausted" and "All live runs" in c["launch"]["detail"]
     assert c["available"] is False and c["reason"] == "launches_exhausted" and c["repetitions"] == []
 
 

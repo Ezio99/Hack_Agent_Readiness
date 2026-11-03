@@ -9,6 +9,8 @@ Configuration (environment; nothing is accepted from requests):
 * ``AR_HOSTED_CEILING_USD``: global hosted spending ceiling, required unless disabled.
   Every evaluation reserves US$1.65 per repetition against it, permanently.
 * ``AR_OPERATOR_TOKEN_FILE`` (default ``/run/secrets/operator_token``),
+* ``AR_JUDGE_TOKEN_FILE`` (M9, optional; default ``/run/secrets/judge_token`` when that file exists): a separate, launch-only judge access code
+  (operator access only). It may start the armed evaluation and nothing else; absent, too short or equal to the operator token = judge access off.
   ``META_MODEL_API_KEY_FILE`` (provider key, read only by the worker; live only).
 * ``AR_HOSTED_DATA`` (default ``/data/hosted``; live/disabled use ``live/``, rehearsal ``rehearsal/``,
   each with its own admission database), ``AR_HOSTED_ROOT`` (explicit override), ``AR_STATIC_DIR`` (dashboard build),
@@ -215,15 +217,25 @@ def build():
             reason = exc.code
             log(f'evaluations disabled [{exc.code}]: {exc}')
 
+    judge_token = None
+    judge_path = os.environ.get('AR_JUDGE_TOKEN_FILE') or ('/run/secrets/judge_token' if Path('/run/secrets/judge_token').exists() else None)
+    if executor is not None and access == 'operator' and judge_path:
+        try:
+            judge_token = _secret(judge_path, 'judge_token', min_length=24)
+        except Unavailable as exc:
+            log(f'judge access off [{exc.code}]')
+        if judge_token is not None and operator_token is not None and judge_token == operator_token:
+            judge_token = None
+            log('judge access off: the judge code must differ from the operator token')
     lifecycle = build_lifecycle(paths, root, admission, executor, _client_key(root))
     static = os.environ.get('AR_STATIC_DIR')
     proxies = [p for p in os.environ.get('AR_TRUSTED_PROXIES', '').split(',') if p.strip()]
     app = create_app(root, admission, client_key=_client_key(root), executor=executor, trusted_proxies=proxies,
                      static_dir=Path(static) if static else None, operator_token=operator_token,
-                     public_start=(access == 'public'), unavailable_reason=reason, mode=mode, lifecycle=lifecycle)
+                     public_start=(access == 'public'), unavailable_reason=reason, mode=mode, lifecycle=lifecycle, judge_token=judge_token)
     app.state.lock = lock
     log(f'mode={mode} access={access} evaluations={"enabled" if executor else "disabled"}'
-        f'{" reason=" + reason if reason else ""} jail={"verified" if executor else "unused"} engine={"stage-b" if executor else "none"} armed={arming_state(executor)}')
+        f'{" reason=" + reason if reason else ""} jail={"verified" if executor else "unused"} engine={"stage-b" if executor else "none"} armed={arming_state(executor)} judge_access={"on" if judge_token else "off"}')
     return app
 
 
