@@ -169,6 +169,40 @@
       "basis": "CALCULATED from provider-reported usage (111 requests; 1054811 prompt + 47571 completion tokens) at published prices; not a bill; all requests settled, none above its reservation",
       "source": "scanner-data/research/stage-b/ledgers/m7-larkspur-browser-1/ledger.jsonl (git-ignored); run evalrun-paid-64a55c5f3a-natural",
       "authorized_by": "owner (conditional chat authorisation 2026-11-02, amended to 12 trials and US$8.00; satisfied by the owner's terminal approval and freeze of larkspur-core v2)"
+    },
+    {
+      "id": "reconciliation-event-period-1",
+      "label": "Event-period spend previously listed as unreconciled (reconciliation.unreconciled), found in local durable ledgers and de-duplicated across forks by (request id, timestamp)",
+      "usd": 3.820762,
+      "components_usd": {
+        "L0 probes (investigations/l0-probe, l0-probe-2, l0-probe-3; one unsettled reservation of 0.000950 counted in full)": 0.040162,
+        "L1a/EXP-B investigations/site-5-live (+ -b, -c fork increments)": 1.534404,
+        "EXP-2 investigations/exp2-pilot-1": 1.141478,
+        "live task-generation smoke/exposure scanner-data/live/live-{46b6ba92b8,96a6c3ab04,b6d91a8a33,bb5d48501b,cb37cc9849,d722f23670}": 0.981919,
+        "investigator replay scanner-data/live/replay-4bad5b1b, increment over its imported history": 0.122799
+      },
+      "basis": "CALCULATED; settled amounts from each durable ledger, an unsettled reservation counted in full; not a bill",
+      "source": "local git-ignored ledgers listed in components_usd; reconciliation in collaboration/reports/lifecycle-m8-product-integration.md §8.1, re-verified independently in collaboration/reports/m9-final-sprint.md §2",
+      "authorized_by": "not a new authorisation: records spend already incurred during the event (reconciliation only)",
+      "appended": "2026-11-03, with the owner's explicit authorisation, after independent reconciliation (proposal collaboration/budget/proposals/m9-ledger-append.json)"
+    },
+    {
+      "id": "correction-task012-stage1-1",
+      "label": "Correction to entry task012-stage1: recorded 0.718, durable ledger runs/experiment-012/live/ledger.jsonl settles 0.718336 (the original entry is kept verbatim)",
+      "usd": 0.000336,
+      "basis": "CALCULATED difference between the durable ledger and the recorded entry; not a bill",
+      "source": "runs/experiment-012/live/ledger.jsonl (git-ignored)",
+      "authorized_by": "not a new authorisation: correction only",
+      "appended": "2026-11-03, with the owner's explicit authorisation, after independent reconciliation (proposal collaboration/budget/proposals/m9-ledger-append.json)"
+    },
+    {
+      "id": "hosted-stageb-live-1",
+      "label": "Hosted production evaluation eval-e529db2aafecbfddd21e5c571eb85243 (Stage B engine, owner arming larkspur-live-1, launch 1 of 1): larkspur-core v2 (frozen 0816af7f7440; manifest 64a55c5f3a93), 6 natural tasks x Original/Modified x 1 repetition = 12 jailed trials, muse-spark-1.3, reasoning_effort low, profile suite-v2-compat2; 12/12 trials completed; hosted reservation US$7.436, experiment cap US$8.00",
+      "usd": 1.546226,
+      "basis": "CALCULATED from provider-reported usage: 112 requests reserved before sending and settled (0 unsettled, 0 above its reservation); 1059177 prompt + 52296 completion tokens (token-level total 1.54622925; per-request settlement rounded to microdollars sums to 1.546226); not a bill",
+      "source": "VM /data/hosted/lifecycle/stage-b/ledgers/larkspur-live-1-l1/ledger.jsonl (224 lines, sha256 e46757001151cd07…); local copy scanner-data/hosted-copy-m9/ (git-ignored)",
+      "authorized_by": "owner (explicit chat authorisations 2026-11-03: ceiling migration to US$10.736; paid arming larkspur-live-1; one paid launch)",
+      "appended": "2026-11-03, with the owner's explicit authorisation, after independent reconciliation (proposal collaboration/budget/proposals/m9-ledger-append.json)"
     }
   ],
   "recorded_runtime_stages": [
@@ -239,6 +273,30 @@
       "known_spend_subtotal_before_usd": 11.898286,
       "known_spend_subtotal_after_usd": 13.418982,
       "note": "Appended only; earlier entries unchanged. The US$8.00 cap and US$7.392 worst-case reservation are limits, not spend."
+    },
+    "reconciliation_addendum_1": {
+      "as_of": "2026-11-03",
+      "added_entry": "reconciliation-event-period-1",
+      "added_usd": 3.820762,
+      "known_spend_subtotal_before_usd": 13.418982,
+      "known_spend_subtotal_after_usd": 17.239744,
+      "note": "Appended only, with the owner's explicit authorisation of 2026-11-03 after independent reconciliation against every local durable ledger (collaboration/reports/m9-final-sprint.md §2); earlier entries and addenda unchanged. Records event-period spend that reconciliation.unreconciled listed as outside the entries (L0 probes, L1a/EXP-B site-5-live forks, EXP-2, live taskgen smoke/exposure, investigator replay); de-duplicated across forks by (request id, timestamp); an unsettled L0 reservation of 0.000950 is counted in full."
+    },
+    "correction_addendum_1": {
+      "as_of": "2026-11-03",
+      "added_entry": "correction-task012-stage1-1",
+      "added_usd": 0.000336,
+      "known_spend_subtotal_before_usd": 17.239744,
+      "known_spend_subtotal_after_usd": 17.24008,
+      "note": "Appended only, with the owner's explicit authorisation of 2026-11-03 after independent reconciliation against every local durable ledger (collaboration/reports/m9-final-sprint.md §2); earlier entries and addenda unchanged. Corrects task012-stage1 (recorded 0.718) to its durable ledger (0.718336); the original entry is kept verbatim. task011 (recorded 0.351 vs ledger 0.347663) and research-taskplan-1 (an unconfirmed reservation counted in full) stay as recorded, conservatively."
+    },
+    "hosted_addendum_3": {
+      "as_of": "2026-11-03",
+      "added_entry": "hosted-stageb-live-1",
+      "added_usd": 1.546226,
+      "known_spend_subtotal_before_usd": 17.24008,
+      "known_spend_subtotal_after_usd": 18.786306,
+      "note": "Appended only, with the owner's explicit authorisation of 2026-11-03 after independent reconciliation against every local durable ledger (collaboration/reports/m9-final-sprint.md §2); earlier entries and addenda unchanged. Production evaluation eval-e529db2aafecbfddd21e5c571eb85243 (launch 1 of 1 under owner arming larkspur-live-1); the hosted reservation (US$7.436, never released; ceiling US$10.736 fully reserved) is capacity, not spend. Known spend 18.786306 = A$28.18 at the 1.50 planning rate; A$21.82 of the A$50 planning ceiling remains (a limit, not an authorisation). Calculated, not provider-invoiced."
     }
   }
 }
