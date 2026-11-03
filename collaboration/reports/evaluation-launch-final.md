@@ -161,3 +161,21 @@ curl -s https://$SITE/api/ironbark/config | python3 -c "import json,sys;c=json.l
 - The opening confirmation and global cap (US$39.029333 = 21.956 + 13.333333 + 3.740) were checked on a copy of production.
 
 Not run: the 33-minute CI suite; nothing on production.
+
+## 8. Production deployment and budget opening (owner-approved, 2026-11-03/04 UTC)
+
+| Step | Result |
+|---|---|
+| A0 pre-flight | Exactly the audited state: image `d40199ef…`; `admission.sqlite` `6868bc95…`; ceiling 21.956 / settled 0.631751 / available 10.588249; `larkspur-judge-1` 2 left; worker idle; Stage B tree identical; 2 421 evidence files identical |
+| A1–A2 | Backup `/root/backups/predeploy-final-20261103T210207Z.tgz` (2 421 files, verified). Clean build of `9ac4485`: image **`sha256:1545dd81af83…`**, bundle `index-bcJLU8Sj.js` = local build, programme ledger `1f0c42cc…`, snapshots unchanged |
+| A3 | New-image read-only commands correct; disabled smoke test on a volume copy 10/10, 0 tracebacks; DB unchanged |
+| A4–A5 | `rollback-dde7e22` = `d40199ef…`; `latest` = `1545dd81…`, healthy, 0 restarts, 0 tracebacks. Public checks 16/16. Evidence 2 421/2 421, only `admission.sqlite` changed (empty new tables); job rows `b337ab49…` and migrations `73e7d874…` unchanged; no code in logs; uid 10001, CapEff 0 |
+| B (owner typed) | `/root/open-budget.sh`: pre-checks passed; backups `admission-pre-budget-20261103T210639Z.sqlite` (verified) and `stage-b-pre-budget-…tgz`; the owner typed the confirmation |
+| C verify | Public 19/19:<br>• budget `ar-a20-2026-11` A$20.00 fresh;<br>• global cap **US$39.029333**;<br>• launch authorised, no launch count;<br>• evaluation `larkspur-core@v3` Original vs Improved (selected);<br>• ceiling scope and the A$50 programme (A$29.13 / A$45.01) unchanged;<br>• historical jobs not in the budget.<br>Evidence: the only additions are `budget-pools/ar-a20-2026-11.json` and the budget rows. **Judge code on the unified path** (no launch): a valid code with a malformed key → 422 (the code is accepted, nothing reserved); a wrong code → 403 |
+| Browser (production, GET only) | Home, Workspace (budget line and soft-cap line, Original vs Improved, "runs while the budget lasts", code field, Run waiting for a code), live report, first report, archive, How it works: OK, 0 errors.<br>**FAIL: the journey page (`#/demo`, `#/lifecycle`) renders blank:** "Cannot read properties of null (reading 'left')". `Lifecycle.tsx` reads the judge arming's launch count, which the budget evaluation does not have (`launches: null`). Not covered by the tests (they never rendered the journey with the budget open) |
+
+**Status:** stopped as instructed. No further production change was made. **Fix:** commit "Journey page: handle the shared budget's evaluation without a launch count" (`Lifecycle.tsx`, `lifecycleApi.ts`). The regression test reproduces the crash without the fix and passes with it; dashboard 224 passed, tsc clean. Not deployed.
+
+**Options (owner decision):**
+- **(a) Hotfix deploy (recommended):** the same image-only procedure §5 A0–A5 for the fix commit. About 10 minutes; the budget stays open; no data change.
+- **(b) Undo the opening:** restore the pre-budget backups. The journey works again, but launches revert to `larkspur-judge-1` (2 left).
