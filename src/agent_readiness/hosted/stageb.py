@@ -157,7 +157,7 @@ class StageBExecutor(J.LifecycleExecutor):
             where = site_view(pool.site)["label"]
         except Exception:
             where = pool.site
-        label = f"{'Live' if mode == 'paid' else 'Rehearsal'} evaluation · {where} · {pool.variants[0][0].capitalize()} vs {pool.variants[1][0].capitalize()}"
+        label = f"{'Live' if mode == 'paid' else 'Rehearsal'} evaluation · {where} · {' vs '.join(display(n) for n, _ in pool.variants)}"
         J.new_job(self.runs_root, job_id, manifest_sha=opt.manifest_sha256, mode=mode, label=label,
                   request={"repetitions": repetitions, "budget": pool.budget, "experiment": claim["experiment_id"], "frozen_suite": pool.frozen_suite,
                            "variants": [n for n, _ in pool.variants], "manifest_basis": "the owner's budget pool", "reservation_usd": amount / 1e6})
@@ -175,16 +175,23 @@ def _runs(runs_root: Path, job: dict):
     return [InvestigationRun(runs_root / rel) for rel in (job.get("runs") or {}).values()]
 
 
+DISPLAY = {"polished": "Polished v1", "polished2": "Polished v2"}           # judge-facing names of website versions (default: capitalised)
+
+
+def display(name: str) -> str:
+    return DISPLAY.get(name, name.capitalize())
+
+
 def _arm_labels(job: dict) -> dict:
     """Positional arm KEYS (first and second website version): they name the hosted routes (`trials/original|modified/<n>`) and the status shape,
     so they never change. What each arm SHOWS is `arm_display` (e.g. Original vs Improved)."""
     v = (job.get("request") or {}).get("variants") or ["original", "modified"]
-    return {v[0]: "Original", v[1]: "Modified"}
+    return dict(zip(v, ("Original", "Modified")))                   # a single-version evaluation has one arm (key "Original")
 
 
 def arm_display(job: dict) -> dict:
     v = (job.get("request") or {}).get("variants") or ["original", "modified"]
-    return {"Original": v[0].capitalize(), "Modified": v[1].capitalize()}
+    return dict(zip(("Original", "Modified"), (display(n) for n in v)))
 
 
 def _outcome(rec: dict) -> str:
@@ -248,7 +255,7 @@ def job_status(runs_root: Path, job_id: str, held_state: str, *, recovery_requir
         st = "completed" if out and all(t["state"] == "completed" for t in out) else ("running" if held_state in ("reserved", "running") else job["state"] if job["state"] != "completed" else "completed")
         reps.append({"index": r, "state": st if out else ("preparing" if held_state in ("reserved", "running") else "incomplete"), "tasks": out, "assessment": None})
     summary = {}
-    for arm in ("Original", "Modified"):
+    for arm in labels.values():
         rs = [t for rep in reps for t in rep["tasks"] if t["arm"] == arm]
         done = [t for t in rs if t["state"] == "completed"]
         mean = lambda k: round(sum(t[k] for t in done) / len(done), 2) if done and all(t.get(k) is not None for t in done) else None
@@ -257,7 +264,7 @@ def job_status(runs_root: Path, job_id: str, held_state: str, *, recovery_requir
                         "strict_passes": sum(t["outcome"] in ("evidence_supported_pass", "strict_pass") for t in done),
                         "requests_total": sum(t.get("requests") or 0 for t in done), "requests_mean": mean("requests"), "page_views_mean": mean("page_views"),
                         "steps_mean": mean("steps"), "elapsed_mean": mean("elapsed_seconds")}
-    planned = len(tasks) * reps_n * 2 if tasks else None
+    planned = len(tasks) * reps_n * len(labels) if tasks else None
     trials = [t for rep in reps for t in rep["tasks"]]
     ran = [rows[n] for n in rows]
     exec_state = job["state"] if job["state"] in TERMINAL else ("running" if held_state in ("reserved", "running") else job["state"])
@@ -275,7 +282,7 @@ def job_status(runs_root: Path, job_id: str, held_state: str, *, recovery_requir
             "reps": reps, "summary": summary, "summary_v2": v2, "report": job_id if report_status["state"] == "available" else None,
             "evaluation": {k: (job.get("request") or {}).get(k) for k in ("frozen_suite", "variants", "repetitions")},
             "arm_display": arm_display(job),
-            "error": job.get("error"), "stopped": job.get("stopped"), "tasks_planned": len(tasks) * reps_n * 2 if tasks else None}
+            "error": job.get("error"), "stopped": job.get("stopped"), "tasks_planned": planned}
 
 
 def _latest_attempt(runs_root: Path, job: dict):

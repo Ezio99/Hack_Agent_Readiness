@@ -45,12 +45,12 @@ def test_original_and_modified_are_unchanged_byte_for_byte():
 def test_improved_is_a_registered_release_not_part_of_the_generation_pair():
     site = get("larkspur")
     assert site.variants == ("original", "modified")                 # tasks are generated and validated on this pair (recorded datasets re-derive)
-    assert site.releases == ("improved",) and site.registered == ("original", "modified", "improved")
+    assert site.releases[0] == "improved" and site.registered[:3] == ("original", "modified", "improved")     # later releases follow (polished)
     a = render.snapshot("improved").sha256
     I.snapshot.cache_clear()
     assert I.snapshot().sha256 == a and a not in (ORIGINAL, MODIFIED)
     view = LS.site_view("larkspur")
-    assert [v["name"] for v in view["variants"]] == ["original", "modified", "improved"]
+    assert [v["name"] for v in view["variants"]][:3] == ["original", "modified", "improved"]
     assert all(v["description"] for v in view["variants"])
 
 

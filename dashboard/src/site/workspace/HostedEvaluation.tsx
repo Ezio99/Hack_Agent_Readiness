@@ -4,7 +4,7 @@ import { Analytics } from './Analytics';
 import { Insights } from './Insights';
 import { History, type HistoryItem } from './History';
 import { Report } from '../lifecycle/Report';
-import type { Evaluation } from '../../lib/lifecycleApi';
+import { VARIANT_LABEL, type Evaluation } from '../../lib/lifecycleApi';
 
 /** Hosted evaluation workspace: compose (website, repetitions, run) → live progress → results → history.
  *  Every number shown here comes from the server's job status; nothing is simulated in the browser.
@@ -25,7 +25,7 @@ type ArmV2 = { completed: number; evidence_supported_passes: number; strict_pass
 interface ArmSummary { planned: number; completed: number; failed: number; evidence_supported_passes: number; strict_passes: number; requests_total: number; requests_mean: number | null; page_views_mean: number | null; steps_mean: number | null; elapsed_mean: number | null }
 export interface Execution { state: string; trials_planned: number | null; trials_completed: number; trials_failed: number; trials_void: number }
 export interface ReportStatus { state: 'available' | 'withheld' | 'pending' | 'unavailable' | 'unknown'; detail?: string }
-export interface Job { engine?: 'stage-b'; execution?: Execution; report_status?: ReportStatus; record_note?: string | null; report?: string | null; error?: string | null; stopped?: string | null; id: string; state: string; mode: 'live' | 'rehearsal' | null; repetitions: number | null; recovery_required?: boolean; created_at: number; started_at: number | null; finished_at: number | null; reps: Rep[]; summary: Record<'Original' | 'Modified', ArmSummary>; arm_display?: Record<'Original' | 'Modified', string> | null; accounting?: { reserved_usd: number; cost_usd: number | null; settled: boolean; budget: string | null }; summary_v2?: ({ label: string; repetitions: number } & Record<'Original' | 'Modified', ArmV2>) | null }
+export interface Job { engine?: 'stage-b'; execution?: Execution; report_status?: ReportStatus; record_note?: string | null; report?: string | null; error?: string | null; stopped?: string | null; id: string; state: string; mode: 'live' | 'rehearsal' | null; repetitions: number | null; recovery_required?: boolean; created_at: number; started_at: number | null; finished_at: number | null; reps: Rep[]; summary: { Original: ArmSummary; Modified: ArmSummary }; arm_display?: ArmNames | null; accounting?: { reserved_usd: number; cost_usd: number | null; settled: boolean; budget: string | null }; summary_v2?: ({ label: string; repetitions: number } & Record<'Original' | 'Modified', ArmV2>) | null }
 interface Worker { state: 'idle' | 'busy' | 'unavailable'; job: string | null; started_at?: number | null; repetitions?: number; finished_runs?: number; total_runs?: number | null; estimated_remaining_seconds?: number | null }
 interface ArmedEvaluation { arming_id: string; mode: 'paid' | 'rehearsal'; site: string; suite: string; frozen_suite: string; frozen_suite_sha256: string; variants: string[]; armed_at: string;
   /** null: the shared budget's evaluation has no launch count (the budget is the limit) */
@@ -89,14 +89,17 @@ export function ProvenanceNote({ p }: { p: Provenance }) {
   </p>;
 }
 
-export function ProgressGrid({ rep, questions, onSelect, selected, names = { Original: 'Original', Modified: 'Modified' } }: { rep: Rep; questions: Record<number, string>; onSelect?: (s: Selection) => void; selected?: Selection | null; names?: Record<'Original' | 'Modified', string> }) {
+export type ArmNames = { Original: string; Modified?: string };
+export function ProgressGrid({ rep, questions, onSelect, selected, names = { Original: 'Original', Modified: 'Modified' } }: { rep: Rep; questions: Record<number, string>; onSelect?: (s: Selection) => void; selected?: Selection | null; names?: ArmNames }) {
+  const arms = (names.Modified ? ['Original', 'Modified'] : ['Original']) as ('Original' | 'Modified')[];   // a single-version evaluation has one arm
+  const swatch = (n: string | undefined, arm: string) => arm === 'Original' && arms.length === 2 ? 'o' : n?.startsWith('Polished') ? 'p' : n === 'Improved' ? 'i' : 'm';
   const numbers = [...new Set([...rep.tasks.map(t => t.task), ...Object.keys(questions).map(Number)])].sort((a, b) => a - b);
   const find = (arm: string, task: number) => rep.tasks.find(t => t.arm === arm && t.task === task);
   const v2 = (arm: string, task: number) => rep.grading_v2?.faithful ? rep.grading_v2.tasks.find(t => t.arm === arm && t.task === task) : undefined;
   return <table className="ws-grid" aria-label={`Repetition ${rep.index} task progress`}>
-    <thead><tr><th scope="col">Task</th><th scope="col"><span className="swatch o" aria-hidden="true" />{names.Original}</th><th scope="col"><span className={`swatch ${names.Modified === 'Improved' ? 'i' : 'm'}`} aria-hidden="true" />{names.Modified}</th></tr></thead>
+    <thead><tr><th scope="col">Task</th>{arms.map(arm => <th key={arm} scope="col"><span className={`swatch ${swatch(names[arm], arm)}`} aria-hidden="true" />{names[arm]}</th>)}</tr></thead>
     <tbody>{(numbers.length ? numbers : [1, 2, 3, 4]).map(n => <tr key={n}><th scope="row"><span className="ws-task-n">Task {n}</span><small>{questions[n] ?? ''}</small></th>
-      {(['Original', 'Modified'] as const).map(arm => { const t = find(arm, n), c = cell(t), key = arm.toLowerCase() as 'original' | 'modified';
+      {arms.map(arm => { const t = find(arm, n), c = cell(t), key = arm.toLowerCase() as 'original' | 'modified';
         const isSel = selected?.repetition === rep.index && selected.arm === key && selected.task === n;
         const body = <><span className="ws-glyph" aria-hidden="true">{c.glyph}</span><span className="ws-cell-text"><strong>{c.text}</strong>
           {t?.state === 'completed' && <small>{t.requests ?? '–'} requests · {t.page_views ?? '–'} pages{t.elapsed_seconds != null ? ` · ${Math.round(t.elapsed_seconds)} s` : ''}</small>}
@@ -275,10 +278,13 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
   const watch = (s: Selection) => { setSelection(s); setTab('watch'); requestAnimationFrame(() => agent.current?.scrollIntoView?.({ behavior: reduce() ? 'auto' : 'smooth', block: 'start' })); };
 
   const questions = Object.fromEntries((config?.tasks ?? []).map(t => [t.task, t.question]));
-  const cap = (v: string | undefined, d: string) => v ? v.charAt(0).toUpperCase() + v.slice(1) : d;
-  const armedNames = { Original: cap(config?.evaluation?.variants?.[0], 'Original'), Modified: cap(config?.evaluation?.variants?.[1], 'Modified') };
-  const names = job?.arm_display ?? (job ? { Original: 'Original', Modified: 'Modified' } : armedNames);
-  const lowerNames = { original: names.Original, modified: names.Modified };
+  const cap = (v: string | undefined, d: string) => v ? VARIANT_LABEL(v) : d;
+  const armedVariants = config?.evaluation?.variants ?? [];
+  const single = armedVariants.length === 1;                                     // one website version evaluated on its own (e.g. Polished)
+  const armedNames: ArmNames = single ? { Original: cap(armedVariants[0], 'Original') } : { Original: cap(armedVariants[0], 'Original'), Modified: cap(armedVariants[1], 'Modified') };
+  const names: ArmNames = job?.arm_display ?? (job ? { Original: 'Original', Modified: 'Modified' } : armedNames);
+  const lowerNames = { original: names.Original, modified: names.Modified ?? names.Original };
+  const siteWords = single ? <>the <strong>{armedNames.Original}</strong> site</> : <>the <strong>{armedNames.Original}</strong> and the <strong>{armedNames.Modified}</strong> site</>;
   const SITE_HOST: Record<string, string> = { larkspur: 'larkspur-college', ironbark: 'ironbark-hire' };
   const operatorOnly = config?.access === 'operator';
   const running = !!job && ACTIVE.includes(job.state);
@@ -286,7 +292,7 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
   const stageB = config?.engine === 'stage-b';
   const ev = config?.evaluation ?? null;
   const nTasks = config?.tasks?.length || 4;
-  const runsPerRep = 2 * nTasks;
+  const runsPerRep = (single ? 1 : 2) * nTasks;
   const done = job ? job.reps.reduce((a, r) => a + r.tasks.filter(t => t.state === 'completed' || t.state === 'failed').length, 0) : 0;
   const total = job?.engine === 'stage-b' ? job.reps.reduce((a, r) => a + r.tasks.length, 0) : (job?.repetitions ?? 0) * 8;
   // M9: a Stage B job shows what EXECUTED; the preserved admission record is shown beside it when the two differ (see record_note).
@@ -319,8 +325,8 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
       <div>
         <p className="eyebrow">Evaluation workspace</p>
         <h1 className="ws-title">Run real agents on a website.</h1>
-        <p className="ws-lede">Fresh Muse Spark browser agents do real customer tasks on two versions of a website. Every answer is checked against the site’s own records, and the report shows where agents got stuck and what to change.</p>
-        <p className="ws-lede-note">{stageB && ev ? <>This live evaluation gives {nTasks} customer task{nTasks === 1 ? '' : 's'} from the <a className="ws-link" href="#/lifecycle/review">{ev.site === 'larkspur' ? 'Larkspur' : ev.site} task set</a> to browser agents on the <strong>{armedNames.Original}</strong> and the <strong>{armedNames.Modified}</strong> site.{armedNames.Modified === 'Improved' ? <> The Improved site applies every recommendation from the <a className="ws-link" href="#/lifecycle/improve">first evaluation</a>.</> : null} </> : null}The websites are frozen copies of the fictional Larkspur Community College; the improvements were made by hand from the report.</p>
+        <p className="ws-lede">Fresh Muse Spark browser agents do real customer tasks on {single ? 'a website' : 'two versions of a website'}. Every answer is checked against the site’s own records, and the report shows where agents got stuck and what to change.</p>
+        <p className="ws-lede-note">{stageB && ev ? <>This live evaluation gives {nTasks} customer task{nTasks === 1 ? '' : 's'} from the <a className="ws-link" href="#/lifecycle/review">{ev.site === 'larkspur' ? 'Larkspur' : ev.site} task set</a> to browser agents on {siteWords}.{armedNames.Modified === 'Improved' ? <> The Improved site applies every recommendation from the <a className="ws-link" href="#/lifecycle/improve">first evaluation</a>.</> : null}{single ? <> No baseline runs beside it: the agents measure how well this version works on its own.</> : null} </> : null}{single ? 'The website is a frozen copy of the fictional Larkspur Community College.' : 'The websites are frozen copies of the fictional Larkspur Community College; the improvements were made by hand from the report.'}</p>
       </div>
       {config && <div className={`ws-worker ${worker?.state === 'idle' && stageB && config.launch && !config.launch.authorized ? 'blocked' : worker?.state ?? 'unavailable'}`} role="status">
         <span className="ws-dot" aria-hidden="true" />
@@ -340,12 +346,12 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
         <ol className="ws-steps">
           <li><span className="ws-step">01 · Website</span>
             {stageB ? <div className="ws-target" aria-label="Selected website">{ev ? <><strong>{ev.site === 'larkspur' ? 'Larkspur Community College' : ev.site === 'ironbark' ? 'Ironbark Hire Co.' : ev.site}</strong>
-                <small>{nTasks} customer task{nTasks === 1 ? '' : 's'} · {armedNames.Original} vs {armedNames.Modified} site · {ev.launches ? `${ev.launches.left} of ${ev.launches.max} live run${ev.launches.max === 1 ? '' : 's'} left` : 'runs while the budget lasts'}</small></>
+                <small>{nTasks} customer task{nTasks === 1 ? '' : 's'} · {single ? `${armedNames.Original} site` : `${armedNames.Original} vs ${armedNames.Modified} site`} · {ev.launches ? `${ev.launches.left} of ${ev.launches.max} live run${ev.launches.max === 1 ? '' : 's'} left` : 'runs while the budget lasts'}</small></>
                 : <><strong>No evaluation armed</strong><small>The owner selects and authorises the frozen suite at the server terminal.</small></>}</div>
               : <div className="ws-target" aria-label="Selected website"><strong>No evaluation available</strong><small>New evaluations are not available on this server right now; recorded evaluations remain available.</small></div>}</li>
           {stageB && (config?.repetitions?.length ?? 0) <= 1
             ? <li><span className="ws-step">02 · What runs</span>
-                <p className="ws-run-summary">{ev ? `${runsPerRep} browser agents, one per task on each site · ${minutes(perRep)}` : 'Nothing to run right now.'}</p>
+                <p className="ws-run-summary">{ev ? `${runsPerRep} browser agents, one per task${single ? '' : ' on each site'} · ${minutes(perRep)}` : 'Nothing to run right now.'}</p>
                 {ev && (config?.tasks?.length ?? 0) > 0 && <ol className="ws-task-list">{config!.tasks.map(t => <li key={t.task}><q>{t.question}</q></li>)}</ol>}</li>
             : <li><span className="ws-step">02 · Repetitions</span>
             <div className="ws-reps" role="radiogroup" aria-label="Paired repetitions">{(config?.repetitions ?? [1, 3, 5]).map(n =>
@@ -432,7 +438,7 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
 
           {tab === 'results' && job.engine === 'stage-b' && <div role="tabpanel" id="ws-panel-results" aria-labelledby="ws-tab-results" className="ws-panel"><StageBReport job={job} /></div>}
           {tab === 'results' && job.engine !== 'stage-b' && <div role="tabpanel" id="ws-panel-results" aria-labelledby="ws-tab-results" className="ws-panel">
-            {job.summary.Original.completed + job.summary.Modified.completed > 0 ? <Metrics job={job} /> : <p className="ws-empty-note">Results appear as agent runs are graded.</p>}
+            {job.summary.Original.completed + (job.summary.Modified?.completed ?? 0) > 0 && job.summary.Modified ? <Metrics job={job} /> : <p className="ws-empty-note">Results appear as agent runs are graded.</p>}
             <Analytics job={job} questions={questions} />
             <div className="ws-rep-list">{job.reps.map(rep => <article key={rep.index} className="ws-rep">
               <header><strong>Repetition {rep.index}</strong><span className={`ws-pill ${rep.state}`}>{label(rep.state)}</span>

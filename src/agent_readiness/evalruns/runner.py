@@ -384,7 +384,7 @@ def _diagnostics(run: InvestigationRun, variants: list[str]) -> dict:
     try:
         from ..diagnostics import run as D
         site = get(run.state["config"]["site"])
-        if len(variants) != 2 or any(v not in site.registered for v in variants):
+        if len(variants) not in (1, 2) or any(v not in site.registered for v in variants):     # one version alone: per-version findings only
             return {"available": False, "reason": "diagnostics compare two of the site's registered versions; this manifest uses other snapshots"}
         bundle = D.from_framework_run(run.dir)
         bundle["origin"] = "dev_fixture" if run.state["config"]["mode"] == "rehearsal" else "real_model"

@@ -211,8 +211,10 @@ def plan(store, *, arming_id: str, mode: str, frozen_ref: str, variants: list[st
     if mode == "paid" and synthetic:
         raise ArmingRefused("synthetic_suite", "a synthetic fixture suite can never be evaluated with a paid model")
     reg = registered_variants(suite.site)
-    if len(variants) != 2 or len(set(variants)) != 2 or any(v not in reg for v in variants):
-        raise ArmingRefused("invalid_variants", f"choose two different registered variants of {suite.site}: {', '.join(reg)}", 422)
+    counts = (1, 2) if _pool else (2,)                     # a budget evaluation may evaluate ONE website version alone; judge armings stay paired
+    if len(variants) not in counts or len(set(variants)) != len(variants) or any(v not in reg for v in variants):
+        raise ArmingRefused("invalid_variants", f"choose {'one registered version, or ' if _pool else ''}two different registered variants of {suite.site}: "
+                            f"{', '.join(reg)}", 422)
     pairs = [(v, reg[v]) for v in variants]
     options, bases = [], []
     agent = None

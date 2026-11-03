@@ -103,8 +103,8 @@ SITES: dict[str, SiteDefinition] = {
                                listings=("/hire",), noun=("hire machine", "hire machines"),
                                notes="Production evaluation site; source data sites/ironbark/data.py."),
     "larkspur": SiteDefinition("larkspur", "Larkspur Community College", "short-course catalogue", True, ("original", "modified"), _larkspur_snapshot, oracle=_larkspur_oracle,
-                               listings=("/courses",), noun=("course", "courses"), releases=("improved",),
-                               notes="Second controlled site; source data sites/larkspur/data.py. `improved` applies every recommendation."),
+                               listings=("/courses",), noun=("course", "courses"), releases=("improved", "polished"),
+                               notes="Second controlled site; source data sites/larkspur/data.py. `improved` applies every recommendation; `polished` is the human-centred redesign (Polished v1)."),
     **{f"zoo-{s}": SiteDefinition(f"zoo-{s}", f"Investigation zoo {s}", "synthetic (sealed diagnoses)", False, ("original",), _zoo(s),
                                   notes="Uncontrolled for this framework: no oracle, so tasks are human-review only.") for s in ("site-1", "site-2", "site-3", "site-4")},
 }

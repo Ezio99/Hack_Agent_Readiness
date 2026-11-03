@@ -45,7 +45,7 @@ export function Report({ ev }: { ev: Evaluation }) {
         {ev.source?.kind === 'launched' && <span className="lc-mode neutral">{ev.mode === 'paid' ? 'Live run in this product' : 'Run in this product'}{ev.started_at ? ` · ${when(ev.started_at)}` : ''}</span>}</div>
       {ev.mode !== 'paid' && ev.notice && <p className="lc-notice" role="note">{ev.notice}</p>}
       <dl className="lc-facts">
-        <div><dt>Agent runs</dt><dd><strong>{done}/{planned || ev.trials.length} finished</strong>{ex.some(x => x.stopped) ? ' · the run stopped early' : ''} · {ev.tasks.filter(t => t.executed).length} tasks on {vs.length} versions of the site</dd></div>
+        <div><dt>Agent runs</dt><dd><strong>{done}/{planned || ev.trials.length} finished</strong>{ex.some(x => x.stopped) ? ' · the run stopped early' : ''} · {ev.tasks.filter(t => t.executed).length} tasks on {vs.length === 1 ? 'one version of the site, evaluated on its own' : `${vs.length} versions of the site`}</dd></div>
         <div><dt>Website versions</dt><dd>{vs.map(v => <span key={v} className="lc-inline"><VariantName v={v} /></span>)}</dd></div>
         <div><dt>Agent</dt><dd>{ev.mode === 'paid' ? `${ev.agent.model}, reasoning ${ev.agent.reasoning_effort ?? '–'}` : `${ev.execution_provider} (the declared model ${ev.agent.model} was not called)`} · Browser Use in an isolated Chromium</dd></div>
         <div><dt>Task set</dt><dd>{ev.suite.name} v{ev.suite.version} · approved by the {ev.approval.role}{ev.approval.synthetic ? ' (test fixture)' : ''}</dd></div>

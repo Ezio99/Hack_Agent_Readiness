@@ -35,8 +35,7 @@ def line(job: dict) -> str:
     total = job.get('tasks_planned') or (sum(len(r['tasks']) for r in job['reps']) if job.get('engine') == 'stage-b' else 8 * (job['repetitions'] or 0))
     s = job['summary']
     text = (f"{job['state']:<11} {done}/{total} runs | reps {[r['state'] for r in job['reps']]} | "
-            f"Original {s['Original']['evidence_supported_passes']}/{s['Original']['completed']} ({s['Original']['requests_total']} req) | "
-            f"Modified {s['Modified']['evidence_supported_passes']}/{s['Modified']['completed']} ({s['Modified']['requests_total']} req)")
+            + " | ".join(f"{a} {s[a]['evidence_supported_passes']}/{s[a]['completed']} ({s[a]['requests_total']} req)" for a in ('Original', 'Modified') if a in s))
     reason = job.get('stopped') or job.get('error')
     return text + (f" | {reason}" if reason else '')
 

@@ -578,8 +578,8 @@ def test_the_owner_can_switch_the_budget_to_another_approved_immutable_pair(prod
     first = ex.admit(jid(1100), "%064x" % 1100, 1, charge="budget")["id"]
     a.transition(first, "reserved", "failed")
     before = {p: sha(p) for p in sb.rglob("*") if p.is_file()}
-    with pytest.raises(BG.BudgetRefused, match="registered variants"):              # an unregistered website version (e.g. Polished before it ships)
-        BG.plan_evaluation(a, store, budget=B, pool_id="ar-a20-polished", frozen="larkspur-core@v3", variants=["original", "polished"])
+    with pytest.raises(BG.BudgetRefused, match="registered variants"):              # an unregistered website version (one that has not shipped)
+        BG.plan_evaluation(a, store, budget=B, pool_id="ar-a20-unshipped", frozen="larkspur-core@v3", variants=["original", "unshipped"])
     with pytest.raises(BG.BudgetRefused, match="no frozen suite"):                  # an unreviewed / unknown suite
         BG.plan_evaluation(a, store, budget=B, pool_id="ar-a20-x", frozen="larkspur-core@v99", variants=["original", "modified"])
     with pytest.raises(BG.BudgetRefused, match="not open"):
@@ -606,3 +606,29 @@ def test_the_owner_can_switch_the_budget_to_another_approved_immutable_pair(prod
         BG.use_evaluation(B, "never-recorded")
     st = BG.status(Admission.open_read_only(a.path))["budgets"][0]
     assert st["selected_evaluation"] == "ar-a20-orig-mod" and {e["id"] for e in st["evaluations"]} == {B, "ar-a20-orig-mod"}
+
+
+def test_a_budget_evaluation_can_evaluate_one_registered_version_alone(prod, monkeypatch):
+    """Polished v1 evaluated on its own (no Original baseline): the same frozen suite, agent and limits; half the trials and half the per-run maximum
+    of a pair; recorded and selected only by the owner; judge armings stay paired; the job status has exactly one arm."""
+    AR, store, a, ex, sb = _pool_env(prod, monkeypatch)
+    _open_pool(a, store)
+    with pytest.raises(BG.BudgetRefused, match="registered"):
+        BG.plan_evaluation(a, store, budget=B, pool_id="ar-a20-x1", frozen="larkspur-core@v3", variants=["polished", "polished"])
+    with pytest.raises(AR.ArmingRefused, match="two different registered"):         # a judge arming is still a comparison of two versions
+        AR.plan(store, arming_id="solo-arming-1", mode="paid", frozen_ref="larkspur-core@v3", variants=["polished"], repetitions=[1], launches=1)
+    t = BG.plan_evaluation(a, store, budget=B, pool_id="ar-a20-polished-v1", frozen="larkspur-core@v3", variants=["polished"])
+    pair = AR.load_pool(B)
+    assert [n for n, _ in t["variants"]] == ["polished"] and t["options"][0]["trials"] == pair.options[0].trials // 2
+    assert t["options"][0]["worst_case_usd"] * 2 == pair.options[0].worst_case_usd and t["options"][0]["reservation_microusd"] == 1_892_000   # US$1.848 + one request
+    BG.add_evaluation(a, store, budget=B, pool_id="ar-a20-polished-v1", frozen="larkspur-core@v3", variants=["polished"], typed=t["attestation"],
+                      at="2026-11-04T00:00:00+00:00")
+    BG.use_evaluation(B, "ar-a20-polished-v1")
+    assert ex.configuration()["evaluation"]["variants"] == ["polished"]
+    j = ex.admit(jid(1200), "%064x" % 1200, 1, charge="budget")["id"]
+    import agent_readiness.lifecycle.jobs as LJ
+    job = LJ.load_job(prod / "live" / "stageb", j)
+    assert job["label"].endswith("· Polished v1") and job["request"]["variants"] == ["polished"]
+    assert AR.check_launch(store, job)["budget_pool"] == "ar-a20-polished-v1"
+    from agent_readiness.hosted import stageb as SB
+    assert SB.arm_display(job) == {"Original": "Polished v1"} and SB._arm_labels(job) == {"polished": "Original"}

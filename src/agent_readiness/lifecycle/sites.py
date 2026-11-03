@@ -18,7 +18,10 @@ VARIANT_TEXT = {
                  "modified": "The same cards also state course fee, duration, level and seats left (one listing-information change).",
                  "improved": "Every recommendation applied: each card states fee, duration, level, class day, campus, seats left and materials; browse "
                              "pages by campus, day, level and subject; a working catalogue filter; a comparison table; schema.org course data; and "
-                             "redirects for every dead end agents hit."},
+                             "redirects for every dead end agents hit.",
+                 "polished": "Polished v1: a human-centred visual redesign of the college site (identity, illustrations, layout, responsive cards with "
+                             "every fact labelled, a course finder, subject and campus sections), keeping the filter, browse pages, comparison table, "
+                             "structured data and redirects."},
     "ironbark": {"original": "The control hire site: deposit, minimum hire and delivery are stated on item pages only.",
                  "modified": "Listing cards also show refundable deposit, minimum hire and delivery (the owner-selected change used by the hosted evaluation)."},
 }

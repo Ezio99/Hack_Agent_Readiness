@@ -122,8 +122,9 @@ export const api = {
 };
 
 export const short = (sha: string | undefined | null, n = 12) => (sha ?? '').slice(0, n);
-export const VARIANT_LABEL = (v: string) => v.charAt(0).toUpperCase() + v.slice(1);
-export const variantClass = (v: string) => v === 'original' ? 'o' : v === 'modified' ? 'm' : v === 'improved' ? 'i' : 'x';
+const VARIANT_DISPLAY: Record<string, string> = { polished: 'Polished v1', polished2: 'Polished v2' };
+export const VARIANT_LABEL = (v: string) => VARIANT_DISPLAY[v] ?? v.charAt(0).toUpperCase() + v.slice(1);
+export const variantClass = (v: string) => v === 'original' ? 'o' : v === 'modified' ? 'm' : v === 'improved' ? 'i' : v.startsWith('polished') ? 'p' : 'x';
 export const fmtUsd = (n: number | null | undefined, d = 3) => n == null ? '–' : `US$${n.toFixed(d)}`;
 export const fmtSec = (n: number | null | undefined) => n == null ? '–' : `${Math.round(n)} s`;
 export const words = (s: string) => s.replaceAll('_', ' ');

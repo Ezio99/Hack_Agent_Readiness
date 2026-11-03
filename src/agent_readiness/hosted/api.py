@@ -688,7 +688,7 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
                     ev = lifecycle.evaluation(job_id)
                     ts = ev['dimensions']['task_success']['variants']
                     names = [v['name'] for v in ev['manifest']['variants']] or list(ts)
-                    lab = {names[0]: 'Original', names[1]: 'Modified'} if len(names) == 2 else {}
+                    lab = dict(zip(names, ('Original', 'Modified'))) if len(names) in (1, 2) else {}
                     # the report's grades per agent run, so the workspace grid reads like the report: correct (v2, else v1) and exact match (v1)
                     grades = {(lab[t['variant']], t['task']): {'correct': bool((t['grades']['v2'] or t['grades']['v1'])['passed']),
                                                                'exact_match': bool(t['grades']['v1']['passed'])}
