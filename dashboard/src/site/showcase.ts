@@ -23,6 +23,10 @@ export const LIVE = data.live as unknown as LiveRecord;
 /** The first live evaluation (Original vs Modified, six tasks, 12 agents): the run the recommendations came from. Kept as history. */
 export const FIRST_LIVE = data.first_live as unknown as LiveRecord;
 
+/** Polished Larkspur, evaluated ON ITS OWN (no baseline beside it), then changed from that evaluation's findings and evaluated again (2026-11-04). */
+export const POLISHED_V1 = data.polished_v1 as unknown as LiveRecord;
+export const POLISHED_V2 = data.polished_v2 as unknown as LiveRecord;
+
 /** The product's own page audit (the readiness report's structural rules) of each version: what is still wrong with the pages themselves. */
 export const PAGE_AUDIT = data.page_audit as Record<'original' | 'modified' | 'improved', string[]>;
 

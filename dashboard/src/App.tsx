@@ -9,6 +9,7 @@ import { ReportPage } from './site/lifecycle/Report';
  *  lives in the archive at `#/demo/ironbark` (its scene deep links still work); the archive also carries the pre-redesign app. Both load on demand. */
 const Demo = lazy(() => import('./site/demo/Demo').then(m => ({ default: m.Demo })));
 const Classic = lazy(() => import('./legacy/Classic'));
+const Story = lazy(() => import('./site/story/Story').then(m => ({ default: m.Story })));
 
 const TITLES: Record<string, string> = {
   home: 'Agent Readiness — usability testing for AI agents',
@@ -17,6 +18,7 @@ const TITLES: Record<string, string> = {
   lifecycle: 'The Larkspur journey: evaluate, improve, re-evaluate · Agent Readiness',
   report: 'Readiness report · Agent Readiness',
   studio: 'Replay archive · Agent Readiness',
+  showcase: 'Polished Larkspur: built for people, tested by agents · Agent Readiness',
   classic: 'Investigation archive · Agent Readiness',
 };
 
@@ -36,6 +38,7 @@ export default function App() {
     case 'run': return <Workspace job={route.job} />;
     case 'lifecycle': return <Lifecycle step={route.step} suite={route.suite} />;
     case 'report': return <ReportPage id={route.id} task={route.task} />;
+    case 'showcase': return <Suspense fallback={<div className="ar ar-night route-loading" aria-busy="true"><p className="sr-only">Loading the showcase…</p></div>}><Story /></Suspense>;
     case 'demo': if (journey) return <Lifecycle />;
       return <Suspense fallback={<div className="ar ar-night route-loading" aria-busy="true"><p className="sr-only">Loading the demo…</p></div>}><Demo scene={route.scene === 'ironbark' ? undefined : route.scene} /></Suspense>;
     default: return <Suspense fallback={fallback}><Classic /></Suspense>;

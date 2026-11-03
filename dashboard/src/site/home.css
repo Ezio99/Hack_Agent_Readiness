@@ -137,3 +137,16 @@
 .audit-line{font-size:15px;color:var(--ink-2);line-height:1.5}.audit-line .mono{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-right:8px}
 .audit-line b{font:400 22px/1 var(--serif);color:var(--ink)}.audit-line b.n-o{color:var(--original)}.audit-line b.n-i{color:var(--improved)}
 .evidence .honest .link{color:#EDEAE3;text-decoration:underline;text-underline-offset:3px}
+
+/* Polished Larkspur band (latest evidence) */
+.polished-band{background:#0b0a12;color:#f3f1ff;padding:clamp(56px,8vw,96px) 0;margin-top:clamp(24px,4vw,48px)}
+.polished-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:clamp(24px,5vw,64px);align-items:center}
+.polished-band .h2 em{color:var(--polished)}
+.polished-band p{color:#b9b5cc;max-width:60ch;margin-top:16px}
+.polished-cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}
+.polished-nums{display:grid;gap:12px}
+.polished-nums a{display:block;text-decoration:none;padding:18px 20px;border-radius:14px;border:1px solid rgba(169,150,240,.35);background:rgba(169,150,240,.06)}
+.polished-nums a:hover{background:rgba(169,150,240,.14)}
+.polished-nums dt{font:600 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--polished)}
+.polished-nums dd{margin-top:8px;font:400 15px/1.4 var(--sans);color:#f3f1ff}.polished-nums b{font-size:22px}
+@media (max-width:860px){.polished-grid{grid-template-columns:1fr}}

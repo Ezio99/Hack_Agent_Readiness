@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { SiteFooter, SiteHeader } from './Shell';
-import { CARD_FACTS, FEATURED, FEATURED_TASK, FIRST_LIVE, IMPROVEMENTS, JOURNEY, LIVE, PAGE_AUDIT, fewerPct, journeyOf, showcaseFrame, trialOf, type LiveStep } from './showcase';
+import { CARD_FACTS, FEATURED, FEATURED_TASK, FIRST_LIVE, IMPROVEMENTS, JOURNEY, LIVE, PAGE_AUDIT, POLISHED_V1, POLISHED_V2, fewerPct, journeyOf, showcaseFrame, trialOf, type LiveStep } from './showcase';
 import { LatestLive } from './LatestLive';
 import './home.css';
 
@@ -97,6 +97,23 @@ export function Home({ section }: { section?: string }) {
             <div className="hero-note" data-reveal><HeroNote /></div>
           </div>
           <div className="hero-visual" data-reveal><HeroFigure /></div>
+        </div>
+      </section>
+
+      <section className="polished-band ar-night" aria-labelledby="polished-h">
+        <div className="wrap polished-grid">
+          <div data-reveal>
+            <p className="eyebrow">Latest · Polished Larkspur · 4 Nov 2026</p>
+            <h2 id="polished-h" className="h2">Built for people. <em>Tested by agents.</em></h2>
+            <p>We redesigned the college site for people, evaluated it with live agents on its own, changed it from what the traces showed, and evaluated it again.
+              Both versions answered every question; the change did not reduce the agents’ work. The showcase tells it as measured.</p>
+            <p className="polished-cta"><a className="btn btn-signal" href="#/showcase">Watch the showcase <span className="arr" aria-hidden="true">→</span></a>
+              <a className="btn btn-ghost" href="#/run">Run Polished v2 live</a></p>
+          </div>
+          <dl className="polished-nums" data-reveal>
+            {([['Polished v1', POLISHED_V1, 'polished'], ['Polished v2', POLISHED_V2, 'polished2']] as const).map(([l, r, v]) => <a key={v} href={`#/reports/${r.id}`}>
+              <dt>{l}</dt><dd><b>{r.correct[v]}/{r.tasks.length}</b> correct · {r.totals[v].requests} requests · {r.totals[v].seconds} s · US${r.totals[v].cost_usd.toFixed(2)}</dd></a>)}
+          </dl>
         </div>
       </section>
 

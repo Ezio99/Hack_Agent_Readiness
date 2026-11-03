@@ -9,6 +9,7 @@ export type Route =
   | { name: 'lifecycle'; step?: string; suite?: string }
   | { name: 'report'; id: string; task?: number }
   | { name: 'studio' }
+  | { name: 'showcase' }
   | { name: 'classic'; page: string };
 
 export const CLASSIC = ['investigation', 'overview', 'scopes', 'evidence', 'replay', 'scanner'] as const;
@@ -31,6 +32,7 @@ export function parse(hash: string): Route {
   const demo = h.match(/^demo(?:\/([a-z-]+))?$/);
   if (demo) return { name: 'demo', scene: demo[1] };
   if (h === 'studio') return { name: 'studio' };
+  if (h === 'showcase' || h === 'story') return { name: 'showcase' };
   if ((CLASSIC as readonly string[]).includes(h)) return { name: 'classic', page: h };
   if ((HOME_SECTIONS as readonly string[]).includes(h)) return { name: 'home', section: h };
   return { name: 'home' };
