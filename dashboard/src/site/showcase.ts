@@ -35,9 +35,9 @@ export const FEATURED = {
   liveDate: '3 Nov 2026',
   /** the earlier pre-recorded research run of the same suite */
   researchRun: 'm7-larkspur-browser-1',
-  /** the frozen tasks judges run live */
+  /** the frozen tasks judges run live: fee and seats; weekend class day and level (needs the Improved cards); fee and duration */
   judgeSuite: 'larkspur-core@v3',
-  judgeTasks: ['gen-23f1802ee0-n', 'gen-f302fa8fe2-n'],
+  judgeTasks: ['gen-23f1802ee0-n', 'gen-8334922e62-n', 'gen-f302fa8fe2-n'],
 } as const;
 
 export const VERSIONS = {

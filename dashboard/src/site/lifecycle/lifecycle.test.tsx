@@ -99,7 +99,8 @@ it('the journey is one page with all eight steps, and #/demo opens it', async ()
 it('shows the frozen task set as approved and frozen, with no approval control on the web', async () => {
   const sha = Object.keys(read('DATASET.json').files).find((f: string) => f.startsWith('suites/'))!.slice(7, 71);
   const suite = { ...read(`suites/${sha}.json`), source: 'dataset' };
-  const f = server({ '/api/lifecycle/overview': overview, '/api/lifecycle/suites': [{ sha256: sha, name: suite.suite_name, version: suite.version, site: suite.site, tasks: suite.tasks.length, state: suite.state, refs: suite.refs, synthetic: false, created_at: '', created_by: 'system', gaps: 0, source: 'dataset' }],
+  const f = server({ '/api/lifecycle/overview': overview, '/api/lifecycle/suites': [{ sha256: sha, name: suite.suite_name, version: suite.version, site: suite.site, tasks: suite.tasks.length, state: suite.state, refs: suite.refs, synthetic: false, created_at: '', created_by: 'system', gaps: 0, source: 'dataset' },
+      { sha256: '0e46a1efe0a628ff2fb69c72ce0c0eb2323919570e4e3fbde1ac296d93460360', name: 'larkspur-core', version: 3, site: 'larkspur', tasks: 3, state: 'frozen', refs: ['larkspur-core@v3'], synthetic: false, created_at: '', created_by: 'owner', gaps: 0, source: 'store' }],
     [`/api/lifecycle/suites/${sha}`]: suite });
   const host = await mount(<Lifecycle step="review" suite={sha} />);
   const t = host.querySelector('#lc-review')!.textContent!;
@@ -107,6 +108,7 @@ it('shows the frozen task set as approved and frozen, with no approval control o
   const first = [...suite.tasks].sort((a: any, b: any) => a.task_id.localeCompare(b.task_id))[0];
   expect(t).toContain(`Task 1${first.customer_wording}`);                                                  // numbered as in every report
   expect(t).toContain('never on the web');
+  expect(t).toContain('Live runs started by judges use larkspur-core@v3: tasks 1, 3 and 6 of this set (frozen)');   // numbered as in every report
   expect([...host.querySelectorAll('button')].some(b => /approve/i.test(b.textContent ?? ''))).toBe(false);
   expect(f.mock.calls.some(c => (c[1] as RequestInit | undefined)?.method === 'POST')).toBe(false);
 });

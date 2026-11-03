@@ -128,7 +128,11 @@ function ReviewStep({ selected }: { selected?: string }) {
       uses the very same questions, so the comparison is fair. Approval happens at the owner’s terminal, never on the web.</p>
     {suites.error && <Failed error={suites.error} what="Task sets" />}
     {s.data && <SuiteView s={s.data} />}
-    {judge && <p className="lc-note">Live runs started by judges use <strong>{FEATURED.judgeSuite}</strong>: tasks 1 and 6 of this set ({judge.state}).</p>}
+    {judge && s.data && <p className="lc-note">Live runs started by judges use <strong>{FEATURED.judgeSuite}</strong>: {(() => {
+      const ids = [...s.data.tasks].map(t => t.task_id).sort();
+      const n = FEATURED.judgeTasks.map(id => ids.indexOf(id) + 1).filter(x => x > 0);
+      return `task${n.length === 1 ? '' : 's'} ${n.length > 1 ? `${n.slice(0, -1).join(', ')} and ${n.at(-1)}` : n.join('')}`;
+    })()} of this set ({judge.state}).</p>}
   </>;
 }
 

@@ -8,7 +8,8 @@ key behind the M9 network guard (reserve-before-send, connection refused, trial 
     S=$(mktemp -d); cd "$S" && M9_NO_NETWORK=1 PYTHONPATH=<repo>/scripts/m9/no_network_guard \\
         <repo>/.venv/bin/python <repo>/scripts/m9/judge_paid_path_rehearsal.py <repo> "$S/run"
 
-Final showcase: set M9_JUDGE_VARIANTS=original,improved to rehearse the featured Original-vs-Improved pool (default: original,modified).
+Final showcase: set M9_JUDGE_VARIANTS=original,improved to rehearse the featured Original-vs-Improved pool (default: original,modified), and
+M9_JUDGE_SUITE=three for the three-task judge suite (v2 tasks gen-23f1802ee0-n, gen-8334922e62-n, gen-f302fa8fe2-n; 3 launches; ceiling 21.956).
 """
 import json
 import os
@@ -49,8 +50,15 @@ from agent_readiness.suites.stage_a import approval as AP  # noqa: E402
 from agent_readiness.suites.store import WriteOnceStore  # noqa: E402
 
 V2_SUITE = "172d1e712eb18871fd4f24b227a2448ec44a546347bb9874f0946c5609f7848b"
-V3_SUITE = "f45694788ea9e1f7b28c95193e25870bfe3aed2975d7f00276cdc87d7c6b09e3"
-NOTES = "judge live evaluation: tasks gen-23f1802ee0-n and gen-f302fa8fe2-n of v2 (their deciding facts are on the Modified listing cards)"
+SUITES = {   # the reproducible judge suites: keep, revise time, notes, expected hash, launches, migrated ceiling
+    "two": (["gen-23f1802ee0-n", "gen-f302fa8fe2-n"], "2026-11-03T12:00:00+00:00",
+            "judge live evaluation: tasks gen-23f1802ee0-n and gen-f302fa8fe2-n of v2 (their deciding facts are on the Modified listing cards)",
+            "f45694788ea9e1f7b28c95193e25870bfe3aed2975d7f00276cdc87d7c6b09e3", 4, "20.768"),
+    "three": (["gen-23f1802ee0-n", "gen-8334922e62-n", "gen-f302fa8fe2-n"], "2026-11-04T00:00:00+00:00",
+              "judge live evaluation: v2 tasks gen-23f1802ee0-n, gen-8334922e62-n and gen-f302fa8fe2-n (fee and seats; weekend class day and level; fee and duration)",
+              "0e46a1efe0a628ff2fb69c72ce0c0eb2323919570e4e3fbde1ac296d93460360", 3, "21.956"),
+}
+KEEP, AT, NOTES, V3_SUITE, LAUNCHES, CEILING = SUITES[os.environ.get("M9_JUDGE_SUITE", "two")]
 OPERATOR, JUDGE = b"m9-operator-token-0123456789abcdef", b"m9-judge-access-code-0123456789abcdef"
 JG = {"authorization": "Bearer " + JUDGE.decode()}
 AR.set_stage_b_root(S / "stage-b")
@@ -67,14 +75,13 @@ st = WriteOnceStore(S / "store")
 out["before"] = {k: v for k, v in CE.status(db).items() if k in ("ceiling", "reserved", "remaining", "jobs", "active")}
 
 # owner tooling (production: at an interactive terminal; here on a copy)
-v3 = AP.revise_keep(st, V2_SUITE, keep=["gen-23f1802ee0-n", "gen-f302fa8fe2-n"], context=AP._context(type("A", (), {"context": None})()),
-                    at="2026-11-03T12:00:00+00:00", by="owner", notes=NOTES)
+v3 = AP.revise_keep(st, V2_SUITE, keep=KEEP, context=AP._context(type("A", (), {"context": None})()), at=AT, by="owner", notes=NOTES)
 assert v3 == V3_SUITE, v3
 sys.stdin.isatty = lambda: True                                       # the owner's terminal (the gate itself is tested in the unit tests)
 appr = AP.decide(st, v3, decision="approved", attestation=AP.attestation_text(v3, "approved"), at="2026-11-03T12:01:00+00:00", notes="rehearsal copy")
 AP.freeze(st, v3, appr, at="2026-11-03T12:02:00+00:00")
 VARIANTS = os.environ.get("M9_JUDGE_VARIANTS", "original,modified").split(",")          # final showcase: M9_JUDGE_VARIANTS=original,improved
-kw = dict(arming_id="larkspur-judge-1", mode="paid", frozen_ref="larkspur-core@v3", variants=VARIANTS, repetitions=[1], launches=4)
+kw = dict(arming_id="larkspur-judge-1", mode="paid", frozen_ref="larkspur-core@v3", variants=VARIANTS, repetitions=[1], launches=LAUNCHES)
 p = AR.plan(st, **kw)
 AR.arm(st, typed=p["attestation"], at="2026-11-03T12:03:00+00:00", interactive=True, **kw)
 out["arming"] = {"manifest": p["options"][0]["manifest_sha256"], "trials": p["options"][0]["trials"], "reservation_usd": p["options"][0]["reservation_microusd"] / 1e6,
@@ -96,11 +103,11 @@ r = c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers=JG)
 out["judge_launch_at_10.736"] = [r.status_code, r.json().get("detail")]
 assert r.status_code in (409, 429) and not AR.claims("larkspur-judge-1") and CE.status(db)["reserved"] == 10_736_000
 
-mp = CE.plan(db, to="20.768", expect_ceiling="10.736", expect_reserved="10.736", reason="four judge-triggered live runs of larkspur-core@v3")
-out["migration"] = CE.migrate(db, to="20.768", expect_ceiling="10.736", expect_reserved="10.736", reason=mp["reason"], typed=mp["confirmation"],
+mp = CE.plan(db, to=CEILING, expect_ceiling="10.736", expect_reserved="10.736", reason=f"{LAUNCHES} judge-triggered live runs of larkspur-core@v3")
+out["migration"] = CE.migrate(db, to=CEILING, expect_ceiling="10.736", expect_reserved="10.736", reason=mp["reason"], typed=mp["confirmation"],
                               interactive=True, actor="m9 rehearsal")
-a, c = app_for(20_768_000)
-out["at_20.768"] = c.get("/api/ironbark/config").json()["launch"]
+a, c = app_for(round(float(CEILING) * 1e6))
+out[f"at_{CEILING}"] = c.get("/api/ironbark/config").json()["launch"]
 runs = []
 for i in (1, 2):
     if i == 2:
