@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { SiteFooter, SiteHeader } from '../Shell';
-import { api, fmtSec, fmtUsd, variantClass, words, type Evaluation, type Finding, type Trial } from '../../lib/lifecycleApi';
+import { api, displayTitle, fmtSec, fmtUsd, variantClass, words, type Evaluation, type Finding, type Trial } from '../../lib/lifecycleApi';
 import { Failed, GradeTag, Hash, Loading, ModeBadge, PairBars, plain, Section, useLoad, VariantName } from './parts';
 import { TraceCompare } from './Trace';
 import './lifecycle.css';
@@ -15,7 +15,7 @@ export function ReportPage({ id, task }: { id: string; task?: number }) {
     <SiteHeader active="report" cta={false} />
     <main id="lc-main" tabIndex={-1} className="wrap lc-wrap">
       <nav className="lc-crumbs" aria-label="Breadcrumb"><a href="#/lifecycle">Journey</a><span aria-hidden="true">/</span><a href="#/lifecycle/compare">Evaluations</a>
-        {task != null && <><span aria-hidden="true">/</span><a href={`#/reports/${id}`}>{ev.data?.title ?? id}</a></>}</nav>
+        {task != null && <><span aria-hidden="true">/</span><a href={`#/reports/${id}`}>{ev.data ? displayTitle(ev.data) : id}</a></>}</nav>
       {ev.loading && <Loading what="the evaluation" />}
       {ev.error && <Failed error={ev.error} what="This evaluation" />}
       {ev.data && (task != null ? <TraceCompare ev={ev.data} n={task} /> : <Report ev={ev.data} />)}
@@ -39,7 +39,7 @@ export function Report({ ev }: { ev: Evaluation }) {
   return <article className="lc-report">
     <header className="lc-report-head">
       <p className="eyebrow">Readiness report · {ev.site.label}</p>
-      <h1 className="lc-title">{ev.title}</h1>
+      <h1 className="lc-title">{displayTitle(ev)}</h1>
       <div className="lc-badges"><ModeBadge mode={ev.mode} />
         {ev.source?.kind === 'dataset' && <span className="lc-mode neutral">First evaluation · recorded</span>}
         {ev.source?.kind === 'launched' && <span className="lc-mode neutral">{ev.mode === 'paid' ? 'Live run in this product' : 'Run in this product'}{ev.started_at ? ` · ${when(ev.started_at)}` : ''}</span>}</div>
@@ -193,7 +193,7 @@ export function FindingCard({ f }: { f: Finding }) {
     <p className="lc-finding-i">{plain(f.impact)}</p>
     <p className="lc-finding-r"><b>Recommendation.</b> {plain(f.recommendation)}</p>
     <details><summary>Evidence ({f.evidence.length})</summary>
-      <ul className="lc-ev">{f.evidence.map((e, i) => <li key={i}><code>{e.type}</code> {e.ref}{e.detail ? ` — ${plain(e.detail)}` : ''}</li>)}</ul>
+      <ul className="lc-ev">{f.evidence.map((e, i) => <li key={i}><code>{e.type}</code> {plain(e.ref)}{e.detail ? ` — ${plain(e.detail)}` : ''}</li>)}</ul>
       <p className="muted"><b>How to check the fix.</b> {plain(f.verify)}</p></details>
   </li>;
 }

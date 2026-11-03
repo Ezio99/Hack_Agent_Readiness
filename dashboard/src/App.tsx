@@ -18,7 +18,7 @@ const TITLES: Record<string, string> = {
   lifecycle: 'The Larkspur journey: evaluate, improve, re-evaluate · Agent Readiness',
   report: 'Readiness report · Agent Readiness',
   studio: 'Replay archive · Agent Readiness',
-  showcase: 'Polished Larkspur: built for people, tested by agents · Agent Readiness',
+  showcase: 'Larkspur Community College: before and after · Agent Readiness',
   classic: 'Investigation archive · Agent Readiness',
 };
 

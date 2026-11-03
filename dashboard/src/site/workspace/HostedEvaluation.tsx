@@ -93,7 +93,7 @@ export function ProvenanceNote({ p }: { p: Provenance }) {
 export type ArmNames = { Original: string; Modified?: string };
 export function ProgressGrid({ rep, questions, onSelect, selected, names = { Original: 'Original', Modified: 'Modified' } }: { rep: Rep; questions: Record<number, string>; onSelect?: (s: Selection) => void; selected?: Selection | null; names?: ArmNames }) {
   const arms = (names.Modified ? ['Original', 'Modified'] : ['Original']) as ('Original' | 'Modified')[];   // a single-version evaluation has one arm
-  const swatch = (n: string | undefined, arm: string) => arm === 'Original' && arms.length === 2 ? 'o' : n?.startsWith('Polished') ? 'p' : n === 'Improved' ? 'i' : 'm';
+  const swatch = (n: string | undefined, arm: string) => arm === 'Original' && arms.length === 2 ? 'o' : n === 'Before' ? 'o' : n === 'After' || n === 'Improved' ? 'i' : n?.startsWith('Earlier') ? 'p' : 'm';
   const numbers = [...new Set([...rep.tasks.map(t => t.task), ...Object.keys(questions).map(Number)])].sort((a, b) => a - b);
   const find = (arm: string, task: number) => rep.tasks.find(t => t.arm === arm && t.task === task);
   const v2 = (arm: string, task: number) => rep.grading_v2?.faithful ? rep.grading_v2.tasks.find(t => t.arm === arm && t.task === task) : undefined;
@@ -281,7 +281,7 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
   const questions = Object.fromEntries((config?.tasks ?? []).map(t => [t.task, t.question]));
   const cap = (v: string | undefined, d: string) => v ? VARIANT_LABEL(v) : d;
   const armedVariants = config?.evaluation?.variants ?? [];
-  const single = armedVariants.length === 1;                                     // one website version evaluated on its own (e.g. Polished)
+  const single = armedVariants.length === 1;                                     // one website version evaluated on its own
   const armedNames: ArmNames = single ? { Original: cap(armedVariants[0], 'Original') } : { Original: cap(armedVariants[0], 'Original'), Modified: cap(armedVariants[1], 'Modified') };
   const names: ArmNames = job?.arm_display ?? (job ? { Original: 'Original', Modified: 'Modified' } : armedNames);
   const lowerNames = { original: names.Original, modified: names.Modified ?? names.Original };

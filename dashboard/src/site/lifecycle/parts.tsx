@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { ApiError, VARIANT_LABEL, variantClass, type Grade } from '../../lib/lifecycleApi';
+import { ApiError, VARIANT_LABEL, audienceText, variantClass, type Grade } from '../../lib/lifecycleApi';
 
 /** Load once per key; errors are shown, never replaced by invented data. */
 export function useLoad<T>(load: () => Promise<T>, key: string): { data: T | null; error: string | null; loading: boolean; reload: () => void } {
@@ -19,7 +19,7 @@ export function useLoad<T>(load: () => Promise<T>, key: string): { data: T | nul
 }
 
 /** Display wording for recorded server text (finding details): the graders by what they check. The recorded data is unchanged. */
-export const plain = (t: string) => t.replace(/the official grader v1/g, 'the exact-match grader').replace(/official grader v1/g, 'exact-match grader')
+export const plain = (t: string) => audienceText(t).replace(/the official grader v1/g, 'the exact-match grader').replace(/official grader v1/g, 'exact-match grader')
   .replace(/post-hoc grader v2/g, 'the correctness grader').replace(/grader v2/g, 'the correctness grader').replace(/grader v1/g, 'the exact-match grader');
 
 export function Loading({ what }: { what: string }) { return <p className="lc-loading" aria-busy="true">Loading {what}…</p>; }

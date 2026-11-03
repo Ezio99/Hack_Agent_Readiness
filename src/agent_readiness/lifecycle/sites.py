@@ -19,13 +19,15 @@ VARIANT_TEXT = {
                  "improved": "Every recommendation applied: each card states fee, duration, level, class day, campus, seats left and materials; browse "
                              "pages by campus, day, level and subject; a working catalogue filter; a comparison table; schema.org course data; and "
                              "redirects for every dead end agents hit.",
-                 "polished": "Polished v1: a human-centred visual redesign of the college site (identity, illustrations, layout, responsive cards with "
-                             "every fact labelled, a course finder, subject and campus sections), keeping the filter, browse pages, comparison table, "
-                             "structured data and redirects.",
-                 "polished2": "Polished v2: Polished v1 plus the changes its live evaluation justified: every result list names all matching courses "
-                              "before the first card, and listing pages use a compact header and slimmer card images so more results fit on screen.",
+                 "polished": "Earlier trial A (superseded): a visual redesign built on the Improved site, so it already had every agent-readiness "
+                             "improvement (filter, browse pages, comparison table, structured data, redirects and every fact on every card).",
+                 "polished2": "Earlier trial B (superseded): trial A plus the changes its live evaluation justified: every result list names all "
+                              "matching courses before the first card, and listing pages use a compact header and slimmer card images.",
                  "polishedoriginal": "Before: the original college website, visually redesigned for people. Course cards show a name, subject and summary; "
-                                     "every fee, class day, level, seat count and campus is on the course's own page."},
+                                     "every fee, class day, level, seat count and campus is on the course's own page.",
+                 "modifiedpolished": "After: the same redesigned website with Agent Readiness's recommendations applied: every course card states its fee, "
+                                     "duration, level, class day, campus, seats left and materials; course URLs that follow the course name lead to the "
+                                     "course; and every course is described with schema.org structured data."},
     "ironbark": {"original": "The control hire site: deposit, minimum hire and delivery are stated on item pages only.",
                  "modified": "Listing cards also show refundable deposit, minimum hire and delivery (the owner-selected change used by the hosted evaluation)."},
 }
