@@ -133,3 +133,24 @@ Recorded in `deploy/DEPLOYED.txt`. **Rollback:** `docker tag agent-readiness-app
 4. restarts the app on exit, whatever the outcome.
 
 Expected afterwards: ceiling **21.956** (unchanged); reserved 14.476 (unchanged, 4 jobs); settled **0.631751** (1 job), released 3.108249; outstanding **10.736** (e529 7.436 + Ironbark 3.300); committed 11.367751; **available 10.588249**; `larkspur-judge-1` **2 left** (the budget covers 2); programme spend to date US$19.418057 (A$29.13), **worst case A$45.01**.
+
+### 6.4 Settlement of `eval-c04fdb10` (owner terminal, 2026-11-03 10:49 UTC) and read-only verification
+
+The owner ran `/root/settle-c04.sh` at an interactive terminal: the pre-checks passed, the app stopped, the backup `/root/backups/admission-pre-settlement-20261103T104926Z.sqlite` (sha256 `75d9e123…`, verified against the live file; 0 settlements, job rows `b337ab49…`, migrations `73e7d874…`) was taken, the owner typed the confirmation, `settlement apply` exited 0 (settled US$0.631751, released US$3.108249, available US$10.588249), and the app restarted.
+
+| Check (read-only, after the restart) | Result |
+|---|---|
+| Service | image `d40199ef…`, started 10:49:36Z, healthy, 0 restarts, 0 tracebacks; log `budget: ceiling US$21.956000, settled US$0.631751, outstanding US$10.736000, available US$10.588249`; `armed=larkspur-judge-1 (paid, larkspur-core v3, launches left 2) judge_access=on` |
+| Settlement record | **exactly 1 row** in `settlements` (primary key `job_id`): `eval-c04fdb10…`, 631 751 µUSD, basis "stage-b launch larkspur-judge-1-l1: 45/45 requests settled", ledger sha256 `243deaca…`, 45 requests, 0 open, 2026-11-03T10:49:36.57Z, actor "owner terminal (uid 10001)". `auto_settle` empty (no automatic settlement) |
+| Totals (`ceiling status`, audit, `/api/ironbark/config`) | ceiling **US$21.956** (unchanged; policy row and migrations #1–#2 identical); reserved US$14.476 (4 jobs, rows `b337ab49…` unchanged); settled **US$0.631751** (1 job); released US$3.108249; outstanding **US$10.736** (e529 US$7.436 + Ironbark 2 × US$1.650, still unsettled as decided); committed US$11.367751; available **US$10.588249** |
+| Unsettled jobs | `eval-e529…` still eligible but **not settled** (owner decision); both Ironbark jobs kept in full (`exceeds_reservation`) |
+| Arming | `larkspur-judge-1` active (`ACTIVE` pointer unchanged), record sha256 `71a26471…`, launches max 3 / used 1 / **left 2**, problems []; capacity: available 10.588249, the budget covers 2. Launch claims and ledgers: only `larkspur-live-1-l1` and `larkspur-judge-1-l1` (+ the rehearsal claim), no new claim |
+| Ledgers | `larkspur-judge-1-l1` `b5b1b4d0…`, `larkspur-live-1-l1` `e4675700…`, Ironbark `paired-60c6…` `3964af4b…`, `paired-86a6…` `dd76c145…`: unchanged |
+| Evidence | **2 420 of 2 421 files byte-identical** to the pre-deploy backup, none added or removed (derived caches excluded); the only change is `admission.sqlite` (the new tables and the one settlement row) |
+| Public (18/18 PASS) | health; judge access on, 2 left; `spending` settled 0.631751 / outstanding 10.736 / committed 11.367751 / available 10.588249 / released 3.108249, 1 settled, 3 unsettled; `ceiling` block 21.956 / 14.476; POST without a valid code ×3: 403; c04 grid and report (equivalent evidence 3/3, recorded grades unchanged, settled 0.631751, 45/0); e529 report; history c04 cost 0.631751, others none; versions; Ironbark jobs; bundle and security headers |
+| Browser (GET only) | Workspace "Budget & capacity": actual model spend US$0.63 (1 evaluation); held for unsettled runs US$10.74 (3 evaluations); available US$10.59 of US$21.96; live runs authorised 2 of 3 left, US$3.74 each, the budget covers 2; cost per completed evaluation US$0.63. History Cost column: c04 US$0.63, the others "—". Home, journey, report, Ironbark archive: 0 console errors, no non-GET request |
+| Programme (1.50 AUD/USD) | programme ledger US$18.786306 + `eval-c04fdb10` US$0.631751 (verified ledger; not yet appended, needs owner approval) = **US$19.418057 = A$29.13**; + available US$10.588249 = worst case **US$30.006306 = A$45.01 ≤ A$50** |
+
+Observation (not changed): the history's "Passed" column uses the official exact-match grade, so `eval-c04fdb10` reads "0% → 0%" there while the grid, report and journey show Correct 0/3 → 3/3. A later release could label the column "Exact match" or add the Correct rate.
+
+**State now:** no paid call, no ceiling change, no other settlement, no arming change. Remaining owner decisions: append `eval-c04fdb10` to the programme ledger; the two remaining judge launches (each reserves US$3.740 and settles automatically when it finishes); whether ever to settle `eval-e529…` (only together with a lower ceiling, §2).
