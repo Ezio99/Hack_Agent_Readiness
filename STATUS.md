@@ -121,6 +121,18 @@ verification of the M8 release candidate. Report: [collaboration/reports/m9-rele
 - **Main risk:** the launch is single-shot. Any failure after admission uses up US$7.436 and the only launch, even with zero spend.
 - The M8 documents' "2026-11-04" dates are 2026-11-03 Sydney per the commits.
 
+**M9 follow-up, report recovery (release candidate on `m9-release-readiness`, code `b16aed8`; NOT deployed; zero cost):** [collaboration/reports/m9-report-recovery.md](collaboration/reports/m9-report-recovery.md).
+- **Root cause:** the paid run's readiness report was withheld because the agent's answer quotes the jailed mirror origin `http://127.0.0.1:34723/…`. The admission row was then set to `failed` although 12/12 trials completed.
+- **Fix:**
+  - only the trial's own recorded fixture origin is shown as a site path, disclosed per trial; any other loopback URL, credential, path or oracle material is still rejected;
+  - raw evidence is unchanged;
+  - one publication policy for the worker and the service;
+  - execution, report availability and the preserved record are reported separately, with an explanation; the record is never rewritten;
+  - the report labels a "Live run launched in this product" vs the "Pre-recorded research run" (M7).
+- **Tests:** 31 new (20 fail without the change); broad 397; critical 214; browser e2e 1; dashboard 201; build CHECK PASSED; M7 re-derives byte-for-byte.
+- **Docker rehearsal on a copy of production:** the paid report is served (12/12, US$1.546226 settled), evidence byte-identical, 0 console errors, rollback-compatible.
+- **Awaiting owner approval:** deployment (report §6).
+
 ## Budget
 
 - Hosted admission: US$10 ceiling, US$3.30 reserved, US$1.65 per repetition. Reservations are never released, even for completed jobs, so the remaining capacity is 4 repetitions.
