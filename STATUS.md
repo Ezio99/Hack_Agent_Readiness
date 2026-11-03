@@ -6,6 +6,8 @@ Authoritative current handoff. Check it against the repository and production be
 
 > **PRODUCTION = `final-showcase` @ `83be351`** (deployed with owner approval 2026-11-03 04:09 UTC; image `fs-83be351` = `sha256:f5d9ec46…`; rollback `rollback-f36db53`; backup `predeploy-fs-20261103T040754Z`; judge access on; **2026-11-03 04:22 UTC: `larkspur-core@v3` frozen (`db2eb1cb…` → suite `0e46a1ef…`), ceiling US$21.956 (US$11.220 free), `larkspur-judge-1` armed: 3 paid launches, Original vs Improved, 6 trials, US$3.740 each; **first paid judge launch `eval-c04fdb10…` (owner-authorised): Original 0/3 correct, 39 requests vs Improved 3/3 correct, 6 requests; settled US$0.631751; 2 launches left; US$7.480 free**; record: [three-task report §8](collaboration/reports/final-showcase-three-task-suite.md)).
 >
+> **Release candidate `dde7e22`** (not deployed) = presentation fixes + **actual-cost settlement** of hosted reservations (verified ledgers only; write-once, idempotent; launch authority and financial capacity shown separately). Read-only reconciliation of production: c04 US$0.631751 and e529 US$1.546226 eligible (release US$8.998023, owner only); Ironbark reservations kept. Settling both requires lowering the ceiling to US$19.38 to keep the worst case within A$50 (A$49.98). [Report](collaboration/reports/hosted-settlement.md).
+>
 > **Presentation-fix release candidate `a3ad4cd`** (not deployed): grid correctness, equivalent-page evidence for the comparison table, opaque header, the live Original vs Improved run featured. [Report](collaboration/reports/final-presentation-fix.md).
 >
 > **Final showcase release (2026-11-03; branch `final-showcase`):** [collaboration/reports/final-showcase-release.md](collaboration/reports/final-showcase-release.md).

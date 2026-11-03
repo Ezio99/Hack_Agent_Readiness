@@ -1,0 +1,122 @@
+{
+ "database": "/data/hosted/live/admission.sqlite (read-only copy, sha256 280fb9ef9e07d3bf..., byte-identical to production on 2026-11-03)",
+ "totals": {
+  "ceiling_microusd": 21956000,
+  "reserved_microusd": 14476000,
+  "per_repetition_microusd": 1650000,
+  "settled_microusd": 0,
+  "settled_jobs": 0,
+  "released_microusd": 0,
+  "outstanding_microusd": 14476000,
+  "unsettled_jobs": 4,
+  "committed_microusd": 14476000,
+  "available_microusd": 7480000
+ },
+ "jobs": [
+  {
+   "job": "eval-9aaac35ca488c2bf951e01e58746604a",
+   "state": "completed",
+   "reserved_microusd": 1650000,
+   "settlement": null,
+   "basis": "paired engine (retired)",
+   "ledger": {
+    "requests": 139,
+    "settled_requests": 139,
+    "open_requests": 0,
+    "bound_violations": 0,
+    "settled_microusd": 1955793,
+    "open_reserved_microusd": 0,
+    "committed_microusd": 1955793,
+    "lines": 278,
+    "sha256": "c45bd4b0e6fac43edc133df426ab94feb0393404a304b205ee84109e9c4cb5c3"
+   },
+   "eligible": false,
+   "reason": "exceeds_reservation",
+   "detail": "the ledger commits more than the job reserved; investigate before any release"
+  },
+  {
+   "job": "eval-aa23e33012717c4a30ca21be1239e85f",
+   "state": "completed",
+   "reserved_microusd": 1650000,
+   "settlement": null,
+   "basis": "paired engine (retired)",
+   "ledger": {
+    "requests": 141,
+    "settled_requests": 141,
+    "open_requests": 0,
+    "bound_violations": 0,
+    "settled_microusd": 1990922,
+    "open_reserved_microusd": 0,
+    "committed_microusd": 1990922,
+    "lines": 282,
+    "sha256": "ff98f05baab56aa210c7f88a6b0cc64edd99e1145bd1196288f94f78e7d90f2e"
+   },
+   "eligible": false,
+   "reason": "exceeds_reservation",
+   "detail": "the ledger commits more than the job reserved; investigate before any release"
+  },
+  {
+   "job": "eval-e529db2aafecbfddd21e5c571eb85243",
+   "state": "failed",
+   "reserved_microusd": 7436000,
+   "settlement": null,
+   "basis": "stage-b launch larkspur-live-1-l1",
+   "ledger": {
+    "requests": 112,
+    "settled_requests": 112,
+    "open_requests": 0,
+    "bound_violations": 0,
+    "settled_microusd": 1546226,
+    "open_reserved_microusd": 0,
+    "committed_microusd": 1546226,
+    "lines": 224,
+    "sha256": "73045954d3ecd4f5836234bdf23b71068041bb06d0256881140878624a61a5b8"
+   },
+   "eligible": true,
+   "reason": null,
+   "commit_microusd": 1546226,
+   "release_microusd": 5889774
+  },
+  {
+   "job": "eval-c04fdb100d6b1c877de96dabe76eb052",
+   "state": "completed",
+   "reserved_microusd": 3740000,
+   "settlement": null,
+   "basis": "stage-b launch larkspur-judge-1-l1",
+   "ledger": {
+    "requests": 45,
+    "settled_requests": 45,
+    "open_requests": 0,
+    "bound_violations": 0,
+    "settled_microusd": 631751,
+    "open_reserved_microusd": 0,
+    "committed_microusd": 631751,
+    "lines": 90,
+    "sha256": "243deaca801e04fec9fb2b0ca4170b817a3c8b975c3bcbc8f09bfecce7de90b1"
+   },
+   "eligible": true,
+   "reason": null,
+   "commit_microusd": 631751,
+   "release_microusd": 3108249
+  }
+ ],
+ "programme": {
+  "rate_aud_per_usd": 1.5,
+  "limit_aud": 50.0,
+  "known_usd": 18.786306,
+  "not_in_ledger": [
+   {
+    "job": "eval-c04fdb100d6b1c877de96dabe76eb052",
+    "usd": 0.631751,
+    "open_requests": 0
+   }
+  ],
+  "spend_to_date_usd": 19.418057,
+  "spend_to_date_aud": 29.13,
+  "hosted_available_usd": 7.48,
+  "worst_case_usd": 26.898057,
+  "worst_case_aud": 40.35,
+  "within_limit": true
+ },
+ "note": "Read-only reconciliation audit (python -m agent_readiness.hosted.settlement audit). Nothing was written to any database or ledger."
+}
