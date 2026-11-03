@@ -28,7 +28,9 @@ OUT = ROOT / "dashboard" / "src" / "site" / "showcase"
 RUNS = {"live": ("eval-c04fdb100d6b1c877de96dabe76eb052", {("original", 2): (2, 9, 13), ("improved", 2): (1, 2), ("original", 1): (13,), ("improved", 1): (2,)}),
         "first_live": ("eval-e529db2aafecbfddd21e5c571eb85243", {("original", 1): (2, 12, 13), ("modified", 1): (2,)}),
         # Polished v1 evaluated alone (2026-11-04): task 2 is the friction trace (finder, 3 of 4 results visible, scroll, answer)
-        "polished_v1": ("eval-abc5fc838a5428b6753a424e189ba1cc", {("polished", 2): (1, 2, 3, 4), ("polished", 1): (1, 2), ("polished", 3): (2,)})}
+        "polished_v1": ("eval-abc5fc838a5428b6753a424e189ba1cc", {("polished", 2): (1, 2, 3, 4), ("polished", 1): (1, 2), ("polished", 3): (2,)}),
+        # Polished v2 evaluated alone (2026-11-04): the same task 2 trace after the change (read options, select, submit, verify-scroll, answer)
+        "polished_v2": ("eval-11ee8a1e6dad19998865db7187c8cb5e", {("polished2", 2): (1, 2, 3, 4, 5), ("polished2", 1): (1, 2), ("polished2", 3): (2,)})}
 PREVIEWS = [("original", "/courses"), ("modified", "/courses"), ("improved", "/courses"), ("improved", "/courses?level=Beginner&campus=&day=Weekend"),
             ("improved", "/courses/compare"), ("improved", "/courses/intro-to-python"), ("polished", "/courses"), ("polished", "/"),
             ("polished", "/courses/wheel-thrown-pottery"),
