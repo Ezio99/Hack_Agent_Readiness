@@ -138,6 +138,33 @@ def test_the_oracle_and_its_facts_are_unchanged():
     assert all(re.fullmatch(r"[a-z0-9-]+", c.slug) for c in D.COURSES)
 
 
+def test_form_results_count_as_reachable_and_the_page_audit_finds_nothing_left_to_fix():
+    from agent_readiness.diagnostics import structural as SD
+    from agent_readiness.investigate.inspect.profile import build_profile
+    prof = build_profile(render.snapshot("improved"))
+    assert prof["unreachable"] == []                                     # every filter result is one form submission away
+    assert prof["depth"][f"/courses?{I.query('Beginner', '', 'Weekend')}"] == 1             # the filter form is on the home page too
+    st = {v: SD.observe(build_profile(render.snapshot(v)), site="larkspur", version=v) for v in ("original", "modified", "improved")}
+    assert [len(st[v]) for v in st] == [7, 4, 0]
+    c = SD.compare(st["original"], st["improved"])
+    assert (len(c["resolved"]), len(c["introduced"]), len(c["persisting"])) == (7, 0, 0)
+    audit = json.loads((Path(__file__).resolve().parents[1] / "dashboard" / "src" / "site" / "showcase" / "larkspur.json").read_text())["page_audit"]
+    assert audit == {v: [f.title for f in st[v]] for v in st}            # the showcase states exactly what the product finds
+
+
+def test_a_get_form_only_adds_reachability_for_pages_its_own_fields_produce():
+    from agent_readiness.investigate.inspect.crawl import Limits, MappingFetcher, crawl
+    from agent_readiness.investigate.inspect.profile import build_profile
+    from agent_readiness.investigate.sitemodel.snapshot import Resource
+    form = '<form method="get" action="/list"><select name="a"><option>x</option></select></form>'
+    snap = crawl(MappingFetcher({"/": f"<html><body><main><a href='/list'>list</a>{form}</main></body></html>", "/list": "<main>list</main>"}), Limits())
+    res = dict(snap.resources)
+    for path in ("/list?a=x", "/list?b=y", "/other?a=x"):
+        res[path] = Resource(path, 200, "text/html; charset=utf-8", b"<main>result</main>")
+    prof = build_profile(type(snap)(res, snap.meta))
+    assert prof["unreachable"] == ["/list?b=y", "/other?a=x"]           # only the form's own action and field names count
+
+
 @pytest.mark.skipif(not (STORE / "objects").is_dir(), reason="needs the local lifecycle store")
 def test_every_frozen_larkspur_task_stays_valid_with_its_answer_on_improved():
     from agent_readiness.evalruns import manifest as MF

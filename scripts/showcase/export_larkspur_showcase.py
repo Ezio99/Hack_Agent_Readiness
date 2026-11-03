@@ -99,6 +99,14 @@ async def _previews() -> dict:
     return out
 
 
+def page_audit() -> dict:
+    """The product's structural page audit of each version (zero cost; the same rules the readiness report uses)."""
+    from agent_readiness.diagnostics import structural as SD
+    from agent_readiness.investigate.inspect.profile import build_profile
+    from agent_readiness.sites.larkspur import render
+    return {v: [f.title for f in SD.observe(build_profile(render.snapshot(v)), site="larkspur", version=v)] for v in ("original", "modified", "improved")}
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--service", help="base URL of a view-only service on a copy of the production data (omit to refresh only the site previews)")
@@ -109,6 +117,7 @@ def main(argv=None) -> int:
     if a.service:
         data["live"] = export_live(a.service.rstrip("/"))
     data["previews"] = asyncio.run(_previews())
+    data["page_audit"] = page_audit()
     target.write_text(json.dumps(data, indent=1, ensure_ascii=False) + "\n")
     print(f"wrote {target.relative_to(ROOT)} and {len(list((OUT / 'frames').glob('*.webp')))} frames")
     return 0

@@ -7,6 +7,8 @@ key behind the M9 network guard (reserve-before-send, connection refused, trial 
 
     S=$(mktemp -d); cd "$S" && M9_NO_NETWORK=1 PYTHONPATH=<repo>/scripts/m9/no_network_guard \\
         <repo>/.venv/bin/python <repo>/scripts/m9/judge_paid_path_rehearsal.py <repo> "$S/run"
+
+Final showcase: set M9_JUDGE_VARIANTS=original,improved to rehearse the featured Original-vs-Improved pool (default: original,modified).
 """
 import json
 import os
@@ -71,7 +73,8 @@ assert v3 == V3_SUITE, v3
 sys.stdin.isatty = lambda: True                                       # the owner's terminal (the gate itself is tested in the unit tests)
 appr = AP.decide(st, v3, decision="approved", attestation=AP.attestation_text(v3, "approved"), at="2026-11-03T12:01:00+00:00", notes="rehearsal copy")
 AP.freeze(st, v3, appr, at="2026-11-03T12:02:00+00:00")
-kw = dict(arming_id="larkspur-judge-1", mode="paid", frozen_ref="larkspur-core@v3", variants=["original", "modified"], repetitions=[1], launches=4)
+VARIANTS = os.environ.get("M9_JUDGE_VARIANTS", "original,modified").split(",")          # final showcase: M9_JUDGE_VARIANTS=original,improved
+kw = dict(arming_id="larkspur-judge-1", mode="paid", frozen_ref="larkspur-core@v3", variants=VARIANTS, repetitions=[1], launches=4)
 p = AR.plan(st, **kw)
 AR.arm(st, typed=p["attestation"], at="2026-11-03T12:03:00+00:00", interactive=True, **kw)
 out["arming"] = {"manifest": p["options"][0]["manifest_sha256"], "trials": p["options"][0]["trials"], "reservation_usd": p["options"][0]["reservation_microusd"] / 1e6,

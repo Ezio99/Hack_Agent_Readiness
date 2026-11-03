@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { SiteFooter, SiteHeader } from './Shell';
-import { CARD_FACTS, FEATURED, IMPROVEMENTS, JOURNEY, LIVE, fewerPct, journeyOf, showcaseFrame, trialOf, type LiveStep } from './showcase';
+import { CARD_FACTS, FEATURED, IMPROVEMENTS, JOURNEY, LIVE, PAGE_AUDIT, fewerPct, journeyOf, showcaseFrame, trialOf, type LiveStep } from './showcase';
 import { LatestLive } from './LatestLive';
 import './home.css';
 
@@ -155,6 +155,7 @@ export function Home({ section }: { section?: string }) {
           <p className="eyebrow"><b>04</b> — The improved website</p>
           <h2 id="learn-h" className="h2">Every recommendation, <em>applied.</em></h2>
           <p className="lede">The Improved {FEATURED.short} site puts all seven deciding facts on every card and fixes every dead end the agents hit. Run it live: the same frozen tasks, Original vs Improved.</p>
+          <p className="audit-line"><span className="mono">Page audit</span> problems the report finds in the pages themselves: <b className="n-o">{PAGE_AUDIT.original.length}</b> Original → <b>{PAGE_AUDIT.modified.length}</b> Modified → <b className="n-i">{PAGE_AUDIT.improved.length}</b> Improved</p>
           <div className="hero-cta"><a className="btn btn-signal" href="#/run">Run Original vs Improved <span className="arr" aria-hidden="true">→</span></a><a className="btn btn-ghost" href="#/lifecycle/improve">See every change</a></div>
           <table className="facts-table"><caption className="sr-only">Facts shown on the course cards of each version</caption>
             <thead><tr><th scope="col">On the course cards</th><th scope="col">Original</th><th scope="col">Modified</th><th scope="col">Improved</th></tr></thead>

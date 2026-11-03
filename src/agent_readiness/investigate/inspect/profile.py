@@ -6,7 +6,7 @@ deterministic `Observation` records (facts with `page:` refs). Nothing here name
 from __future__ import annotations
 
 from collections import Counter, defaultdict, deque
-from urllib.parse import urlsplit
+from urllib.parse import parse_qsl, urlsplit
 
 from ..models import Observation, Provenance
 from ..sitemodel.snapshot import Snapshot
@@ -44,10 +44,16 @@ def build_profile(snap: Snapshot) -> dict:
     tmpl = {p: template_of(p, parents) for p in pages}
     # link graph + click depth from "/"
     edges = {p: sorted({l["href"] for l in rec["links"] + rec["nav_links"] if l["href"] in pages}) for p, rec in pages.items()}
+    # A GET form is navigation too: submitting it opens its action with the form's own field names, so every captured page it can produce is one
+    # interaction away (pages reached only through a form were otherwise reported as unreachable). Sites without GET forms are unaffected.
+    via_form = {p: sorted({t for f in rec["forms"] if f["method"] == "get" and f["action"] for t in pages
+                           if urlsplit(t).query and urlsplit(t).path == urlsplit(f["action"]).path
+                           and {k for k, _ in parse_qsl(urlsplit(t).query, keep_blank_values=True)} <= {x["name_attr"] for x in f["fields"] if x.get("name_attr")}})
+                for p, rec in pages.items() if rec["forms"]}
     depth, q = {"/": 0} if "/" in pages else {}, deque(["/"] if "/" in pages else [])
     while q:
         cur = q.popleft()
-        for nxt in edges.get(cur, []):
+        for nxt in edges.get(cur, []) + via_form.get(cur, []):
             if nxt not in depth:
                 depth[nxt] = depth[cur] + 1
                 q.append(nxt)

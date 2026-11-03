@@ -26,7 +26,7 @@ export default function App() {
   useEffect(() => { document.title = TITLES[journey ? 'lifecycle' : route.name]; }, [route.name, journey]);
   // Each route starts at the top unless it targets a section/scene; those components scroll themselves.
   useEffect(() => {
-    const targeted = (route.name === 'home' && route.section) || (route.name === 'demo' && route.scene);
+    const targeted = (route.name === 'home' && route.section) || (route.name === 'demo' && route.scene) || (route.name === 'lifecycle' && route.step);
     if (!targeted) window.scrollTo?.({ top: 0 });
   }, [route.name, route.name === 'report' ? `${route.id}/${route.task ?? ''}` : '']);
 

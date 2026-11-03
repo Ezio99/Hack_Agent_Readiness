@@ -367,5 +367,23 @@
    "path": "/courses/intro-to-python",
    "snapshot_sha256": "87e715d59c2376f82b23f33007496edf193812eb574a65a8629109bbe35e63b5"
   }
+ },
+ "page_audit": {
+  "original": [
+   "'campus' is only on item pages, not on the /courses listing",
+   "'class day' is only on item pages, not on the /courses listing",
+   "'course fee' is only on item pages, not on the /courses listing",
+   "'duration' is only on item pages, not on the /courses listing",
+   "'materials' is only on item pages, not on the /courses listing",
+   "'seats left' is only on item pages, not on the /courses listing",
+   "none of 14 item pages carries structured data"
+  ],
+  "modified": [
+   "'campus' is only on item pages, not on the /courses listing",
+   "'class day' is only on item pages, not on the /courses listing",
+   "'materials' is only on item pages, not on the /courses listing",
+   "none of 14 item pages carries structured data"
+  ],
+  "improved": []
  }
 }

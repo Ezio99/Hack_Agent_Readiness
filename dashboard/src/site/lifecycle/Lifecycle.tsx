@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { SiteFooter, SiteHeader } from '../Shell';
 import { api, fmtUsd, words, type EvaluationSummary, type Finding, type Generation, type Overview, type Suite } from '../../lib/lifecycleApi';
-import { CARD_FACTS, FEATURED, IMPROVEMENTS, JOURNEY, LIVE, VERSIONS, fewerPct, journeyOf, showcaseFrame, trialOf } from '../showcase';
+import { CARD_FACTS, FEATURED, IMPROVEMENTS, JOURNEY, LIVE, PAGE_AUDIT, VERSIONS, fewerPct, journeyOf, showcaseFrame, trialOf } from '../showcase';
 import { Failed, Loading, useLoad, VariantName } from './parts';
 import './lifecycle.css';
 
@@ -12,7 +12,12 @@ import './lifecycle.css';
 export function Lifecycle({ step, suite }: { step?: string; suite?: string }) {
   const ov = useLoad(() => api.overview(), 'overview');
   const current = step ?? 'website';
-  useEffect(() => { if (step) document.getElementById(`lc-${step}`)?.scrollIntoView?.({ block: 'start' }); }, [step]);
+  useEffect(() => {                      // deep link: scroll now, and again once the sections above have loaded their data and images
+    if (!step) return;
+    const go = () => document.getElementById(`lc-${step}`)?.scrollIntoView?.({ block: 'start' });
+    go(); const t = [setTimeout(go, 400), setTimeout(go, 1200)];
+    return () => t.forEach(clearTimeout);
+  }, [step]);
   return <div className="ar lc">
     <a className="ar-skip" href="#lc-main" onClick={e => { e.preventDefault(); document.getElementById('lc-main')?.focus(); }}>Skip to content</a>
     <SiteHeader active="lifecycle" />
@@ -97,7 +102,7 @@ function GenerationView({ g }: { g: Generation }) {
   return <div className="lc-gen">
     <dl className="lc-kpis">
       <div><dt>Questions proposed</dt><dd>{g.proposals.length}</dd><small>{g.rounds.filter(r => r.sent).length} rounds · {String(g.generator.model)}</small></div>
-      <div><dt>Accepted</dt><dd>{final.natural ?? 0}</dd><small>answerable from the catalogue, in the customer’s words</small></div>
+      <div><dt>Accepted</dt><dd>{final.natural ?? 0}</dd><small>answerable from the catalogue, in the customer’s words{g.post_fix_reevaluation ? ` (${g.admissions.natural ?? 0} as first checked; ${final.natural ?? 0} after a fix to the checker, re-checked at no cost)` : ''}</small></div>
       <div><dt>Model cost</dt><dd>{fmtUsd(g.cost.calculated_usd, 3)}</dd><small>{g.cost.requests} model requests</small></div>
     </dl>
     <div className="lc-seg" role="group" aria-label="Filter proposed questions">{['natural', 'rubric', 'rejected', 'all'].filter(k => k === 'all' || g.admissions[k]).map(k =>
@@ -217,6 +222,8 @@ function ImproveStep() {
     <div className="lc-table-wrap"><table className="lc-table lc-facts-grid"><caption>What each version shows on its course cards</caption>
       <thead><tr><th scope="col">Fact</th>{(['original', 'modified', 'improved'] as const).map(v => <th scope="col" key={v}><VariantName v={v} /></th>)}</tr></thead>
       <tbody>{CARD_FACTS.map(f => <tr key={f.fact}><th scope="row">{f.fact}</th>{[f.original, f.modified, f.improved].map((x, i) => <td key={i} className={x ? 'yes' : 'no'}>{x ? '✓ on the card' : 'course page only'}</td>)}</tr>)}</tbody></table></div>
+    <dl className="lc-kpis">{(['original', 'modified', 'improved'] as const).map(v => <div key={v}><dt>Page audit · {VERSIONS[v].label}</dt><dd>{PAGE_AUDIT[v].length}</dd>
+      <small>{PAGE_AUDIT[v].length ? `problems in the pages themselves (${PAGE_AUDIT[v].length === 1 ? 'one' : 'e.g.'} ${PAGE_AUDIT[v][0]})` : 'nothing left for the page audit to flag'}</small></div>)}</dl>
     <ol className="lc-improvements">{IMPROVEMENTS.map((x, i) => <li key={x.id} id={`improve-${x.id}`}>
       <div className="lc-imp-text">
         <span className="lc-tn">Change {i + 1}</span><h3>{x.title}</h3>

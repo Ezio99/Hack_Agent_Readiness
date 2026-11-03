@@ -133,3 +133,5 @@
 .facts-table td{text-align:center;color:var(--ink-3)}.facts-table td.yes{color:var(--pass);font-weight:600}
 .improve-shot{margin:0;border-bottom:1px solid var(--rule)}.improve-shot img{display:block;width:100%;height:auto}
 .how-journey h3 .link{color:inherit}
+.audit-line{font-size:15px;color:var(--ink-2);line-height:1.5}.audit-line .mono{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-right:8px}
+.audit-line b{font:400 22px/1 var(--serif);color:var(--ink)}.audit-line b.n-o{color:var(--original)}.audit-line b.n-i{color:var(--improved)}

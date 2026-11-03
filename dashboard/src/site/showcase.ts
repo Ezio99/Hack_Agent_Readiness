@@ -21,6 +21,9 @@ export interface LiveRecord {
 /** The paid live evaluation of the featured site (Original vs Modified, six tasks, 12 agent runs), as the product's report states it. */
 export const LIVE = data.live as unknown as LiveRecord;
 
+/** The product's own page audit (the readiness report's structural rules) of each version: what is still wrong with the pages themselves. */
+export const PAGE_AUDIT = data.page_audit as Record<'original' | 'modified' | 'improved', string[]>;
+
 export const FEATURED = {
   site: 'larkspur',
   name: 'Larkspur Community College',
