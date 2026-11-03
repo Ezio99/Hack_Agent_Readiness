@@ -220,14 +220,40 @@ it('the Agent runs grid shows Correct / Not correct as the report counts it, wit
   expect(host.querySelector('.ws-grid')!.textContent).toContain('2 requests');
 });
 
-it('operator diagnostics show actual spend, held reservations, available budget, authorised launches and cost per evaluation separately', async () => {
-  const spending = { ceiling: 21.956, settled: 2.177977, outstanding: 3.3, committed: 5.477977, available: 16.478023, released: 8.998023, settled_jobs: 2, unsettled_jobs: 2, basis: 'calculated from provider-reported usage; not a bill' };
+it('operator diagnostics separate programme expenditure, the hosted ceiling and separate budgets, beside launch authority', async () => {
+  const programme = { spent_usd: 19.418057, spent_aud: 29.13, recorded_usd: 18.786306, not_recorded: [{ job: ID, usd: 0.631751 }], held_usd: 0, ceiling_available_usd: 10.588249,
+    worst_case_usd: 30.006306, worst_case_aud: 45.01, limit_aud: 50, rate_aud_per_usd: 1.5, within_limit: true, ledger_entries: 21, ledger_problems: 0, basis: 'actual' };
+  const spending = { ceiling: 21.956, settled: 0.631751, outstanding: 10.736, committed: 11.367751, available: 10.588249, released: 3.108249, settled_jobs: 1, unsettled_jobs: 3,
+    basis: 'calculated from provider-reported usage; not a bill', global: null, budgets: [], charged_to: null, programme };
   const pool = { ...armed, variants: ['original', 'improved'], launches: { max: 3, used: 1, left: 2 }, options: [{ repetitions: 1, trials: 6, reservation_usd: 3.74, manifest_sha256: 'd'.repeat(64), available: true, fits_hosted_ceiling: true }] };
-  const hist = [{ id: ID, engine: 'stage-b', state: 'completed', repetitions: 1, mode: 'live', created_at: 1, summary: job.summary, cost_usd: 0.631751, reserved_usd: 3.74, arm_display: { Original: 'Original', Modified: 'Improved' } }];
+  const hist = [{ id: ID, engine: 'stage-b', state: 'completed', repetitions: 1, mode: 'live', created_at: 1, summary: job.summary, cost_usd: 0.631751, reserved_usd: 3.74, budget: null, arm_display: { Original: 'Original', Modified: 'Improved' } }];
   server(url => url.endsWith('/config') ? config({ evaluation: pool, spending }) : url.endsWith('/jobs') ? hist : job);
   const host = await mount();
-  const b = host.querySelector('.ws-budget')!.textContent!;
-  for (const s of ['Actual model spendUS$2.18', 'settled, 2 evaluations', 'Held for unsettled runsUS$3.30', 'AvailableUS$16.48', 'of the US$21.96 hosted budget',
-                   'Live runs authorised2 of 3 left', 'each reserves US$3.74; the budget covers 4', 'Cost per completed evaluationUS$0.63']) expect(b).toContain(s);
-  expect(host.querySelector('.history-table')!.textContent).toContain('US$0.63');
+  const sec = (name: string) => host.querySelector(`.ws-budget section[aria-label="${name}"]`)!.textContent!;
+  for (const x of ['Spent to dateA$29.13', 'US$19.42 of verified actual costs, including 1 hosted run not yet in the programme ledger', 'Worst caseA$45.01', 'of the A$50 limit'])
+    expect(sec('Programme expenditure')).toContain(x);
+  for (const x of ['a safety cap for programme runs, not spending', 'Settled actual costUS$0.63', '1 evaluation', 'Held for unsettled runsUS$10.74', '3 evaluations', 'AvailableUS$10.59', 'of the US$21.96 ceiling'])
+    expect(sec('Hosted admission ceiling')).toContain(x);
+  expect(sec('Separate budgets')).toContain('None open');
+  for (const x of ['Authorised2 of 3 left', 'charged to the A$50 programme (hosted ceiling); each reserves US$3.74; the ceiling covers 2', 'Cost per completed evaluationUS$0.63'])
+    expect(sec('Launch authority')).toContain(x);
+  expect(host.querySelector('.ws-budget')!.textContent).not.toContain('hosted budget');                 // the ceiling is never called a budget
+  expect(host.querySelector('.history-table')!.textContent).toContain('US$0.63 programme');
+});
+
+it('a launch charged to a separate budget shows that budget and its own capacity, never the programme or the ceiling', async () => {
+  const b = { id: 'ar-a20-2026-11', limit_aud: 20, rate_aud_per_usd: 1.5, spent_aud: 0.947627, outstanding_aud: 5.61, available_aud: 13.442373, spent_usd: 0.631751, outstanding_usd: 3.74,
+    available_usd: 8.961582, jobs: 2, settled_jobs: 1, allocations: 1, open_allocations: 0 };
+  const spending = { ceiling: 21.956, settled: 0.631751, outstanding: 10.736, committed: 11.367751, available: 10.588249, released: 3.108249, settled_jobs: 1, unsettled_jobs: 3,
+    basis: 'not a bill', global: { cap_usd: 35.289333, committed_usd: 15.739502, available_usd: 19.549831 }, budgets: [b], charged_to: 'ar-a20-2026-11', programme: null };
+  const pool = { ...armed, budget: 'ar-a20-2026-11', launches: { max: 3, used: 2, left: 1 }, options: [{ repetitions: 1, trials: 6, reservation_usd: 3.74, manifest_sha256: 'd'.repeat(64), available: true, fits_hosted_ceiling: true }] };
+  const hist = [{ id: ID, engine: 'stage-b', state: 'completed', repetitions: 1, mode: 'live', created_at: 1, summary: job.summary, cost_usd: 0.631751, reserved_usd: 3.74, budget: 'ar-a20-2026-11', arm_display: { Original: 'Original', Modified: 'Improved' } }];
+  server(url => url.endsWith('/config') ? config({ evaluation: pool, spending }) : url.endsWith('/jobs') ? hist : job);
+  const host = await mount();
+  const sec = (name: string) => host.querySelector(`.ws-budget section[aria-label="${name}"]`)!.textContent!;
+  expect(sec('Separate budgets')).toContain('ar-a20-2026-11A$13.44 available');
+  expect(sec('Separate budgets')).toContain('of A$20.00 · spent A$0.95 · held A$5.61 · 2 runs, 1 off-host allocation');
+  expect(sec('Launch authority')).toContain('charged to the separate budget ar-a20-2026-11; each reserves US$3.74; the budget covers 2');
+  expect(host.querySelector('.ws-budget section[aria-label="Programme expenditure"]')).toBeNull();
+  expect(host.querySelector('.history-table')!.textContent).toContain('US$0.63 ar-a20-2026-11');
 });

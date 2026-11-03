@@ -106,16 +106,20 @@ def snapshot(db: sqlite3.Connection) -> dict:
     if "policy_migrations" in {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}:
         history = [dict(zip(("seq", "at", "from_ceiling", "to_ceiling", "reason", "actor"), r))
                    for r in db.execute("SELECT seq, at, from_ceiling, to_ceiling, reason, actor FROM policy_migrations ORDER BY seq")]
+    tables = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    budgeted = {r[0]: r[1] for r in db.execute("SELECT job_id, budget_id FROM budget_jobs")} if "budget_jobs" in tables else {}
+    legacy = {j[0]: j[4] for j in jobs if j[0] not in budgeted}                  # the ceiling's scope: jobs not charged to a separate budget
     settled, released, n_settled = 0, 0, 0
-    if "settlements" in {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}:      # actual-cost settlement (additive table)
-        res = {j[0]: j[4] for j in jobs}
+    if "settlements" in tables:                                                  # actual-cost settlement (additive table)
         for job_id, amount in db.execute("SELECT job_id, settled FROM settlements"):
-            settled, released, n_settled = settled + amount, released + res.get(job_id, amount) - amount, n_settled + 1
-    committed = reserved - released
+            if job_id in legacy:
+                settled, released, n_settled = settled + amount, released + legacy[job_id] - amount, n_settled + 1
+    committed = sum(legacy.values()) - released
     return {"ceiling": ceiling, "cap": cap, "interval": interval, "reserved": reserved, "remaining": ceiling - reserved, "jobs": len(jobs),
             "active": active, "jobs_fingerprint": fingerprint, "history": history, "by_state": _by_state(jobs),
             "settled": settled, "settled_jobs": n_settled, "released": released, "outstanding": committed - settled,
-            "committed": committed, "available": ceiling - committed}
+            "committed": committed, "available": ceiling - committed,
+            "budget_jobs": len(budgeted), "budget_reserved": sum(j[4] for j in jobs if j[0] in budgeted)}
 
 
 def _by_state(jobs) -> dict:
@@ -234,7 +238,10 @@ def _print_state(st: dict) -> None:
     print(f"reservations    {usd(st['reserved'])} held by {st['jobs']} job(s) " + ", ".join(f"{k}: {v['jobs']} ({usd(v['reserved'])})" for k, v in sorted(st["by_state"].items())))
     print(f"remaining       {usd(st['remaining'])}; active jobs: {len(st['active'])}")
     print(f"settlement      settled {usd(st['settled'])} by {st['settled_jobs']} job(s) (released {usd(st['released'])}); outstanding {usd(st['outstanding'])}; "
-          f"committed {usd(st['committed'])}; available {usd(st['available'])}")
+          f"committed {usd(st['committed'])}; available {usd(st['available'])}" + (" (programme/legacy jobs only)" if st.get("budget_jobs") else ""))
+    if st.get("budget_jobs"):
+        print(f"budgets         {st['budget_jobs']} job(s) charged to separate budgets (reserved {usd(st['budget_reserved'])}) are bounded by their budgets, not this ceiling "
+              "(python -m agent_readiness.hosted.budget status)")
     for h in st["history"]:
         print(f"migration #{h['seq']}    {time.strftime('%Y-%m-%d %H:%M:%SZ', time.gmtime(h['at']))} {usd(h['from_ceiling'])} -> {usd(h['to_ceiling'])} by {h['actor']}: {h['reason']}")
 

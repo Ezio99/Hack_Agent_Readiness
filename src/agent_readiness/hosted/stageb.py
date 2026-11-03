@@ -78,7 +78,8 @@ class StageBExecutor(J.LifecycleExecutor):
         if sum(c["reservation_microusd"] for c in used) + opt.reservation_microusd > rec.total_reservation_microusd:
             raise AR.ArmingRefused("arming_total_exhausted", "This launch would exceed the armed total.", 409)
         amount = opt.reservation_microusd if rec.mode == "paid" else 0
-        self.admission.reserve_amount(job_id, client, amount)                           # atomic: slot + ceiling + rate limit
+        # atomic: slot + rate limit + the arming's scope (its separate budget, or the hosted ceiling for programme/legacy armings) + global cap
+        self.admission.reserve_amount(job_id, client, amount, **({"budget": rec.budget} if getattr(rec, "budget", None) else {}))
         at = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime())
         try:
             claim = AR.launch(self.store(), rec, repetitions=repetitions, job_id=job_id, at=at)

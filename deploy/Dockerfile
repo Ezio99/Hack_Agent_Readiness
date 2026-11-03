@@ -20,6 +20,8 @@ COPY src ./src
 RUN pip install --no-deps . && python -c "import agent_readiness.hosted.serve"
 # Sanitized, versioned lifecycle datasets (M8): the preloaded M7 evaluation; validated at startup (a dataset that fails is not served).
 COPY datasets ./datasets
+# The A$50 programme ledger as of this release (display of actual programme expenditure; matched to hosted jobs by explicit identity). Read-only.
+COPY collaboration/budget/programme-ledger.json /app/budget/programme-ledger.json
 COPY --from=studio /dashboard/dist /srv/studio
 COPY deploy/jail-policy.json /etc/agent-readiness/jail.json
 # Defence in depth only (the network namespace is the boundary): no local-file pages in Chromium.
@@ -31,7 +33,7 @@ USER agent
 # ledgers) live on the data volume; the serve process AND the owner's `docker compose exec app python -m agent_readiness.lifecycle.arming` use them.
 ENV AR_HOSTED_DATA=/data/hosted AR_STATIC_DIR=/srv/studio AR_HOST=0.0.0.0 AR_PORT=8080 AR_LIFECYCLE_DATASETS=/app/datasets/lifecycle \
     AR_LIFECYCLE_STORE=/data/hosted/lifecycle/store AR_STAGE_B_ROOT=/data/hosted/lifecycle/stage-b \
-    AGENT_READINESS_BROWSER_JAIL=/etc/agent-readiness/jail.json
+    AGENT_READINESS_BROWSER_JAIL=/etc/agent-readiness/jail.json AR_PROGRAMME_LEDGER=/app/budget/programme-ledger.json
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=90s CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=5)"]
 CMD ["python", "-m", "agent_readiness.hosted.serve"]

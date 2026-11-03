@@ -14,7 +14,11 @@ own durable ledger. A failed or interrupted launch is never retried; its number 
 
     python -m agent_readiness.lifecycle.arming prepare --frozen larkspur-core@v2 --variants original modified --repetitions 1 --launches 1 --mode paid
     python -m agent_readiness.lifecycle.arming arm     ...same arguments...           # owner, interactive terminal, types the attestation
-    python -m agent_readiness.lifecycle.arming status | disarm"""
+    python -m agent_readiness.lifecycle.arming status | disarm
+
+Separate budgets (2026-11): `--budget <id>` records a `hosted-arming-v2` arming whose launches are charged to that owner-opened budget (admission
+checks the budget, not the hosted ceiling) and whose attestation names it. Without `--budget` the record is `hosted-arming-v1`, byte-identical in
+form to every earlier arming (its hash is unchanged): its launches are programme (legacy) jobs under the hosted ceiling."""
 from __future__ import annotations
 
 import argparse
@@ -27,12 +31,14 @@ from decimal import ROUND_CEILING, Decimal
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ..evalruns import authorization as AU
 from . import sites as S
 
 SCHEMA = "hosted-arming-v1"
+SCHEMA_V2 = "hosted-arming-v2"                                    # + budget: launches are charged to a separate owner-opened budget
+BUDGET_ID = r"^[a-z0-9][a-z0-9-]{2,40}$"
 RECORDED_BY = "owner at an interactive terminal (agent_readiness.lifecycle.arming arm)"
 ARMING_ID = AU.EXPERIMENT_ID                                      # the launch experiment ids append "-l<N>", so ids stay below the experiment-id limit
 REPETITIONS = (1, 3, 5)
@@ -56,7 +62,7 @@ class Option(BaseModel):
 
 class Arming(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
-    schema_: Literal["hosted-arming-v1"] = Field(default=SCHEMA, alias="schema")
+    schema_: Literal["hosted-arming-v1", "hosted-arming-v2"] = Field(default=SCHEMA, alias="schema")
     arming_id: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{2,50}$")
     mode: Literal["paid", "rehearsal"]
     site: str
@@ -70,9 +76,19 @@ class Arming(BaseModel):
     attestation: str
     recorded_at: str
     recorded_by: str
+    budget: str | None = Field(default=None, pattern=BUDGET_ID)
+
+    @model_validator(mode="after")
+    def _budget_matches_schema(self):
+        if (self.schema_ == SCHEMA_V2) != (self.budget is not None):
+            raise ValueError("hosted-arming-v2 names a budget; hosted-arming-v1 never does")
+        return self
 
     def content(self) -> dict:
-        return self.model_dump(mode="json", by_alias=True)
+        d = self.model_dump(mode="json", by_alias=True)
+        if self.schema_ == SCHEMA:                                      # v1: exactly the fields it was recorded (and hashed) with
+            d.pop("budget", None)
+        return d
 
     @property
     def sha256(self) -> str:
@@ -181,11 +197,15 @@ def attestation(a: dict) -> str:
     return (f"I am the owner and I {verb} under arming {a['arming_id']}: frozen suite {a['frozen_suite']} {a['frozen_suite_sha256']} on "
             f"{a['site']} ({', '.join(f'{n} {s}' for n, s in a['variants'])}), model {ag['model']} at {ag['endpoint']} (reasoning {ag['reasoning_effort']}, "
             f"{ag['max_completion_tokens']} completion tokens, profile {ag['profile']} {ag['profile_sha256'][:12]}); {opts}; at most {a['max_launches']} "
-            f"launch(es) reserving at most US${a['total_reservation_microusd'] / 1e6:.6f} in total")
+            f"launch(es) reserving at most US${a['total_reservation_microusd'] / 1e6:.6f} in total"
+            + (f"; every launch is charged to the separate budget {a['budget']}, not to the A$50 programme or the hosted ceiling" if a.get("budget") else ""))
 
 
-def plan(store, *, arming_id: str, mode: str, frozen_ref: str, variants: list[str], repetitions: list[int], launches: int) -> dict:
+def plan(store, *, arming_id: str, mode: str, frozen_ref: str, variants: list[str], repetitions: list[int], launches: int, budget: str | None = None) -> dict:
     arming_path(arming_id)
+    import re as _re
+    if budget is not None and not _re.match(BUDGET_ID, budget):
+        raise ArmingRefused("invalid_budget", "budget ids are 3-41 lowercase letters, digits or hyphens", 422)
     if mode not in ("paid", "rehearsal"):
         raise ArmingRefused("invalid_mode", "mode is paid or rehearsal", 422)
     if not repetitions or any(r not in REPETITIONS for r in repetitions) or len(set(repetitions)) != len(repetitions):
@@ -217,7 +237,8 @@ def plan(store, *, arming_id: str, mode: str, frozen_ref: str, variants: list[st
         bases.append(f"{r}: {basis}")
     total = max(o["reservation_microusd"] for o in options) * launches
     a = {"arming_id": arming_id, "mode": mode, "site": suite.site, "frozen_suite": frozen_ref, "frozen_suite_sha256": frozen_sha,
-         "variants": [list(p) for p in pairs], "options": options, "agent": agent, "max_launches": launches, "total_reservation_microusd": total}
+         "variants": [list(p) for p in pairs], "options": options, "agent": agent, "max_launches": launches, "total_reservation_microusd": total,
+         **({"budget": budget} if budget else {})}
     return {**a, "attestation": attestation(a), "manifest_basis": bases, "approval_sha256": fz.approval_sha256, "approved_at": approval.approved_at, "synthetic": synthetic}
 
 
@@ -231,7 +252,8 @@ def arm(store, *, typed: str, at: str, interactive: bool, **kw) -> Path:
     path = arming_path(p["arming_id"])
     if path.exists():
         raise ArmingRefused("already_armed", f"arming {p['arming_id']} exists (write-once); use a new arming id", 409)
-    rec = Arming(**{"schema": SCHEMA, **{k: p[k] for k in ("arming_id", "mode", "site", "frozen_suite", "frozen_suite_sha256", "max_launches", "total_reservation_microusd", "attestation")},
+    rec = Arming(**{"schema": SCHEMA_V2 if p.get("budget") else SCHEMA, **({"budget": p["budget"]} if p.get("budget") else {}),
+                    **{k: p[k] for k in ("arming_id", "mode", "site", "frozen_suite", "frozen_suite_sha256", "max_launches", "total_reservation_microusd", "attestation")},
                     "variants": tuple(tuple(v) for v in p["variants"]), "options": tuple(Option(**o) for o in p["options"]), "agent": p["agent"],
                     "recorded_at": at, "recorded_by": RECORDED_BY})
     problems = verify(store, rec)
@@ -311,7 +333,8 @@ def verify(store, rec: Arming) -> list[str]:
             problems.append("the armed agent is not the pinned agent configuration")
     if rec.total_reservation_microusd < max(o.reservation_microusd for o in rec.options):
         problems.append("the total reservation does not cover one launch")
-    if rec.attestation != attestation({**rec.content(), "options": [o.model_dump() for o in rec.options], "variants": [list(v) for v in rec.variants]}) or rec.recorded_by != RECORDED_BY:
+    if rec.attestation != attestation({**rec.content(), "options": [o.model_dump() for o in rec.options], "variants": [list(v) for v in rec.variants],
+                                       "budget": rec.budget}) or rec.recorded_by != RECORDED_BY:
         problems.append("the arming was not recorded by the owner's terminal attestation of exactly these terms")
     return problems
 
@@ -397,8 +420,11 @@ def summary(store, rec: Arming | None, admission=None) -> dict | None:
     used = claims(rec.arming_id)
     rem = None
     if admission is not None:
-        t = admission.totals()
-        rem = t.get("available_microusd", t["ceiling_microusd"] - t["reserved_microusd"])       # settled + outstanding against the ceiling
+        if hasattr(admission, "capacity_microusd"):
+            rem = admission.capacity_microusd(rec.budget)               # the arming's scope: its separate budget, or the hosted ceiling (legacy)
+        else:
+            t = admission.totals()
+            rem = t.get("available_microusd", t["ceiling_microusd"] - t["reserved_microusd"])
     try:
         fz = store.get("frozen_suite", rec.frozen_suite_sha256)
         suite = store.get("suite", fz.suite_sha256)
@@ -410,6 +436,7 @@ def summary(store, rec: Arming | None, admission=None) -> dict | None:
     return {"arming_id": rec.arming_id, "arming_sha256": rec.sha256, "mode": rec.mode, "site": rec.site, "suite": name, "frozen_suite": rec.frozen_suite,
             "frozen_suite_sha256": rec.frozen_suite_sha256, "variants": [n for n, _ in rec.variants], "armed_at": rec.recorded_at,
             "launches": {"max": rec.max_launches, "used": len(used), "left": left},
+            "budget": rec.budget, "charged_to": f"budget {rec.budget}" if rec.budget else "A$50 programme (hosted ceiling)",
             # authorised launches (the owner's arming) and financial capacity (the hosted ceiling) are separate limits; a launch needs both
             "capacity": None if rem is None else {"available_usd": rem / 1e6, "launches_affordable": [rem // o.reservation_microusd if o.reservation_microusd else None for o in rec.options][0]},
             "options": [{"repetitions": o.repetitions, "trials": o.trials, "reservation_usd": o.reservation_microusd / 1e6, "manifest_sha256": o.manifest_sha256,
@@ -444,7 +471,18 @@ def _print(p: dict, adm) -> None:
     for o, b in zip(p["options"], p["manifest_basis"]):
         print(f"repetitions {o['repetitions']}   manifest {o['manifest_sha256']} ({b.split(': ', 1)[1]}); {o['trials']} trials; worst case US${o['worst_case_usd']}; reserves US${o['reservation_microusd'] / 1e6:.6f}")
     print(f"launches        at most {p['max_launches']}, reserving at most US${p['total_reservation_microusd'] / 1e6:.6f}")
-    if adm is not None:
+    print(f"charged to      " + (f"the separate budget {p['budget']} (hosted-arming-v2)" if p.get("budget") else "the A$50 programme: hosted ceiling scope (hosted-arming-v1)"))
+    if adm is not None and p.get("budget"):
+        b = next((x for x in adm.totals()["budgets"] if x["budget"] == p["budget"]), None)
+        if b is None:
+            raise ArmingRefused("no_budget", f"budget {p['budget']} is not open in this admission database; the owner opens it first (agent_readiness.hosted.budget open)")
+        rem = adm.capacity_microusd(p["budget"])
+        afford = min((rem // o["reservation_microusd"] for o in p["options"] if o["reservation_microusd"]), default=None)
+        print(f"budget          {p['budget']}: limit A${b['limit_micro_aud'] / 1e6:.2f}; spent A${b['spent_micro_aud'] / 1e6:.6f}; outstanding A${b['outstanding_micro_aud'] / 1e6:.6f}; "
+              f"available A${b['available_micro_aud'] / 1e6:.6f} (US${rem / 1e6:.6f} within the global cap)")
+        if afford is not None:
+            print(f"capacity        the budget covers {afford} launch(es) of this size now; this arming authorises at most {p['max_launches']}")
+    elif adm is not None:
         t = adm.totals()
         rem = t.get("available_microusd", t["ceiling_microusd"] - t["reserved_microusd"])
         fit = [o["repetitions"] for o in p["options"] if o["reservation_microusd"] <= rem]
@@ -467,6 +505,7 @@ def main(argv=None) -> int:
         s.add_argument("--variants", nargs=2, required=True)
         s.add_argument("--repetitions", nargs="+", type=int, default=[1])
         s.add_argument("--launches", type=int, default=1)
+        s.add_argument("--budget", help="charge every launch to this separate owner-opened budget (hosted-arming-v2)")
     sub.add_parser("status")
     sub.add_parser("disarm")
     for s in sub.choices.values():
@@ -483,7 +522,7 @@ def main(argv=None) -> int:
             rec = active()
             print(json.dumps({"active": summary(store, rec, _admission(a.admission, rec.mode if rec else "live")), "problems": verify(store, rec) if rec else None}, indent=1))
             return 0
-        kw = dict(arming_id=a.arming, mode=a.mode, frozen_ref=a.frozen, variants=a.variants, repetitions=a.repetitions, launches=a.launches)
+        kw = dict(arming_id=a.arming, mode=a.mode, frozen_ref=a.frozen, variants=a.variants, repetitions=a.repetitions, launches=a.launches, budget=a.budget)
         p = plan(store, **kw)
         _print(p, _admission(a.admission, a.mode))
         if a.cmd == "prepare":

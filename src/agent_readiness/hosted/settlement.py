@@ -46,9 +46,10 @@ def micro(usd: float) -> int:
 
 
 # ----------------------------------------------------------------------------------------------------------------------------- ledgers
-def ledger_state(paths: list[Path]) -> dict:
+def ledger_state(paths: list[Path], skip: list[int] | None = None) -> dict:
     """Read one or more append-only request ledgers (reserve-before-send; `settle` replaces a reservation by the actual cost). Unsettled requests
-    count at their full reserved bound. Raises SettlementRefused if a ledger is missing or malformed."""
+    count at their full reserved bound. Raises SettlementRefused if a ledger is missing or malformed. `skip[i]` lines at the start of ledger i are
+    a verified imported prefix (`fork_prefixes`) and are not this job's spending; the digest always covers every file in full."""
     reserved: dict[tuple, int] = {}
     settled: dict[tuple, int] = {}
     digest, lines, violations = hashlib.sha256(), 0, 0
@@ -58,8 +59,9 @@ def ledger_state(paths: list[Path]) -> dict:
             raise SettlementRefused("ledger_missing", f"a request ledger of this job is missing ({p.name})")
         raw = p.read_bytes()
         digest.update(hashlib.sha256(raw).digest())
+        first = (skip or [0] * len(paths))[i]
         for n, line in enumerate(raw.decode().splitlines(), 1):
-            if not line.strip():
+            if n <= first or not line.strip():
                 continue
             try:
                 e = json.loads(line)
@@ -123,20 +125,69 @@ def job_ledgers(root: Path, job_id: str, stage_b: Path | None = None) -> tuple[s
     raise SettlementRefused("no_job_record", "no job record names this job")
 
 
+# Copied-ledger rule `fork-prefix-1` (the retired Ironbark engine). Each hosted Ironbark repetition was a FORK of the source run live-2d58a80e14: its
+# request ledger starts with a byte-exact copy of the source run's ledger (imported history, already recorded ONCE in the programme ledger as
+# `ironbark-source`), followed by the repetition's own requests. The fork's own write-once `fork.json` declares the imported ledger (entries, sha256).
+# A job's own spending is the remainder, and only when: the fork declares a source ledger whose sha256 is pinned here (i.e. recorded separately), the
+# job ledger's first `entries` lines hash to exactly that sha256, and the remainder is a complete ledger by itself (a settle line naming a request
+# of the imported part is refused as "never reserved"). Nothing is estimated, no file is changed; one differing byte refuses.
+RECORDED_SOURCES = {
+    "90bbc68f6b30b6b6d53bbd2f94d1854ccf4dc941b5793064def05828b70a4357": {"source_run": "live-2d58a80e14", "entries": 126, "settled_microusd": 864_825,
+                                                                         "programme_entry": "ironbark-source"},
+}
+FORK_RULE = "fork-prefix-1"
+
+
+def fork_prefixes(paths: list[Path]) -> tuple[list[int], list[dict]]:
+    """For each ledger path (…/<run>/spend/ledger.jsonl): the number of leading lines that are a verified imported source ledger (0 if the run is
+    not a fork). Raises SettlementRefused when a fork's declared prefix does not verify."""
+    skip, notes = [], []
+    for p in paths:
+        p = Path(p)
+        fj = p.parent.parent / "fork.json"
+        if not fj.is_file():
+            skip.append(0)
+            continue
+        try:
+            src = json.loads(fj.read_text()).get("source_ledger") or {}
+            sha, n = src.get("sha256"), src.get("entries")
+        except (ValueError, AttributeError):
+            raise SettlementRefused("fork_record_malformed", "the fork record is not readable") from None
+        if not sha:
+            skip.append(0)
+            continue
+        pin = RECORDED_SOURCES.get(sha)
+        if pin is None or pin["entries"] != n:
+            raise SettlementRefused("fork_source_unrecorded", "the fork imports a source ledger that is not pinned as recorded separately")
+        if not p.is_file():
+            raise SettlementRefused("ledger_missing", f"a request ledger of this job is missing ({p.name})")
+        raw = p.read_bytes().splitlines(keepends=True)
+        if len(raw) < n or hashlib.sha256(b"".join(raw[:n])).hexdigest() != sha:
+            raise SettlementRefused("fork_prefix_mismatch", "the ledger does not start with exactly the declared imported source ledger")
+        skip.append(n)
+        notes.append({"run": p.parent.parent.name, "source_run": pin["source_run"], "imported_lines": n, "imported_sha256": sha,
+                      "imported_settled_microusd": pin["settled_microusd"], "recorded_as": pin["programme_entry"]})
+    return skip, notes
+
+
 # ----------------------------------------------------------------------------------------------------------------------------- decisions
 def assess(admission, root: Path, job_id: str, *, allow_open: bool = False) -> dict:
     """Read-only: whether `job_id` may be settled now, and at what commitment. Never writes."""
     row = admission.get(job_id)
     if row is None:
         raise SettlementRefused("no_job", "no admission row for this job")
-    out = {"job": job_id, "state": row["state"], "reserved_microusd": row["reserved_microusd"], "settlement": admission.settlement(job_id)}
+    out = {"job": job_id, "state": row["state"], "reserved_microusd": row["reserved_microusd"], "settlement": admission.settlement(job_id),
+           "budget": admission.job_budget(job_id) if hasattr(admission, "job_budget") else None}
     try:
         basis, paths = job_ledgers(root, job_id)
-        led = ledger_state(paths) if paths else {"requests": 0, "settled_requests": 0, "open_requests": 0, "bound_violations": 0, "settled_microusd": 0,
+        skip, forks = fork_prefixes(paths) if basis.startswith("paired engine") else ([0] * len(paths), [])
+        if forks:
+            basis += f"; {FORK_RULE}: imported source ledger {forks[0]['source_run']} ({forks[0]['imported_lines']} lines, sha256 {forks[0]['imported_sha256'][:12]}, recorded once as {forks[0]['recorded_as']}) excluded"
+        led = ledger_state(paths, skip) if paths else {"requests": 0, "settled_requests": 0, "open_requests": 0, "bound_violations": 0, "settled_microusd": 0,
                                                 "open_reserved_microusd": 0, "committed_microusd": 0, "lines": 0, "sha256": hashlib.sha256(b"").hexdigest()}
     except SettlementRefused as exc:
         return {**out, "eligible": False, "reason": exc.code, "detail": exc.detail}
-    out.update(basis=basis, ledger=led)
+    out.update(basis=basis, ledger=led, **({"fork": forks} if forks else {}))
     commit = led["committed_microusd"] if allow_open else led["settled_microusd"]
     why = None
     if row["state"] not in TERMINAL:
@@ -198,22 +249,9 @@ PROGRAMME_LIMIT_AUD = 50.0             # a limit, never an authorisation
 
 
 def programme_view(rep: dict, ledger_path: Path, rate: float = AUD_PER_USD) -> dict:
-    """Owner-facing: the programme's known spend (programme ledger), plus hosted jobs whose verified request ledgers are not yet in it, plus the
-    worst case if the whole available hosted budget were spent; in A$ at the conservative planning rate, against the A$50 limit."""
-    doc = json.loads(Path(ledger_path).read_text())
-    entries = doc.get("entries") or []
-    known = round(sum(float(e.get("usd") or 0) for e in entries), 6)
-    text = json.dumps(entries)
-    missing = []
-    for j in rep["jobs"]:
-        led = j.get("ledger") or {}
-        if led.get("requests") and j["job"] not in text and j["job"][:13] not in text:
-            missing.append({"job": j["job"], "usd": led["committed_microusd"] / 1e6, "open_requests": led["open_requests"]})
-    to_date = round(known + sum(m["usd"] for m in missing), 6)
-    avail = rep["totals"]["available_microusd"] / 1e6
-    return {"rate_aud_per_usd": rate, "limit_aud": PROGRAMME_LIMIT_AUD, "known_usd": known, "not_in_ledger": missing, "spend_to_date_usd": to_date,
-            "spend_to_date_aud": round(to_date * rate, 2), "hosted_available_usd": avail, "worst_case_usd": round(to_date + avail, 6),
-            "worst_case_aud": round((to_date + avail) * rate, 2), "within_limit": (to_date + avail) * rate <= PROGRAMME_LIMIT_AUD + 1e-9}
+    """Owner-facing A$50 programme view from an audit report (see `programme.view`): recorded spend matched by explicit job identity, never by text."""
+    from . import programme
+    return programme.view_from_audit(json.loads(Path(ledger_path).read_text()), rep, rate=rate)
 
 
 def _usd(m: int | None) -> str:
@@ -231,9 +269,11 @@ def _print_audit(rep: dict) -> None:
     pv = rep.get("programme")
     if pv:
         extra = "; ".join(f"{m['job'][:13]} US${m['usd']:.6f}" for m in pv["not_in_ledger"]) or "none"
+        if pv.get("unverified_exposure_usd"):
+            extra += f" (+ US${pv['unverified_exposure_usd']:.6f} held for unverified runs)"
         print(f"programme       known US${pv['known_usd']:.6f} (programme ledger) + not yet recorded: {extra} = US${pv['spend_to_date_usd']:.6f} = A${pv['spend_to_date_aud']:.2f}"
               f" at {pv['rate_aud_per_usd']:.2f} AUD/USD")
-        print(f"worst case      + the available hosted budget US${pv['hosted_available_usd']:.6f} = A${pv['worst_case_aud']:.2f} of the A${pv['limit_aud']:.0f} limit"
+        print(f"worst case      + the hosted ceiling's available US${pv['hosted_available_usd']:.6f} = A${pv['worst_case_aud']:.2f} of the A${pv['limit_aud']:.0f} limit"
               f" ({'within' if pv['within_limit'] else 'ABOVE'} the limit; a limit, never an authorisation)")
     for j in rep["jobs"]:
         led = j.get("ledger") or {}

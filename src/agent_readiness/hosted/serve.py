@@ -195,6 +195,11 @@ def build():
     t = admission.totals()
     log(f'budget: ceiling US${t["ceiling_microusd"] / 1e6:.6f}, settled US${t["settled_microusd"] / 1e6:.6f}, outstanding US${t["outstanding_microusd"] / 1e6:.6f}, '
         f'available US${t["available_microusd"] / 1e6:.6f}')
+    for b in t.get('budgets') or []:
+        log(f'separate budget {b["budget"]}: limit A${b["limit_micro_aud"] / 1e6:.2f}, spent A${b["spent_micro_aud"] / 1e6:.6f}, '
+            f'outstanding A${b["outstanding_micro_aud"] / 1e6:.6f}, available A${b["available_micro_aud"] / 1e6:.6f}')
+    if t.get('global_cap_microusd') is not None:
+        log(f'global hosted cap US${t["global_cap_microusd"] / 1e6:.6f}, all commitments US${t["all_committed_microusd"] / 1e6:.6f}')
 
     executor, operator_token = None, None
     if mode == 'disabled':

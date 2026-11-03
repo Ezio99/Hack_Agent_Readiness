@@ -465,6 +465,53 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
                 'detail': None if authorized else LAUNCH_DETAIL.get(reason, 'No launch is authorised.'),
                 'launches_left': (ev.get('launches') or {}).get('left') if ev else None}
 
+    programme_cache: dict = {}
+
+    def programme_block() -> dict | None:
+        """The A$50 programme (legacy scope) for display: recorded actual costs (the programme ledger shipped with this release, matched by job
+        identity) + verified legacy hosted costs not yet recorded + held exposure + the hosted ceiling's available amount. Cached for 30 s."""
+        path = Path(os.environ.get('AR_PROGRAMME_LEDGER') or '/app/budget/programme-ledger.json')
+        if not path.is_file():
+            path = Path(__file__).resolve().parents[3] / 'collaboration' / 'budget' / 'programme-ledger.json'
+        if not path.is_file():
+            return None
+        now = time.monotonic()
+        if programme_cache.get('at', -1e9) > now - 30:
+            return programme_cache['value']
+        try:
+            from . import programme as PG, settlement as ST
+            doc = json.loads(path.read_text())
+            v = PG.view_from_audit(doc, ST.audit(admission, root))
+            entries = doc.get('entries') or []
+            value = {'spent_usd': v['spend_to_date_usd'], 'spent_aud': v['spend_to_date_aud'], 'recorded_usd': v['known_usd'],
+                     'not_recorded': [{'job': m['job'], 'usd': m['usd']} for m in v['not_in_ledger']], 'held_usd': v['unverified_exposure_usd'],
+                     'ceiling_available_usd': v['hosted_available_usd'], 'worst_case_usd': v['worst_case_usd'], 'worst_case_aud': v['worst_case_aud'],
+                     'limit_aud': v['limit_aud'], 'rate_aud_per_usd': v['rate_aud_per_usd'], 'within_limit': v['within_limit'], 'ledger_entries': len(entries),
+                     'ledger_problems': len(v['problems']), 'basis': 'actual verified costs (programme ledger, then verified hosted runs not yet recorded); a reservation is never spend'}
+        except Exception as exc:                                                      # display only; never breaks the config route
+            value = {'error': type(exc).__name__}
+        programme_cache.update(at=now, value=value)
+        return value
+
+    def spending_view(totals: dict, ev: dict | None) -> dict:
+        """Three separate things, never mixed: the hosted CEILING (a safety cap for programme/legacy jobs), each separately allocated BUDGET
+        (A$, its own jobs and allocations only), and the A$50 PROGRAMME (actual expenditure). Top-level keys keep their earlier meaning: the
+        ceiling's scope."""
+        out = {k: totals[f'{k}_microusd'] / 1e6 for k in ('ceiling', 'settled', 'outstanding', 'committed', 'available', 'released')}
+        out |= {'settled_jobs': totals['settled_jobs'], 'unsettled_jobs': totals['unsettled_jobs'], 'scope': 'programme (legacy) jobs under the hosted ceiling',
+                'basis': 'calculated from provider-reported usage in each job\'s durable request ledger; not a bill'}
+        gcap = totals.get('global_cap_microusd')
+        out['global'] = None if gcap is None else {'cap_usd': gcap / 1e6, 'committed_usd': totals['all_committed_microusd'] / 1e6,
+                                                   'available_usd': totals['global_available_microusd'] / 1e6}
+        out['budgets'] = [{'id': b['budget'], 'limit_aud': b['limit_micro_aud'] / 1e6, 'rate_aud_per_usd': b['rate_num'] / b['rate_den'],
+                           'spent_aud': b['spent_micro_aud'] / 1e6, 'outstanding_aud': b['outstanding_micro_aud'] / 1e6,
+                           'available_aud': b['available_micro_aud'] / 1e6, 'spent_usd': b['spent_microusd'] / 1e6, 'outstanding_usd': b['outstanding_microusd'] / 1e6,
+                           'available_usd': b['available_microusd'] / 1e6, 'jobs': b['jobs'], 'settled_jobs': b['settled_jobs'], 'allocations': b['allocations'],
+                           'open_allocations': b['open_allocations']} for b in totals.get('budgets') or []]
+        out['charged_to'] = (ev or {}).get('budget') or None                         # the active arming's budget (None = the programme / hosted ceiling)
+        out['programme'] = programme_block()
+        return out
+
     @app.get('/api/ironbark/config')
     def config():
         totals = admission.totals()
@@ -484,9 +531,7 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
                     'repetitions': cfg['repetitions'], 'model': (ev.get('agent') or {}).get('model') or ModelConfig().model, 'agent_profile': (ev.get('agent') or {}).get('profile') or AGENT_PROFILE,
                     'agent_settings': ev.get('agent'), 'tasks': cfg['tasks'], 'evaluation': ev or None, 'remaining_repetitions': left,
                     'ceiling': {'ceiling_usd': totals['ceiling_microusd'] / 1e6, 'reserved_usd': totals['reserved_microusd'] / 1e6},
-                    'spending': {k: totals[f'{k}_microusd'] / 1e6 for k in ('ceiling', 'settled', 'outstanding', 'committed', 'available', 'released')}
-                                | {'settled_jobs': totals['settled_jobs'], 'unsettled_jobs': totals['unsettled_jobs'],
-                                   'basis': 'calculated from provider-reported usage in each job\'s durable request ledger; not a bill'},
+                    'spending': spending_view(totals, ev),
                     'active': active[0] if active else None}
         return {'worker': worker_state(), 'repetition_duration': repetition_seconds(), 'available': enabled(), 'mode': getattr(executor, 'mode', None) if enabled() else None, 'access': 'public' if public_start else 'operator',
                 'reason': None if enabled() else (unavailable_reason or 'disabled'),
@@ -509,7 +554,7 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
                             'finished_at': st.get('finished_at'), 'completed_repetitions': sum(r['state'] == 'completed' for r in st['reps']),
                             'summary': st['summary'] if j['state'] in TERMINAL else None, 'arm_display': st.get('arm_display'),
                             'cost_usd': (lambda x: x['settled_microusd'] / 1e6 if x else None)(admission.settlement(j['id'])),
-                            'reserved_usd': j['reserved_microusd'] / 1e6})
+                            'reserved_usd': j['reserved_microusd'] / 1e6, 'budget': admission.job_budget(j['id'])})
                 continue
             try:
                 data = paired.load_job(root, j['id'])

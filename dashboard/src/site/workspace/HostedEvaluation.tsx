@@ -28,11 +28,17 @@ export interface ReportStatus { state: 'available' | 'withheld' | 'pending' | 'u
 export interface Job { engine?: 'stage-b'; execution?: Execution; report_status?: ReportStatus; record_note?: string | null; report?: string | null; error?: string | null; stopped?: string | null; id: string; state: string; mode: 'live' | 'rehearsal' | null; repetitions: number | null; recovery_required?: boolean; created_at: number; started_at: number | null; finished_at: number | null; reps: Rep[]; summary: Record<'Original' | 'Modified', ArmSummary>; arm_display?: Record<'Original' | 'Modified', string> | null; summary_v2?: ({ label: string; repetitions: number } & Record<'Original' | 'Modified', ArmV2>) | null }
 interface Worker { state: 'idle' | 'busy' | 'unavailable'; job: string | null; started_at?: number | null; repetitions?: number; finished_runs?: number; total_runs?: number | null; estimated_remaining_seconds?: number | null }
 interface ArmedEvaluation { arming_id: string; mode: 'paid' | 'rehearsal'; site: string; suite: string; frozen_suite: string; frozen_suite_sha256: string; variants: string[]; armed_at: string;
-  launches: { max: number; used: number; left: number }; options: { repetitions: number; trials: number; reservation_usd: number; manifest_sha256: string; available: boolean; fits_hosted_ceiling: boolean | null }[];
+  launches: { max: number; used: number; left: number }; budget?: string | null; options: { repetitions: number; trials: number; reservation_usd: number; manifest_sha256: string; available: boolean; fits_hosted_ceiling: boolean | null }[];
   agent: { model: string; reasoning_effort: string | null; max_completion_tokens: number; profile: string } }
+interface SeparateBudget { id: string; limit_aud: number; rate_aud_per_usd: number; spent_aud: number; outstanding_aud: number; available_aud: number; spent_usd: number; outstanding_usd: number; available_usd: number; jobs: number; settled_jobs: number; allocations: number; open_allocations: number }
+interface Programme { spent_usd: number; spent_aud: number; recorded_usd: number; not_recorded: { job: string; usd: number }[]; held_usd: number; ceiling_available_usd: number; worst_case_usd: number; worst_case_aud: number; limit_aud: number; rate_aud_per_usd: number; within_limit: boolean; ledger_entries: number; ledger_problems: number; basis: string }
+/** Three separate things, never mixed: the A$50 programme (actual expenditure), the hosted admission ceiling (a safety cap for programme runs) and
+ *  each separately allocated budget. Top-level figures are the ceiling's scope. */
+interface Spending { ceiling: number; settled: number; outstanding: number; committed: number; available: number; released: number; settled_jobs: number; unsettled_jobs: number; basis: string; scope?: string;
+  global?: { cap_usd: number; committed_usd: number; available_usd: number } | null; budgets?: SeparateBudget[]; charged_to?: string | null; programme?: Programme | null | { error: string } }
 interface LaunchState { authorized: boolean; ready: boolean; reason: string | null; detail: string | null; launches_left: number | null }
 interface Config { engine?: 'stage-b'; launch?: LaunchState; judge_access?: boolean; service?: { state: 'operational' | 'unavailable'; reason: string | null }; evaluation?: ArmedEvaluation | null; ceiling?: { ceiling_usd: number; reserved_usd: number };
-  spending?: { ceiling: number; settled: number; outstanding: number; committed: number; available: number; released: number; settled_jobs: number; unsettled_jobs: number; basis: string };
+  spending?: Spending;
   agent_settings?: { profile: string; profile_file_sha256: string; reasoning_effort: string | null; max_completion_tokens: number | null } | null; worker?: Worker; repetition_duration?: { seconds: number; basis: 'measured' | 'first genuine run' | 'default'; samples: number }; available: boolean; mode: 'live' | 'rehearsal' | null; access?: 'public' | 'operator'; reason?: string | null; repetitions: number[]; model: string; agent_profile: string; tasks: { task: number; question: string; capability?: string; limits?: { max_steps?: number; timeout_seconds?: number; max_model_requests?: number } }[]; remaining_repetitions: number; active: string | null }
 
 const ACTIVE = ['reserved', 'running'];
@@ -139,20 +145,38 @@ function StageBReport({ job }: { job: Job }) {
   return <div className="ws-report"><Report ev={ev} /><p className="ws-note"><a className="ws-link" href={`#/reports/${job.id}`}>Open the report on its own page →</a> · <a className="ws-link" href={`/api/ironbark/jobs/${job.id}/repetitions/1/export`} download={`${job.id.slice(0, 13)}.json`}>Export JSON</a></p></div>;
 }
 
-/** Operator diagnostics: what has actually been spent, what is still held, and what the owner has authorised (two separate limits). */
-function Budget({ s, ev, history }: { s: NonNullable<Config['spending']>; ev: ArmedEvaluation | null; history: HistoryItem[] }) {
+/** Operator diagnostics: actual programme expenditure, the hosted admission ceiling and separately allocated budgets are shown apart, and the
+ *  owner's launch authority is shown beside the financial capacity of the scope its launches are charged to (two separate limits). */
+function Budget({ s, ev, history }: { s: Spending; ev: ArmedEvaluation | null; history: HistoryItem[] }) {
   const usd = (n: number) => `US$${n.toFixed(2)}`;
+  const aud = (n: number) => `A$${n.toFixed(2)}`;
+  const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`;
   const costs = history.filter(h => h.cost_usd != null && h.mode === 'live').map(h => h.cost_usd as number);
   const per = ev?.options[0]?.reservation_usd ?? null;
-  return <details className="ws-method ws-budget"><summary>Budget &amp; capacity</summary>
-    <dl>
-      <div><dt>Actual model spend</dt><dd>{usd(s.settled)} <small>settled, {s.settled_jobs} evaluation{s.settled_jobs === 1 ? '' : 's'}</small></dd></div>
-      <div><dt>Held for unsettled runs</dt><dd>{usd(s.outstanding)} <small>{s.unsettled_jobs} evaluation{s.unsettled_jobs === 1 ? '' : 's'}, kept at their full reservation</small></dd></div>
-      <div><dt>Available</dt><dd>{usd(s.available)} <small>of the {usd(s.ceiling)} hosted budget</small></dd></div>
-      {ev && <div><dt>Live runs authorised</dt><dd>{ev.launches.left} of {ev.launches.max} left <small>{per ? `each reserves ${usd(per)}; the budget covers ${Math.floor(s.available / per + 1e-9)}` : ''}</small></dd></div>}
+  const charged = s.charged_to ? (s.budgets ?? []).find(b => b.id === s.charged_to) ?? null : null;
+  let room = charged ? charged.available_usd : s.available;
+  if (s.global) room = Math.min(room, s.global.available_usd);
+  const p = s.programme && !('error' in s.programme) ? s.programme : null;
+  return <details className="ws-method ws-budget"><summary>Spending &amp; capacity</summary>
+    {p && <section aria-label="Programme expenditure"><h4>A${p.limit_aud.toFixed(0)} programme · actual expenditure</h4><dl>
+      <div><dt>Spent to date</dt><dd>{aud(p.spent_aud)} <small>{usd(p.spent_usd)} of verified actual costs{p.not_recorded.length ? `, including ${p.not_recorded.length} hosted run${p.not_recorded.length === 1 ? '' : 's'} not yet in the programme ledger` : ''}</small></dd></div>
+      {p.held_usd > 0 && <div><dt>Held for unverified runs</dt><dd>{usd(p.held_usd)} <small>full reservations until their cost is verified</small></dd></div>}
+      <div><dt>Worst case</dt><dd>{aud(p.worst_case_aud)} <small>of the A${p.limit_aud.toFixed(0)} limit, if the hosted ceiling's remaining room were also spent ({p.rate_aud_per_usd.toFixed(2)} A$/US$)</small></dd></div>
+    </dl></section>}
+    <section aria-label="Hosted admission ceiling"><h4>Hosted admission ceiling · a safety cap for programme runs, not spending</h4><dl>
+      <div><dt>Settled actual cost</dt><dd>{usd(s.settled)} <small>{plural(s.settled_jobs, 'evaluation')}</small></dd></div>
+      <div><dt>Held for unsettled runs</dt><dd>{usd(s.outstanding)} <small>{plural(s.unsettled_jobs, 'evaluation')}, kept at their full reservation</small></dd></div>
+      <div><dt>Available</dt><dd>{usd(s.available)} <small>of the {usd(s.ceiling)} ceiling</small></dd></div>
+    </dl></section>
+    <section aria-label="Separate budgets"><h4>Separately allocated budgets</h4>
+      {(s.budgets ?? []).length === 0 ? <p className="ws-budget-note">None open. A separate budget is opened by the owner at the server terminal; historical runs never count against it.</p>
+        : <dl>{(s.budgets ?? []).map(b => <div key={b.id}><dt>{b.id}</dt><dd>{aud(b.available_aud)} available <small>of {aud(b.limit_aud)} · spent {aud(b.spent_aud)} · held {aud(b.outstanding_aud)} · {plural(b.jobs, 'run')}{b.allocations ? `, ${plural(b.allocations, 'off-host allocation')}` : ''}</small></dd></div>)}</dl>}
+    </section>
+    {ev && <section aria-label="Launch authority"><h4>Live runs</h4><dl>
+      <div><dt>Authorised</dt><dd>{ev.launches.left} of {ev.launches.max} left <small>charged to {s.charged_to ? `the separate budget ${s.charged_to}` : `the A$50 programme (hosted ceiling)`}{per ? `; each reserves ${usd(per)}; the ${s.charged_to ? 'budget' : 'ceiling'} covers ${Math.max(0, Math.floor(room / per + 1e-9))}` : ''}</small></dd></div>
       {costs.length > 0 && <div><dt>Cost per completed evaluation</dt><dd>{costs.map(usd).join(' · ')}</dd></div>}
-    </dl>
-    <p className="ws-budget-note">A run reserves its worst case before it starts. When it has finished and every model request is settled in its durable ledger, only its actual cost stays committed and the rest is released; runs with unsettled requests keep their full reservation. {s.basis}.</p>
+    </dl></section>}
+    <p className="ws-budget-note">A run reserves its worst case before it starts; a reservation is a temporary safety commitment, not expenditure. When the run has finished and every model request is settled in its durable ledger, only its actual cost counts and the rest is released; runs with unsettled requests keep their full reservation. {s.basis}.</p>
   </details>;
 }
 
