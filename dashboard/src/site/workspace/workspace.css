@@ -298,3 +298,8 @@ button.ws-cell-button:hover{background:var(--paper)}
 .ws-soft-cap{display:block;margin-top:4px}
 
 .ws-site-preview{margin:.6rem 0 .5rem;border:1px solid var(--rule, #ddd);border-radius:8px;overflow:hidden;background:var(--sheet, #fff)}.ws-site-preview img{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;object-position:top}.ws-site-preview figcaption{font-size:12px;padding:.35rem .6rem;color:var(--ink-3, #666)}
+/* mobile: the job header and status wrap instead of widening the page */
+.ws-job,.ws-job>*,.ws-jobbar,.ws-jobbar>*,.ws-job-head>*{min-width:0}
+.ws-status>span,.ws-cost{overflow-wrap:anywhere}
+@media (max-width:600px){.ws-status{gap:6px 12px}.ws-job-meta{flex-wrap:wrap}}
+.ws-layout>*,.ws-main,.ws-panel,.ws-report,.ws-report>*{min-width:0}

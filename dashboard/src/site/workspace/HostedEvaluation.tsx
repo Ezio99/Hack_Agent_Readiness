@@ -285,7 +285,10 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
   const armedNames: ArmNames = single ? { Original: cap(armedVariants[0], 'Original') } : { Original: cap(armedVariants[0], 'Original'), Modified: cap(armedVariants[1], 'Modified') };
   const names: ArmNames = job?.arm_display ?? (job ? { Original: 'Original', Modified: 'Modified' } : armedNames);
   const lowerNames = { original: names.Original, modified: names.Modified ?? names.Original };
-  const siteWords = single ? <>the <strong>{armedNames.Original}</strong> site</> : <>the <strong>{armedNames.Original}</strong> and the <strong>{armedNames.Modified}</strong> site</>;
+  const siteWords = single ? (armedNames.Original === 'After'
+      ? <>the improved website (<strong>After</strong>: the college’s redesigned site with Agent Readiness’s recommendations applied; <a className="ws-link" href="#/showcase">see before and after</a>)</>
+      : <>the <strong>{armedNames.Original}</strong> version of the website</>)
+    : <>the <strong>{armedNames.Original}</strong> and the <strong>{armedNames.Modified}</strong> site</>;
   const SITE_HOST: Record<string, string> = { larkspur: 'larkspur-college', ironbark: 'ironbark-hire' };
   const operatorOnly = config?.access === 'operator';
   const running = !!job && ACTIVE.includes(job.state);
@@ -349,7 +352,7 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
             {stageB ? <div className="ws-target" aria-label="Selected website">{ev ? <><strong>{ev.site === 'larkspur' ? 'Larkspur Community College' : ev.site === 'ironbark' ? 'Ironbark Hire Co.' : ev.site}</strong>
                 {armedVariants.map(v => showcaseFrame(`site-${v}-courses`) ? <figure key={v} className="ws-site-preview"><img src={showcaseFrame(`site-${v}-courses`)} alt={`The ${VARIANT_LABEL(v)} Larkspur course catalogue (frozen snapshot the agents use)`} loading="lazy" />
                   <figcaption>{VARIANT_LABEL(v)} · <code>/courses</code> · the frozen copy the agents browse</figcaption></figure> : null)}
-                <small>{nTasks} customer task{nTasks === 1 ? '' : 's'} · {single ? `${armedNames.Original} site` : `${armedNames.Original} vs ${armedNames.Modified} site`} · {ev.launches ? `${ev.launches.left} of ${ev.launches.max} live run${ev.launches.max === 1 ? '' : 's'} left` : 'runs while the budget lasts'}</small></>
+                <small>{nTasks} customer task{nTasks === 1 ? '' : 's'} · {single ? `${armedNames.Original} version` : `${armedNames.Original} vs ${armedNames.Modified} site`} · {ev.launches ? `${ev.launches.left} of ${ev.launches.max} live run${ev.launches.max === 1 ? '' : 's'} left` : 'runs while the budget lasts'}</small></>
                 : <><strong>No evaluation armed</strong><small>The owner selects and authorises the frozen suite at the server terminal.</small></>}</div>
               : <div className="ws-target" aria-label="Selected website"><strong>No evaluation available</strong><small>New evaluations are not available on this server right now; recorded evaluations remain available.</small></div>}</li>
           {stageB && (config?.repetitions?.length ?? 0) <= 1

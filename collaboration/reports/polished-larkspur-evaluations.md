@@ -1,4 +1,16 @@
-# Polished Larkspur: v1 → evaluation → v2 → re-evaluation (2026-11-04 Sydney)
+# Larkspur showcase evaluations (2026-11-04 Sydney)
+
+> **Correction, 2026-11-04 ~10:30 AEDT (owner review).** The first experiment below (internal `polished` / `polished2`, shown to the audience as "Earlier trial A/B") is
+> **superseded**. Its records are kept unchanged.
+>
+> **Lineage, checked in the files:**
+> - `polished.py` imports Improved's helpers (`from .improved import ... matching, query, redirects, _course_ld`).
+> - Polished v1/v2 had Improved's 162 pages, 870 redirects, filter form, comparison table, JSON-LD on 155 pages, all facts on every card, and page audit 0. Original has 18 pages, 0 redirects, none of those features, and page audit 7.
+> - v2 differed from v1 only in presentation (a result-line summary, compact header, slimmer card images).
+> - So its 3/3 came from Improved's features, not from a redesign of Original.
+>
+> **The corrected experiment** (§6) starts from Original. It is the featured showcase.
+
 
 Status legend: **DONE** (committed and tested locally), **PROPOSED** (awaiting owner approval), **PENDING** (not started).
 
@@ -78,3 +90,47 @@ Budget after both: spent A$0.35 of A$20 (`ar-a20-2026-11`).
   - 13 public routes in a real browser with 0 errors, plus the showcase at 1440 and 390 px.
 - **Checks before the deploy:** critical 264 passed; polished/budget 49 passed; vitest 226 passed; `test_showcase_judge_browser` and `test_judge_experience_browser` passed (run alone).
 - **Submission:** [FINAL_SUBMISSION.md](../../docs/FINAL_SUBMISSION.md), [FINAL_VIDEO_SCRIPT.md](../../docs/FINAL_VIDEO_SCRIPT.md).
+
+
+## 6. Corrected experiment: Before → After (featured; DONE)
+**Audience names:** Larkspur Community College · Before · After · Agent Readiness. Internal names stay in code, tests and this document only.
+
+### Snapshots
+| Audience name | Internal snapshot | sha256 | What it is |
+|---|---|---|---|
+| Before | `polishedoriginal` (`polished_original.py`) | `2ee4a7be…` | Original re-skinned only. Same 18 pages and links, Original's card content (subject, name, summary), the same 7 page-audit findings. No filter, table, structured data or redirects (tested) |
+| After | `modifiedpolished` (`modified_polished.py`) | `2a16c38b…` | Before plus exactly the Before report's recommendations: all 7 labelled facts on each card, a redirect for the observed dead end (name-based course URL), schema.org Course/ItemList data. Same pages and design; audit 0 |
+
+### Live evaluations
+Each version alone, `larkspur-core@v3`, muse-spark-1.3, recorded and selected with `--delegated`.
+
+| | Before `eval-ea13944e…` | After `eval-5cf934b3…` |
+|---|---|---|
+| Correct (v2) / exact (v1) | **0/3** / 0/3 | **3/3** / 1/3 |
+| Evidence shown | 0/3 | 3/3 |
+| Model requests (per task) | 36 (13 · 11 · 12) | 15 (6 · 6 · 3) |
+| Course pages opened | 11 | 0 |
+| Agent time | 311 s | 121 s |
+| Settled cost | US$0.521494 | US$0.204389 |
+
+**Before findings (its report):**
+- Listing-fact gaps, linked to the tasks: fee and seats (task 1), class day (task 2), fee and duration (task 3). Level appears in task 2's agent notes; campus and materials come from the page audit.
+- One dead end: `/courses/introduction-to-python` returned 404.
+- Budget exhaustion on task 1; partial answers on tasks 2 and 3.
+- No structured data.
+
+All three agents' last notes say they were out of steps.
+
+**After:** every agent answered from `/courses` alone, with no dead ends. The exact-match misses on tasks 1 and 3 carry extra detail (fees, seats), which the report labels a grading-format effect.
+
+**Budget:** `ar-a20-2026-11` spent A$1.43 of A$20 after all four runs (two superseded, two featured). The Workspace's selected evaluation is `ar-a20-after`.
+
+### Product changes
+- **Audience labels at the presentation layer:** `VARIANT_LABEL`, `audienceText`, and `displayTitle` for stored job titles. Stored records are unchanged.
+- **Pages rebuilt on Before/After:** Home, the hero card, the showcase (`#/showcase`), the Journey re-evaluate step, nav and footer. Earlier experiments are labelled "Earlier".
+- **Workspace:** runs After and shows its preview.
+- **Mobile overflow fixed:** Journey, job page, report badges.
+
+### Checks
+- **Before deploying:** critical tests; `test_larkspur_before_after.py` (pins every snapshot, Before = Original's pages/links/cards/audit, After = Before + exactly the recommendations); vitest 226, including a no-internal-names assertion on Home and the showcase.
+- **Production sweep:** 22 public routes × desktop and mobile; 0 internal names in text or `alt`/`aria-label`/`title`, 0 errors, 0 writes. Overflow fixes re-verified against production data with the local build.

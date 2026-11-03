@@ -313,3 +313,7 @@
 .lc-vname + .lc-vname{margin-left:14px}   /* version names listed side by side */
 .lc-featured{padding:22px 24px;border-radius:14px;background:var(--sheet);box-shadow:0 0 0 1px var(--rule-2),0 24px 60px -36px rgba(18,18,17,.35);margin:6px 0 30px}
 .lc-featured .lc-kpis{margin-top:10px}
+/* mobile: grid children may shrink below their content (long words, tables scroll inside their own wrappers) */
+.lc-journey>*,.lc-jstep,.lc-jstep-head>*{min-width:0}
+.lc-jstep .lc-h2,.lc-jstep .lede{overflow-wrap:anywhere}
+@media (max-width:600px){.lc-mode{white-space:normal;height:auto;min-height:26px;padding:5px 10px;line-height:1.35}}

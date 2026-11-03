@@ -1,29 +1,23 @@
-# Final three-minute video: Polished Larkspur (2026-11-04)
+# Final three-minute video: Larkspur Community College, before and after (2026-11-04)
 
-Recording plan for the submission video. It replaces [THREE_MINUTE_DEMO_SCRIPT.md](THREE_MINUTE_DEMO_SCRIPT.md), the earlier Ironbark draft. Every number below is a recorded result. Read them from the screen, not from memory.
-
-## Setup
-- **Where:** production, https://209-38-84-72.sslip.io, in a fresh browser profile at 1440×900, 100 % zoom, with system notifications off.
-- **Never show:** the access code, `.env`, `deploy/secrets/*` or a terminal.
-- **Workspace segment:** paste the access code off-camera, or blur it in editing.
-- **Live run:** each one costs at most A$2.84, from the A$20 budget. Use one live run only if a fresh run is wanted on camera. Otherwise open the recorded Polished v2 run `#/run/eval-11ee8a1e6dad19998865db7187c8cb5e`; it shows the same grid, traces and report.
-- **Order:** record the showcase (`#/showcase`) first, then the Workspace. Scroll the showcase slowly; each scene is sticky.
-
-## Timed script
+Recording plan. Every number is a recorded live result; read it from the screen.
+- **Audience wording:** say "Larkspur Community College", "Before", "After" and "Agent Readiness". Never say internal snapshot names.
+- **Setup:** production https://209-38-84-72.sslip.io in a fresh browser profile at 1440×900, 100 % zoom, notifications off. Never show the access code, `.env`, secrets or a terminal; paste the code off-camera or blur it.
+- **Live run:** each run of the After site costs at most A$2.84 from the A$20 budget. If no fresh run is needed, open the recorded After run `#/run/eval-5cf934b372942da74f5157c5fca39fd6`.
 
 | Time | Screen | Narration |
 |---|---|---|
-| 0:00–0:15 | `#/showcase` hero: "Built for people. Tested by agents." Scroll until the Polished v1 site rises | "Personal AI agents are starting to use websites for us. Agent Readiness measures whether they can, with real browser agents, real customer tasks, and answers checked against the business's own records." |
-| 0:15–0:35 | Chapter 1: the three Polished v1 pages swap as you scroll | "This is Larkspur Community College, a fictional college. We redesigned its site for people: a new identity, a course finder, labelled facts on every card, and a layout that works on a phone. We kept everything that had already helped agents." |
-| 0:35–0:55 | Chapter 2: the three customer questions, then the v1 numbers | "Then three fresh Muse Spark agents got three real customer questions, each in an isolated browser. Every answer was right: three of three, 8 model requests, 65 seconds, eleven cents of model calls." |
-| 0:55–1:25 | Chapter 3: scroll through the task 2 trace; pause on step 3 | "Task 2 took four requests where the others took two, so we looked. These are the agent's own screenshots and working notes. It used the finder, read 'four courses found', and could see three. Its note: 'Visible 3… scroll down to reveal the 4th course.' That's one extra step and one extra model request, caused by a tall header and big card images." |
-| 1:25–1:45 | Chapter 4: three recommendation cards; then the v1/v2 wipe | "The recommendation: say the whole answer before the first card, and make results fit. Two answers missed the exact-match grade only because they added fees and seats. That's grading format, not the website, so we didn't touch it. Polished v2 is the same site with exactly those two changes." |
-| 1:45–2:10 | Chapter 6: the v2 trace; pause on step 4 | "Same tasks, same agent, evaluated again. The agent read the new summary and noted all four courses, then scrolled anyway, 'to verify fourth course details'." |
-| 2:10–2:30 | Chapter 7: "v2 did not beat v1." and the table | "So v2 did not beat v1: 9 requests against 8, both three for three. With one agent per task, that difference is within run-to-run variation. The lesson is still real: agents verify. Naming the answer isn't enough; they want each match's deciding facts on screen. That's the next recommendation, not yet built." |
-| 2:30–2:45 | "Where Larkspur started": the four result cards | "For context: on the original Larkspur site, agents got zero of three right in 39 requests. Agent Readiness's first round of fixes took that to three of three in 6. The polish kept that." |
-| 2:45–3:00 | `#/run`: the Polished v2 preview, the A$20 budget line, then the recorded run grid and report tab | "Anyone with an access code can run this live: enter the code, press Run, watch the agents, read the report. Agent Readiness: evaluate a real website, find the friction, change it, and measure honestly." |
+| 0:00–0:15 | `#/showcase` hero: "Looks great to people. Can agents use it?" Scroll until the site rises | "Personal AI agents are starting to use websites for us. Agent Readiness measures whether they can: real browser agents, real customer questions, every answer checked against the business's own records." |
+| 0:15–0:35 | Chapter 1: the three website pages swap as you scroll | "This is Larkspur Community College, freshly redesigned for people. Like many catalogues, each course card shows a name and a summary. The fee, class day, level and seats left are on each course's own page." |
+| 0:35–0:55 | Chapter 2: the three questions; then "Before · measured" | "Three fresh Muse Spark agents got three real customer questions. Not one right answer: zero of three, 36 model requests, over five minutes of browsing." |
+| 0:55–1:25 | Chapter 3: scroll through the Before trace; pause on the last step | "Here's why, in the agent's own screenshots and notes. It opened course pages one at a time and kept returning to the catalogue. Its last note: 'Checked 3 of 14… out of steps.' Another agent guessed a course address and hit a dead end." |
+| 1:25–1:45 | Chapter 4: the three recommendation cards | "Agent Readiness found the cause and recommended three things: put every fact on the course cards, fix the dead end, and describe each course in structured data. Same pages, same design." |
+| 1:45–2:00 | Chapter 5: the Before/After wipe | "Here is the same catalogue after the change. The design hasn't moved; the facts are now where an agent looks." |
+| 2:00–2:20 | Chapter 6: the After trace | "Same questions, same agent, evaluated again. It read all fourteen cards on one page and answered, without opening a single course page." |
+| 2:20–2:40 | Chapter 7: "0/3 → 3/3" and the table | "Zero of three became three of three. Model requests fell from 36 to 15, agent time from 311 seconds to 121, and cost from 52 cents to 20. That's one agent per question: a measured result for these tasks, not a statistical guarantee." |
+| 2:40–3:00 | `#/run`: the After preview, the budget line, the recorded After run and its report tab | "Judges can run it live: enter the access code, press Run, watch the agents work, and read the report. Agent Readiness: see your website the way an agent does, fix what gets in the way, and measure the difference." |
 
-## Guardrails while recording
-- Say "did not beat", not "improved". Say "within run-to-run variation", not "proved".
-- Costs are calculated from provider-reported token usage and settled from the ledger. They are not invoices.
-- Larkspur is fictional. The tasks are frozen and owner-approved (`larkspur-core@v3`).
+## Guardrails
+- "Before" is the redesigned original website; "After" is the same design with the recommendations applied. Both were evaluated live on 4 Nov 2026, each on its own, with the same frozen tasks and agent.
+- Costs are calculated from provider-reported token usage and settled from each run's ledger; they are not invoices.
+- Earlier experiments (3 Nov Original vs Improved; superseded redesign trials) are history. Don't present them as the featured result.

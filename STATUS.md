@@ -19,13 +19,13 @@ Authoritative current handoff. Check it against the repository and production be
 > - **Deadline:** **2026-11-05 13:00 AEDT**.
 > - **Owner approval:** deploys, paid runs, `budget evaluation-add/use`, settlements and ledger appends need explicit owner approval.
 
-> **CURRENT (2026-11-04 ~10:00 AEDT): PRODUCTION = `final-showcase` @ `730037b`** (image `40679aa0…`; rollback `rollback-before-showcase` = `4b878538…`). Polished Larkspur stages 1–6 done; record: [collaboration/reports/polished-larkspur-evaluations.md](collaboration/reports/polished-larkspur-evaluations.md).
-> - **New immutable versions:** `larkspur@polished` (Polished v1, `1053ce18…`) and `larkspur@polished2` (Polished v2, `1b02ed09…`); earlier hashes unchanged.
-> - **Budget evaluations** can evaluate one version alone. `evaluation-add/use --delegated` = non-interactive, audited (`budget-pools/DELEGATIONS.jsonl`), under the owner's written standing authorization of 2026-11-04; the opening, allocations and settlements stay owner-typed.
-> - **Live runs (genuine, settled):** Polished v1 `eval-abc5fc83…` 3/3 correct, 8 requests, 65 s, US$0.108; Polished v2 `eval-11ee8a1e…` 3/3, 9 requests, 79 s, US$0.122. **v2 did not beat v1** (within run-to-run variation; the agent verified facts after reading the new summary).
-> - **Budget** `ar-a20-2026-11`: A$0.35 spent of A$20; selected evaluation **`ar-a20-polished-v2`** (Workspace runs Polished v2 alone, at most A$2.84 per run).
-> - **Public routes:** `#/showcase` (new cinematic story) · `#/` · `#/lifecycle` = `#/demo` · `#/run` · reports · `#/demo/ironbark` archive. All 13 verified in a real browser on production.
-> - **Submission:** [docs/FINAL_SUBMISSION.md](docs/FINAL_SUBMISSION.md), video plan [docs/FINAL_VIDEO_SCRIPT.md](docs/FINAL_VIDEO_SCRIPT.md). The owner records the video and submits.
+> **CURRENT (2026-11-04 ~11:15 AEDT): PRODUCTION = `final-showcase`** (see `deploy/DEPLOYED.txt` on the VM for the exact commit and rollback tag). Featured experiment: **Before → After** (Larkspur Community College); record: [collaboration/reports/polished-larkspur-evaluations.md](collaboration/reports/polished-larkspur-evaluations.md) §6.
+> - **Before** = `larkspur@polishedoriginal` (`2ee4a7be…`): Original redesigned only. Live `eval-ea13944e…`: 0/3 correct, 36 requests, 311 s, US$0.52.
+> - **After** = `larkspur@modifiedpolished` (`2a16c38b…`): Before + its report's recommendations. Live `eval-5cf934b3…`: 3/3, 15 requests, 121 s, US$0.20.
+> - **Superseded:** the earlier `polished` / `polished2` trial was built on Improved (lineage check, report header). Kept as "Earlier trial A/B".
+> - **Workspace** runs `ar-a20-after` (After alone, at most A$2.84 per run). Budget A$1.43 spent of A$20.
+> - **Audience names everywhere:** Before / After / Larkspur Community College / Agent Readiness. Internal names appear only in code and docs.
+> - **Submission:** [docs/FINAL_SUBMISSION.md](docs/FINAL_SUBMISSION.md), [docs/FINAL_VIDEO_SCRIPT.md](docs/FINAL_VIDEO_SCRIPT.md). The owner records and submits.
 
 Everything below this line is earlier state, kept as history; where it disagrees with the handoff, the handoff and production win.
 
