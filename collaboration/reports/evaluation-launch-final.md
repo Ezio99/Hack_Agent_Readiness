@@ -179,3 +179,15 @@ Not run: the 33-minute CI suite; nothing on production.
 **Options (owner decision):**
 - **(a) Hotfix deploy (recommended):** the same image-only procedure §5 A0–A5 for the fix commit. About 10 minutes; the budget stays open; no data change.
 - **(b) Undo the opening:** restore the pre-budget backups. The journey works again, but launches revert to `larkspur-judge-1` (2 left).
+
+### 8.1 Journey hotfix `fdc3f43` (owner-approved, 2026-11-03 21:15 UTC)
+- **Release diff** (`9ac4485..fdc3f43`, non-documentation): `Lifecycle.tsx`, `lifecycleApi.ts` (launch count may be null) and the regression test only. No `src`, `deploy` or programme-ledger change.
+- **Pre-flight:** the post-opening state exactly. Image `1545dd81…`; DB `d870675…`; budget A$20.00 open, 0 jobs; global cap 39.029333; selected evaluation Original vs Improved; worker idle; evidence 2 422 files (the opening's two additions only).
+- **Backup and build:** backup `predeploy-hotfix-20261103T211503Z` (2 422 files, verified). Clean build: image **`sha256:a2a3792a35f3…`**; bundle `index-u2vtLsz6.js` = local build; ledger `1f0c42cc…`. Disabled smoke test on a volume copy: 0 tracebacks.
+- **Switch:** `rollback-9ac4485` = `1545dd81…`; `latest` = `a2a3792a…`, healthy, 0 restarts, 0 tracebacks.
+- **Verify:**
+  - public 19/19 (budget open and fresh, cap, Original vs Improved, programme and ceiling unchanged, invalid codes 403);
+  - evidence 2 422/2 422 identical to the pre-hotfix backup;
+  - judge code accepted without launching (422 on a malformed key), nothing reserved;
+  - no code in logs.
+- **Browser (production, fresh profile per page, GET only):** `#/demo` and `#/lifecycle` render the journey with "runs while the A$20 evaluation budget lasts". Home, Workspace (soft-cap line), both reports and the archive are OK. 0 errors, no writes.
