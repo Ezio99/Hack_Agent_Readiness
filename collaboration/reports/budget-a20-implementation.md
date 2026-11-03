@@ -1,5 +1,7 @@
 # Separate A$20 evaluation budget: implementation, tests and deployment/migration plan (release candidate; NOT deployed)
 
+> **Superseded in part (2026-11-04):** the final launch model (one access code, one flow, a fresh A$20 soft cap on actual spending, no sessions) is in [evaluation-launch-final.md](evaluation-launch-final.md).
+
 **Date:** 2026-11-03/04 (Sydney). **Branch:** `final-showcase`. **Production:** `dde7e22` (image `d40199ef…`), unchanged.
 **Cost:** US$0. Nothing deployed, no budget opened, no arming, no ceiling change, no production settlement, no paid call, no change to the programme ledger.
 **Owner decisions implemented (2026-11-03):**

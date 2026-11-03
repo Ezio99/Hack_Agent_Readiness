@@ -1,5 +1,7 @@
 # A$20 operator budget: deployment readiness, deployment and one-time budget opening (NOT executed)
 
+> **Superseded in part (2026-11-04):** the operator session, CSRF and sign-in steps no longer exist, and the budget is a soft cap on actual spending shared by every valid access code. See [evaluation-launch-final.md](evaluation-launch-final.md). The backup, build, switch and rollback mechanics below still apply; the opening command and expected values are in the final document §5.
+
 **Date:** 2026-11-04 (Sydney). **Release:** code `f60fcbf` + documentation `418a971` + this readiness commit (tests and documentation only; `git diff f60fcbf HEAD -- src dashboard/src deploy` is empty). Build the readiness commit (`C` below).
 **Production now:** `dde7e22` (image `d40199ef…`). Every step below needs separate owner approval. Cost of this check: US$0.
 
