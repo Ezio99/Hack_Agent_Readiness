@@ -23,7 +23,9 @@ VARIANT_TEXT = {
                              "every fact labelled, a course finder, subject and campus sections), keeping the filter, browse pages, comparison table, "
                              "structured data and redirects.",
                  "polished2": "Polished v2: Polished v1 plus the changes its live evaluation justified: every result list names all matching courses "
-                              "before the first card, and listing pages use a compact header and slimmer card images so more results fit on screen."},
+                              "before the first card, and listing pages use a compact header and slimmer card images so more results fit on screen.",
+                 "polishedoriginal": "Before: the original college website, visually redesigned for people. Course cards show a name, subject and summary; "
+                                     "every fee, class day, level, seat count and campus is on the course's own page."},
     "ironbark": {"original": "The control hire site: deposit, minimum hire and delivery are stated on item pages only.",
                  "modified": "Listing cards also show refundable deposit, minimum hire and delivery (the owner-selected change used by the hosted evaluation)."},
 }

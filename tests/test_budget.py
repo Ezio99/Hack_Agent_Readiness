@@ -628,10 +628,10 @@ def test_a_budget_evaluation_can_evaluate_one_registered_version_alone(prod, mon
     j = ex.admit(jid(1200), "%064x" % 1200, 1, charge="budget")["id"]
     import agent_readiness.lifecycle.jobs as LJ
     job = LJ.load_job(prod / "live" / "stageb", j)
-    assert job["label"].endswith("· Polished v1") and job["request"]["variants"] == ["polished"]
+    assert job["label"].endswith("· Earlier trial A") and job["request"]["variants"] == ["polished"]
     assert AR.check_launch(store, job)["budget_pool"] == "ar-a20-polished-v1"
     from agent_readiness.hosted import stageb as SB
-    assert SB.arm_display(job) == {"Original": "Polished v1"} and SB._arm_labels(job) == {"polished": "Original"}
+    assert SB.arm_display(job) == {"Original": "Earlier trial A"} and SB._arm_labels(job) == {"polished": "Original"}
 
 
 def test_the_agent_can_record_and_select_an_evaluation_under_delegated_authority_and_it_is_audited(prod, monkeypatch):

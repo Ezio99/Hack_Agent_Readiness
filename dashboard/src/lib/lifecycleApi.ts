@@ -122,9 +122,10 @@ export const api = {
 };
 
 export const short = (sha: string | undefined | null, n = 12) => (sha ?? '').slice(0, n);
-const VARIANT_DISPLAY: Record<string, string> = { polished: 'Polished v1', polished2: 'Polished v2' };
+/** Audience-facing version names. Internal snapshot names (polishedoriginal, modifiedpolished, polished, polished2) never reach the audience. */
+const VARIANT_DISPLAY: Record<string, string> = { polishedoriginal: 'Before', modifiedpolished: 'After', polished: 'Earlier trial A', polished2: 'Earlier trial B' };
 export const VARIANT_LABEL = (v: string) => VARIANT_DISPLAY[v] ?? v.charAt(0).toUpperCase() + v.slice(1);
-export const variantClass = (v: string) => v === 'original' ? 'o' : v === 'modified' ? 'm' : v === 'improved' ? 'i' : v.startsWith('polished') ? 'p' : 'x';
+export const variantClass = (v: string) => v === 'original' ? 'o' : v === 'modified' ? 'm' : v === 'improved' ? 'i' : v === 'polishedoriginal' ? 'o' : v === 'modifiedpolished' ? 'i' : v.startsWith('polished') ? 'p' : 'x';
 export const fmtUsd = (n: number | null | undefined, d = 3) => n == null ? '–' : `US$${n.toFixed(d)}`;
 export const fmtSec = (n: number | null | undefined) => n == null ? '–' : `${Math.round(n)} s`;
 export const words = (s: string) => s.replaceAll('_', ' ');

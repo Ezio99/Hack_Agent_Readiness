@@ -52,9 +52,9 @@ def test_every_earlier_version_is_unchanged_and_polished_is_pinned():
 def test_polished_is_a_registered_release_not_part_of_the_generation_pair():
     site = get("larkspur")
     assert site.variants == ("original", "modified")
-    assert site.releases == ("improved", "polished", "polished2") and site.registered == ("original", "modified", "improved", "polished", "polished2")
+    assert site.releases[:3] == ("improved", "polished", "polished2") and site.registered[:5] == ("original", "modified", "improved", "polished", "polished2")
     view = LS.site_view("larkspur")
-    assert [v["name"] for v in view["variants"]] == ["original", "modified", "improved", "polished", "polished2"]
+    assert [v["name"] for v in view["variants"]][:5] == ["original", "modified", "improved", "polished", "polished2"]     # later releases follow
     assert all(v["description"] for v in view["variants"])
 
 

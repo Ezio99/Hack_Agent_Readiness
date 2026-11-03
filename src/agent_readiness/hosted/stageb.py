@@ -175,7 +175,9 @@ def _runs(runs_root: Path, job: dict):
     return [InvestigationRun(runs_root / rel) for rel in (job.get("runs") or {}).values()]
 
 
-DISPLAY = {"polished": "Polished v1", "polished2": "Polished v2"}           # judge-facing names of website versions (default: capitalised)
+# Audience-facing names of website versions (default: capitalised). Internal snapshot names never reach the audience: the corrected showcase
+# pair is "Before" (polishedoriginal) and "After" (modifiedpolished); the superseded redesign trial on the Improved base is "Earlier trial A/B".
+DISPLAY = {"polishedoriginal": "Before", "modifiedpolished": "After", "polished": "Earlier trial A", "polished2": "Earlier trial B"}
 
 
 def display(name: str) -> str:
