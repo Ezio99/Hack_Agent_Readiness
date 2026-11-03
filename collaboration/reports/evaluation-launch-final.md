@@ -21,7 +21,7 @@ The next run's worst case is not compared with what remains, and an admitted run
 | Removed or bypassed | • the judge arming and its launch counter (not consulted once the budget is open; its record is unchanged);<br>• the per-client 120 s interval for budget launches;<br>• the hosted-ceiling check for new launches (the ceiling now covers historical jobs only);<br>• the worst-case-versus-remaining comparison;<br>• the operator/judge distinction;<br>• sessions.<br>The invalid-code limiter (10 per 10 min) now counts and refuses **invalid** codes only: a valid code always passes |
 | Completion | Automatic settlement at the verified actual cost; the unused reservation is released. Failed or interrupted runs keep their full reservation until reconciled |
 | Concurrency and duplicates | A second launch while one runs → **409** "An evaluation is already running (eval-…). You can watch it live…": the page then opens that run instead of showing an error. A per-click `Idempotency-Key` makes a double-click or retry return the same run |
-| Workspace | One code field and one **Run** button for everyone.<br>"A$x of A$20.00 evaluation budget left · spent A$y · new evaluations start while less than A$20 has been used"; no launch counts.<br>The job bar shows "Reserved up to US$3.74 until settled", then "Actual cost US$… · ar-a20-2026-11".<br>When the budget is used, Run is disabled with "The A$20 evaluation budget has been used. Completed evaluations, their results and traces remain available." |
+| Workspace | One code field and one **Run** button for everyone.<br>"A$x of A$20.00 evaluation budget left · spent A$y", plus the explicit soft-cap line: "A new evaluation starts while less than A$20 is committed. Each run can cost at most A$5.61, so the last one can take the total to at most A$25.61."; no launch counts.<br>The job bar shows "Reserved up to US$3.74 until settled", then "Actual cost US$… · ar-a20-2026-11".<br>When the budget is used, Run is disabled with "The A$20 evaluation budget has been used. Completed evaluations, their results and traces remain available." |
 
 ## 3. Backend launch-path audit: every condition between a valid code and a running evaluation
 
@@ -51,24 +51,83 @@ Results are in §7, filled in after the runs. Coverage:
 - **Rollback:** the real `dde7e22` code on a database with the budget open.
 - **Real browser, clean profile:** open the site → see the budget → enter the code → double-click Run (one run) → a second visitor watches the running evaluation → progress → report and trace → launches 2, 3 and 4 with the same code → near-limit launch 5 at A$19.99 spent → after A$20, a clean browser sees Run disabled with the reason, and history remains.
 
-## 5. Deployment and activation (each step needs owner approval; do them in one window)
+## 5. Final deployment and budget opening (each step needs owner approval; do both in one window)
 
-- **Deploy:** as in [budget-a20-deployment.md](budget-a20-deployment.md) §2: preflight, backup and manifest, clean-worktree build of the release commit, read-only checks, disabled smoke test on a volume copy, tag `rollback-dde7e22`, switch, verify.
-  - The launch-state check now shows `launches_left 2` until activation (the judge arming).
-  - New files after the first launch: `live/launch-requests.sqlite` (idempotency keys, hashed per caller).
-- **Activate** (owner terminal) immediately after verifying the deploy:
-  1. Back up `admission.sqlite` and the Stage B tree, as in that document's §3.
-  2. Run `docker compose exec -it app python -m agent_readiness.hosted.budget open --db /data/hosted/live/admission.sqlite --id ar-a20-2026-11 --limit-aud 20 --rate 1.50 --frozen larkspur-core@v3 --variants original improved`.
-  3. Type the printed line. It states that the shared budget takes every new evaluation, starts runs while actual spending is below A$20, and that the global cap becomes US$39.029333.
-  4. Verify:
-     - `budget status`: A$20.000000 left, global cap 39.029333;
-     - `/api/ironbark/config`: `launch.authorized` true, `launches_left` null, `spending.charged_to` `ar-a20-2026-11`;
-     - `larkspur-judge-1` unchanged (2 left, not used);
-     - the Workspace shows "A$20.00 of A$20.00 evaluation budget left".
-- **Code to give judges:** the existing judge code (`secrets/judge_token`). No change is needed.
-- **Rollback:** as in the deployment document §4: rotate the operator token, then tag `rollback-dde7e22` and start.
-  - The old image ignores the budget and returns to the judge arming (2 launches, hosted ceiling, the A$50 programme).
-  - Budget runs count against its ceiling, so it is more conservative.
+Build the release commit `C` (this branch's HEAD at approval time). Expected production state before starting:
+- image `d40199ef…`, healthy;
+- `admission.sqlite` `6868bc95…` (1 settlement);
+- ceiling 21.956, reserved 14.476, settled 0.631751, available 10.588249;
+- `larkspur-judge-1` 2 left, problems [];
+- worker idle;
+- 2 421 evidence files.
+
+If anything differs, stop.
+
+```sh
+ssh root@209.38.84.72; cd /root/agent-readiness/deploy; SITE=209-38-84-72.sslip.io; C=<release commit>; DB=/data/hosted/live/admission.sqlite
+# A0 PRE-FLIGHT (read-only)
+docker compose exec -T app python -m agent_readiness.hosted.ceiling status --db $DB
+docker compose exec -T app python -m agent_readiness.lifecycle.arming status | head -30
+docker run --rm -v agent-readiness_data:/data:ro alpine sha256sum /data/hosted/live/admission.sqlite
+# A1 BACKUP (outside the volume; verified)
+T=$(date -u +%Y%m%dT%H%M%SZ); echo $T > /root/backups/LAST-FINAL
+docker run --rm -v agent-readiness_data:/data:ro -v /root/backups:/out alpine tar czf /out/predeploy-final-$T.tgz -C /data .
+docker run --rm -v agent-readiness_data:/data:ro alpine sh -c 'cd /data && find . -type f ! -path "*/derived/*" | sort | xargs sha256sum' > /root/backups/predeploy-final-$T.sha256
+cp .env /root/backups/env-predeploy-final-$T && chmod 600 /root/backups/env-predeploy-final-$T && cp compose.yaml /root/backups/compose-predeploy-final-$T
+gzip -t /root/backups/predeploy-final-$T.tgz && mkdir /root/backups/v && tar xzf /root/backups/predeploy-final-$T.tgz -C /root/backups/v \
+  && (cd /root/backups/v && sha256sum -c --quiet /root/backups/predeploy-final-$T.sha256) && rm -rf /root/backups/v && echo "backup verified"
+# A2 BUILD (clean worktree; compose.yaml must be identical: no compose, secret or .env change in this release)
+git -C /root/agent-readiness fetch -q origin final-showcase && git -C /root/agent-readiness worktree add --detach /root/agent-readiness-build-final $C
+cd /root/agent-readiness-build-final && test "$(git status --porcelain | wc -l)" = 0 && diff -q deploy/compose.yaml /root/agent-readiness/deploy/compose.yaml \
+  && docker build -q -f deploy/Dockerfile -t agent-readiness-app:final-$C . && cd /root/agent-readiness/deploy
+# A3 READ-ONLY WITH THE NEW IMAGE + disabled smoke on a VOLUME COPY (as in hosted-settlement.md §6.2): config launch_left 2 (judge arming until opening),
+#    spending budgets [], programme spent_aud 29.13; POST without a code 403; 0 tracebacks; remove the copy
+docker run --rm -v agent-readiness_data:/data:ro agent-readiness-app:final-$C python -m agent_readiness.hosted.budget status --db $DB      # none open
+# A4 SWITCH (worker idle)
+docker tag agent-readiness-app:latest agent-readiness-app:rollback-dde7e22 && docker tag agent-readiness-app:final-$C agent-readiness-app:latest
+docker compose up -d --no-build --no-deps app
+docker compose logs app | grep 'hosted service' | tail -5      # budget line unchanged; "shared budget evaluation: none (no_budget)"; armed=larkspur-judge-1 ... left 2
+# A5 VERIFY: health; POST without/with a wrong code 403; ceiling and arming status unchanged; evidence vs the manifest: only admission.sqlite changed
+#    (five new empty tables); browser (GET only): Home, journey, Workspace, live report, 0 console errors
+
+# B OPEN THE SHARED BUDGET (owner terminal, typed once; right after A5)
+docker run --rm -v agent-readiness_data:/data:ro -v /root/backups:/out alpine sh -c \
+  "cp /data/hosted/live/admission.sqlite /out/admission-pre-budget-$T.sqlite && tar czf /out/stage-b-pre-budget-$T.tgz -C /data/hosted/lifecycle stage-b"
+docker compose exec -it app python -m agent_readiness.hosted.budget open --db $DB --id ar-a20-2026-11 --limit-aud 20 --rate 1.50 \
+  --frozen larkspur-core@v3 --variants original improved
+#   The printed line names: A$20.000000 at 3/2 (US$13.333333); every evaluation from now on, by anyone, is charged to it; historical ones are not;
+#   new evaluations start while spending (plus any unreconciled run) is below A$20 and the last one may finish above it; the global cap becomes
+#   US$39.029333 (21.956 + 13.333333 + one run's maximum 3.740); then the evaluation: larkspur-core@v3 original vs improved, 6 trials, at most
+#   US$3.740 per run, no launch count. Type it exactly (paste is fine).
+# C VERIFY THE OPENING (no restart needed; nothing is launched)
+docker compose exec -T app python -m agent_readiness.hosted.budget status --db $DB
+#   ar-a20-2026-11: limit A$20.000000; spent 0; outstanding 0; available A$20.000000; global cap US$39.029333; evaluation ar-a20-2026-11 <- selected
+docker compose exec -T app python -m agent_readiness.hosted.ceiling status --db $DB | sed -n 5p     # historical scope unchanged: available US$10.588249
+curl -s https://$SITE/api/ironbark/config | python3 -c "import json,sys;c=json.load(sys.stdin);print(c['launch'],c['spending']['charged_to'],c['evaluation']['variants'])"
+#   authorized True, launches_left None; ar-a20-2026-11; ['original', 'improved']
+#   Workspace (browser): "A$20.00 of A$20.00 evaluation budget left" and the soft-cap line "...at most A$5.61 ... at most A$25.61"; Run waits for a code.
+```
+- **Code for judges:** the existing judge code (`secrets/judge_token`), unchanged.
+- **First paid run:** separately approved.
+- **Undo opening (only before any launch):**
+  1. Stop the app.
+  2. Restore `admission-pre-budget-$T.sqlite` and the Stage B tar.
+  3. Start the app.
+- **Rollback of the image:** rotate the operator token, then tag `rollback-dde7e22` and start, as in [budget-a20-deployment.md](budget-a20-deployment.md) §4. The old image ignores the budget and returns to the judge arming (2 launches).
+
+### 5a. Later: evaluate another approved version (e.g. Polished Larkspur)
+1. **Ship the version in a reviewed release.** It becomes a registered, content-hashed, immutable snapshot (`SiteDefinition.releases`, like `improved`), then deploy as above. Nothing else can be selected: an unregistered version, mutable content or an arbitrary URL is refused.
+2. **Record the evaluation (owner terminal):**
+   ```sh
+   python -m agent_readiness.hosted.budget evaluation-add --db $DB --budget ar-a20-2026-11 --id ar-a20-polished --frozen larkspur-core@v3 --variants original polished
+   ```
+   - The suite must be owner-approved and frozen; a new suite goes through the existing revise → decide → freeze.
+   - Its per-run maximum may not exceed the US$3.740 allowance (so the bound stays A$20 + one run).
+   - Type the printed line.
+3. **Select it:** `budget evaluation-use --budget ar-a20-2026-11 --id ar-a20-polished` (typed). The next launch runs it.
+   - Judges see the new pair in the same Workspace: code → Run → progress → report.
+   - The same A$20 pool and launch counter continue; earlier runs and records are unchanged.
+   - Switching back is the same command.
 
 ## 6. Remaining ways a valid-code, under-budget launch can be blocked, and how to remove or explain each
 
@@ -94,5 +153,11 @@ Results are in §7, filled in after the runs. Coverage:
 | `scripts/dev-tests.sh` | 1 741 passed, 2 failed (the known Task-015 ledger-total tests) |
 | Dashboard vitest / build | 224 passed / CHECK PASSED |
 | Rollback (real `dde7e22` code on a database with the budget open and a budget run) | Starts; counts the budget run against its ceiling (available US$6.85 instead of US$10.59: more conservative); admits 1 judge launch; changes no budget row. Back on the new code, its launch is a historical (non-budget) job |
+
+**Re-run after the soft-cap wording and approved-pair selection (2026-11-04):**
+- real-browser judge experience: 1 passed (9 min 04 s);
+- `test_budget` adds the version switch on a production copy: an unregistered version (e.g. `polished` before it ships), an unknown suite and an unopened budget are refused; a typed confirmation is required; the next launch runs the selected pair with the same launch counter, the worker re-check accepts it, and earlier records are unchanged;
+- critical 262; dev 1 742 passed (+2 known Task-015); dashboard 224 + build.
+- The opening confirmation and global cap (US$39.029333 = 21.956 + 13.333333 + 3.740) were checked on a copy of production.
 
 Not run: the 33-minute CI suite; nothing on production.
