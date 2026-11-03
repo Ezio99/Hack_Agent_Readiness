@@ -66,8 +66,9 @@ it('shows a completed Stage B evaluation as the six-dimension readiness report',
   const t = host.textContent ?? '';
   expect(button(host, 'Readiness report')).toBeTruthy();
   expect(button(host, 'Insights')).toBeFalsy();
-  for (const d of ['Task success', 'Navigation efficiency', 'Evidence quality', 'Information accessibility', 'Agent reliability', 'Coverage']) expect(t).toContain(d);
-  expect(t).toContain('v1 official'); expect(t).toContain('v2 post-hoc');
+  for (const d of ['Task success', 'Navigation efficiency', 'Evidence', 'Information accessibility', 'Agent reliability', 'Coverage', 'What slowed the agents down']) expect(t).toContain(d);
+  expect(t).toContain('Exact match'); expect(t).toContain('Correct');
+  expect(t).not.toContain('post-hoc');
   expect(host.querySelector(`a[href="#/reports/${ID}/tasks/1"]`)).not.toBeNull();                       // the trace comparison
 });
 
@@ -87,7 +88,7 @@ it('shows a completed run with a preserved "failed" record as completed, explain
   await act(async () => { button(host, 'Readiness report').click(); });
   for (let i = 0; i < 4; i++) await act(async () => { await new Promise(r => setTimeout(r, 0)); });
   expect(host.textContent).toContain('Task success');
-  expect(host.textContent).toContain('Live run launched in this product');
+  expect(host.textContent).toContain('Live run in this product');
 });
 
 it('keeps a withheld report withheld while showing that every agent run finished', async () => {
@@ -124,17 +125,36 @@ it('says "Worker available" only when a launch is authorised', async () => {
   expect(host.querySelector('.ws-worker')!.textContent).toContain('Worker available');
 });
 
-it('describes the product generically and says Modified is a manually prepared demonstration', async () => {
+it('describes the product plainly and says the improved websites were changed by hand from the report', async () => {
   server(url => url.endsWith('/config') ? config({ evaluation: null, available: false, repetitions: [], tasks: [], reason: 'not_armed',
     launch: { authorized: false, ready: false, reason: 'not_armed', detail: 'No evaluation is authorised. The owner authorises one at the server terminal.', launches_left: null } }) : []);
   const host = await mount();
   const intro = host.querySelector('.ws-intro')!.textContent ?? '';
-  expect(intro).toContain('Agent Readiness evaluates an existing website');
-  expect(intro).toContain('re-evaluate');
-  expect(intro).toContain('manually prepared');
-  expect(intro).toContain('does not change websites');
+  expect(intro).toContain('Fresh Muse Spark browser agents do real customer tasks on two versions of a website');
+  expect(intro).toContain('what to change');
+  expect(intro).toContain('the improvements were made by hand from the report');
   for (const old of ['Ironbark', 'four frozen tasks', 'eight new agent runs', '4 owner-approved']) expect(intro).not.toContain(old);
   expect(host.textContent).not.toContain('Ironbark Hire');
+});
+
+it('an Original vs Improved pool is named as such in the compose panel, the task grid and the live agent view', async () => {
+  const improved = { ...armed, suite: 'larkspur-core v3', frozen_suite: 'larkspur-core@v3', variants: ['original', 'improved'], launches: { max: 4, used: 1, left: 3 },
+    options: [{ repetitions: 1, trials: 4, reservation_usd: 2.508, manifest_sha256: 'd'.repeat(64), available: true, fits_hosted_ceiling: true }] };
+  const two = tasks.slice(0, 2);
+  const j = { ...job, arm_display: { Original: 'Original', Modified: 'Improved' }, reps: [{ index: 1, state: 'completed', assessment: null, tasks: two.flatMap((t: any) => [row('Original', t.task), row('Modified', t.task)]) }] };
+  server(url => url.endsWith('/config') ? config({ evaluation: improved, tasks: two, judge_access: true, launch: { authorized: true, ready: true, reason: null, detail: null, launches_left: 3 } })
+    : url.endsWith('/jobs') ? [] : url.includes('/live') || url.includes('/trials/') ? { active: false, trial: null } : url.includes('/api/lifecycle/') ? json({ detail: 'unavailable' }, false) : j);
+  let host = await mount();
+  const compose = host.querySelector('.ws-compose')!.textContent!;
+  expect(compose).toContain('Original vs Improved site'); expect(compose).toContain('3 of 4 live runs left');
+  for (const t of two) expect(compose).toContain(t.question);
+  expect(host.querySelector('.ws-intro')!.textContent).toContain('The Improved site applies every recommendation');
+  document.body.innerHTML = '';
+  host = await mount({ initialJob: ID });
+  await act(async () => { button(host, 'Agent runs').click(); });
+  const head = [...host.querySelectorAll('.ws-grid thead th')].map(th => th.textContent);
+  expect(head).toEqual(['Task', 'Original', 'Improved']);
+  expect(host.querySelector('.ws-grid .swatch.i')).not.toBeNull();
 });
 
 // M9: judges start the armed live evaluation with a separate, launch-only access code.

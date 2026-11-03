@@ -101,7 +101,7 @@
 .ws-agent-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}
 .ws-agent-head h2{font:360 clamp(24px,2.3vw,32px)/1.15 var(--serif);letter-spacing:-.015em;margin-top:8px;max-width:28em}
 .ws-agent-tools{display:flex;gap:10px;align-items:center;flex:none}
-.arm-original{color:var(--original)} .arm-modified{color:var(--modified)}
+.arm-original{color:var(--original)} .arm-modified{color:var(--modified)} .arm-modified.arm-improved{color:var(--improved)}
 .ws-tool{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;min-width:32px;padding:0 11px;border-radius:7px;border:1px solid var(--rule-2);background:var(--sheet);cursor:pointer;font:500 13px/1 var(--sans);color:var(--ink);transition:border-color .15s,background .15s}
 .ws-tool:hover:not(:disabled){border-color:var(--ink)}
 .ws-tool[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
@@ -205,7 +205,7 @@ button.ws-cell-button:hover{background:var(--paper)}
 .ws-headline h3,.ws-metric dt{font:500 11px/1.3 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
 .ws-big{display:flex;align-items:baseline;gap:12px;margin:14px 0 8px;font:320 clamp(38px,4vw,56px)/1 var(--serif);letter-spacing:-.03em}
 .ws-big i,.ws-metric i{font:300 .45em/1 var(--sans);font-style:normal;color:var(--ink-3)}
-.ws .o{color:var(--original)} .ws .m{color:var(--modified)}
+.ws .o{color:var(--original)} .ws .m{color:var(--modified)} .ws .m.improved{color:var(--improved)}
 .ws-headline p{font-size:13.5px;color:var(--ink-2)}
 .ws-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
 .ws-metric{padding:16px 16px 16px 0}
@@ -286,3 +286,5 @@ button.ws-cell-button:hover{background:var(--paper)}
 .ws-v2-diff{display:block;margin-top:2px;font-style:italic;color:var(--ink-2)}
 .ws-v2-verdicts{margin-top:4px;color:var(--ink-2)}
 .ws-provenance{font-size:13px;line-height:1.55;color:var(--ink-2)}.ws-provenance code{font:400 12px var(--mono)}
+.ws-task-list{display:grid;gap:6px;margin-top:10px;padding-left:18px;list-style:decimal;font-size:13px;line-height:1.45;color:var(--ink-2)}
+.ws-task-list q{quotes:'“' '”'}

@@ -4,7 +4,7 @@ import { Failed, GradeTag, Loading, useLoad, VariantName } from './parts';
 import { FindingCard } from './Report';
 
 /** Original and Modified traces of one frozen task, side by side: real recorded screenshots, the navigation path, requests, time and cost, the
- *  outcome under official v1 and post-hoc v2 (and any prospective rule, labelled), evidence counts and the diagnostics that cite this task. */
+ *  outcome (correct, and exact match), evidence counts and the diagnostics that cite this task. */
 export function TraceCompare({ ev, n }: { ev: Evaluation; n: number }) {
   const task = ev.tasks.find(t => t.n === n);
   const vs = ev.manifest.variants.map(v => v.name);
@@ -41,18 +41,16 @@ function Side({ ev, t }: { ev: Evaluation; t: Trial }) {
   const c = t.answer_coverage, m = t.metrics;
   return <section className={`lc-side ${variantClass(t.variant)}`} aria-label={`${VARIANT_LABEL(t.variant)} trace`}>
     <header><h2><VariantName v={t.variant} /></h2>
-      <div className="lc-grades"><GradeTag g={t.grades.v1} which="v1" /><GradeTag g={t.grades.v2} which="v2" />{t.grades.v2_1_contrast && <GradeTag g={t.grades.v2_1_contrast} which="v2.1" />}</div></header>
+      <div className="lc-grades"><GradeTag g={t.grades.v2 ?? t.grades.v1} which="v2" /><GradeTag g={t.grades.v1} which="v1" /></div></header>
     <dl className="lc-side-stats">
       <div><dt>Answer</dt><dd>{c && c.expected_items > 1 ? `${c.named_expected} of ${c.expected_items} expected items` : c ? (c.named_expected ? 'expected item named' : 'expected item not named') : '–'}{c?.named_other ? ` · ${c.named_other} other named` : ''}</dd></div>
       <div><dt>Requests</dt><dd>{m.model_requests ?? '–'}{m.request_limit ? ` of ${m.request_limit}` : ''}</dd></div>
       <div><dt>Time</dt><dd>{fmtSec(m.elapsed_seconds)}</dd></div>
-      <div><dt>{ev.mode === 'paid' ? 'Cost (calculated)' : 'Cost'}</dt><dd>{ev.mode === 'paid' ? fmtUsd(m.cost_usd) : 'US$0'}</dd></div>
+      <div><dt>Model cost</dt><dd>{ev.mode === 'paid' ? fmtUsd(m.cost_usd) : 'US$0'}</dd></div>
       <div><dt>Pages</dt><dd>{t.navigation.distinct_pages} distinct · {t.navigation.revisits} revisits</dd></div>
       <div><dt>Evidence</dt><dd>{t.evidence.satisfied ? 'answer pages shown' : `${t.evidence.missing_pages} required page(s) not shown`}</dd></div>
     </dl>
     <blockquote className="lc-answer"><span className="eyebrow">{t.answer_withheld ? 'Answer' : "Agent's answer, as recorded"}</span><p>{answerText(t)}</p></blockquote>
-    {t.grades.v2_1_contrast && <p className="lc-prospective-note">Prospective review rule v2.1: {t.grades.v2_1_contrast.reasons.join(', ')} — {t.grades.v2_1_contrast.status}.</p>}
-    {t.evidence.ranked_subset_rule_2.applies && <p className="lc-prospective-note">Prospective evidence rule 2: {t.evidence.ranked_subset_rule_2.shown_pages} of {t.evidence.ranked_subset_rule_2.required_pages} candidate pages shown ({t.evidence.ranked_subset_rule_2.satisfied ? 'comparison evidenced' : 'comparison not evidenced'}).</p>}
     {(t.reliability.http_errors.length > 0 || t.reliability.near_request_limit || t.reliability.partial_answer || t.reliability.empty_answer) &&
       <ul className="lc-flags">{t.reliability.http_errors.map((e, i) => <li key={i}>Dead end: <code>{e.path}</code> returned {e.status}{t.reliability.recovered ? ' (recovered)' : ''}</li>)}
         {t.reliability.near_request_limit && <li>Used {m.model_requests} of {m.request_limit} requests (at or near the limit)</li>}

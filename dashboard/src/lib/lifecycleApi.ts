@@ -85,7 +85,7 @@ export interface Evaluation { id: string; title: string; mode: 'paid' | 'rehears
   cost: { by_variant: Record<string, number | null> | null; total_usd: number | null; basis: string; settled_spend?: { settled_usd: number; settled_requests: number; unsettled_requests: number; basis: string } | null };
   exploratory: boolean; caveat: string | null; tasks: EvTask[]; trials: Trial[]; analysis: Record<string, Analysis>; dimensions: Dimensions; diagnostics: Record<string, Diagnostics>;
   source?: { kind: 'dataset' | 'launched'; id?: string; version?: number; built_at?: string; description?: string; runs?: string[]; job?: string; state?: string } }
-export interface EvaluationSummary { id: string; title: string | null; mode: string; mode_label?: string; state: string; source: 'dataset' | 'launched'; site?: string; suite?: string;
+export interface EvaluationSummary { id: string; title: string | null; mode: string; mode_label?: string; state: string; source: 'dataset' | 'launched'; site?: string; site_id?: string; suite?: string; started_at?: string | null;
   variants?: string[]; finished_at?: string | number | null; created_at?: number; tasks?: number; trials?: number; exploratory?: boolean; dataset_version?: number;
   success?: Dimensions['task_success']['variants']; requests?: Record<string, number | null>; cost_usd?: number | null }
 export interface Step { step: number; path: string | null; title: string | null; screenshot: string | null; assessment: string | null; memory: string | null; goal: string | null;
@@ -121,7 +121,7 @@ export const api = {
 
 export const short = (sha: string | undefined | null, n = 12) => (sha ?? '').slice(0, n);
 export const VARIANT_LABEL = (v: string) => v.charAt(0).toUpperCase() + v.slice(1);
-export const variantClass = (v: string) => v === 'original' ? 'o' : v === 'modified' ? 'm' : 'x';
+export const variantClass = (v: string) => v === 'original' ? 'o' : v === 'modified' ? 'm' : v === 'improved' ? 'i' : 'x';
 export const fmtUsd = (n: number | null | undefined, d = 3) => n == null ? '–' : `US$${n.toFixed(d)}`;
 export const fmtSec = (n: number | null | undefined) => n == null ? '–' : `${Math.round(n)} s`;
 export const words = (s: string) => s.replaceAll('_', ' ');

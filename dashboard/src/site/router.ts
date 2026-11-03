@@ -14,12 +14,14 @@ export type Route =
 export const CLASSIC = ['investigation', 'overview', 'scopes', 'evidence', 'replay', 'scanner'] as const;
 export const HOME_SECTIONS = ['problem', 'how', 'learn', 'evidence', 'trust'] as const;
 
-export const LIFECYCLE_STEPS = ['website', 'tasks', 'review', 'evaluate', 'report', 'reevaluate'] as const;
+export const LIFECYCLE_STEPS = ['website', 'tasks', 'review', 'evaluate', 'recommendations', 'improve', 'reevaluate', 'compare'] as const;
+/** Earlier step names that still open the right section of the journey. */
+const STEP_ALIAS: Record<string, string> = { report: 'recommendations' };
 
 export function parse(hash: string): Route {
   const h = hash.replace(/^#\/?/, '');
   const lc = h.match(/^lifecycle(?:\/([a-z]+))?$/);
-  if (lc && (!lc[1] || (LIFECYCLE_STEPS as readonly string[]).includes(lc[1]))) return { name: 'lifecycle', step: lc[1] };
+  if (lc && (!lc[1] || (LIFECYCLE_STEPS as readonly string[]).includes(lc[1]) || lc[1] in STEP_ALIAS)) return { name: 'lifecycle', step: lc[1] ? STEP_ALIAS[lc[1]] ?? lc[1] : undefined };
   const suite = h.match(/^lifecycle\/suites\/([0-9a-f]{64})$/);
   if (suite) return { name: 'lifecycle', step: 'review', suite: suite[1] };
   const rep = h.match(/^reports\/([a-z0-9][a-z0-9-]{2,60}|eval-[0-9a-f]{32})(?:\/tasks\/(\d{1,2}))?$/);

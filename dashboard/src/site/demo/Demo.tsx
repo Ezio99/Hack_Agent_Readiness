@@ -324,9 +324,9 @@ export function Demo({ scene }: { scene?: string }) {
     <div className="demo-progress" aria-hidden="true"><div ref={bar} /></div>
     <header className="demo-head">
       <div className="wrap">
-        <div className="demo-head-l"><Brand /><span className="demo-head-tag mono">Recorded demo · {shortId}</span></div>
+        <div className="demo-head-l"><Brand /><span className="demo-head-tag mono">Earlier case study · Ironbark Hire · {shortId}</span></div>
         <p className="demo-chapter"><span className="mono">{String(CHAPTERS.findIndex(c => c.id === active) + 1).padStart(2, '0')}<small> / {String(CHAPTERS.length).padStart(2, '0')}</small></span><strong>{CHAPTERS.find(c => c.id === active)?.label}</strong><i aria-hidden="true"><span ref={chapterBar} /></i></p>
-        <div className="demo-head-r"><a className="btn btn-sm btn-ghost" href="#/">Exit</a><a className="btn btn-sm btn-signal" href="#/run">Run evaluation</a></div></div>
+        <div className="demo-head-r"><a className="btn btn-sm btn-ghost" href="#/">Exit</a><a className="btn btn-sm btn-signal" href="#/lifecycle">The Larkspur journey</a></div></div>
     </header>
     <Rail active={active} jump={id => jump(id)} />
     <main id="demo-main">

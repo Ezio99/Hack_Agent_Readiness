@@ -112,3 +112,24 @@
 .cta-note{font-size:12.5px;color:var(--ink-3)}
 
 .hero-lifecycle{margin-top:16px;font-size:14.5px;line-height:1.55;color:var(--ink-2);max-width:34em}
+
+/* Results: requests per task (Original vs Modified), direct labels */
+.task-bars{margin:8px 0 40px;max-width:1040px}
+.tb-legend{display:flex;gap:18px;font:400 12px/1 var(--mono);color:#B9B5AC;margin-bottom:14px}
+.tb-legend span{display:inline-flex;align-items:center;gap:6px}.tb-legend i{width:10px;height:10px;border-radius:2px}
+.tb-legend i.o{background:#D86C45}.tb-legend i.m{background:#8F9BFF}.tb-limit{margin-left:auto}
+.task-bars ol{display:grid;gap:14px;border-top:1px solid rgba(242,240,235,.12);padding-top:14px}
+.task-bars li{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px;align-items:center}
+.tb-q{font-size:14px;line-height:1.45;color:#C9C5BC}.tb-q b{color:var(--paper);font-weight:500;margin-right:6px}
+.tb-rows{display:grid;gap:5px}.tb-row{display:flex;align-items:center;gap:8px}
+.tb-bar{height:10px;border-radius:2px;min-width:3px}.tb-bar.o{background:#D86C45}.tb-bar.m{background:#8F9BFF}
+.tb-v{font:400 12px/1 var(--mono);color:#B9B5AC}
+@media (max-width:760px){.task-bars li{grid-template-columns:1fr;gap:8px}}
+
+/* Improved site: facts table and screenshot */
+.facts-table{border-collapse:collapse;font-size:14px;width:100%;max-width:440px}
+.facts-table th,.facts-table td{padding:7px 10px;border-bottom:1px solid var(--rule);text-align:left}
+.facts-table thead th{font:500 11px/1.3 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3)}
+.facts-table td{text-align:center;color:var(--ink-3)}.facts-table td.yes{color:var(--pass);font-weight:600}
+.improve-shot{margin:0;border-bottom:1px solid var(--rule)}.improve-shot img{display:block;width:100%;height:auto}
+.how-journey h3 .link{color:inherit}

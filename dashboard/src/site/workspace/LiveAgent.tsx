@@ -13,7 +13,7 @@ const ICON: Record<string, string> = { Navigate: '↗', Click: '◉', Scroll: '�
 
 const DETAILS = 'ar-ws-timeline-details';
 
-export function TrialView({ jobId, trial, live, scripted, focus, onFocus, host = 'ironbark-hire' }: { jobId: string; trial: Trial; live: boolean; scripted: boolean; focus?: boolean; onFocus?: () => void; host?: string }) {
+export function TrialView({ jobId, trial, live, scripted, focus, onFocus, host = 'ironbark-hire', names = ARM }: { jobId: string; trial: Trial; live: boolean; scripted: boolean; focus?: boolean; onFocus?: () => void; host?: string; names?: Record<'original' | 'modified', string> }) {
   const [picked, setPicked] = useState<number | null>(null);
   const [details, setDetails] = useState(() => sessionStorage.getItem(DETAILS) !== 'compact');
   const list = useRef<HTMLOListElement>(null);
@@ -45,7 +45,7 @@ export function TrialView({ jobId, trial, live, scripted, focus, onFocus, host =
   const toggleDetails = () => setDetails(d => { sessionStorage.setItem(DETAILS, d ? 'compact' : 'details'); return !d; });
   return <section className={`ws-agent${focus ? ' focused' : ''}`} aria-label="Agent activity">
     <header className="ws-agent-head">
-      <div><p className="eyebrow">{live ? <><span className="ws-live" aria-hidden="true" /> Live agent</> : 'Agent run'} · Repetition {trial.repetition} · <span className={`arm-${trial.arm}`}>{ARM[trial.arm]}</span> · Task {trial.task}</p>
+      <div><p className="eyebrow">{live ? <><span className="ws-live" aria-hidden="true" /> Live agent</> : 'Agent run'} · Repetition {trial.repetition} · <span className={`arm-${trial.arm}${names[trial.arm] === 'Improved' ? ' arm-improved' : ''}`}>{names[trial.arm]}</span> · Task {trial.task}</p>
         <h2>{trial.question ?? `Task ${trial.task}`}</h2></div>
       <div className="ws-agent-tools">
         <span className={`ws-pill ${trial.state}`}>{trial.state === 'running' ? 'Agent working' : trial.state.replaceAll('_', ' ')}</span>
@@ -95,7 +95,7 @@ export function TrialView({ jobId, trial, live, scripted, focus, onFocus, host =
 async function get<T>(url: string): Promise<T> { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw new Error('unavailable'); return await r.json() as T; }
 
 /** Follows the trial being executed now; or shows a selected trial (polled while it runs). */
-export function AgentPanel({ jobId, active, selection, scripted, onClear, focus, onFocus , host = 'ironbark-hire' }: { jobId: string; active: boolean; selection: Selection | null; scripted: boolean; onClear: () => void; focus?: boolean; onFocus?: () => void ; host?: string }) {
+export function AgentPanel({ jobId, active, selection, scripted, onClear, focus, onFocus , host = 'ironbark-hire', names = ARM }: { jobId: string; active: boolean; selection: Selection | null; scripted: boolean; onClear: () => void; focus?: boolean; onFocus?: () => void ; host?: string; names?: Record<'original' | 'modified', string> }) {
   const [trial, setTrial] = useState<Trial | null>(null);
   const [missing, setMissing] = useState(false);
   useEffect(() => {
@@ -112,5 +112,5 @@ export function AgentPanel({ jobId, active, selection, scripted, onClear, focus,
   }, [jobId, active, selection?.repetition, selection?.arm, selection?.task]);
   if (!trial) return <div className="ws-empty-note"><p>{missing ? (active ? 'Waiting for the first agent to open a browser…' : 'No agent activity was recorded for this selection.') : 'Loading agent activity…'}</p></div>;
   return <>{selection && <button className="ws-link ws-back" onClick={onClear}>{active ? '← Follow the live agent' : '← Latest run'}</button>}
-    <TrialView jobId={jobId} trial={trial} live={active && !selection ? true : active && trial.state === 'running'} scripted={scripted} focus={focus} onFocus={onFocus} host={host} /></>;
+    <TrialView jobId={jobId} trial={trial} live={active && !selection ? true : active && trial.state === 'running'} scripted={scripted} focus={focus} onFocus={onFocus} host={host} names={names} /></>;
 }

@@ -18,6 +18,10 @@ export function useLoad<T>(load: () => Promise<T>, key: string): { data: T | nul
   return { data: current ? state.data : null, error: current ? state.error : null, loading: !current || state.loading, reload: () => setTick(t => t + 1) };
 }
 
+/** Display wording for recorded server text (finding details): the graders by what they check. The recorded data is unchanged. */
+export const plain = (t: string) => t.replace(/the official grader v1/g, 'the exact-match grader').replace(/official grader v1/g, 'exact-match grader')
+  .replace(/post-hoc grader v2/g, 'the correctness grader').replace(/grader v2/g, 'the correctness grader').replace(/grader v1/g, 'the exact-match grader');
+
 export function Loading({ what }: { what: string }) { return <p className="lc-loading" aria-busy="true">Loading {what}…</p>; }
 export function Failed({ error, what }: { error: string; what: string }) { return <p className="lc-error" role="alert"><strong>{what} unavailable.</strong> {error}</p>; }
 
@@ -30,7 +34,7 @@ export function Hash({ sha, label, full = false }: { sha: string; label?: string
 }
 
 export function ModeBadge({ mode }: { mode: string }) {
-  return mode === 'paid' ? <span className="lc-mode paid">Paid evaluation · real model</span> : <span className="lc-mode rehearsal">Rehearsal · scripted stand-in, not a model</span>;
+  return mode === 'paid' ? <span className="lc-mode paid">Live · Meta Muse Spark</span> : <span className="lc-mode rehearsal">Rehearsal · scripted agent, no model</span>;
 }
 
 export function VariantName({ v }: { v: string }) {
@@ -41,12 +45,11 @@ export function Legend({ variants }: { variants: string[] }) {
   return <p className="lc-legend" aria-label="Legend">{variants.map(v => <VariantName key={v} v={v} />)}</p>;
 }
 
-/** A grade with its grader always named: v1 is official; v2 is a labelled post-hoc rescore; prospective rules are never applied. */
-export function GradeTag({ g, which }: { g: Grade | null | undefined; which: 'v1' | 'v2' | 'v2.1' }) {
-  const name = which === 'v1' ? 'v1 official' : which === 'v2' ? 'v2 post-hoc' : 'v2.1 review rule (prospective)';
-  if (!g) return <span className="tag tag-neutral">{name}: n/a</span>;
-  const ok = g.passed;
-  return <span className={`tag ${ok ? 'tag-pass' : 'tag-fail'}`} title={g.reasons?.join(', ')}>{ok ? '✓' : '✕'} {name}{ok && g.evidence_backed === false ? ' · evidence not shown' : ''}</span>;
+/** A recorded grade in plain words: `v2` = correct (consistent extra detail allowed), `v1` = exact match (the official grader). */
+export function GradeTag({ g, which }: { g: Grade | null | undefined; which: 'v1' | 'v2' }) {
+  const [yes, no] = which === 'v1' ? ['Exact match', 'Not an exact match'] : ['Correct', 'Not correct'];
+  if (!g) return null;
+  return <span className={`tag ${g.passed ? (which === 'v1' ? 'tag-neutral' : 'tag-pass') : (which === 'v1' ? 'tag-neutral' : 'tag-fail')}`} title={g.reasons?.join(', ')}>{g.passed ? '✓' : '✕'} {g.passed ? yes : no}</span>;
 }
 
 export function Section({ id, n, title, basis, children }: { id: string; n?: string; title: string; basis?: string; children: ReactNode }) {

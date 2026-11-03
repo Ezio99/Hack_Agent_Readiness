@@ -501,7 +501,7 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
                             'runs_per_repetition': (st.get('tasks_planned') or 0) // max(1, st['repetitions'] or 1) or None,
                             'report_state': st['report_status']['state'], 'repetitions': st['repetitions'], 'mode': st['mode'], 'created_at': st['created_at'],
                             'finished_at': st.get('finished_at'), 'completed_repetitions': sum(r['state'] == 'completed' for r in st['reps']),
-                            'summary': st['summary'] if j['state'] in TERMINAL else None})
+                            'summary': st['summary'] if j['state'] in TERMINAL else None, 'arm_display': st.get('arm_display')})
                 continue
             try:
                 data = paired.load_job(root, j['id'])

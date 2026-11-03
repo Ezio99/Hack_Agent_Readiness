@@ -8,6 +8,7 @@ import App from '../App';
 import { parse } from './router';
 import { evidence, headline, trial, isItemPage, replication } from './evidence';
 import { LATEST_LIVE } from './LatestLive';
+import { FEATURED, IMPROVEMENTS, LIVE } from './showcase';
 import { Home } from './Home';
 import { Demo } from './demo/Demo';
 import { Workspace } from './workspace/Workspace';
@@ -27,6 +28,9 @@ describe('routes', () => {
     expect(parse('#/run/eval-short').name).toBe('home');
     expect(parse('#/demo')).toEqual({ name: 'demo', scene: undefined });
     expect(parse('#/demo/friction')).toEqual({ name: 'demo', scene: 'friction' });
+    expect(parse('#/demo/ironbark')).toEqual({ name: 'demo', scene: 'ironbark' });
+    expect(parse('#/lifecycle/improve')).toEqual({ name: 'lifecycle', step: 'improve' });
+    expect(parse('#/lifecycle/report')).toEqual({ name: 'lifecycle', step: 'recommendations' });   // an earlier step name still lands
     expect(parse('#/how')).toEqual({ name: 'home', section: 'how' });
     expect(parse('#/studio')).toEqual({ name: 'studio' });
     expect(parse('#/investigation')).toEqual({ name: 'classic', page: 'investigation' });
@@ -70,17 +74,33 @@ describe('recorded evidence (eval-9aaac35c)', () => {
   });
 });
 
-describe('homepage', () => {
-  it('positions the product with real data and links to the workspace and demo without calling any API', () => {
+describe('homepage (the featured Larkspur story)', () => {
+  it('tells the Larkspur story from the recorded live evaluation, links the journey, workspace and report, and calls no API', () => {
     const f = noNetwork();
     act(() => root.render(<Home />));
     expect(host.querySelector('h1')?.textContent).toBe('See your website the way an agent does.');
-    expect([...host.querySelectorAll('a')].filter(a => a.getAttribute('href') === '#/run').length).toBeGreaterThan(0);
-    expect([...host.querySelectorAll('a')].some(a => a.getAttribute('href') === '#/demo')).toBe(true);
+    const hrefs = [...host.querySelectorAll('a')].map(a => a.getAttribute('href'));
+    for (const h of ['#/run', '#/lifecycle', `#/reports/${LIVE.id}`, '#/lifecycle/improve']) expect(hrefs).toContain(h);
     const text = host.textContent!;
-    for (const s of ['1/4', '4/4', '48% fewer on Modified', 'inconclusive', 'consistent with the hypothesis', 'operator invitation']) expect(text).toContain(s);
-    expect(text).toContain(trial('original', 1).steps[2].memory!);
+    const O = LIVE.totals.original, M = LIVE.totals.modified;
+    for (const s of [`${O.requests}`, `${M.requests}`, `${Math.round(100 * (O.requests - M.requests) / O.requests)}% fewer on Modified`, `${LIVE.correct.original}/6`, `${LIVE.correct.modified}/6`,
+                     'Larkspur Community College', 'Run Original vs Improved', ...IMPROVEMENTS.map(i => i.title)]) expect(text).toContain(s);
+    expect(text).toContain(LIVE.journeys['original-1'].steps.at(-1)!.memory!);                     // the agent's own words, unedited
+    for (const s of ['post-hoc', 'inconclusive', 'p =', 'xploratory', 'verified', 'pre-registered']) expect(text).not.toContain(s);
+    expect(host.querySelector('main')!.textContent).not.toContain('Ironbark');                                // the earlier case study is only linked from the footer
     expect(f).not.toHaveBeenCalled();
+  });
+  it('the recorded showcase numbers are internally consistent with the per-agent records', () => {
+    expect(LIVE.trials).toHaveLength(12);
+    for (const v of ['original', 'modified']) {
+      const ts = LIVE.trials.filter(t => t.variant === v);
+      expect(ts.reduce((a, t) => a + t.requests, 0)).toBe(LIVE.totals[v].requests);
+      expect(ts.filter(t => t.correct).length).toBe(LIVE.correct[v]);
+      expect(ts.filter(t => t.passed).length).toBe(LIVE.passed[v]);
+    }
+    expect(LIVE.cost_usd).toBeCloseTo(LIVE.totals.original.cost_usd + LIVE.totals.modified.cost_usd, 4);
+    expect(LATEST_LIVE.id).toBe(FEATURED.liveEvaluation);
+    for (const x of IMPROVEMENTS) if (x.preview) expect(existsSync(join(__dirname, 'showcase', 'frames', `${x.preview}.webp`))).toBe(true);
   });
 });
 
@@ -153,31 +173,13 @@ describe('workspace and app shell', () => {
   });
 });
 
-describe('M9 presentation patch (I1, I3)', () => {
-  const REPL = ['Replicated later the same day by a second live run of the same four tasks (eval-aa23e330)', '0/4 → 3/4 under the official grader v1',
-                '1/4 → 4/4 under the labelled post-hoc grader v2', '52 → 26 model requests', "The headline figures are the first run's (eval-9aaac35c)"];
-  it('home: labels the headline as official v1, discloses the replication and links the latest live evaluation, still without calling any API', () => {
-    const f = noNetwork();
-    act(() => root.render(<Home />));
-    const text = host.textContent!;
-    expect(text).toContain('Tasks passed, evidence-supported (official grader v1)');
-    for (const r of REPL) expect(text).toContain(r);
-    for (const s of ['1/4', '4/4', 'inconclusive']) expect(text).toContain(s);                     // the earlier Ironbark story is kept
-    const link = [...host.querySelectorAll('a')].find(a => a.getAttribute('href') === `#/reports/${LATEST_LIVE.id}`)!;
-    expect(link).toBeTruthy();
-    expect(link.textContent).toContain('Complete live evaluation');
-    expect(link.textContent).toContain('12 agent runs finished');
-    expect(link.textContent).toContain('official grader v1: 1/6 → 2/6 passed');
-    expect(link.textContent).toContain('post-hoc grader v2: 2/6 → 4/6');
-    expect(f).not.toHaveBeenCalled();
-  });
-  it('demo: the outcome discloses the replication with both graders and links the latest live evaluation', () => {
+describe('earlier case study (Ironbark, archived)', () => {
+  it('the demo outcome keeps its recorded replication figures', () => {
     reducedMotion(true); noNetwork();
     act(() => root.render(<Demo scene="outcome" />));
     const outcome = host.querySelector('#outcome')!;
-    expect(outcome.textContent).toContain('Tasks passed (official grader v1)');
-    for (const r of REPL) expect(outcome.textContent).toContain(r);
-    expect(outcome.querySelector(`a[href="#/reports/${LATEST_LIVE.id}"]`)).not.toBeNull();
+    expect(outcome.textContent).toContain('Replicated later the same day by a second live run of the same four tasks (eval-aa23e330)');
+    expect(host.textContent).toContain('Earlier case study · Ironbark Hire');
   });
   it('the replication figures are the recorded ones (first run = the bundled evidence)', () => {
     expect(replication.first.official).toEqual({ original: headline.passes.original, modified: headline.passes.modified });

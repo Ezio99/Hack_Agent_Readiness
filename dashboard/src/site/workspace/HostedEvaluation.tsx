@@ -23,7 +23,7 @@ type ArmV2 = { completed: number; evidence_supported_passes: number; strict_pass
 interface ArmSummary { planned: number; completed: number; failed: number; evidence_supported_passes: number; strict_passes: number; requests_total: number; requests_mean: number | null; page_views_mean: number | null; steps_mean: number | null; elapsed_mean: number | null }
 export interface Execution { state: string; trials_planned: number | null; trials_completed: number; trials_failed: number; trials_void: number }
 export interface ReportStatus { state: 'available' | 'withheld' | 'pending' | 'unavailable' | 'unknown'; detail?: string }
-export interface Job { engine?: 'stage-b'; execution?: Execution; report_status?: ReportStatus; record_note?: string | null; report?: string | null; error?: string | null; stopped?: string | null; id: string; state: string; mode: 'live' | 'rehearsal' | null; repetitions: number | null; recovery_required?: boolean; created_at: number; started_at: number | null; finished_at: number | null; reps: Rep[]; summary: Record<'Original' | 'Modified', ArmSummary>; summary_v2?: ({ label: string; repetitions: number } & Record<'Original' | 'Modified', ArmV2>) | null }
+export interface Job { engine?: 'stage-b'; execution?: Execution; report_status?: ReportStatus; record_note?: string | null; report?: string | null; error?: string | null; stopped?: string | null; id: string; state: string; mode: 'live' | 'rehearsal' | null; repetitions: number | null; recovery_required?: boolean; created_at: number; started_at: number | null; finished_at: number | null; reps: Rep[]; summary: Record<'Original' | 'Modified', ArmSummary>; arm_display?: Record<'Original' | 'Modified', string> | null; summary_v2?: ({ label: string; repetitions: number } & Record<'Original' | 'Modified', ArmV2>) | null }
 interface Worker { state: 'idle' | 'busy' | 'unavailable'; job: string | null; started_at?: number | null; repetitions?: number; finished_runs?: number; total_runs?: number | null; estimated_remaining_seconds?: number | null }
 interface ArmedEvaluation { arming_id: string; mode: 'paid' | 'rehearsal'; site: string; suite: string; frozen_suite: string; frozen_suite_sha256: string; variants: string[]; armed_at: string;
   launches: { max: number; used: number; left: number }; options: { repetitions: number; trials: number; reservation_usd: number; manifest_sha256: string; available: boolean; fits_hosted_ceiling: boolean | null }[];
@@ -76,12 +76,12 @@ export function ProvenanceNote({ p }: { p: Provenance }) {
   </p>;
 }
 
-export function ProgressGrid({ rep, questions, onSelect, selected }: { rep: Rep; questions: Record<number, string>; onSelect?: (s: Selection) => void; selected?: Selection | null }) {
+export function ProgressGrid({ rep, questions, onSelect, selected, names = { Original: 'Original', Modified: 'Modified' } }: { rep: Rep; questions: Record<number, string>; onSelect?: (s: Selection) => void; selected?: Selection | null; names?: Record<'Original' | 'Modified', string> }) {
   const numbers = [...new Set([...rep.tasks.map(t => t.task), ...Object.keys(questions).map(Number)])].sort((a, b) => a - b);
   const find = (arm: string, task: number) => rep.tasks.find(t => t.arm === arm && t.task === task);
   const v2 = (arm: string, task: number) => rep.grading_v2?.faithful ? rep.grading_v2.tasks.find(t => t.arm === arm && t.task === task) : undefined;
   return <table className="ws-grid" aria-label={`Repetition ${rep.index} task progress`}>
-    <thead><tr><th scope="col">Task</th><th scope="col"><span className="swatch o" aria-hidden="true" />Original</th><th scope="col"><span className="swatch m" aria-hidden="true" />Modified</th></tr></thead>
+    <thead><tr><th scope="col">Task</th><th scope="col"><span className="swatch o" aria-hidden="true" />{names.Original}</th><th scope="col"><span className={`swatch ${names.Modified === 'Improved' ? 'i' : 'm'}`} aria-hidden="true" />{names.Modified}</th></tr></thead>
     <tbody>{(numbers.length ? numbers : [1, 2, 3, 4]).map(n => <tr key={n}><th scope="row"><span className="ws-task-n">Task {n}</span><small>{questions[n] ?? ''}</small></th>
       {(['Original', 'Modified'] as const).map(arm => { const t = find(arm, n), c = cell(t), key = arm.toLowerCase() as 'original' | 'modified';
         const isSel = selected?.repetition === rep.index && selected.arm === key && selected.task === n;
@@ -89,7 +89,7 @@ export function ProgressGrid({ rep, questions, onSelect, selected }: { rep: Rep;
           {t?.state === 'completed' && <small>{t.requests ?? '–'} requests · {t.page_views ?? '–'} pages{t.elapsed_seconds != null ? ` · ${Math.round(t.elapsed_seconds)} s` : ''}</small>}
           {(() => { const d = v2(arm, n); return d && t?.state === 'completed' && d.outcome !== t.outcome ? <small className="ws-v2-diff">Grader v2 (post-hoc): {V2_TEXT[d.outcome] ?? d.outcome}</small> : null; })()}</span></>;
         return <td key={arm} className={`ws-cell ${c.cls}${isSel ? ' selected' : ''}`}>
-          {onSelect && t && t.state !== 'pending' ? <button className="ws-cell-button" aria-label={`Watch ${arm} task ${n}, repetition ${rep.index}: ${c.text}`} aria-pressed={isSel} onClick={() => onSelect({ repetition: rep.index, arm: key, task: n })}>{body}</button> : <div className="ws-cell-button static">{body}</div>}</td>; })}
+          {onSelect && t && t.state !== 'pending' ? <button className="ws-cell-button" aria-label={`Watch ${names[arm]} task ${n}, repetition ${rep.index}: ${c.text}`} aria-pressed={isSel} onClick={() => onSelect({ repetition: rep.index, arm: key, task: n })}>{body}</button> : <div className="ws-cell-button static">{body}</div>}</td>; })}
     </tr>)}</tbody>
   </table>;
 }
@@ -214,6 +214,11 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
   const watch = (s: Selection) => { setSelection(s); setTab('watch'); requestAnimationFrame(() => agent.current?.scrollIntoView?.({ behavior: reduce() ? 'auto' : 'smooth', block: 'start' })); };
 
   const questions = Object.fromEntries((config?.tasks ?? []).map(t => [t.task, t.question]));
+  const cap = (v: string | undefined, d: string) => v ? v.charAt(0).toUpperCase() + v.slice(1) : d;
+  const armedNames = { Original: cap(config?.evaluation?.variants?.[0], 'Original'), Modified: cap(config?.evaluation?.variants?.[1], 'Modified') };
+  const names = job?.arm_display ?? (job ? { Original: 'Original', Modified: 'Modified' } : armedNames);
+  const lowerNames = { original: names.Original, modified: names.Modified };
+  const SITE_HOST: Record<string, string> = { larkspur: 'larkspur-college', ironbark: 'ironbark-hire' };
   const operatorOnly = config?.access === 'operator';
   const running = !!job && ACTIVE.includes(job.state);
   const othersRunning = !!config?.active && config.active !== job?.id;
@@ -250,8 +255,8 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
       <div>
         <p className="eyebrow">Evaluation workspace</p>
         <h1 className="ws-title">Run real agents on a website.</h1>
-        <p className="ws-lede">Agent Readiness evaluates an existing website: fresh browser agents attempt realistic customer tasks, an independent grader checks every answer against the site's own data, and the report shows where agents get stuck and what to change. After you change your site, re-evaluate it to measure the effect.</p>
-        <p className="ws-lede-note">{stageB && ev ? <>This live evaluation gives {nTasks} customer task{nTasks === 1 ? '' : 's'} to browser agents on the <strong>Original</strong> and the <strong>Modified</strong> version of the site. </> : null}In this demonstration, Modified is a manually prepared version of the controlled Larkspur site; Agent Readiness does not change websites itself.</p>
+        <p className="ws-lede">Fresh Muse Spark browser agents do real customer tasks on two versions of a website. Every answer is checked against the site’s own records, and the report shows where agents got stuck and what to change.</p>
+        <p className="ws-lede-note">{stageB && ev ? <>This live evaluation gives {nTasks} customer task{nTasks === 1 ? '' : 's'} from the <a className="ws-link" href="#/lifecycle/review">{ev.site === 'larkspur' ? 'Larkspur' : ev.site} task set</a> to browser agents on the <strong>{armedNames.Original}</strong> and the <strong>{armedNames.Modified}</strong> site.{armedNames.Modified === 'Improved' ? <> The Improved site applies every recommendation from the <a className="ws-link" href="#/lifecycle/improve">first evaluation</a>.</> : null} </> : null}The websites are frozen copies of the fictional Larkspur Community College; the improvements were made by hand from the report.</p>
       </div>
       {config && <div className={`ws-worker ${worker?.state === 'idle' && stageB && config.launch && !config.launch.authorized ? 'blocked' : worker?.state ?? 'unavailable'}`} role="status">
         <span className="ws-dot" aria-hidden="true" />
@@ -271,12 +276,13 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
         <ol className="ws-steps">
           <li><span className="ws-step">01 · Website</span>
             {stageB ? <div className="ws-target" aria-label="Selected website">{ev ? <><strong>{ev.site === 'larkspur' ? 'Larkspur Community College' : ev.site === 'ironbark' ? 'Ironbark Hire Co.' : ev.site}</strong>
-                <small>{nTasks} customer task{nTasks === 1 ? '' : 's'} · Original vs Modified site · {ev.launches.left} of {ev.launches.max} live run{ev.launches.max === 1 ? '' : 's'} left</small></>
+                <small>{nTasks} customer task{nTasks === 1 ? '' : 's'} · {armedNames.Original} vs {armedNames.Modified} site · {ev.launches.left} of {ev.launches.max} live run{ev.launches.max === 1 ? '' : 's'} left</small></>
                 : <><strong>No evaluation armed</strong><small>The owner selects and authorises the frozen suite at the server terminal.</small></>}</div>
               : <div className="ws-target" aria-label="Selected website"><strong>No evaluation available</strong><small>New evaluations are not available on this server right now; recorded evaluations remain available.</small></div>}</li>
           {stageB && (config?.repetitions?.length ?? 0) <= 1
             ? <li><span className="ws-step">02 · What runs</span>
-                <p className="ws-run-summary">{ev ? `${runsPerRep} browser agents, one per task on each site · ${minutes(perRep)}` : 'Nothing to run right now.'}</p></li>
+                <p className="ws-run-summary">{ev ? `${runsPerRep} browser agents, one per task on each site · ${minutes(perRep)}` : 'Nothing to run right now.'}</p>
+                {ev && (config?.tasks?.length ?? 0) > 0 && <ol className="ws-task-list">{config!.tasks.map(t => <li key={t.task}><q>{t.question}</q></li>)}</ol>}</li>
             : <li><span className="ws-step">02 · Repetitions</span>
             <div className="ws-reps" role="radiogroup" aria-label="Paired repetitions">{(config?.repetitions ?? [1, 3, 5]).map(n =>
               <button key={n} role="radio" aria-checked={reps === n} disabled={running} onClick={() => setReps(n)}><strong>{n}</strong><small>{n * (stageB ? runsPerRep : 8)} agent runs</small><small>{minutes(perRep * n)}</small></button>)}</div></li>}
@@ -294,10 +300,10 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
             <p className="ws-note" id="ws-run-note">{note}</p></li>
         </ol>
         {stageB && <details className="ws-method"><summary>Methodology &amp; provenance</summary>
-          <p><strong>Suite.</strong> {ev ? <>Frozen suite <code>{ev.frozen_suite}</code> (<code>{ev.frozen_suite_sha256.slice(0, 12)}…</code>), approved and frozen by the owner at a terminal; its tasks are the customers' own words, generated and validated in the lifecycle (<a className="ws-link" href="#/lifecycle">see the lifecycle</a>).</> : 'none armed.'}</p>
+          <p><strong>Tasks.</strong> {ev ? <>The frozen task set <code>{ev.frozen_suite}</code> (<code>{ev.frozen_suite_sha256.slice(0, 12)}…</code>), approved by the owner; the questions are the customers’ own words, generated and checked in the <a className="ws-link" href="#/lifecycle">journey</a>.</> : 'none open.'}</p>
           <p><strong>Agent.</strong> Browser Use agent driven by <code>{ev?.agent.model ?? config?.model}</code>, reasoning <code>{show(ev?.agent.reasoning_effort)}</code>, {show(ev?.agent.max_completion_tokens)} completion tokens, profile <code>{ev?.agent.profile}</code>; each task limited to {config?.tasks[0]?.limits?.max_model_requests ?? 14} model requests; no retries.</p>
-          <p><strong>Authorisation and spend.</strong> The owner armed this evaluation at the server terminal: the exact manifest per repetition count, the model, the number of launches and their total. Each launch reserves its worst case against the hosted budget before it starts (never released), and every model request is reserved in the launch's own ledger before it is sent. Calculated spend is not a bill.</p>
-          <p><strong>Grading.</strong> Official grades are grader v1; grader v2 is a labelled post-hoc rescore; prospective rules are shown, never applied. The report separates observed facts from hypotheses.</p>
+          <p><strong>Spending.</strong> The owner authorised a fixed number of live runs in advance. Each run reserves its worst case against the service budget before it starts, and every model request is reserved against the run’s own cap before it is sent.</p>
+          <p><strong>Grading.</strong> Every answer is checked against the site’s own records, which the agent never sees. The report shows correct answers, exact matches, requests, time and cost per agent, and its recommendations cite the evidence.</p>
           <p><strong>Isolation.</strong> Each browser runs in its own network namespace that can reach only the frozen website copy; model credentials never enter the browser.</p>
         </details>}
         {!stageB && job && job.engine !== 'stage-b' && <details className="ws-method"><summary>Methodology &amp; provenance (historical Ironbark evaluation)</summary>
@@ -342,12 +348,12 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
           {job.engine === 'stage-b' && job.execution?.state === 'completed' && job.report_status?.state === 'withheld' && <p className="ws-alert">Every agent run finished; only the readiness report is withheld (it did not pass the publication leak audit).</p>}
 
           {tab === 'watch' && <div className="ws-watch" role="tabpanel" id="ws-panel-watch" aria-labelledby="ws-tab-watch">
-            <div ref={agent} className="ws-agent-anchor"><AgentPanel jobId={job.id} active={running} selection={selection} scripted={job.mode === 'rehearsal'} onClear={() => setSelection(null)} focus={focus} onFocus={toggleFocus} host={job.engine === 'stage-b' ? (ev?.site ?? 'website') : 'ironbark-hire'} /></div>
+            <div ref={agent} className="ws-agent-anchor"><AgentPanel jobId={job.id} active={running} selection={selection} scripted={job.mode === 'rehearsal'} onClear={() => setSelection(null)} focus={focus} onFocus={toggleFocus} host={job.engine === 'stage-b' ? SITE_HOST[ev?.site ?? ''] ?? ev?.site ?? 'website' : 'ironbark-hire'} names={lowerNames} /></div>
             {(() => {
               const focus = selection?.repetition ?? (job.reps.find(r => ['preparing', 'running'].includes(r.state)) ?? job.reps[job.reps.length - 1])?.index;
               const grid = (rep: Rep) => <article key={rep.index} className="ws-rep">
                 <header><strong>Repetition {rep.index}</strong><span className={`ws-pill ${rep.state}`}>{label(rep.state)}</span><small>Select a run to inspect it</small></header>
-                <ProgressGrid rep={rep} questions={questions} onSelect={watch} selected={selection} /></article>;
+                <ProgressGrid rep={rep} questions={questions} onSelect={watch} selected={selection} names={names} /></article>;
               const others = job.reps.filter(r => r.index !== focus);
               return <div className="ws-rep-list">{job.reps.filter(r => r.index === focus).map(grid)}
                 {others.length > 0 && <details className="ws-more"><summary>Other repetitions ({others.map(r => `${r.index}: ${label(r.state).toLowerCase()}`).join(' · ')})</summary>

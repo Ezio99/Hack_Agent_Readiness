@@ -5,15 +5,16 @@ import { Workspace } from './site/workspace/Workspace';
 import { Lifecycle } from './site/lifecycle/Lifecycle';
 import { ReportPage } from './site/lifecycle/Report';
 
-/** The cinematic demo carries its own evidence frames; the archive carries the pre-redesign app. Both load on demand. */
+/** `#/demo` is the featured Larkspur journey (the same page as `#/lifecycle`). The earlier Ironbark scroll story carries its own evidence frames and
+ *  lives in the archive at `#/demo/ironbark` (its scene deep links still work); the archive also carries the pre-redesign app. Both load on demand. */
 const Demo = lazy(() => import('./site/demo/Demo').then(m => ({ default: m.Demo })));
 const Classic = lazy(() => import('./legacy/Classic'));
 
 const TITLES: Record<string, string> = {
   home: 'Agent Readiness — usability testing for AI agents',
-  demo: 'Demo — watch an AI agent use a website · Agent Readiness',
+  demo: 'Earlier case study: Ironbark Hire · Agent Readiness',
   run: 'Evaluation workspace · Agent Readiness',
-  lifecycle: 'Evaluation lifecycle · Agent Readiness',
+  lifecycle: 'The Larkspur journey: evaluate, improve, re-evaluate · Agent Readiness',
   report: 'Readiness report · Agent Readiness',
   studio: 'Replay archive · Agent Readiness',
   classic: 'Investigation archive · Agent Readiness',
@@ -21,7 +22,8 @@ const TITLES: Record<string, string> = {
 
 export default function App() {
   const route = useRoute();
-  useEffect(() => { document.title = TITLES[route.name]; }, [route.name]);
+  const journey = route.name === 'demo' && !route.scene;
+  useEffect(() => { document.title = TITLES[journey ? 'lifecycle' : route.name]; }, [route.name, journey]);
   // Each route starts at the top unless it targets a section/scene; those components scroll themselves.
   useEffect(() => {
     const targeted = (route.name === 'home' && route.section) || (route.name === 'demo' && route.scene);
@@ -34,7 +36,8 @@ export default function App() {
     case 'run': return <Workspace job={route.job} />;
     case 'lifecycle': return <Lifecycle step={route.step} suite={route.suite} />;
     case 'report': return <ReportPage id={route.id} task={route.task} />;
-    case 'demo': return <Suspense fallback={<div className="ar ar-night route-loading" aria-busy="true"><p className="sr-only">Loading the demo…</p></div>}><Demo scene={route.scene} /></Suspense>;
+    case 'demo': if (journey) return <Lifecycle />;
+      return <Suspense fallback={<div className="ar ar-night route-loading" aria-busy="true"><p className="sr-only">Loading the demo…</p></div>}><Demo scene={route.scene === 'ironbark' ? undefined : route.scene} /></Suspense>;
     default: return <Suspense fallback={fallback}><Classic /></Suspense>;
   }
 }

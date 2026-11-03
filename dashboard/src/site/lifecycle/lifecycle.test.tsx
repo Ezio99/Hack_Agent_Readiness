@@ -8,6 +8,7 @@ import { Lifecycle } from './Lifecycle';
 import { ReportPage } from './Report';
 import { useLoad } from './parts';
 import { parse } from '../router';
+import { LIVE } from '../showcase';
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 afterEach(() => { vi.unstubAllGlobals(); document.body.innerHTML = ''; window.location.hash = ''; });
 
@@ -39,6 +40,7 @@ async function mount(node: React.ReactNode) {
 it('routes the lifecycle steps, suites and reports (hosted evaluations keep #/run/eval-…)', () => {
   expect(parse('#/lifecycle')).toEqual({ name: 'lifecycle', step: undefined });
   expect(parse('#/lifecycle/review')).toEqual({ name: 'lifecycle', step: 'review' });
+  expect(parse('#/lifecycle/compare')).toEqual({ name: 'lifecycle', step: 'compare' });
   expect(parse('#/lifecycle/suites/' + 'a'.repeat(64))).toEqual({ name: 'lifecycle', step: 'review', suite: 'a'.repeat(64) });
   expect(parse('#/reports/eval-' + 'b'.repeat(32))).toEqual({ name: 'report', id: 'eval-' + 'b'.repeat(32), task: undefined });
   expect(parse('#/reports/m7-larkspur-browser-1/tasks/1')).toEqual({ name: 'report', id: 'm7-larkspur-browser-1', task: 1 });
@@ -46,19 +48,19 @@ it('routes the lifecycle steps, suites and reports (hosted evaluations keep #/ru
   expect(parse('#/run').name).toBe('run');                                      // the hosted workspace URLs are unchanged
 });
 
-it('renders the M7 report from the recorded dataset with both graders labelled and no composite score', async () => {
+it('renders the M7 report in plain product language: correct answers and exact matches, six dimensions, recommendations, no research framing', async () => {
   server({ '/api/lifecycle/evaluations/m7-larkspur-browser-1': EV });
   const host = await mount(<ReportPage id="m7-larkspur-browser-1" />);
   const t = host.textContent ?? '';
-  expect(t).toContain('Paid evaluation · real model');
-  expect(t).toContain('no statistical power');
-  expect(t).toContain('2/6'); expect(t).toContain('3/6'); expect(t).toContain('1/6'); expect(t).toContain('4/6');
-  expect(t).toContain('v1 official'); expect(t).toContain('v2 post-hoc'); expect(t).toContain('v2.1 review rule (prospective)');
+  expect(t).toContain('Live · Meta Muse Spark');
+  const row = (k: string) => [...host.querySelectorAll('tr')].find(r => r.textContent?.startsWith(k))!.textContent!;
+  expect(row('Correct answers')).toContain('3/6'); expect(row('Correct answers')).toContain('4/6');            // the recorded grades (v2)
+  expect(row('Exact match')).toContain('2/6'); expect(row('Exact match')).toContain('1/6');                    // the recorded official grades (v1), unchanged
   expect(t).toContain('named 1 of 5'); expect(t).toContain('named 5 of 5');
-  expect(t).toContain('US$1.520696');
-  for (const d of ['Task success', 'Navigation efficiency', 'Evidence quality', 'Information accessibility', 'Agent reliability', 'Coverage']) expect(t).toContain(d);
-  expect(t).toContain('no composite readiness score');
-  expect(t).toContain('Hypotheses'); expect(t).toContain('Observed facts');
+  expect(t).toContain('US$1.5207');
+  for (const d of ['Task success', 'Navigation efficiency', 'Evidence', 'Information accessibility', 'Agent reliability', 'Coverage', 'What slowed the agents down, and what to change']) expect(t).toContain(d);
+  expect(t).toContain('Likely causes and what to change'); expect(t).toContain('Observations');
+  for (const s of ['post-hoc', 'prospective', 'xploratory', 'no statistical power', 'p =', 'Retrospective', 'grade of record', 'no composite']) expect(t).not.toContain(s);
   expect(host.querySelector('a[href="#/reports/m7-larkspur-browser-1/tasks/1"]')).not.toBeNull();
 });
 
@@ -77,75 +79,108 @@ it('compares the availability task side by side from real screenshots and timeli
   expect(t).toContain('step 1 / 12'); expect(t).toContain('step 1 / 3');
 });
 
-it('shows suite review with the exact hash and keeps web approval disabled', async () => {
+it('the journey is one page with all eight steps, and #/demo opens it', async () => {
+  server({});
+  const host = await mount(<Lifecycle />);
+  expect(host.querySelector('h1')?.textContent).toBe('From a website to one agents can use.');
+  for (const id of ['website', 'tasks', 'review', 'evaluate', 'recommendations', 'improve', 'reevaluate', 'compare']) expect(host.querySelector(`#lc-${id}`)).not.toBeNull();
+  expect(host.querySelectorAll('.lc-stepper a')).toHaveLength(8);
+  expect(host.textContent).toContain('Every deciding fact on every card');                                  // the improvements are static and always shown
+  expect(host.querySelectorAll('.lc-versions img')).toHaveLength(3);
+  expect(host.querySelector('main')!.textContent).not.toContain('Ironbark');                                    // featured site only (the footer keeps an archive link)
+  expect(host.querySelector('[role=radiogroup]')).toBeNull();                                                 // no site selector
+  document.body.innerHTML = '';
+  window.location.hash = '#/demo';
+  const { default: App } = await import('../../App');
+  const app = await mount(<App />);
+  expect(app.querySelector('h1')?.textContent).toBe('From a website to one agents can use.');
+});
+
+it('shows the frozen task set as approved and frozen, with no approval control on the web', async () => {
   const sha = Object.keys(read('DATASET.json').files).find((f: string) => f.startsWith('suites/'))!.slice(7, 71);
   const suite = { ...read(`suites/${sha}.json`), source: 'dataset' };
-  const f = server({ '/api/lifecycle/overview': overview, '/api/lifecycle/sites': [], '/api/lifecycle/suites': [{ sha256: sha, name: suite.suite_name, version: suite.version, site: suite.site, tasks: suite.tasks.length, state: suite.state, refs: suite.refs, synthetic: false, created_at: '', created_by: 'system', gaps: 0, source: 'dataset' }],
+  const f = server({ '/api/lifecycle/overview': overview, '/api/lifecycle/suites': [{ sha256: sha, name: suite.suite_name, version: suite.version, site: suite.site, tasks: suite.tasks.length, state: suite.state, refs: suite.refs, synthetic: false, created_at: '', created_by: 'system', gaps: 0, source: 'dataset' }],
     [`/api/lifecycle/suites/${sha}`]: suite });
   const host = await mount(<Lifecycle step="review" suite={sha} />);
-  expect(host.textContent).toContain(sha);
-  const approve = [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Approve and freeze')) as HTMLButtonElement;
-  expect(approve.disabled).toBe(true);
-  expect(host.textContent).toContain('Web approval is disabled');
+  const t = host.querySelector('#lc-review')!.textContent!;
+  expect(t).toContain(`${suite.suite_name} v${suite.version}`);
+  const first = [...suite.tasks].sort((a: any, b: any) => a.task_id.localeCompare(b.task_id))[0];
+  expect(t).toContain(`Task 1${first.customer_wording}`);                                                  // numbered as in every report
+  expect(t).toContain('never on the web');
+  expect([...host.querySelectorAll('button')].some(b => /approve/i.test(b.textContent ?? ''))).toBe(false);
   expect(f.mock.calls.some(c => (c[1] as RequestInit | undefined)?.method === 'POST')).toBe(false);
 });
 
-it('sends launches to the one launch path (the workspace) and shows the armed evaluation, or why none is armed', async () => {
-  server({ '/api/lifecycle/overview': overview, '/api/lifecycle/sites': [], '/api/lifecycle/evaluations': [] });
-  const host = await mount(<Lifecycle step="evaluate" />);
-  expect(host.textContent).toContain('This server does not run evaluations');
-  expect(host.querySelector('a[href="#/run"]')).not.toBeNull();
-  expect([...host.querySelectorAll('button')].some(b => /launch/i.test(b.textContent ?? ''))).toBe(false);      // no second launch control
+it('re-evaluation sends launches to the workspace (the one launch path) and shows what is open, or that nothing is', async () => {
+  server({ '/api/lifecycle/overview': overview, '/api/lifecycle/evaluations': [] });
+  const host = await mount(<Lifecycle step="reevaluate" />);
+  const sec = () => document.querySelector('#lc-reevaluate')!;
+  expect(sec().textContent).toContain('No live run is open right now');
+  expect(sec().querySelector('a[href="#/run"]')).not.toBeNull();
+  expect([...host.querySelectorAll('button')].some(b => /launch|run/i.test(b.textContent ?? ''))).toBe(false);      // no second launch control
   document.body.innerHTML = '';
-  const armed = { ...overview, evaluation: { engine: 'stage-b', armed: true, reason: null, repetitions: [1], evaluation: { arming_id: 'larkspur-live-1', arming_sha256: 'a'.repeat(64), mode: 'paid', site: 'larkspur',
-    suite: 'larkspur-core v2', frozen_suite: 'larkspur-core@v2', frozen_suite_sha256: 'b'.repeat(64), variants: ['original', 'modified'], armed_at: '2026-11-04T00:00:00+00:00',
-    launches: { max: 1, used: 0, left: 1 }, options: [{ repetitions: 1, trials: 12, reservation_usd: 7.436, manifest_sha256: 'c'.repeat(64), available: false, fits_hosted_ceiling: false }],
+  const armed = { ...overview, evaluation: { engine: 'stage-b', armed: true, reason: null, repetitions: [1], evaluation: { arming_id: 'judge-pool-1', arming_sha256: 'a'.repeat(64), mode: 'paid', site: 'larkspur',
+    suite: 'larkspur-core v3', frozen_suite: 'larkspur-core@v3', frozen_suite_sha256: 'b'.repeat(64), variants: ['original', 'improved'], armed_at: '2026-11-04T00:00:00+00:00',
+    launches: { max: 4, used: 0, left: 4 }, options: [{ repetitions: 1, trials: 4, reservation_usd: 2.508, manifest_sha256: 'c'.repeat(64), available: true, fits_hosted_ceiling: true }],
     agent: { model: 'muse-spark-1.3', reasoning_effort: 'low', max_completion_tokens: 4096, profile: 'suite-v2-compat2' } } } };
-  server({ '/api/lifecycle/overview': armed, '/api/lifecycle/sites': [], '/api/lifecycle/evaluations': [] });
-  const h2 = await mount(<Lifecycle step="evaluate" />);
-  expect(h2.textContent).toContain('larkspur-live-1'); expect(h2.textContent).toContain('1 of 1 left'); expect(h2.textContent).toContain('does not fit the hosted budget');
+  server({ '/api/lifecycle/overview': armed, '/api/lifecycle/evaluations': [] });
+  await mount(<Lifecycle step="reevaluate" />);
+  const t = sec().textContent!;
+  expect(t).toContain('Ready for a live run'); expect(t).toContain('4 of 4 live runs left'); expect(t).toContain('Improved');
+  expect(sec().querySelector('a[href="#/run"]')!.textContent).toContain('Run Original vs Improved');
 });
 
-it('shows the recorded Stage A generation with its admissions and the disabled generate action', async () => {
+it('shows the recorded task generation: proposed, accepted and its model cost; no generate control', async () => {
   const gen = read('generation.json');
-  server({ '/api/lifecycle/overview': overview, '/api/lifecycle/sites': [], '/api/lifecycle/generations': [{ id: gen.id, dataset: 'm7', site: 'larkspur', created_at: gen.created_at, mode: 'paid', stop_reason: gen.stop_reason, admissions: gen.admissions, proposals: 24, rounds: 2, cost: gen.cost, suite_sha256: gen.suite_sha256, generator: gen.generator }],
+  server({ '/api/lifecycle/overview': overview, '/api/lifecycle/generations': [{ id: gen.id, dataset: 'm7', site: 'larkspur', created_at: gen.created_at, mode: 'paid', stop_reason: gen.stop_reason, admissions: gen.admissions, proposals: 24, rounds: 2, cost: gen.cost, suite_sha256: gen.suite_sha256, generator: gen.generator }],
     [`/api/lifecycle/generations/${gen.id}`]: gen });
-  const host = await mount(<Lifecycle step="tasks" />);
-  const t = host.textContent ?? '';
-  expect(t).toContain('18 natural'); expect(t).toContain('5 rejected'); expect(t).toContain('US$0.049804');
-  expect(t).toContain('Generate new tasks — needs owner authorisation');
+  await mount(<Lifecycle step="tasks" />);
+  const t = document.querySelector('#lc-tasks')!.textContent!;
+  expect(t).toContain('Questions proposed24'); expect(t).toContain(`Accepted${(gen.post_fix_reevaluation ?? gen).admissions.natural}`);
+  expect(t).toContain('US$0.050'); expect(t).toContain('Accepted 18'); expect(t).toContain('Rejected 5');
+  expect([...document.querySelectorAll('#lc-tasks button')].some(b => /generate/i.test(b.textContent ?? ''))).toBe(false);
 });
 
-it('labels the pre-recorded M7 dataset and a live run launched in this product differently, and shows the completed agent runs', async () => {
+it('maps every recommendation of the live report to the change on the Improved site that applies it', async () => {
+  server({ [`/api/lifecycle/evaluations/${LIVE.id}`]: { ...EV, id: LIVE.id } });
+  await mount(<Lifecycle step="recommendations" />);
+  const sec = document.querySelector('#lc-recommendations')!;
+  const items = [...sec.querySelectorAll('.lc-rec-list li')];
+  expect(items.length).toBeGreaterThan(3);
+  expect(items.filter(li => li.textContent!.includes('Applied:')).length).toBeGreaterThanOrEqual(items.length - 1);
+  expect(sec.textContent).toContain('State campus on each card');
+  expect(sec.textContent).toContain('What the agents ran into');
+});
+
+it('compares the live evaluations and says when the Improved site has not had a live run yet', async () => {
+  const row = (id: string, variants: string[], extra = {}) => ({ id, title: id, mode: 'paid', state: 'completed', source: 'launched', site: 'Larkspur Community College', site_id: 'larkspur', variants, started_at: '2026-11-04T01:00:00+00:00', tasks: 2, trials: 4,
+    success: Object.fromEntries(variants.map(v => [v, { trials: 2, v1_passed: 1, v1_evidence_backed: 1, v2_passed: 2, v2_evidence_backed: 2, v2_1_contrast_review_passes: 0 }])), requests: Object.fromEntries(variants.map((v, i) => [v, 20 - 10 * i])), ...extra });
+  server({ '/api/lifecycle/evaluations': [row(LIVE.id, ['original', 'modified'])] });
+  await mount(<Lifecycle step="compare" />);
+  expect(document.querySelector('#lc-compare')!.textContent).toContain('The Improved site has not had a live run yet');
+  document.body.innerHTML = '';
+  const imp = 'eval-' + 'd'.repeat(32);
+  server({ '/api/lifecycle/evaluations': [row(LIVE.id, ['original', 'modified']), row(imp, ['original', 'improved']), row('eval-' + '9'.repeat(32), ['original', 'improved'], { mode: 'rehearsal' })] });
+  await mount(<Lifecycle step="compare" />);
+  const sec = document.querySelector('#lc-compare')!;
+  expect(sec.textContent).not.toContain('has not had a live run yet');
+  expect(sec.querySelector(`a[href="#/reports/${imp}"]`)).not.toBeNull();
+  expect(sec.querySelectorAll('tbody tr')).toHaveLength(2);                                                   // rehearsals are not live results
+});
+
+it('labels the recorded first evaluation and a live run in this product differently, and shows the finished agent runs', async () => {
   server({ '/api/lifecycle/evaluations/m7-larkspur-browser-1': EV });
   let host = await mount(<ReportPage id="m7-larkspur-browser-1" />);
-  expect(host.textContent).toContain('Pre-recorded research run · sanitized dataset v1');
-  expect(host.textContent).not.toContain('Live run launched in this product');
-  expect(host.textContent).toContain('12/12 agent runs finished');
+  expect(host.textContent).toContain('First evaluation · recorded');
+  expect(host.textContent).not.toContain('Live run in this product');
+  expect(host.textContent).toContain('12/12 finished');
   document.body.innerHTML = '';
   const id = 'eval-' + 'e'.repeat(32);
   const trials = EV.trials.map((t: any, i: number) => i === 0 ? { ...t, answer: ['/courses/x'], answer_normalized: { fixture_origin_replaced: 1, note: 'shown as a site path' } } : t);
   server({ [`/api/lifecycle/evaluations/${id}`]: { ...EV, id, trials, source: { kind: 'launched', job: id, state: 'completed' } } });
   host = await mount(<ReportPage id={id} />);
-  expect(host.textContent).toContain('Live run launched in this product');
-  expect(host.textContent).not.toContain('Pre-recorded research run');
-});
-
-it('I2: shows the retrospective evidence audit, labelled and separate, only for the audited evaluations; official grades unchanged', async () => {
-  server({ '/api/lifecycle/evaluations/m7-larkspur-browser-1': EV });
-  let host = await mount(<ReportPage id="m7-larkspur-browser-1" />);
-  const audit = host.querySelector('.lc-audit')!;
-  expect(audit).not.toBeNull();
-  const a = audit.textContent!;
-  expect(a).toContain('Retrospective evidence audit'); expect(a).toContain('not an official score'); expect(a).toContain('documented false negatives');
-  expect(a).toContain('3/6 → 5/6'); expect(a).toContain('1/6 → 4/6'); expect(a).toContain('v1 remains the grade of record');
-  const v1 = [...host.querySelectorAll('tr')].find(r => r.textContent?.startsWith('Official grader v1'))!;
-  expect(v1.textContent).toContain('2/6'); expect(v1.textContent).toContain('1/6');                      // the recorded official grades, as before
-  document.body.innerHTML = '';
-  const id = 'eval-' + 'f'.repeat(32);
-  server({ [`/api/lifecycle/evaluations/${id}`]: { ...EV, id, source: { kind: 'launched', job: id, state: 'completed' } } });
-  host = await mount(<ReportPage id={id} />);
-  expect(host.querySelector('.lc-audit')).toBeNull();                                                   // never shown for an unaudited evaluation
+  expect(host.textContent).toContain('Live run in this product');
+  expect(host.textContent).not.toContain('First evaluation · recorded');
 });
 
 it('C2: useLoad never returns the previous key\'s data while the next key loads', async () => {
