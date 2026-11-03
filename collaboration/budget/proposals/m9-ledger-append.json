@@ -1,0 +1,65 @@
+{
+ "schema": "programme-ledger-append-proposal-v1",
+ "status": "PROPOSED - NOT APPENDED. Needs the owner's explicit approval; the authoritative collaboration/budget/programme-ledger.json is unchanged.",
+ "prepared": "2026-11-03 (Sydney), M9 final sprint",
+ "applies_to": {
+  "file": "collaboration/budget/programme-ledger.json",
+  "schema": "programme-ledger-v1",
+  "entries_before": 18,
+  "sum_before_usd": 13.418982,
+  "last_entry": "research-stage-b-m7-1",
+  "convention": "append-only: new entries at the end of `entries`, one `reconciliation.<name>_addendum` object per append with before/after subtotals; earlier entries kept verbatim"
+ },
+ "basis": "All USD is CALCULATED from provider-reported token usage at the published muse-spark-1.3 prices (US$1.25 / US$4.25 per M); the provider reports no cost, so none of this is provider-invoiced spending. AUD uses the ledger's conservative planning assumption 1.50 AUD/USD.",
+ "entries": [
+  {
+   "id": "reconciliation-event-period-1",
+   "label": "Event-period spend previously listed as unreconciled (reconciliation.unreconciled), found in local durable ledgers and de-duplicated across forks by (request id, timestamp)",
+   "usd": 3.820762,
+   "components_usd": {
+    "L0 probes (investigations/l0-probe, l0-probe-2, l0-probe-3; one unsettled reservation of 0.000950 counted in full)": 0.040162,
+    "L1a/EXP-B investigations/site-5-live (+ -b, -c fork increments)": 1.534404,
+    "EXP-2 investigations/exp2-pilot-1": 1.141478,
+    "live task-generation smoke/exposure scanner-data/live/live-{46b6ba92b8,96a6c3ab04,b6d91a8a33,bb5d48501b,cb37cc9849,d722f23670}": 0.981919,
+    "investigator replay scanner-data/live/replay-4bad5b1b, increment over its imported history": 0.122799
+   },
+   "basis": "CALCULATED; settled amounts from each durable ledger, an unsettled reservation counted in full; not a bill",
+   "source": "local git-ignored ledgers listed in components_usd; reconciliation in collaboration/reports/lifecycle-m8-product-integration.md \u00a78.1, re-verified independently in collaboration/reports/m9-final-sprint.md \u00a72",
+   "authorized_by": "not a new authorisation: records spend already incurred during the event (reconciliation only)"
+  },
+  {
+   "id": "correction-task012-stage1-1",
+   "label": "Correction to entry task012-stage1: recorded 0.718, durable ledger runs/experiment-012/live/ledger.jsonl settles 0.718336 (the original entry is kept verbatim)",
+   "usd": 0.000336,
+   "basis": "CALCULATED difference between the durable ledger and the recorded entry; not a bill",
+   "source": "runs/experiment-012/live/ledger.jsonl (git-ignored)",
+   "authorized_by": "not a new authorisation: correction only"
+  },
+  {
+   "id": "hosted-stageb-live-1",
+   "label": "Hosted production evaluation eval-e529db2aafecbfddd21e5c571eb85243 (Stage B engine, owner arming larkspur-live-1, launch 1 of 1): larkspur-core v2 (frozen 0816af7f7440; manifest 64a55c5f3a93), 6 natural tasks x Original/Modified x 1 repetition = 12 jailed trials, muse-spark-1.3, reasoning_effort low, profile suite-v2-compat2; 12/12 trials completed; hosted reservation US$7.436, experiment cap US$8.00",
+   "usd": 1.546226,
+   "basis": "CALCULATED from provider-reported usage: 112 requests reserved before sending and settled (0 unsettled, 0 above its reservation); 1059177 prompt + 52296 completion tokens (token-level total 1.54622925; per-request settlement rounded to microdollars sums to 1.546226); not a bill",
+   "source": "VM /data/hosted/lifecycle/stage-b/ledgers/larkspur-live-1-l1/ledger.jsonl (224 lines, sha256 e46757001151cd07\u2026); local copy scanner-data/hosted-copy-m9/ (git-ignored)",
+   "authorized_by": "owner (explicit chat authorisations 2026-11-03: ceiling migration to US$10.736; paid arming larkspur-live-1; one paid launch)"
+  }
+ ],
+ "reconciliation_addendum": {
+  "as_of": "2026-11-03",
+  "added_entries": [
+   "reconciliation-event-period-1",
+   "correction-task012-stage1-1",
+   "hosted-stageb-live-1"
+  ],
+  "known_spend_subtotal_before_usd": 13.418982,
+  "after_each_usd": [
+   17.239744,
+   17.24008,
+   18.786306
+  ],
+  "known_spend_subtotal_after_usd": 18.786306,
+  "aud_at_1_50": 28.179459,
+  "remaining_of_a50_aud": 21.820541,
+  "note": "Appended only; earlier entries unchanged. Kept as recorded (conservative, not corrected downwards): task011 recorded 0.351 vs ledger 0.347663; research-taskplan-1 0.029054 is an unconfirmed reservation counted in full. Pre-event Tasks 004-007 (2.606) have no local ledger and stay as recorded. Hosted reservations (US$10.736 held) are capacity, not spend. Zero-cost runs (dev provider, mocks, dry runs, rehearsals, and the M9 network-blocked paid-path rehearsals with a dummy key, whose scratch ledgers hold reservations for requests that were refused before any connection) are excluded as non-spend. Spend outside this workstation's ledgers cannot be counted; this is not a provider invoice."
+ }
+}

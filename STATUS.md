@@ -133,6 +133,22 @@ verification of the M8 release candidate. Report: [collaboration/reports/m9-rele
 - **Docker rehearsal on a copy of production:** the paid report is served (12/12, US$1.546226 settled), evidence byte-identical, 0 console errors, rollback-compatible.
 - **Deployed with owner approval** 2026-11-03 00:27 UTC: `e7e35e1`, image `sha256:20f699d2…`. The paid report and export are served (12/12, US$1.546226 settled, no local URLs); the record `failed` is preserved and explained. All 21 production checks PASS; 2 204 evidence files byte-identical; no paid activity. Rollback image `rollback-b563a33`.
 
+**M9 final sprint (release candidate on `m9-release-readiness`; code `68ae88f`; NOT deployed; zero cost):** [collaboration/reports/m9-final-sprint.md](collaboration/reports/m9-final-sprint.md).
+- **Workspace fixes:**
+  - the config separates service health from launch authorisation (`launch.reason` from the arming summary the launch path enforces);
+  - the banner reads "Worker ready · no launch authorised" when the launch is used;
+  - the intro is generic (evaluate → diagnose → recommend → re-evaluate; Modified is a manually prepared demo; the product does not change websites).
+- **Programme ledger:** the append is PROPOSED, not applied (`collaboration/budget/proposals/m9-ledger-append.json`): +3.820762 +0.000336 +1.546226 → **US$18.786306 = A$28.18; A$21.82 left**, reconciled exactly against every local durable ledger.
+- **Grading audit** (read-only; [m9-grading-audit.md](collaboration/reports/m9-grading-audit.md)):
+  - 0 false facts, 0 oracle errors;
+  - official v1 fails 9 of 15 correct answers, 7 of them on Modified, so it understates Modified;
+  - 9 of 18 failures are budget-limited navigation on Original;
+  - v2 has 2 false negatives, 1 evidence false negative and 4 unverified passes;
+  - `v2.1-contrast` does not generalise.
+- **Demo review:** no blocking issue. Important: the home headline omits the Ironbark replication; the audit is not reflected in the product; home does not link the live run; the call to action vs no launch (fixed).
+- **Tests:** broad 403, critical 214, browser e2e 1, dashboard 204, build CHECK PASSED.
+- **Awaiting owner approval:** deploy, ledger append, any grading policy.
+
 ## Budget
 
 - Hosted admission: US$10 ceiling, US$3.30 reserved, US$1.65 per repetition. Reservations are never released, even for completed jobs, so the remaining capacity is 4 repetitions.
