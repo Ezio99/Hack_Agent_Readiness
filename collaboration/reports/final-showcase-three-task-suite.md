@@ -150,3 +150,26 @@ Programme: known spend unchanged at US$18.786306 (A$28.18); reservation-based wo
 **Next (separate owner authorisation):** the first paid judge launch from `#/run` with the access code (reserves US$3.740; expected about US$0.65–0.85 and 6–9 minutes).
 
 Cosmetic follow-ups for any later deploy (need approval; not done): the journey's re-evaluate card says "about 4–6 minutes" (the workspace's own estimate for 6 agents reads about 8 minutes); two version names render without a space between them in the journey; the sticky header is translucent over scrolled content. The service's startup log line still names the earlier arming because it was written before arming; the live config and `arming status` show `larkspur-judge-1`.
+
+## 10. First paid judge launch (owner-authorised: exactly one; 2026-11-03 UTC)
+
+**Pre-launch:** `larkspur-judge-1` unchanged (arming record sha256 `800baf2a…`, manifest `c32cfc6f…`, 3 of 3 left, problems []); worker idle; ceiling US$21.956 with US$11.220 free. **Launch:** one `POST /api/ironbark/jobs {"repetitions":1}` through the public judge path with the judge code (read from the secret file into a root-only tmpfs header file, deleted after; never printed): HTTP 202 at 04:24:23Z, **`eval-c04fdb100d6b1c877de96dabe76eb052`**. No retry. Completed 6/6 at 04:30:33Z (agents 04:24:31–04:29:54; 5:56 elapsed in the workspace); report available 04:30:53Z.
+
+| Task (suite) | Version | Correct | Exact match | Requests | Time | Cost | Path | Answer coverage |
+|---|---|---|---|---|---|---|---|---|
+| 1 `gen-23f1802ee0-n` fee ≤ $250, ≥ 5 seats | Original | ✕ | ✕ | 13/14 | 74.6 s | US$0.176346 | `/` → `/courses` ⇄ 3 course pages → `/courses/beginners-yoga` | 1 of 5 |
+| | **Improved** | **✓** | ✕ | **2/14** | **13.0 s** | US$0.026841 | `/` → `/courses/compare` | **5 of 5**, none extra |
+| 2 `gen-8334922e62-n` weekend, Beginner | Original | ✕ | ✕ | 13/14 | 82.7 s | US$0.181523 | `/` → `/courses` ⇄ 4 course pages | 2 of 4 |
+| | **Improved** | **✓** | ✕ | **2/14** | **21.4 s** | US$0.027361 | `/` → `/courses/compare` | **4 of 4**, none extra |
+| 3 `gen-f302fa8fe2-n` fee ≤ $180, ≤ 6 weeks | Original | ✕ | ✕ | 13/14 | 104.5 s | US$0.193060 | `/` → `/courses` ⇄ 3 course pages | 1 of 3 |
+| | **Improved** | **✓** | ✕ | **2/14** | **19.3 s** | US$0.026616 | `/` → `/courses/compare` | **3 of 3**, none extra |
+
+Totals: Original **0/3 correct, 39 requests, 262 s, US$0.550929**; Improved **3/3 correct, 6 requests, 54 s, US$0.080818**. **Settled US$0.631751** in the launch's durable ledger `larkspur-judge-1-l1` (45 requests reserved before sending, largest reservation US$0.036 < US$0.044 cap; 45 settled; 0 unsettled). No HTTP errors or dead ends on either version; 0 errors in the service log. Diagnostics: 17 observations, 6 likely causes; the Improved version resolves 7 page-audit problems and introduces none.
+
+**After:** ceiling US$21.956, **US$14.476 reserved by 4 jobs, US$7.480 free**; `larkspur-judge-1` **2 of 3 launches left**, problems []; worker idle. Programme known spend (not yet appended to the programme ledger, which needs owner approval): US$18.786306 + 0.631751 = **US$19.418057 = A$29.13**; reservation-based worst case unchanged at A$45.01.
+
+**Observations:**
+- Every Improved agent went straight from the home page to the new comparison table (`/courses/compare`, linked from Home and every listing) and answered from it; none used the filter form or the browse pages. Original agents read the catalogue, then opened course pages one at a time and returned partial answers near the request limit.
+- "Exact match" (official grader v1) is 0/3 on both versions: the Improved answers add fees, seats, days or weeks (e.g. "Beginners yoga – Beginner – Saturday"). "Correct" is the recorded v2 grade.
+- The recorded evidence rule names `/courses` as the page holding the answer, so it does not credit `/courses/compare`, where the Improved agents read every fact ("Shown the pages that hold the answer 0/3", "1 required page not shown"). Grading is unchanged.
+- The workspace's "Agent runs" grid uses the official grade, so after completion every cell there reads "Not passed" (with requests and time). The "Readiness report" tab, the report page, the trace replay and the journey's Compare table show Correct 0/3 → 3/3.
