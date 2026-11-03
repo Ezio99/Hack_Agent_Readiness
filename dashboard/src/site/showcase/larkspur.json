@@ -443,6 +443,36 @@
    "variant": "improved",
    "path": "/courses/intro-to-python",
    "snapshot_sha256": "87e715d59c2376f82b23f33007496edf193812eb574a65a8629109bbe35e63b5"
+  },
+  "site-polished-courses": {
+   "variant": "polished",
+   "path": "/courses",
+   "snapshot_sha256": "1053ce1884a9cf718fc631c2f7c144168b9562705727b23ef2f4fae0964f9bbb"
+  },
+  "site-polished-home": {
+   "variant": "polished",
+   "path": "/",
+   "snapshot_sha256": "1053ce1884a9cf718fc631c2f7c144168b9562705727b23ef2f4fae0964f9bbb"
+  },
+  "site-polished-courses-wheel-thrown-pottery": {
+   "variant": "polished",
+   "path": "/courses/wheel-thrown-pottery",
+   "snapshot_sha256": "1053ce1884a9cf718fc631c2f7c144168b9562705727b23ef2f4fae0964f9bbb"
+  },
+  "site-polished-courses-filter": {
+   "variant": "polished",
+   "path": "/courses?level=Beginner&campus=&day=Weekend",
+   "snapshot_sha256": "1053ce1884a9cf718fc631c2f7c144168b9562705727b23ef2f4fae0964f9bbb"
+  },
+  "site-polished2-courses": {
+   "variant": "polished2",
+   "path": "/courses",
+   "snapshot_sha256": "1b02ed0907330a1e17ce414ef232081922769554a322b93632f43d38ce7c6106"
+  },
+  "site-polished2-courses-filter": {
+   "variant": "polished2",
+   "path": "/courses?level=Beginner&campus=&day=Weekend",
+   "snapshot_sha256": "1b02ed0907330a1e17ce414ef232081922769554a322b93632f43d38ce7c6106"
   }
  },
  "page_audit": {
@@ -901,6 +931,187 @@
       "memory": "Reviewed all 14 courses on /courses page. 5 courses meet criteria cost <=$250 and seats >=5.",
       "goal": "Return qualifying courses in required format.",
       "frame": null
+     }
+    ]
+   }
+  }
+ },
+ "polished_v1": {
+  "id": "eval-abc5fc838a5428b6753a424e189ba1cc",
+  "title": "Live evaluation · Larkspur Community College · Polished v1",
+  "started_at": "2026-11-03T22:04:43.627990+00:00",
+  "finished_at": "2026-11-03T22:06:04.821894+00:00",
+  "agent": {
+   "model": "muse-spark-1.3",
+   "reasoning_effort": "low",
+   "max_completion_tokens": 4096,
+   "profile": "suite-v2-compat2"
+  },
+  "cost_usd": 0.10811,
+  "tasks": [
+   {
+    "n": 1,
+    "task_id": "gen-23f1802ee0-n",
+    "wording": "I need a course that costs $250 or less and still has at least 5 seats left. What qualifies?",
+    "capability": "multi_condition_filter"
+   },
+   {
+    "n": 2,
+    "task_id": "gen-8334922e62-n",
+    "wording": "I work full-time on weekdays, so I can only do Saturday or Sunday. List Beginner courses that meet on Saturday or Sunday.",
+    "capability": "either_of"
+   },
+   {
+    "n": 3,
+    "task_id": "gen-f302fa8fe2-n",
+    "wording": "I just graduated and need a cheap, quick skill for my CV. Find courses costing $180 or less that last 6 weeks or less.",
+    "capability": "multi_condition_filter"
+   }
+  ],
+  "totals": {
+   "polished": {
+    "requests": 8,
+    "seconds": 65,
+    "cost_usd": 0.108109
+   }
+  },
+  "passed": {
+   "polished": 1
+  },
+  "correct": {
+   "polished": 3
+  },
+  "trials": [
+   {
+    "task": 1,
+    "variant": "polished",
+    "passed": false,
+    "correct": true,
+    "requests": 2,
+    "limit": 14,
+    "seconds": 18.0,
+    "cost_usd": 0.02745,
+    "dead_end": false,
+    "path": [
+     "/",
+     "/courses/compare"
+    ]
+   },
+   {
+    "task": 2,
+    "variant": "polished",
+    "passed": true,
+    "correct": true,
+    "requests": 4,
+    "limit": 14,
+    "seconds": 24.0,
+    "cost_usd": 0.053366,
+    "dead_end": false,
+    "path": [
+     "/",
+     "/courses"
+    ]
+   },
+   {
+    "task": 3,
+    "variant": "polished",
+    "passed": false,
+    "correct": true,
+    "requests": 2,
+    "limit": 14,
+    "seconds": 22.6,
+    "cost_usd": 0.027293,
+    "dead_end": false,
+    "path": [
+     "/",
+     "/courses/compare"
+    ]
+   }
+  ],
+  "journeys": {
+   "polished-1": {
+    "answer": [
+     "Mindful meditation - $120, 15 seats left",
+     "Beginners yoga - $150, 12 seats left",
+     "Spreadsheets for small business - $180, 9 seats left",
+     "Conversational Italian 1 - $230, 6 seats left",
+     "Spanish conversation 2 - $230, 8 seats left"
+    ],
+    "steps": [
+     {
+      "step": 1,
+      "path": "/",
+      "memory": "Homepage shows 14 courses. Need to find courses <=$250 with >=5 seats. Heading to compare table.",
+      "goal": "Open compare page to see all courses fees and seats",
+      "frame": "abc5-polished-t1-s1"
+     },
+     {
+      "step": 2,
+      "path": "/courses/compare",
+      "memory": "Identified 5 courses meeting <=$250 and >=5 seats criteria from compare table. Life drawing (3 seats) and Japanese (0 seats) excluded, others over price excluded.",
+      "goal": "Return qualifying courses in required format.",
+      "frame": "abc5-polished-t1-s2"
+     }
+    ]
+   },
+   "polished-2": {
+    "answer": [
+     "Wheel-thrown pottery",
+     "Beginners yoga",
+     "Mindful meditation",
+     "Home electrical basics"
+    ],
+    "steps": [
+     {
+      "step": 1,
+      "path": "/",
+      "memory": "Homepage shows filters for level and day. Set level Beginner and day Weekend.",
+      "goal": "Apply Level=Beginner and Day=Weekend filters then search",
+      "frame": "abc5-polished-t2-s1"
+     },
+     {
+      "step": 2,
+      "path": "/",
+      "memory": "Filters set to Beginner + Weekend. Need to submit search to get filtered list.",
+      "goal": "Click Find courses to apply Beginner + Weekend filters.",
+      "frame": "abc5-polished-t2-s2"
+     },
+     {
+      "step": 3,
+      "path": "/courses?level=Beginner&campus=&day=Weekend",
+      "memory": "Page shows Courses: Beginner Weekend with 4 courses found. Visible 3: Wheel-thrown pottery (Saturday), Beginners yoga (Saturday), Mindful meditation (Sunday). Need 4th course below fold (Home electrical basics per elements).",
+      "goal": "Scroll down to reveal the 4th course.",
+      "frame": "abc5-polished-t2-s3"
+     },
+     {
+      "step": 4,
+      "path": "/courses?level=Beginner&campus=&day=Weekend",
+      "memory": "Found all 4 Beginner Weekend courses: Wheel-thrown pottery (Saturday), Beginners yoga (Saturday), Mindful meditation (Sunday), Home electrical basics (Saturday). Ready to finish.",
+      "goal": "Return the list of 4 Beginner Saturday/Sunday courses in required format.",
+      "frame": "abc5-polished-t2-s4"
+     }
+    ]
+   },
+   "polished-3": {
+    "answer": [
+     "Mindful meditation - $120, 4 weeks",
+     "Beginners yoga - $150, 6 weeks",
+     "Spreadsheets for small business - $180, 4 weeks"
+    ],
+    "steps": [
+     {
+      "step": 1,
+      "path": "/",
+      "memory": "Homepage shows 14 courses. Need to find courses <=$180 and <=6 weeks. Going to compare/all courses page.",
+      "goal": "Navigate to compare/all courses table to see fees and durations.",
+      "frame": null
+     },
+     {
+      "step": 2,
+      "path": "/courses/compare",
+      "memory": "Found 3 courses <=$180 and <=6 weeks: Mindful meditation, Beginners yoga, Spreadsheets for small business.",
+      "goal": "Return final answer with qualifying courses.",
+      "frame": "abc5-polished-t3-s2"
      }
     ]
    }

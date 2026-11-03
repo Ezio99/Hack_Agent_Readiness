@@ -26,10 +26,13 @@ OUT = ROOT / "dashboard" / "src" / "site" / "showcase"
 # the featured live evaluation (Original vs Improved, the three-task judge suite) and the first live evaluation (Original vs Modified, six tasks).
 # Frames: the steps the story shows (suite-local task numbers).
 RUNS = {"live": ("eval-c04fdb100d6b1c877de96dabe76eb052", {("original", 2): (2, 9, 13), ("improved", 2): (1, 2), ("original", 1): (13,), ("improved", 1): (2,)}),
-        "first_live": ("eval-e529db2aafecbfddd21e5c571eb85243", {("original", 1): (2, 12, 13), ("modified", 1): (2,)})}
+        "first_live": ("eval-e529db2aafecbfddd21e5c571eb85243", {("original", 1): (2, 12, 13), ("modified", 1): (2,)}),
+        # Polished v1 evaluated alone (2026-11-04): task 2 is the friction trace (finder, 3 of 4 results visible, scroll, answer)
+        "polished_v1": ("eval-abc5fc838a5428b6753a424e189ba1cc", {("polished", 2): (1, 2, 3, 4), ("polished", 1): (1, 2), ("polished", 3): (2,)})}
 PREVIEWS = [("original", "/courses"), ("modified", "/courses"), ("improved", "/courses"), ("improved", "/courses?level=Beginner&campus=&day=Weekend"),
             ("improved", "/courses/compare"), ("improved", "/courses/intro-to-python"), ("polished", "/courses"), ("polished", "/"),
-            ("polished", "/courses/wheel-thrown-pottery")]
+            ("polished", "/courses/wheel-thrown-pottery"),
+            ("polished", "/courses?level=Beginner&campus=&day=Weekend"), ("polished2", "/courses"), ("polished2", "/courses?level=Beginner&campus=&day=Weekend")]
 
 
 def _get(base: str, path: str):
@@ -76,7 +79,7 @@ def export_live(base: str, EVAL: str, FRAMES: dict) -> dict:
             "trials": trials, "journeys": journeys}
 
 
-async def _previews() -> dict:
+async def _previews(only: set[str] | None = None) -> dict:
     from playwright.async_api import async_playwright
 
     from agent_readiness.investigate.sitemodel.server import Mirror
@@ -86,6 +89,8 @@ async def _previews() -> dict:
     async with async_playwright() as p:
         b = await p.chromium.launch()
         for variant in dict.fromkeys(v for v, _ in PREVIEWS):
+            if only and variant not in only:
+                continue
             snap = render.snapshot(variant)
             async with serve_app(Mirror(snap)) as base:
                 page = await b.new_page(viewport={"width": 1280, "height": 960})
@@ -111,17 +116,21 @@ def page_audit() -> dict:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--service", help="base URL of a view-only service on a copy of the production data (omit to refresh only the site previews)")
+    ap.add_argument("--service", help="base URL of a view-only service on a copy of the production data, or the public site (GET only)")
+    ap.add_argument("--runs", nargs="+", choices=sorted(RUNS), help="export only these runs (default: all); other runs' data and frames are kept")
+    ap.add_argument("--preview-variants", nargs="+", help="render only these versions' previews; the others are kept as they are")
     a = ap.parse_args(argv)
     (OUT / "frames").mkdir(parents=True, exist_ok=True)
     target = OUT / "larkspur.json"
     data = json.loads(target.read_text()) if target.exists() else {}
     if a.service:
-        for f in (OUT / "frames").glob("*-t*-s*.webp"):
-            f.unlink()                                                   # run frames are re-exported below
-        for key, (ev_id, frames) in RUNS.items():
+        for key in (a.runs or sorted(RUNS)):
+            ev_id, frames = RUNS[key]
+            for f in (OUT / "frames").glob(f"{ev_id[5:9]}-*-t*-s*.webp"):
+                f.unlink()                                               # this run's frames are re-exported below
             data[key] = export_live(a.service.rstrip("/"), ev_id, frames)
-    data["previews"] = asyncio.run(_previews())
+    only = set(a.preview_variants) if a.preview_variants else None
+    data["previews"] = {**({k: v for k, v in data.get("previews", {}).items() if only and v["variant"] not in only}), **asyncio.run(_previews(only))}
     data["page_audit"] = page_audit()
     target.write_text(json.dumps(data, indent=1, ensure_ascii=False) + "\n")
     print(f"wrote {target.relative_to(ROOT)} and {len(list((OUT / 'frames').glob('*.webp')))} frames")
