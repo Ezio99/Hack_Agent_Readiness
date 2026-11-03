@@ -110,6 +110,8 @@ To fall back to the known-good judge launch instead (`3377d75`, Original vs Modi
 
 ## 5. Owner terminal steps for the live judge pool (each needs owner approval)
 
+> **Superseded for the featured pool (2026-11-03):** the owner prefers the **three-task** judge suite (adds the class-day task `gen-8334922e62-n`; 3 launches; ceiling 10.736 → 21.956; worst case A$45.01). Use [final-showcase-three-task-suite.md](final-showcase-three-task-suite.md) §5. The two-task commands below remain valid as the fallback.
+
 ```sh
 cd /root/agent-readiness/deploy
 STORE=/data/hosted/lifecycle/store
