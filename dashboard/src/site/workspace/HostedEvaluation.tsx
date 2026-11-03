@@ -21,7 +21,9 @@ export interface Provenance { trials: number; model_requests_recorded: number; m
 export interface Rep { index: number; state: string; tasks: TaskRow[]; assessment: { frozen_rule: string | null; exploratory: string | null; evidence_origin: string | null } | null; grading_v2?: GradingV2 | null; provenance?: Provenance | null }
 type ArmV2 = { completed: number; evidence_supported_passes: number; strict_passes: number };
 interface ArmSummary { planned: number; completed: number; failed: number; evidence_supported_passes: number; strict_passes: number; requests_total: number; requests_mean: number | null; page_views_mean: number | null; steps_mean: number | null; elapsed_mean: number | null }
-export interface Job { engine?: 'stage-b'; report?: string | null; error?: string | null; stopped?: string | null; id: string; state: string; mode: 'live' | 'rehearsal' | null; repetitions: number | null; recovery_required?: boolean; created_at: number; started_at: number | null; finished_at: number | null; reps: Rep[]; summary: Record<'Original' | 'Modified', ArmSummary>; summary_v2?: ({ label: string; repetitions: number } & Record<'Original' | 'Modified', ArmV2>) | null }
+export interface Execution { state: string; trials_planned: number | null; trials_completed: number; trials_failed: number; trials_void: number }
+export interface ReportStatus { state: 'available' | 'withheld' | 'pending' | 'unavailable' | 'unknown'; detail?: string }
+export interface Job { engine?: 'stage-b'; execution?: Execution; report_status?: ReportStatus; record_note?: string | null; report?: string | null; error?: string | null; stopped?: string | null; id: string; state: string; mode: 'live' | 'rehearsal' | null; repetitions: number | null; recovery_required?: boolean; created_at: number; started_at: number | null; finished_at: number | null; reps: Rep[]; summary: Record<'Original' | 'Modified', ArmSummary>; summary_v2?: ({ label: string; repetitions: number } & Record<'Original' | 'Modified', ArmV2>) | null }
 interface Worker { state: 'idle' | 'busy' | 'unavailable'; job: string | null; started_at?: number | null; repetitions?: number; finished_runs?: number; total_runs?: number | null; estimated_remaining_seconds?: number | null }
 interface ArmedEvaluation { arming_id: string; mode: 'paid' | 'rehearsal'; site: string; suite: string; frozen_suite: string; frozen_suite_sha256: string; variants: string[]; armed_at: string;
   launches: { max: number; used: number; left: number }; options: { repetitions: number; trials: number; reservation_usd: number; manifest_sha256: string; available: boolean; fits_hosted_ceiling: boolean | null }[];
@@ -116,13 +118,15 @@ export function Metrics({ job }: { job: Job }) {
 function StageBReport({ job }: { job: Job }) {
   const [ev, setEv] = useState<Evaluation | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const publishable = job.report_status ? job.report_status.state === 'available' : job.state === 'completed';
   useEffect(() => {
-    if (job.state !== 'completed') return;
+    if (!publishable) return;
     let live = true;
     getJSON<Evaluation>(`/api/lifecycle/evaluations/${encodeURIComponent(job.id)}`).then(d => live && setEv(d), e => live && setErr(e instanceof Error ? e.message : 'unavailable'));
     return () => { live = false; };
-  }, [job.id, job.state]);
-  if (job.state !== 'completed') return <p className="ws-empty-note">{ACTIVE.includes(job.state) ? 'The readiness report appears when every agent run is graded and the evidence has passed the leak audit.' : `This evaluation ended ${label(job.state).toLowerCase()}; it has no report.${job.error ? ` ${job.error}` : ''}`}</p>;
+  }, [job.id, publishable]);
+  if (job.report_status?.state === 'withheld') return <p className="ws-alert">The agent runs finished, but the readiness report is withheld: it did not pass the publication leak audit (fail-closed). The agent runs, traces and screenshots remain available under Agent runs.</p>;
+  if (!publishable) return <p className="ws-empty-note">{ACTIVE.includes(job.state) ? 'The readiness report appears when every agent run is graded and the evidence has passed the leak audit.' : `This evaluation ended ${label(job.state).toLowerCase()}; it has no report.${job.error ? ` ${job.error}` : ''}`}</p>;
   if (err) return <p className="ws-alert">The readiness report is unavailable: {err}</p>;
   if (!ev) return <p className="ws-empty-note">Loading the readiness report…</p>;
   return <div className="ws-report"><Report ev={ev} /><p className="ws-note"><a className="ws-link" href={`#/reports/${job.id}`}>Open the report on its own page →</a> · <a className="ws-link" href={`/api/ironbark/jobs/${job.id}/repetitions/1/export`} download={`${job.id.slice(0, 13)}.json`}>Export JSON</a></p></div>;
@@ -218,6 +222,8 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
   const runsPerRep = 2 * nTasks;
   const done = job ? job.reps.reduce((a, r) => a + r.tasks.filter(t => t.state === 'completed' || t.state === 'failed').length, 0) : 0;
   const total = job?.engine === 'stage-b' ? job.reps.reduce((a, r) => a + r.tasks.length, 0) : (job?.repetitions ?? 0) * 8;
+  // M9: a Stage B job shows what EXECUTED; the preserved admission record is shown beside it when the two differ (see record_note).
+  const shown = job && job.engine === 'stage-b' && job.execution && !ACTIVE.includes(job.state) && !ACTIVE.includes(job.execution.state) ? job.execution.state : (job?.state ?? 'pending');
   const elapsed = job?.started_at ? (job.finished_at ?? now) - job.started_at : 0;
   const mode = job?.mode ?? config?.mode;
   const budgetOk = stageB ? (config?.repetitions ?? []).includes(reps) && (config?.remaining_repetitions ?? 0) > 0 : (config?.remaining_repetitions ?? 0) >= reps;
@@ -313,7 +319,8 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
         {job && <section className="ws-job" aria-label={`Evaluation ${job.id.slice(0, 13)}`}>
           <div className="ws-jobbar">
           <header className="ws-job-head">
-            <div className="ws-status" aria-live="polite"><span className={`ws-dot ${job.state}`} aria-hidden="true" /><strong>{label(job.state)}</strong>
+            <div className="ws-status" aria-live="polite"><span className={`ws-dot ${shown}`} aria-hidden="true" /><strong>{label(shown)}</strong>
+              {shown !== job.state && <span className="ws-record" title="The job record is kept exactly as it was written">Job record: {label(job.state).toLowerCase()}</span>}
               <span>{done} / {total || '–'} agent runs finished</span>{job.started_at && <span>{clock(elapsed)} elapsed</span>}</div>
             <div className="ws-job-meta"><span>{job.repetitions} repetition{job.repetitions === 1 ? '' : 's'} · started {when(job.created_at)}</span><code title={job.id}>{job.id.slice(0, 13)}</code></div>
           </header>
@@ -325,6 +332,8 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
           {job.state === 'interrupted' && <p className="ws-alert">This evaluation was interrupted by a service restart. Finished repetitions remain available.</p>}
           {job.mode === 'rehearsal' && <p className="ws-alert">Rehearsal: real browsers and grading, but a scripted agent instead of a model. These are not Muse Spark results.</p>}
           {job.engine === 'stage-b' && job.error && <p className="ws-alert">{job.error}</p>}
+          {job.record_note && <p className="ws-note-info" role="note">{job.record_note}</p>}
+          {job.engine === 'stage-b' && job.execution?.state === 'completed' && job.report_status?.state === 'withheld' && <p className="ws-alert">Every agent run finished; only the readiness report is withheld (it did not pass the publication leak audit).</p>}
 
           {tab === 'watch' && <div className="ws-watch" role="tabpanel" id="ws-panel-watch" aria-labelledby="ws-tab-watch">
             <div ref={agent} className="ws-agent-anchor"><AgentPanel jobId={job.id} active={running} selection={selection} scripted={job.mode === 'rehearsal'} onClear={() => setSelection(null)} focus={focus} onFocus={toggleFocus} host={job.engine === 'stage-b' ? (ev?.site ?? 'website') : 'ironbark-hire'} /></div>

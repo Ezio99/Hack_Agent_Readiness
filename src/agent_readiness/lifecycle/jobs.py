@@ -172,10 +172,27 @@ def run_job(runs_root: Path, store_root: Path, job_id: str, admission) -> dict:
     pub = RN.public_report(doc)
     _write(Path(runs_root) / "reports" / f"{job_id}.public.json", pub)
     audit = RN.audit_public(store, job["manifest_sha256"], runs, [Path(runs_root) / "reports" / f"{job_id}.public.json"])
-    state = "completed" if audit["clean"] and not stopped else "failed"
+    # M9: the job's state is its EXECUTION outcome (every planned trial ran, nothing stopped the run). Whether its report may be PUBLISHED is a
+    # separate, fail-closed check: the same lifecycle projection audit the service applies before serving, recorded here. A withheld report stays
+    # withheld (the service re-checks on every build); it no longer turns a completed run into a terminal "failed".
+    publication = _publication_check(store, runs_root, job_id, runner_audit_clean=audit["clean"])
+    state = "completed" if not stopped else "failed"
     return update_job(runs_root, job_id, state=state, finished_at=time.time(), stopped="; ".join(stopped) or None,
-                      run_results=[r["sha256"] for r in doc["run_results"]], audit_clean=audit["clean"],
-                      error=None if state == "completed" else ("the public leak audit failed" if not audit["clean"] else "the run stopped early: " + "; ".join(stopped)))
+                      run_results=[r["sha256"] for r in doc["run_results"]], audit_clean=audit["clean"], publication_check=publication,
+                      error=None if state == "completed" else "the run stopped early: " + "; ".join(stopped))
+
+
+def _publication_check(store, runs_root: Path, job_id: str, *, runner_audit_clean: bool) -> dict:
+    """Run the service's own publication policy (lifecycle.service.project_and_audit) on the finished job; counts only, never the problem text."""
+    from .service import project_and_audit
+    out = {"policy": "lifecycle.service.project_and_audit (lifecycle.audit.check_evaluation)", "runner_public_report_clean": bool(runner_audit_clean)}
+    try:
+        _, problems = project_and_audit(store, runs_root, load_job(runs_root, job_id))
+        out.update(report_audit_clean=not problems, report_problems=len(problems))
+    except Exception as exc:                                                     # the report cannot be built: not publishable, execution unaffected
+        out.update(report_audit_clean=False, report_problems=None, report_error=type(exc).__name__)
+    out["publishable"] = bool(out["report_audit_clean"] and runner_audit_clean)
+    return out
 
 
 def worker_main(argv: list[str]) -> int:

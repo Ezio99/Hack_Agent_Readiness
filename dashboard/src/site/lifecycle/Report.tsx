@@ -34,11 +34,13 @@ export function Report({ ev }: { ev: Evaluation }) {
       <p className="eyebrow">Readiness report · {ev.site.label}</p>
       <h1 className="lc-title">{ev.title}</h1>
       <div className="lc-badges"><ModeBadge mode={ev.mode} />{ev.exploratory && <span className="lc-mode neutral">Exploratory · no claim</span>}
-        {ev.source?.kind === 'dataset' && <span className="lc-mode neutral">Preloaded from sanitized dataset v{ev.source.version}</span>}
-        {ev.source?.kind === 'launched' && <span className="lc-mode neutral">Launched in the product</span>}</div>
+        {ev.source?.kind === 'dataset' && <span className="lc-mode neutral">Pre-recorded research run · sanitized dataset v{ev.source.version}</span>}
+        {ev.source?.kind === 'launched' && <span className="lc-mode neutral">{ev.mode === 'paid' ? 'Live run launched in this product' : 'Launched in this product'}{ev.started_at ? ` · ${new Date(ev.started_at).toUTCString().slice(5, 22)} UTC` : ''}</span>}</div>
       {ev.notice && <p className="lc-notice" role="note">{ev.notice}</p>}
       {ev.caveat && <p className="lc-caveat" role="note"><strong>Read this first.</strong> {ev.caveat} Official grades are grader v1 as recorded; grader v2 is a labelled post-hoc rescore; rules marked prospective are shown, never applied.</p>}
       <dl className="lc-facts">
+        <div><dt>Agent runs</dt><dd>{(() => { const ex = Object.values(ev.execution); const planned = ex.reduce((a, x) => a + (x.planned ?? 0), 0); const done = ev.trials.filter(t => t.status === 'completed').length; const v = ev.trials.filter(t => t.void).length;
+          return <><strong>{done}/{planned || ev.trials.length} completed</strong>{v ? ` · ${v} void` : ' · none void'}{ex.some(x => x.stopped) ? ' · the run stopped early' : ''}</>; })()}</dd></div>
         <div><dt>Frozen suite</dt><dd>{ev.suite.name} v{ev.suite.version} · <Hash sha={ev.frozen_suite.sha256} /></dd></div>
         <div><dt>Approval</dt><dd>{ev.approval.decision} by the {ev.approval.role}{ev.approval.synthetic ? ' (SYNTHETIC fixture)' : ''}, {new Date(ev.approval.decided_at).toUTCString().slice(5, 22)} UTC · <Hash sha={ev.approval.sha256} /></dd></div>
         <div><dt>Manifest</dt><dd><Hash sha={ev.manifest.sha256} /> · {ev.manifest.repetitions} repetition · seed {ev.manifest.seed} · plan {ev.manifest.plan}</dd></div>

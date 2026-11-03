@@ -65,6 +65,10 @@ def test_an_operator_launch_runs_the_stage_b_pipeline_and_reports_through_the_li
     assert st["summary"]["Original"]["completed"] == st["summary"]["Modified"]["completed"] == 3
     assert a.get(job)["state"] == "completed" and a.get(job)["reserved_microusd"] == 0
     assert seen_live
+    # M9: execution, report publication and the record are reported separately; the worker ran the service's own publication check
+    assert st["execution"] == {"state": "completed", "trials_planned": 6, "trials_completed": 6, "trials_failed": 0, "trials_void": 0}
+    assert st["report_status"]["state"] == "available" and st["record_note"] is None
+    assert st["report_status"]["recorded_at_completion"] == {"publishable": True, "report_audit_clean": True, "runner_public_report_clean": True}
 
     tr = c.get(f"/api/ironbark/jobs/{job}/repetitions/1/trials/original/1").json()           # the workspace's agent panel
     assert tr["steps"] and all(s["memory"] is None for s in tr["steps"])                      # stand-in replies withheld

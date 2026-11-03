@@ -70,3 +70,33 @@ it('shows a completed Stage B evaluation as the six-dimension readiness report',
   expect(t).toContain('v1 official'); expect(t).toContain('v2 post-hoc');
   expect(host.querySelector(`a[href="#/reports/${ID}/tasks/1"]`)).not.toBeNull();                       // the trace comparison
 });
+
+// M9: execution outcome vs report publication vs the preserved job record.
+const exec = { state: 'completed', trials_planned: 12, trials_completed: 12, trials_failed: 0, trials_void: 0 };
+const NOTE = 'Execution completed: 12/12 agent runs finished. The job record reads “failed” because, when the run finished, its report did not pass the publication check of that release, which treated a completed run with an unpublishable report as failed. The report has since passed the current publication check and is available. The original record is kept unchanged.';
+
+it('shows a completed run with a preserved "failed" record as completed, explains the record and serves the report', async () => {
+  server(url => url.endsWith('/config') ? config() : url.endsWith('/jobs') ? [] : url.includes('/api/lifecycle/evaluations/') ? { ...EV, id: ID, source: { kind: 'launched', job: ID, state: 'completed' } }
+    : { ...job, state: 'failed', execution: exec, report_status: { state: 'available' }, record_note: NOTE });
+  const host = await mount({ initialJob: ID });
+  for (let i = 0; i < 4; i++) await act(async () => { await new Promise(r => setTimeout(r, 0)); });
+  const status = host.querySelector('.ws-status')!.textContent ?? '';
+  expect(status).toContain('Completed'); expect(status).toContain('Job record: failed');
+  expect(host.textContent).toContain('The original record is kept unchanged');
+  expect(host.textContent).not.toContain('it has no report');
+  await act(async () => { button(host, 'Readiness report').click(); });
+  for (let i = 0; i < 4; i++) await act(async () => { await new Promise(r => setTimeout(r, 0)); });
+  expect(host.textContent).toContain('Task success');
+  expect(host.textContent).toContain('Live run launched in this product');
+});
+
+it('keeps a withheld report withheld while showing that every agent run finished', async () => {
+  const f = server(url => url.endsWith('/config') ? config() : url.endsWith('/jobs') ? [] : url.includes('/api/lifecycle/evaluations/') ? json({ detail: 'withheld' }, false)
+    : { ...job, state: 'completed', report: null, execution: exec, report_status: { state: 'withheld', detail: 'x' }, record_note: null });
+  const host = await mount({ initialJob: ID });
+  await act(async () => { button(host, 'Readiness report').click(); });
+  for (let i = 0; i < 4; i++) await act(async () => { await new Promise(r => setTimeout(r, 0)); });
+  expect(host.textContent).toContain('the readiness report is withheld');
+  expect(host.textContent).toContain('only the readiness report is withheld');
+  expect(f.mock.calls.some(c => String(c[0]).includes('/api/lifecycle/evaluations/'))).toBe(false);   // never requested
+});

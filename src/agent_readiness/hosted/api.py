@@ -321,7 +321,14 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
             if is_sb(job_id):
                 if lifecycle is None:
                     raise RuntimeError('the lifecycle service is required to project a Stage B evaluation')
-                lifecycle.evaluation(job_id)               # complete only if the public projection builds and passes the leak audit
+                # M9: the run completed (the worker verified every planned trial ran). Publication is a separate, fail-closed check: a report that
+                # does not pass the leak audit is withheld (reported as such by the status route), but no longer turns the run into "failed".
+                try:
+                    lifecycle.evaluation(job_id)
+                except Exception as exc:
+                    if getattr(exc, 'code', None) == 'not_ready':
+                        raise                                           # no results at all: an execution failure, not a publication one
+                    print(f'hosted service: evaluation {job_id} completed; its report is not published ({getattr(exc, "code", None) or type(exc).__name__})', flush=True)
             else:
                 job = paired.load_job(root, job_id)
                 for rep in job['reps']:
@@ -443,7 +450,8 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
                     st = status(j['id'])
                 except Exception:
                     continue
-                out.append({'id': j['id'], 'engine': stageb.ENGINE, 'state': j['state'], 'repetitions': st['repetitions'], 'mode': st['mode'], 'created_at': st['created_at'],
+                out.append({'id': j['id'], 'engine': stageb.ENGINE, 'state': j['state'], 'execution_state': st['execution']['state'],
+                            'report_state': st['report_status']['state'], 'repetitions': st['repetitions'], 'mode': st['mode'], 'created_at': st['created_at'],
                             'finished_at': st.get('finished_at'), 'completed_repetitions': sum(r['state'] == 'completed' for r in st['reps']),
                             'summary': st['summary'] if j['state'] in TERMINAL else None})
                 continue
@@ -489,6 +497,21 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
             raise HTTPException(503, 'Unable to start evaluation') from exc
         return out
 
+    def report_publication(job_id: str, held_state: str) -> dict:
+        """Whether a Stage B job's readiness report may be published: the lifecycle service's own build + leak audit (cached once it passes)."""
+        if held_state in ('reserved', 'running'):
+            return {'state': 'pending'}
+        if lifecycle is None:
+            return {'state': 'unavailable', 'detail': 'the lifecycle service is not configured'}
+        try:
+            lifecycle.evaluation(job_id)
+            return {'state': 'available'}
+        except Exception as exc:
+            code = getattr(exc, 'code', None)
+            if code == 'withheld':
+                return {'state': 'withheld', 'detail': 'the report did not pass the publication leak audit and is withheld (fail-closed)'}
+            return {'state': 'unavailable', 'detail': getattr(exc, 'detail', None) or 'the report could not be built'}
+
     @app.get('/api/ironbark/jobs/{job_id}')
     def status(job_id: str):
         held = checked_job(job_id)
@@ -498,7 +521,8 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
             recovery_required = held['state'] in ('reserved', 'running') and job_id not in inflight
         if is_sb(job_id):
             v2 = None
-            if held['state'] == 'completed' and lifecycle is not None:
+            publication = report_publication(job_id, held['state'])
+            if publication['state'] == 'available':
                 try:
                     ts = lifecycle.evaluation(job_id)['dimensions']['task_success']['variants']
                     names = list(ts)
@@ -507,7 +531,7 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
                           **{lab[v]: {'completed': x['trials'], 'evidence_supported_passes': x['v2_evidence_backed'], 'strict_passes': x['v2_passed']} for v, x in ts.items() if v in lab}}
                 except Exception:
                     v2 = None
-            out = stageb.job_status(sb_root, job_id, held['state'], recovery_required=recovery_required, v2=v2)
+            out = stageb.job_status(sb_root, job_id, held['state'], recovery_required=recovery_required, v2=v2, publication=publication)
             if held['state'] in TERMINAL:
                 cache.setdefault(job_id, {})['status'] = out
             return out

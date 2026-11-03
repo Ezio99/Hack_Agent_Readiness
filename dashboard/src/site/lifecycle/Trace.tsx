@@ -32,8 +32,8 @@ export function TraceCompare({ ev, n }: { ev: Evaluation; n: number }) {
 function answerText(t: Trial): string {
   if (t.answer_withheld) return t.answer_withheld;
   if (t.answer == null) return 'no answer';
-  if (Array.isArray(t.answer)) return t.answer.length ? t.answer.join('; ') : '(empty list)';
-  return t.answer;
+  const text = Array.isArray(t.answer) ? (t.answer.length ? t.answer.join('; ') : '(empty list)') : t.answer;
+  return t.answer_normalized ? `${text} (${t.answer_normalized.note})` : text;
 }
 
 function Side({ ev, t }: { ev: Evaluation; t: Trial }) {

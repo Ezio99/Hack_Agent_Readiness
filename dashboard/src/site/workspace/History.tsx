@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 interface ArmSummary { completed: number; evidence_supported_passes: number; requests_mean: number | null; requests_total: number; steps_mean: number | null; page_views_mean: number | null }
-export interface HistoryItem { id: string; state: string; repetitions: number; mode: string; created_at: number; finished_at?: number | null; completed_repetitions?: number; summary: Record<'Original' | 'Modified', ArmSummary> | null }
+export interface HistoryItem { id: string; state: string; execution_state?: string; report_state?: string; repetitions: number; mode: string; created_at: number; finished_at?: number | null; completed_repetitions?: number; summary: Record<'Original' | 'Modified', ArmSummary> | null }
 
 const rate = (a?: ArmSummary) => a && a.completed ? `${Math.round(100 * a.evidence_supported_passes / a.completed)}%` : '—';
 const when = (t: number) => new Date(t * 1000).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -15,7 +15,7 @@ export function History({ items, current, open }: { items: HistoryItem[]; curren
     <div className="table-scroll"><table className="ws-table history-table"><thead><tr><th>Compare</th><th>Evaluation</th><th>Started</th><th>Runs</th><th>Mode</th><th>Original success</th><th>Modified success</th><th>Requests / task</th><th /></tr></thead>
       <tbody>{items.map(i => <tr key={i.id} aria-current={i.id === current ? 'true' : undefined}>
         <td><input type="checkbox" aria-label={`Compare ${i.id.slice(0, 13)}`} checked={picked.includes(i.id)} disabled={!i.summary} onChange={() => toggle(i.id)} /></td>
-        <td><code>{i.id.slice(0, 13)}</code> <span className={`ws-pill ${i.state}`}>{i.state.replaceAll('_', ' ')}</span></td>
+        <td><code>{i.id.slice(0, 13)}</code> <span className={`ws-pill ${i.execution_state ?? i.state}`}>{(i.execution_state ?? i.state).replaceAll('_', ' ')}</span>{i.execution_state && i.execution_state !== i.state && <small className="ws-record" title="The job record is kept exactly as it was written"> record: {i.state.replaceAll('_', ' ')}</small>}{i.report_state === 'withheld' && <small className="ws-record"> report withheld</small>}</td>
         <td>{when(i.created_at)}</td><td>{i.repetitions} × 8</td><td>{i.mode === 'live' ? 'Muse Spark' : 'Rehearsal'}</td>
         <td>{rate(i.summary?.Original)}</td><td>{rate(i.summary?.Modified)}</td>
         <td>{i.summary ? `${i.summary.Original.requests_mean ?? '—'} → ${i.summary.Modified.requests_mean ?? '—'}` : '—'}</td>

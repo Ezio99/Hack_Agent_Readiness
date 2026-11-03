@@ -220,7 +220,7 @@ function RecordedList({ title, filter }: { title: string; filter?: (e: Evaluatio
     {evs.error && <Failed error={evs.error} what="Evaluations" />}
     {evs.data && !list.length && <p className="muted">None yet.</p>}
     <ul className="lc-evals">{list.map(e => <li key={e.id}><a href={e.state === 'completed' ? `#/reports/${e.id}` : `#/run/${e.id}`}>
-      <div className="lc-eval-top"><ModeBadge mode={e.mode} /><span className="tag tag-neutral">{words(e.state)}</span>{e.source === 'dataset' && <span className="tag tag-neutral">dataset v{e.dataset_version}</span>}</div>
+      <div className="lc-eval-top"><ModeBadge mode={e.mode} /><span className="tag tag-neutral">{words(e.state)}</span>{e.source === 'dataset' && <span className="tag tag-neutral">pre-recorded · dataset v{e.dataset_version}</span>}{e.source === 'launched' && e.mode === 'paid' && <span className="tag tag-neutral">live run in this product</span>}</div>
       <strong>{e.title ?? e.id}</strong>
       <small>{[e.site, e.suite, e.variants?.join(' vs '), e.tasks != null ? `${e.tasks} tasks, ${e.trials} trials` : null].filter(Boolean).join(' · ')}</small>
       {e.success && <span className="lc-eval-nums">{Object.entries(e.success).map(([v, s]) => <span key={v}><VariantName v={v} /> v1 {s.v1_passed}/{s.trials} · v2 {s.v2_passed}/{s.trials} · {e.requests?.[v] ?? '–'} requests</span>)}</span>}

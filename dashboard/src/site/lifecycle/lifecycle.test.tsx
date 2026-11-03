@@ -114,3 +114,18 @@ it('shows the recorded Stage A generation with its admissions and the disabled g
   expect(t).toContain('18 natural'); expect(t).toContain('5 rejected'); expect(t).toContain('US$0.049804');
   expect(t).toContain('Generate new tasks — needs owner authorisation');
 });
+
+it('labels the pre-recorded M7 dataset and a live run launched in this product differently, and shows the completed agent runs', async () => {
+  server({ '/api/lifecycle/evaluations/m7-larkspur-browser-1': EV });
+  let host = await mount(<ReportPage id="m7-larkspur-browser-1" />);
+  expect(host.textContent).toContain('Pre-recorded research run · sanitized dataset v1');
+  expect(host.textContent).not.toContain('Live run launched in this product');
+  expect(host.textContent).toContain('12/12 completed');
+  document.body.innerHTML = '';
+  const id = 'eval-' + 'e'.repeat(32);
+  const trials = EV.trials.map((t: any, i: number) => i === 0 ? { ...t, answer: ['/courses/x'], answer_normalized: { fixture_origin_replaced: 1, note: 'shown as a site path' } } : t);
+  server({ [`/api/lifecycle/evaluations/${id}`]: { ...EV, id, trials, source: { kind: 'launched', job: id, state: 'completed' } } });
+  host = await mount(<ReportPage id={id} />);
+  expect(host.textContent).toContain('Live run launched in this product');
+  expect(host.textContent).not.toContain('Pre-recorded research run');
+});

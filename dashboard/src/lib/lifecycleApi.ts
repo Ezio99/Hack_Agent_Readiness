@@ -44,7 +44,7 @@ export interface Suite { sha256: string; suite_name: string; version: number; si
 
 export interface Grade { passed: boolean; evidence_backed?: boolean; reasons: string[]; review?: boolean; official?: boolean; status?: string }
 export interface Trial { id: string; task_id: string; task: number; variant: string; condition: string; repetition: number; status: string; stop_reason: string | null; void: boolean;
-  answer: string | string[] | null; answer_withheld?: string;
+  answer: string | string[] | null; answer_withheld?: string; answer_normalized?: { fixture_origin_replaced: number; note: string };
   grades: { v1: Grade; v2: Grade | null; v2_1_contrast: Grade | null };
   answer_coverage: { expected_items: number; named_expected: number; named_other: number; unrecognised: number } | null;
   evidence: { satisfied: boolean; required_pages: number; missing_pages: number; missing_texts: number;

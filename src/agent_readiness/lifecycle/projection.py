@@ -52,6 +52,60 @@ def _answer(outcome: dict):
     return None
 
 
+FIXTURE_ISOLATION = "netns-loopback-mirror-only"
+FIXTURE_NOTE = ("The agent quoted the address of the local test copy of the website it browsed; that address is shown as a site path "
+                "(the raw answer is unchanged in the evidence).")
+
+
+def fixture_origin(trial_dir: Path) -> str | None:
+    """The ONE browser-local origin a trial's snapshot was served from, as the runner recorded it at the start of the trial's own trace: the jailed
+    browser's isolation mode (`netns-loopback-mirror-only`) and its initial navigation to `http://127.0.0.1:<port>/`. Anything else (no trace, another
+    isolation mode, another scheme, host, path, query or credentials) is not an approved fixture origin and returns None (M9)."""
+    from urllib.parse import urlsplit
+    mode = url = None
+    try:
+        with open(Path(trial_dir) / "trace.jsonl") as f:
+            for i, line in enumerate(f):
+                if i >= 20 or (mode and url):
+                    break
+                e = json.loads(line)
+                if e.get("kind") == "browser_isolation":
+                    mode = e.get("mode")
+                elif e.get("kind") == "initial_actions" and url is None:
+                    url = next((a["navigate"].get("url") for a in e.get("actions") or [] if isinstance(a, dict) and isinstance(a.get("navigate"), dict)), None)
+    except (OSError, ValueError):
+        return None
+    if mode != FIXTURE_ISOLATION or not isinstance(url, str):
+        return None
+    p = urlsplit(url)
+    try:
+        port = p.port
+    except ValueError:
+        return None
+    if p.scheme != "http" or p.hostname != "127.0.0.1" or not port or p.username or p.password or p.path not in ("", "/") or p.query or p.fragment:
+        return None
+    return f"http://127.0.0.1:{port}"
+
+
+def site_relative(value, origin: str | None):
+    """Replace exactly the trial's fixture origin by a site path (`http://127.0.0.1:34723/courses/x` -> `/courses/x`); every other loopback origin,
+    port or host is left as it is, so the leak audit still rejects it. Returns (value, replacements)."""
+    if origin is None or value is None:
+        return value, 0
+    import re
+    rx = re.compile(re.escape(origin) + r"(?![\d])/?")
+    if isinstance(value, str):
+        return rx.subn("/", value)
+    if isinstance(value, list):
+        out, n = [], 0
+        for x in value:
+            y, k = rx.subn("/", x) if isinstance(x, str) else (x, 0)
+            out.append(y)
+            n += k
+        return out, n
+    return value, 0
+
+
 def _visits(paths: list[str]) -> list[str]:
     return [p for i, p in enumerate(paths) if i == 0 or p != paths[i - 1]]
 
@@ -118,10 +172,12 @@ def _trial_row(run: InvestigationRun, name: str, t: dict, graded: dict, task_n: 
     near_limit = bool(lim and (m.get("model_requests") or 0) >= lim - 1)
     dead_end = bool(http or failed or blocked)
     proto = t.get("protocol") or {}
+    shown, replaced = site_relative(ans, fixture_origin(run.dir / t["trial_dir"]) if t.get("trial_dir") else None)
     return {
         "id": name, "task_id": t["task_id"], "task": task_n[t["task_id"]], "variant": t["variant"], "condition": t.get("condition"), "repetition": t.get("repeat"),
         "status": status, "stop_reason": out.get("stop_reason"), "void": void, "finished_at": t.get("finished_at"),
-        "answer": ans,
+        "answer": shown,
+        **({"answer_normalized": {"fixture_origin_replaced": replaced, "note": FIXTURE_NOTE}} if replaced else {}),
         "grades": {
             "v1": {"passed": bool(ev.get("passed")), "evidence_backed": bool(ev.get("evidence_backed")), "answer_valid": ev.get("answer_valid"),
                    "reasons": list(ev.get("reasons") or []), "official": True},
@@ -336,7 +392,7 @@ def project(store: WriteOnceStore, runs: dict[str, InvestigationRun], *, evaluat
             min_hops.setdefault(tid, {})[v] = (vpriv or {}).get("min_hops")
             row = _trial_row(run, path.stem, t, graded.get(path.stem), task_n, privs.get(tid), vpriv, keys.get(tid), profiles[v], paid)
             if row["grades"]["v2"] is not None and keys.get(tid) is not None:
-                g = G2.grade(keys[tid], row["answer"] if t["evaluation"].get("answer_valid") else None)
+                g = G2.grade(keys[tid], _answer(t.get("outcome")) if t["evaluation"].get("answer_valid") else None)     # the raw answer, as graded
                 row["grades"]["v2"]["review"] = g.review
             if not paid:
                 row["answer"] = None

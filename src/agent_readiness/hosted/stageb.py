@@ -19,6 +19,7 @@ import json
 import time
 from pathlib import Path
 
+from ..investigate.trials.stage import VOID_STATUSES
 from ..lifecycle import arming as AR
 from ..lifecycle import jobs as J
 from . import telemetry
@@ -115,8 +116,26 @@ def _outcome(rec: dict) -> str:
     return "strict_pass" if ev.get("passed") else "not_passed"
 
 
-def job_status(runs_root: Path, job_id: str, held_state: str, *, recovery_required: bool, v2: dict | None = None) -> dict:
-    """The hosted status shape (reps x tasks x arms) computed from Stage B trial records; per repetition, every planned trial with its state."""
+TERMINAL = ("completed", "failed", "timed_out", "interrupted")
+
+
+def record_note(held_state: str, execution_state: str, report_state: str, done: int, planned: int | None) -> str | None:
+    """Why a job's preserved admission record differs from its execution outcome (M9). Before M9 a run whose report could not be published was
+    recorded as failed even when every agent run completed; the record is kept as written and explained here, never rewritten."""
+    if held_state not in TERMINAL or held_state == execution_state or execution_state != "completed":
+        return None
+    runs = f"{done}/{planned}" if planned else str(done)
+    after = {"available": "The report has since passed the current publication check and is available.",
+             "withheld": "The report is still withheld by the publication check (fail-closed)."}.get(report_state, "The report is not available.")
+    return (f"Execution completed: {runs} agent runs finished. The job record reads \u201c{held_state}\u201d because, when the run finished, its report "
+            f"did not pass the publication check of that release, which treated a completed run with an unpublishable report as failed. {after} "
+            "The original record is kept unchanged.")
+
+
+def job_status(runs_root: Path, job_id: str, held_state: str, *, recovery_required: bool, v2: dict | None = None, publication: dict | None = None) -> dict:
+    """The hosted status shape (reps x tasks x arms) computed from Stage B trial records; per repetition, every planned trial with its state.
+    M9: `state` is the preserved admission record; `execution` is what ran (from the trial records and the worker's job record); `report_status` is
+    whether the readiness report may be published (from `publication`, the service's own check); `record_note` explains any difference."""
     job = J.load_job(runs_root, job_id)
     labels = _arm_labels(job)
     reps_n = job.get("repetitions") or (job.get("request") or {}).get("repetitions") or 1
@@ -158,9 +177,22 @@ def job_status(runs_root: Path, job_id: str, held_state: str, *, recovery_requir
                         "strict_passes": sum(t["outcome"] in ("evidence_supported_pass", "strict_pass") for t in done),
                         "requests_total": sum(t.get("requests") or 0 for t in done), "requests_mean": mean("requests"), "page_views_mean": mean("page_views"),
                         "steps_mean": mean("steps"), "elapsed_mean": mean("elapsed_seconds")}
+    planned = len(tasks) * reps_n * 2 if tasks else None
+    trials = [t for rep in reps for t in rep["tasks"]]
+    ran = [rows[n] for n in rows]
+    exec_state = job["state"] if job["state"] in TERMINAL else ("running" if held_state in ("reserved", "running") else job["state"])
+    execution = {"state": exec_state, "trials_planned": planned, "trials_completed": sum(t["state"] == "completed" for t in trials),
+                 "trials_failed": sum(t["state"] == "failed" for t in trials),
+                 "trials_void": sum((r.get("outcome") or {}).get("run_status") in VOID_STATUSES for r in ran)}
+    pub = publication or {"state": "pending" if held_state in ("reserved", "running") else ("unavailable" if exec_state != "completed" else "unknown")}
+    pub_check = job.get("publication_check")
+    report_status = {**pub, **({"recorded_at_completion": {k: pub_check.get(k) for k in ("publishable", "report_audit_clean", "runner_public_report_clean")}}
+                               if pub_check else {})}
     return {"id": job_id, "engine": ENGINE, "state": held_state, "recovery_required": recovery_required, "mode": "live" if job["mode"] == "paid" else "rehearsal",
             "repetitions": reps_n, "created_at": job["created_at"], "started_at": job.get("started_at"), "finished_at": job.get("finished_at"),
-            "reps": reps, "summary": summary, "summary_v2": v2, "report": job_id if job["state"] == "completed" else None,
+            "execution": execution, "report_status": report_status,
+            "record_note": record_note(held_state, exec_state, report_status["state"], execution["trials_completed"], planned),
+            "reps": reps, "summary": summary, "summary_v2": v2, "report": job_id if report_status["state"] == "available" else None,
             "evaluation": {k: (job.get("request") or {}).get(k) for k in ("frozen_suite", "variants", "repetitions")},
             "error": job.get("error"), "stopped": job.get("stopped"), "tasks_planned": len(tasks) * reps_n * 2 if tasks else None}
 

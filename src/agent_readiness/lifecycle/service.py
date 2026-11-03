@@ -38,6 +38,15 @@ class Refused(PermissionError):
         self.code, self.detail, self.status = code, detail, status
 
 
+def project_and_audit(store, runs_root: Path, job: dict) -> tuple[dict, list[str]]:
+    """The public evaluation document of a launched job and its leak-audit problems (empty = publishable). ONE policy for every stage (M9): the
+    worker runs it when the evaluation finishes (recorded as the job's publication check) and the service runs it again before serving."""
+    runs = P.load_runs([Path(runs_root) / r for r in job["runs"].values()])
+    doc = P.project(store, runs, evaluation_id=job["id"], title=job.get("label"), context=S.context_for(next(iter(runs.values())).state["config"]["site"]))
+    from ..evalruns import runner as RN
+    return doc, audit.check_evaluation(doc, RN._answers(store, doc["frozen_suite"]["sha256"]))
+
+
 class LifecycleService:
     def __init__(self, *, datasets: Path | None = None, store_root: Path | None = None, runs_root: Path | None = None, executor=None,
                  admission=None, client_key: bytes = b"", log=print):
@@ -230,10 +239,9 @@ class LifecycleService:
             st = self.store()
             if st is None:
                 raise Refused("no_store", "the lifecycle store is not available on this server", 503)
-            runs = P.load_runs([self.runs_root / r for r in job["runs"].values()])
-            doc = P.project(st, runs, evaluation_id=job["id"], title=job.get("label"), context=S.context_for(next(iter(runs.values())).state["config"]["site"]))
-            from ..evalruns import runner as RN
-            problems = audit.check_evaluation(doc, RN._answers(st, doc["frozen_suite"]["sha256"]))
+            doc, problems = project_and_audit(st, self.runs_root, job)
+            if job.get("audit_clean") is False or (job.get("publication_check") or {}).get("runner_public_report_clean") is False:
+                problems = problems + ["the runner's public report failed its leak audit"]          # fail-closed: either audit withholds publication
             if problems:
                 self.log(f"lifecycle: evaluation {job['id']} withheld by the leak audit ({len(problems)} problems)")
                 raise Refused("withheld", "this evaluation failed the public leak audit and is withheld", 409)
