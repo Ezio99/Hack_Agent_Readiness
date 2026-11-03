@@ -209,3 +209,31 @@ No grading code was changed.
    - the audit's correct-answer view (2/6 → 5/6, no false facts);
    - that six tasks × one repetition supports no statistical claim.
 5. **Defer** grader v3, evidence rule 3 and feasibility costing to after the hackathon, as versioned and pre-registered policies.
+
+## 9. Addendum: owner-approved actions (2026-11-03)
+
+### 9.1 Programme-ledger append (`98d5ec6`)
+- **Rechecked first:** none of the three ids or amounts existed in the ledger; 18 entries summed to US$13.418982.
+- **Appended textually** at the end of `entries`, with one addendum per entry at the end of `reconciliation` (`reconciliation_addendum_1`, `correction_addendum_1`, `hosted_addendum_3`), matching the earlier appends: 58 lines added, 0 changed.
+- **Verified:** all 18 earlier entries, every earlier reconciliation field and all other keys are identical to the committed version. The ledger now has **21 entries totalling US$18.786306**; subtotals run 13.418982 → 17.239744 → 17.240080 → 18.786306; A$28.18 at 1.50, **A$21.82 remaining**.
+- **Not touched:** the hosted admission database and the per-experiment ledgers.
+- **Pre-existing test failures:**
+  - `tests/test_remediation.py`, `tests/test_remediation_experiment.py` and `tests/test_remediation_main_design.py` (historical Task-015 tests, outside the critical and broad suites) pin older ledger totals (US$11.848482 / A$17.7727).
+  - They already failed 5 tests on the committed ledger **before** this append (verified by stashing it); the same 3 ledger-total assertions still fail after it.
+  - Not modified (historical tests).
+
+### 9.2 Deployment of `f36db53` (2026-11-03 01:07:38 UTC)
+
+| Step | Result |
+|---|---|
+| Pre-flight (read-only) | healthy on `20f699d2…` (`e7e35e1`), 0 restarts. **0 active jobs**, no worker process. Still exactly **one** paid authorisation (`larkspur-live-1-l1`, used); arming 1/1/0, problems []. Ceiling US$10.736, **fully reserved**, US$0 remaining. Ledger 224 lines. `.env` live / operator / 10.736 |
+| Candidate | `e7e35e1 → f36db53` non-documentation changes are exactly the 7 reviewed Task 1 files. Clean worktree (0 untracked) |
+| Backup | `/root/backups/predeploy-m9s-20261103T010520Z.tgz` (gzip ok), `env-predeploy-m9s-…`, and a manifest of 2 204 files |
+| Build | `agent-readiness-app:m9s-f36db53` = **`sha256:6fa8b107ea3337413f688b87224622fc8723c1537c253e0d0c3add2cc900492f`** |
+| Pre-flight with the new image | US$10.736 / US$10.736 / 0 active |
+| Smoke test, disabled, loopback, on a volume **copy** | smoke PASS. Report-recovery checks PASS (launch-capacity checks skipped: no Stage B engine in disabled mode). 0 tracebacks. Copy removed |
+| Switch | `rollback-e7e35e1` = `20f699d2…`; `latest` = `6fa8b107…`; single app restart; healthy. `mode=live access=operator evaluations=enabled jail=verified engine=stage-b armed=larkspur-live-1 (… launches left 0)` |
+| **Production verification** | Report-recovery checks **PASS** (paid report, export, 12/12 timelines and screenshots, no local URLs, results and US$1.546226, history, M7). **Launch state:** `worker idle`, `service operational`, `launch {authorized: false, reason: launches_exhausted}`, `available false`, repetitions [], ceiling 10.736 / 10.736, no active job. Smoke PASS. **All 2 204 non-derived files byte-identical.** Still one authorisation; ledger 224 lines; 1 Stage B job; 0 provider or traceback log lines; jail self-test ok; `.env` unchanged |
+| Browser (production) | Banner: "**Worker ready · no launch authorised** · The authorised launch has been used. A new launch needs a new owner authorisation." "Ready to start" appears nowhere. Generic intro (manual Modified; no Ironbark). 0 console errors, 0 ≥400, 0 non-GET |
+
+**Rollback:** `docker tag agent-readiness-app:rollback-e7e35e1 agent-readiness-app:latest && docker compose up -d --no-build --no-deps app`. No database or `.env` change is involved.
