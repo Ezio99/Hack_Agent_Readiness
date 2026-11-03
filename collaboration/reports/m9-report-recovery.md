@@ -114,3 +114,39 @@ docker tag agent-readiness-app:rollback-b563a33 agent-readiness-app:latest && do
 docker run --rm -v agent-readiness_data:/data alpine rm -f /data/hosted/live/stageb/derived/eval-e529db2aafecbfddd21e5c571eb85243.projection-1.json
 ```
 No database or `.env` change is involved in either direction. The pre-deploy backup is only for disaster recovery: **never restore a volume backup over the paid run's records.**
+
+## 7. Addendum: authorised production deployment (2026-11-03 00:25–00:35 UTC)
+
+**Owner approval:** deploy `e7e35e1` with backups, smoke tests and verification only.
+
+| Step | Result |
+|---|---|
+| Pre-deploy checks (read-only) | app healthy on `cc97e004…`, 0 restarts. **0 active jobs**. Ceiling **US$10.736, US$10.736 reserved** (2 completed + 1 failed), **US$0 remaining**. Arming `larkspur-live-1` 1/1 used, 0 left, problems []. Still exactly **one** paid authorisation and launch claim (`larkspur-live-1-l1`); ledger 224 lines. `.env` live / operator / 10.736 |
+| Candidate | `e7e35e1` = tested `b16aed8` + 2 documentation files. The changes from the deployed `b563a33` are exactly the 16 reviewed files (§2). Clean worktree `/root/agent-readiness-build-m9r` (0 untracked) |
+| Backup | `/root/backups/predeploy-m9r-20261103T002518Z.tgz` (gzip intact), `env-predeploy-m9r-…`, and a checksum manifest of 2 204 non-derived files (same count as the rehearsed copy) |
+| Build | `agent-readiness-app:m9r-e7e35e1` = **`sha256:20f699d2201a53ce81ddcae7ddeb35d42a184f644ea0e99fc538125b1742f872`** |
+| Pre-flight with the new image (`:ro`) | US$10.736 / US$10.736 / 0 active / migration #1 |
+| Smoke test, disabled, loopback, on a **copy** of the volume | smoke PASS. Report-recovery checks: all 20 applicable passed (the launch-capacity check needs live mode). Copy removed |
+| Switch (00:27:20Z) | `rollback-b563a33` = `cc97e004…`; `latest` = `20f699d2…`; `docker compose up -d --no-build --no-deps app`; healthy. `mode=live access=operator evaluations=enabled jail=verified engine=stage-b armed=larkspur-live-1 (paid, larkspur-core v2, launches left 0)` |
+
+**Production verification (public HTTPS): all 21 checks PASS.**
+- **Status:** `eval-e529…` status 200; preserved record `failed`; execution completed 12/12, 0 failed, 0 void; report available; `record_note` explains the record.
+- **Report:** 200, with **no browser-local URL**. 12 completed / 0 void. v1 Original 1 / Modified 2; v2 2 / 4; requests 68 / 44. **Settled US$1.546226 (112 settled, 0 unsettled)**; six dimensions; paid, launched, manifest `64a55c5f…`. Only `original-gen-ae6c23b20b-n-r1` normalised.
+- **Evidence views:** export 200 with no local URL; **12/12 timelines, 12/12 screenshots**; 12/12 workspace trial views.
+- **History:** execution completed, report available, record failed. Ironbark `eval-aa23e330` and `eval-9aaac35c`: status, insights, export and trial all 200. The M7 research report is unchanged (US$1.520696).
+- **Launch capacity:** `config` repetitions [], ceiling 10.736 / 10.736, no active job.
+- **Smoke:** PASS. 4 security headers; jail self-test ok; `.env` unchanged.
+- **Evidence integrity:** all **2 204** non-derived files are **byte-identical** to the pre-deploy manifest (admission DB, ledgers, authorisation, arming, launch claims, trial evidence). The only new file is the disposable cache `live/stageb/derived/eval-e529….projection-1.json`.
+- **No paid activity:**
+  - still one authorisation and one paid launch claim;
+  - ledger 224 lines;
+  - no new job and no worker process;
+  - 0 provider or traceback lines in the logs.
+- **Browser** (Chromium, GET only):
+  - workspace: "Completed", "Job record: failed", the explanation, "12 / 12 agent runs finished", no "it has no report";
+  - report tab and page: "Live run launched in this product · 02 Nov 2026 23:38 UTC", "12/12 completed · none void", 1/6, 2/6, 4/6, US$1.546226;
+  - task 4 trace: the disclosure, no local URL;
+  - M7: "Pre-recorded research run"; lifecycle tags; history "record: failed";
+  - **0 console errors, 0 responses ≥400, 0 non-GET requests.**
+
+**Remaining (cosmetic):** the workspace banner reads "Worker available · Ready to start a new evaluation" while Run is disabled ("Every armed launch has been used"), because `config.available` stays true after the launches are used. §5 otherwise stands.

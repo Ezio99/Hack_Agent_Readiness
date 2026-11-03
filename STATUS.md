@@ -131,7 +131,7 @@ verification of the M8 release candidate. Report: [collaboration/reports/m9-rele
   - the report labels a "Live run launched in this product" vs the "Pre-recorded research run" (M7).
 - **Tests:** 31 new (20 fail without the change); broad 397; critical 214; browser e2e 1; dashboard 201; build CHECK PASSED; M7 re-derives byte-for-byte.
 - **Docker rehearsal on a copy of production:** the paid report is served (12/12, US$1.546226 settled), evidence byte-identical, 0 console errors, rollback-compatible.
-- **Awaiting owner approval:** deployment (report §6).
+- **Deployed with owner approval** 2026-11-03 00:27 UTC: `e7e35e1`, image `sha256:20f699d2…`. The paid report and export are served (12/12, US$1.546226 settled, no local URLs); the record `failed` is preserved and explained. All 21 production checks PASS; 2 204 evidence files byte-identical; no paid activity. Rollback image `rollback-b563a33`.
 
 ## Budget
 
