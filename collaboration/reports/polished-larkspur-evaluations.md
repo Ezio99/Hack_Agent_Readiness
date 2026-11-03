@@ -62,5 +62,19 @@ Budget after both: spent A$0.35 of A$20 (`ar-a20-2026-11`).
 
 **Remaining friction and next recommendation (not built, not evaluated):** agents verify the deciding facts before answering. A results view that keeps the deciding facts of every match on screen (e.g. a compact table of the filtered courses) addresses what the agent actually did. Names alone do not.
 
-## 5. Stages 5–6
-The Workspace runs Polished v2 (the latest approved immutable version). Larkspur-focused copy and the cinematic demo follow in later commits.
+## 5. Stages 5–6 (DONE)
+- **Showcase** `#/showcase` (`dashboard/src/site/story/`):
+  - Chapters: Polished v1 → evaluation → discovered friction → recommendation → Polished v2 → re-evaluation → measured result → where Larkspur started.
+  - Real data only: exported frames and agent memory, settled costs.
+  - Reduced-motion fallback; no API calls.
+  - Tested: vitest checks the table against `larkspur.json`; reviewed in a browser at 1440 and 390 px.
+- **Home:** a Polished band with both live results. Nav has "Showcase"; the footer links the Polished reports.
+- **Workspace:** runs Polished v2 alone. It shows a preview of the selected version, and its copy matches the shared budget.
+- **Ironbark:** remains the archive only (`#/demo/ironbark`). Historical reports are unchanged.
+- **Deploy `730037b`:**
+  - backup `predeploy-showcase-20261103T225011Z` (2 898 files);
+  - image `40679aa0…`, rollback `rollback-before-showcase` = `4b878538…`;
+  - evidence identical; 403 without a code;
+  - 13 public routes in a real browser with 0 errors, plus the showcase at 1440 and 390 px.
+- **Checks before the deploy:** critical 264 passed; polished/budget 49 passed; vitest 226 passed; `test_showcase_judge_browser` and `test_judge_experience_browser` passed (run alone).
+- **Submission:** [FINAL_SUBMISSION.md](../../docs/FINAL_SUBMISSION.md), [FINAL_VIDEO_SCRIPT.md](../../docs/FINAL_VIDEO_SCRIPT.md).
