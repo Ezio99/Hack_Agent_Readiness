@@ -632,3 +632,37 @@ def test_a_budget_evaluation_can_evaluate_one_registered_version_alone(prod, mon
     assert AR.check_launch(store, job)["budget_pool"] == "ar-a20-polished-v1"
     from agent_readiness.hosted import stageb as SB
     assert SB.arm_display(job) == {"Original": "Polished v1"} and SB._arm_labels(job) == {"polished": "Original"}
+
+
+def test_the_agent_can_record_and_select_an_evaluation_under_delegated_authority_and_it_is_audited(prod, monkeypatch):
+    """Non-interactive counterpart of the owner's typed lines (owner's standing authorization, 2026-11-04): the statement names the agent (it never
+    claims to be the owner's typed confirmation), it is bound to the reviewed terms by sha256, every action is appended to DELEGATIONS.jsonl, and the
+    record verifies exactly like an owner-recorded one. The budget's FIRST evaluation (the opening) cannot be delegated."""
+    import json as _json
+    AR, store, a, ex, sb = _pool_env(prod, monkeypatch)
+    _open_pool(a, store)
+    auth = "owner standing authorization, chat message 2026-11-04 (register and select immutable Larkspur versions)"
+    t = BG.delegated_terms(a, store, budget=B, pool_id="ar-a20-polished-v1", frozen="larkspur-core@v3", variants=["polished"])
+    assert t["attestation"].startswith(AR.DELEGATED_PREFIX) and "I am the owner" not in t["attestation"]
+    with pytest.raises(BG.BudgetRefused, match="sha256 differs"):
+        BG.add_evaluation_delegated(a, store, budget=B, pool_id="ar-a20-polished-v1", frozen="larkspur-core@v3", variants=["polished"],
+                                    expect_sha256="0" * 64, authorization=auth, actor="agent", at="t")
+    with pytest.raises(BG.BudgetRefused, match="cite"):
+        BG.add_evaluation_delegated(a, store, budget=B, pool_id="ar-a20-polished-v1", frozen="larkspur-core@v3", variants=["polished"],
+                                    expect_sha256=t["attestation_sha256"], authorization="ok", actor="agent", at="t")
+    assert not AR.pool_path("ar-a20-polished-v1").exists()
+    BG.add_evaluation_delegated(a, store, budget=B, pool_id="ar-a20-polished-v1", frozen="larkspur-core@v3", variants=["polished"],
+                                expect_sha256=t["attestation_sha256"], authorization=auth, actor="agent", at="2026-11-04T00:00:00+00:00")
+    rec = AR.load_pool("ar-a20-polished-v1")
+    assert rec.recorded_by == AR.DELEGATED_RECORDED_BY and AR.verify(store, rec) == []
+    forged = rec.model_copy(update={"attestation": AR.pool_attestation({**rec.content(), "options": [o.model_dump() for o in rec.options],
+                                                                        "variants": [list(v) for v in rec.variants]})})
+    assert AR.verify(store, forged)                                                   # an agent-recorded pool may not carry the owner's statement
+    BG.use_evaluation_delegated(B, "ar-a20-polished-v1", authorization=auth, actor="agent", at="2026-11-04T00:01:00+00:00")
+    assert ex.budget_pool()[0].pool_id == "ar-a20-polished-v1" and ex.configuration()["evaluation"]["variants"] == ["polished"]
+    log = [_json.loads(x) for x in (AR.pools_root() / "DELEGATIONS.jsonl").read_text().splitlines()]
+    assert [(e["action"], e["pool_id"]) for e in log] == [("evaluation-add", "ar-a20-polished-v1"), ("evaluation-use", "ar-a20-polished-v1")]
+    assert log[0]["attestation_sha256"] == t["attestation_sha256"] and all(e["authorization"] == auth for e in log)
+    j = ex.admit(jid(1300), "%064x" % 1300, 1, charge="budget")["id"]             # launches still need the budget and the worker's re-check
+    import agent_readiness.lifecycle.jobs as LJ
+    assert AR.check_launch(store, LJ.load_job(prod / "live" / "stageb", j))["budget_pool"] == "ar-a20-polished-v1"

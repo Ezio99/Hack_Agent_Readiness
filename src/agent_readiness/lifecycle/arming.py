@@ -320,8 +320,9 @@ def verify(store, rec: Arming) -> list[str]:
         if pinned.content() != m.agent.content():
             problems.append("the armed agent is not the pinned agent configuration")
     if isinstance(rec, BudgetPool):
-        if rec.attestation != pool_attestation({**rec.content(), "options": [o.model_dump() for o in rec.options], "variants": [list(v) for v in rec.variants]}) \
-                or rec.recorded_by != POOL_RECORDED_BY:
+        owner = pool_attestation({**rec.content(), "options": [o.model_dump() for o in rec.options], "variants": [list(v) for v in rec.variants]})
+        if not ((rec.recorded_by == POOL_RECORDED_BY and rec.attestation == owner)
+                or (rec.recorded_by == DELEGATED_RECORDED_BY and rec.pool_id != rec.budget and rec.attestation == delegated_attestation(owner))):
             problems.append("the budget pool was not recorded by the owner's terminal confirmation of exactly these terms")
         return problems
     if rec.total_reservation_microusd < max(o.reservation_microusd for o in rec.options):
@@ -444,6 +445,26 @@ def summary(store, rec: Arming | None, admission=None) -> dict | None:
 # ------------------------------------------------------------------------------------------------------------------------------- operator budget pool
 POOL_SCHEMA = "hosted-budget-pool-v1"
 POOL_RECORDED_BY = "owner at an interactive terminal (agent_readiness.hosted.budget open)"
+# A budget evaluation recorded NON-interactively by the agent under the owner's written standing authorization (2026-11-04). Its statement says so
+# (it never claims to be the owner's typed confirmation), every such action is appended to DELEGATIONS.jsonl, and it is otherwise verified exactly
+# like an owner-recorded evaluation (registered snapshots, approved frozen suite, manifests, pinned agent, per-run maximum).
+DELEGATED_RECORDED_BY = "agent (Claude Code), non-interactively, under the owner's written standing authorization (agent_readiness.hosted.budget --delegated)"
+OWNER_PREFIX, DELEGATED_PREFIX = "I am the owner and I ", "Under the owner's written standing authorization, the agent records that the owner (not typing this line) will "
+
+
+def delegated_attestation(owner_text: str) -> str:
+    """The delegated form of an evaluation statement: the same terms, attributed to the agent acting on the owner's written authorization."""
+    if not owner_text.startswith(OWNER_PREFIX):
+        raise ValueError("not an owner evaluation statement")
+    return DELEGATED_PREFIX + owner_text[len(OWNER_PREFIX):]
+
+
+def log_delegation(entry: dict) -> None:
+    """Append-only audit log of every delegated budget action (who, what, which exact terms, under which authorization)."""
+    pools_root().mkdir(parents=True, exist_ok=True)
+    fd = os.open(pools_root() / "DELEGATIONS.jsonl", os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
+    with os.fdopen(fd, "a") as f:
+        f.write(json.dumps(entry, sort_keys=True) + "\n")
 
 
 class BudgetPool(BaseModel):
@@ -525,11 +546,11 @@ def pool_terms(store, *, budget: str, mode: str, frozen_ref: str, variants: list
     return {**a, "attestation": pool_attestation(a), "manifest_basis": p["manifest_basis"], "synthetic": p["synthetic"]}
 
 
-def record_pool(store, terms: dict, *, at: str) -> BudgetPool:
+def record_pool(store, terms: dict, *, at: str, recorded_by: str = POOL_RECORDED_BY) -> BudgetPool:
     """Write-once (exclusive create). Called by `hosted.budget open` after the owner's typed confirmation, which includes the pool text."""
     rec = BudgetPool(**{"schema": POOL_SCHEMA, **{k: terms[k] for k in ("budget", "pool_id", "mode", "site", "frozen_suite", "frozen_suite_sha256", "attestation")},
                         "variants": tuple(tuple(v) for v in terms["variants"]), "options": tuple(Option(**o) for o in terms["options"]), "agent": terms["agent"],
-                        "recorded_at": at, "recorded_by": POOL_RECORDED_BY})
+                        "recorded_at": at, "recorded_by": recorded_by})
     problems = verify(store, rec)
     if problems:
         raise ArmingRefused("verification_failed", "; ".join(problems))

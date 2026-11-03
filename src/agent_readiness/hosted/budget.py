@@ -298,6 +298,38 @@ def add_evaluation(admission: Admission, store, *, budget: str, pool_id: str, fr
     AR.record_pool(store, terms, at=at)
 
 
+def delegated_terms(admission: Admission, store, *, budget: str, pool_id: str, frozen: str, variants: list[str], mode: str = "paid") -> dict:
+    """The exact terms of an evaluation the agent may record under the owner's standing authorization, and the sha256 that binds a later
+    `--delegated` record to exactly them (the non-interactive counterpart of typing the line). Read-only. Never the budget's first evaluation."""
+    import hashlib
+    from ..lifecycle import arming as AR
+    terms = plan_evaluation(admission, store, budget=budget, pool_id=pool_id, frozen=frozen, variants=variants, mode=mode)
+    text = AR.delegated_attestation(terms["attestation"])
+    return {**terms, "attestation": text, "attestation_sha256": hashlib.sha256(text.encode()).hexdigest()}
+
+
+def add_evaluation_delegated(admission: Admission, store, *, budget: str, pool_id: str, frozen: str, variants: list[str], expect_sha256: str,
+                             authorization: str, actor: str, at: str, mode: str = "paid") -> None:
+    from ..lifecycle import arming as AR
+    if len(authorization.strip()) < 20:
+        raise BudgetRefused("no_authorization", "a delegated record must cite the owner's written authorization")
+    t = delegated_terms(admission, store, budget=budget, pool_id=pool_id, frozen=frozen, variants=variants, mode=mode)
+    if expect_sha256 != t["attestation_sha256"]:
+        raise BudgetRefused("terms_mismatch", "the terms changed since they were reviewed (sha256 differs); nothing was recorded")
+    terms = {k: v for k, v in t.items() if k != "attestation_sha256"}
+    rec = AR.record_pool(store, terms, at=at, recorded_by=AR.DELEGATED_RECORDED_BY)
+    AR.log_delegation({"action": "evaluation-add", "budget": budget, "pool_id": rec.pool_id, "attestation_sha256": t["attestation_sha256"], "at": at,
+                       "actor": actor, "authorization": authorization.strip()})
+
+
+def use_evaluation_delegated(budget: str, pool_id: str, *, authorization: str, actor: str, at: str) -> None:
+    from ..lifecycle import arming as AR
+    if len(authorization.strip()) < 20:
+        raise BudgetRefused("no_authorization", "a delegated selection must cite the owner's written authorization")
+    use_evaluation(budget, pool_id)
+    AR.log_delegation({"action": "evaluation-use", "budget": budget, "pool_id": pool_id, "at": at, "actor": actor, "authorization": authorization.strip()})
+
+
 def use_evaluation(budget: str, pool_id: str) -> None:
     """Select which recorded evaluation the budget's launches run (takes effect for the next launch; a running one is unaffected)."""
     from ..lifecycle import arming as AR
@@ -351,6 +383,37 @@ def _print_status(st: dict) -> None:
             print(f"  allocation    {a['ref']} ({a['purpose']}): max {usd(a['max_microusd'])}" + (f", settled {usd(a['settled_microusd'])}" if a["settled_microusd"] is not None else ", held in full"))
 
 
+def _delegated(a) -> int:
+    """evaluation-add / evaluation-use without a terminal, under the owner's written standing authorization (audited; never the opening, an
+    allocation or a settlement, which stay owner-typed)."""
+    from datetime import datetime, timezone
+    from ..lifecycle import arming as AR
+    adm = Admission.open_existing(a.db)
+    actor = f"agent (Claude Code), non-interactive CLI (uid {os.getuid()})"
+    at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    try:
+        if a.cmd == "evaluation-add":
+            store = AR.open_store(Path(a.store or os.environ.get("AR_LIFECYCLE_STORE") or "/data/hosted/lifecycle/store"))
+            if a.dry_run:
+                t = delegated_terms(adm, store, budget=a.budget, pool_id=a.id, frozen=a.frozen, variants=a.variants)
+                print(t["attestation"])
+                print(f"sha256 {t['attestation_sha256']}")
+                return 0
+            if not a.expect_sha256:
+                print("refused: --delegated needs --expect-sha256 of the reviewed terms (see --dry-run)", file=sys.stderr)
+                return 2
+            add_evaluation_delegated(adm, store, budget=a.budget, pool_id=a.id, frozen=a.frozen, variants=a.variants, expect_sha256=a.expect_sha256,
+                                     authorization=a.delegated, actor=actor, at=at)
+            print(f"recorded evaluation {a.id} under delegated authorization (not selected; `evaluation-use` selects it)")
+            return 0
+        use_evaluation_delegated(a.budget, a.id, authorization=a.delegated, actor=actor, at=at)
+        print(f"selected {a.id} under delegated authorization")
+        return 0
+    except BudgetRefused as exc:
+        print(f"refused ({exc.code}): {exc.detail}", file=sys.stderr)
+        return 1
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m agent_readiness.hosted.budget", description="Separate evaluation budgets (owner tools).")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -370,9 +433,13 @@ def main(argv=None) -> int:
     s.add_argument("--frozen", required=True)
     s.add_argument("--variants", nargs="+", required=True, help="one version evaluated alone (e.g. polished) or two compared (e.g. original improved)")
     s.add_argument("--store")
+    s.add_argument("--delegated", metavar="AUTHORIZATION", help="non-interactive: record under the owner's written standing authorization (cite it)")
+    s.add_argument("--expect-sha256", help="with --delegated: the sha256 of the reviewed terms (print it with --dry-run)")
+    s.add_argument("--dry-run", action="store_true", help="with --delegated: print the exact terms and their sha256; record nothing")
     s = sub.add_parser("evaluation-use", help="select which recorded evaluation every new launch runs")
     s.add_argument("--budget", required=True)
     s.add_argument("--id", required=True)
+    s.add_argument("--delegated", metavar="AUTHORIZATION", help="non-interactive: select under the owner's written standing authorization (cite it)")
     s = sub.add_parser("allocate")
     s.add_argument("--budget", required=True)
     s.add_argument("--ref", required=True)
@@ -391,6 +458,9 @@ def main(argv=None) -> int:
             st = status(Admission.open_read_only(a.db))
             print(json.dumps(st, indent=1)) if a.json else _print_status(st)
             return 0
+        delegated = a.cmd in ("evaluation-add", "evaluation-use") and getattr(a, "delegated", None)
+        if delegated:
+            return _delegated(a)
         if not sys.stdin.isatty():
             print("refused: budget changes are owner actions at an interactive terminal", file=sys.stderr)
             return 2
