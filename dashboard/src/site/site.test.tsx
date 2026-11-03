@@ -8,7 +8,7 @@ import App from '../App';
 import { parse } from './router';
 import { evidence, headline, trial, isItemPage, replication } from './evidence';
 import { LATEST_LIVE } from './LatestLive';
-import { FEATURED, FIRST_LIVE, IMPROVEMENTS, LIVE } from './showcase';
+import { AFTER, AFTER_CHANGES, BEFORE, FIRST_LIVE, IMPROVEMENTS, LIVE } from './showcase';
 import { Home } from './Home';
 import { Demo } from './demo/Demo';
 import { Workspace } from './workspace/Workspace';
@@ -75,36 +75,38 @@ describe('recorded evidence (eval-9aaac35c)', () => {
 });
 
 describe('homepage (the featured Larkspur story)', () => {
-  it('tells the Larkspur story from the recorded live evaluation, links the journey, workspace and report, and calls no API', () => {
+  it('tells the before-and-after story from the recorded live evaluations, links the showcase, workspace and reports, and calls no API', () => {
     const f = noNetwork();
     act(() => root.render(<Home />));
     expect(host.querySelector('h1')?.textContent).toBe('See your website the way an agent does.');
     const hrefs = [...host.querySelectorAll('a')].map(a => a.getAttribute('href'));
-    for (const h of ['#/run', '#/lifecycle', `#/reports/${LIVE.id}`, '#/lifecycle/improve']) expect(hrefs).toContain(h);
+    for (const h of ['#/run', '#/lifecycle', '#/showcase', `#/reports/${BEFORE.id}`, `#/reports/${AFTER.id}`, `#/reports/${LIVE.id}`]) expect(hrefs).toContain(h);
     const text = host.textContent!;
-    const O = LIVE.totals.original, M = LIVE.totals.improved;
-    for (const s of [`${O.requests}`, `${M.requests}`, `${Math.round(100 * (O.requests - M.requests) / O.requests)}% fewer on Improved`, '0/3', '3/3',
-                     'Larkspur Community College', 'Run Original vs Improved', 'Measured live', ...IMPROVEMENTS.map(i => i.title)]) expect(text).toContain(s);
-    expect(text).toContain(LIVE.journeys['original-2'].steps.at(-1)!.memory!);                     // the agent's own words, unedited
-    expect(text).toContain(`${FIRST_LIVE.totals.original.requests} → ${FIRST_LIVE.totals.modified.requests}`);   // the first live run, kept as context
-    for (const h of [`#/reports/${FIRST_LIVE.id}`]) expect(hrefs).toContain(h);
+    const O = BEFORE.totals.polishedoriginal, M = AFTER.totals.modifiedpolished;
+    for (const s of [`${O.requests}`, `${M.requests}`, `${Math.round(100 * (O.requests - M.requests) / O.requests)}% fewer after the change`, '0/3', '3/3',
+                     'Larkspur Community College', 'Measured live', 'Before', 'After', ...AFTER_CHANGES.map(i => i.title)]) expect(text).toContain(s);
+    expect(text).toContain(BEFORE.journeys['polishedoriginal-2'].steps.at(-1)!.memory!);         // the agent's own words, unedited
+    expect(text).toContain(`${LIVE.totals.original.requests} → ${LIVE.totals.improved.requests}`);   // the earlier experiment, labelled as history
+    expect(text).not.toMatch(/[Pp]olished|Original vs Improved site|Run Original vs Improved/);       // no internal snapshot names; no stale call to action
     for (const s of ['post-hoc', 'inconclusive', 'p =', 'xploratory', 'verified', 'pre-registered']) expect(text).not.toContain(s);
-    expect(host.querySelector('main')!.textContent).not.toContain('Ironbark');                                // the earlier case study is only linked from the footer
+    expect(host.querySelector('main')!.textContent).not.toContain('Ironbark');
     expect(f).not.toHaveBeenCalled();
   });
   it('the recorded showcase numbers are internally consistent with the per-agent records', () => {
-    expect(LIVE.id).toBe('eval-c04fdb100d6b1c877de96dabe76eb052');                                   // the featured run: Original vs Improved, live
+    expect(LIVE.id).toBe('eval-c04fdb100d6b1c877de96dabe76eb052');                                   // the earlier experiment: Original vs Improved, live
     expect(LIVE.trials).toHaveLength(6); expect(FIRST_LIVE.trials).toHaveLength(12);
-    for (const [run, vs] of [[LIVE, ['original', 'improved']], [FIRST_LIVE, ['original', 'modified']]] as const) for (const v of vs) {
+    for (const [run, vs] of [[LIVE, ['original', 'improved']], [FIRST_LIVE, ['original', 'modified']], [BEFORE, ['polishedoriginal']], [AFTER, ['modifiedpolished']]] as const) for (const v of vs) {
       const ts = run.trials.filter(t => t.variant === v);
       expect(ts.reduce((a, t) => a + t.requests, 0)).toBe(run.totals[v].requests);
       expect(ts.filter(t => t.correct).length).toBe(run.correct[v]);
       expect(ts.filter(t => t.passed).length).toBe(run.passed[v]);
     }
     expect([LIVE.correct.original, LIVE.correct.improved, LIVE.totals.original.requests, LIVE.totals.improved.requests]).toEqual([0, 3, 39, 6]);
+    expect([BEFORE.correct.polishedoriginal, AFTER.correct.modifiedpolished, BEFORE.totals.polishedoriginal.requests, AFTER.totals.modifiedpolished.requests]).toEqual([0, 3, 36, 15]);
     expect(LIVE.cost_usd).toBeCloseTo(LIVE.totals.original.cost_usd + LIVE.totals.improved.cost_usd, 4);
-    expect(LATEST_LIVE.id).toBe(FEATURED.liveEvaluation);
+    expect([LATEST_LIVE.before, LATEST_LIVE.after]).toEqual([BEFORE.id, AFTER.id]);
     for (const x of IMPROVEMENTS) if (x.preview) expect(existsSync(join(__dirname, 'showcase', 'frames', `${x.preview}.webp`))).toBe(true);
+    for (const v of ['polishedoriginal', 'modifiedpolished']) expect(existsSync(join(__dirname, 'showcase', 'frames', `site-${v}-courses.webp`))).toBe(true);
   });
 });
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { SiteFooter, SiteHeader } from '../Shell';
 import { api, fmtUsd, words, type EvaluationSummary, type Finding, type Generation, type Overview, type Suite } from '../../lib/lifecycleApi';
-import { CARD_FACTS, FEATURED, FEATURED_TASK, FIRST_LIVE, IMPROVEMENTS, JOURNEY, LIVE, PAGE_AUDIT, VERSIONS, fewerPct, journeyOf, showcaseFrame, trialOf, type LiveRecord } from '../showcase';
+import { CARD_FACTS, FEATURED, FEATURED_TASK, FIRST_LIVE, IMPROVEMENTS, JOURNEY, LIVE, PAGE_AUDIT, VERSIONS, fewerPct, journeyOf, showcaseFrame, trialOf, type LiveRecord, AFTER, AFTER_V, BEFORE, BEFORE_V } from '../showcase';
 import { Failed, Loading, useLoad, VariantName } from './parts';
 import './lifecycle.css';
 
@@ -244,7 +244,7 @@ function ReevaluateStep({ ov }: { ov: Overview | null }) {
   const ev = ov?.evaluation?.evaluation ?? null;
   const ready = !!ev && (ev.launches === null || ev.launches.left > 0) && ev.mode === 'paid';     // launches null: the shared budget's evaluation
   return <>
-    <p className="lede sm">The same frozen tasks run again on Original and Improved, with fresh agents, the same model and the same limits. The product re-checks
+    <p className="lede sm">The same frozen tasks run again on the changed website, with fresh agents, the same model and the same limits. The product re-checks
       every task on the new site first: a task whose correct answer changed would be set aside, with the reason.</p>
     <div className="lc-launch">
       <div>
@@ -253,9 +253,10 @@ function ReevaluateStep({ ov }: { ov: Overview | null }) {
           <strong>{ev.launches ? `${ev.launches.left} of ${ev.launches.max} live run${ev.launches.max === 1 ? '' : 's'} left` : 'runs while the A$20 evaluation budget lasts'}</strong></p>
           : <p>No live run is open right now. The owner opens a set number of runs; completed evaluations stay available to everyone.</p>}
         <p className="muted">Start it in the workspace with your access code, watch every agent work live, and the report appears when they finish (about 6–9 minutes for {ev?.options[0]?.trials ?? 6} agents).</p>
-        <p>Latest live run, {FEATURED.liveDate}: correct answers {LIVE.correct.original}/{LIVE.tasks.length} on Original → <strong>{LIVE.correct.improved}/{LIVE.tasks.length} on Improved</strong>, {LIVE.totals.original.requests} → {LIVE.totals.improved.requests} model requests. <a className="link" href={`#/reports/${LIVE.id}`}>Open its report</a></p>
+        <p>Latest, 4 Nov: <strong>before {BEFORE.correct[BEFORE_V]}/{BEFORE.tasks.length} → after {AFTER.correct[AFTER_V]}/{AFTER.tasks.length}</strong> correct, {BEFORE.totals[BEFORE_V].requests} → {AFTER.totals[AFTER_V].requests} model requests. <a className="link" href="#/showcase">Watch before and after</a></p>
+        <p className="muted">This journey’s first experiment, {FEATURED.liveDate}: {LIVE.correct.original}/{LIVE.tasks.length} on Original → {LIVE.correct.improved}/{LIVE.tasks.length} on Improved, {LIVE.totals.original.requests} → {LIVE.totals.improved.requests} requests. <a className="link" href={`#/reports/${LIVE.id}`}>Open its report</a></p>
       </div>
-      <a className="btn btn-signal" href="#/run">{ready ? 'Run Original vs Improved' : 'Open the workspace'} <span className="arr" aria-hidden="true">→</span></a>
+      <a className="btn btn-signal" href="#/run">{ready ? 'Run it live' : 'Open the workspace'} <span className="arr" aria-hidden="true">→</span></a>
     </div>
   </>;
 }

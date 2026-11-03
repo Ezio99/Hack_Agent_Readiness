@@ -12,30 +12,28 @@ beforeEach(() => { host = document.createElement('div'); document.body.append(ho
 afterEach(() => { act(() => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
 const reducedMotion = (on: boolean) => vi.stubGlobal('matchMedia', (q: string) => ({ matches: on && q.includes('reduce'), media: q, addEventListener() {}, removeEventListener() {} }));
 
-describe('the cinematic Larkspur showcase (#/showcase)', () => {
+describe('the cinematic showcase (#/showcase): Before -> After', () => {
   it('is its own route, separate from the functional journey', () => {
     expect(parse('#/showcase')).toEqual({ name: 'showcase' });
     expect(parse('#/demo')).toEqual({ name: 'demo', scene: undefined });
   });
 
-  it('states the recorded numbers of both live evaluations and the measured outcome, calling no API', () => {
+  it('states the recorded Before and After results, never internal snapshot names, and calls no API', () => {
     reducedMotion(true);
     const f = vi.fn(async () => { throw new Error('no network expected'); }); vi.stubGlobal('fetch', f);
     act(() => root.render(<Story />));
     const text = host.textContent ?? '';
-    const v1 = (data as any).polished_v1, v2 = (data as any).polished_v2;
-    expect(v1.id).toBe('eval-abc5fc838a5428b6753a424e189ba1cc');
-    expect(v2.id).toBe('eval-11ee8a1e6dad19998865db7187c8cb5e');
-    expect(text).toContain('v2 did not beat v1.');
+    const b = (data as any).before, a = (data as any).after;
+    expect(b.id).toBe('eval-ea13944e8ba5c08e8893426b2f8b1c8f');
+    expect(a.id).toBe('eval-5cf934b372942da74f5157c5fca39fd6');
     const table = [...host.querySelectorAll('.st-table tbody tr')].map(r => [...r.children].map(c => c.textContent));
-    expect(table).toContainEqual(['Model requests', String(v1.totals.polished.requests), String(v2.totals.polished2.requests)]);
-    expect(table).toContainEqual(['Correct answers', `${v1.correct.polished}/3`, `${v2.correct.polished2}/3`]);
-    expect(table).toContainEqual(['Actual cost', `US$${v1.totals.polished.cost_usd.toFixed(2)}`, `US$${v2.totals.polished2.cost_usd.toFixed(2)}`]);
-    // the friction quote is the agent's own recorded memory
-    const step3 = v1.journeys['polished-2'].steps.find((s: any) => s.step === 3);
-    expect(text).toContain(step3.memory);
+    expect(table).toContainEqual(['Correct answers', `${b.correct.polishedoriginal}/3`, `${a.correct.modifiedpolished}/3`]);
+    expect(table).toContainEqual(['Model requests', String(b.totals.polishedoriginal.requests), String(a.totals.modifiedpolished.requests)]);
+    expect(table).toContainEqual(['Actual cost', `US$${b.totals.polishedoriginal.cost_usd.toFixed(2)}`, `US$${a.totals.modifiedpolished.cost_usd.toFixed(2)}`]);
+    const last = b.journeys['polishedoriginal-2'].steps.at(-1);
+    expect(text).toContain(last.memory);                                              // the agent's own recorded words
+    expect(text).not.toMatch(/polished|Polished|v1|v2 /);                             // no internal names on the page
     expect(f).not.toHaveBeenCalled();
-    // every image has alt text and a recorded source
     for (const img of host.querySelectorAll('img')) expect(img.getAttribute('alt')).toBeTruthy();
   });
 });

@@ -129,7 +129,7 @@ it('re-evaluation sends launches to the workspace (the one launch path) and show
   await mount(<Lifecycle step="reevaluate" />);
   const t = sec().textContent!;
   expect(t).toContain('Ready for a live run'); expect(t).toContain('4 of 4 live runs left'); expect(t).toContain('Improved');
-  expect(sec().querySelector('a[href="#/run"]')!.textContent).toContain('Run Original vs Improved');
+  expect(sec().querySelector('a[href="#/run"]')!.textContent).toContain('Run it live');
   document.body.innerHTML = '';
   // the shared A$20 budget's evaluation has NO launch count (launches: null): the journey must render, not crash (production regression 2026-11-04)
   const shared = { ...armed, evaluation: { ...armed.evaluation, evaluation: { ...armed.evaluation.evaluation, arming_id: 'ar-a20-2026-11', launches: null } } };
@@ -137,7 +137,7 @@ it('re-evaluation sends launches to the workspace (the one launch path) and show
   await mount(<Lifecycle step="reevaluate" />);
   const u = sec().textContent!;
   expect(u).toContain('Ready for a live run'); expect(u).toContain('runs while the A$20 evaluation budget lasts'); expect(u).not.toMatch(/live runs? left/);
-  expect(sec().querySelector('a[href="#/run"]')!.textContent).toContain('Run Original vs Improved');
+  expect(sec().querySelector('a[href="#/run"]')!.textContent).toContain('Run it live');
 });
 
 it('shows the recorded task generation: proposed, accepted and its model cost; no generate control', async () => {

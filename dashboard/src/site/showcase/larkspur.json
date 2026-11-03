@@ -473,6 +473,36 @@
    "variant": "polished2",
    "path": "/courses?level=Beginner&campus=&day=Weekend",
    "snapshot_sha256": "1b02ed0907330a1e17ce414ef232081922769554a322b93632f43d38ce7c6106"
+  },
+  "site-polishedoriginal-home": {
+   "variant": "polishedoriginal",
+   "path": "/",
+   "snapshot_sha256": "2ee4a7be2bd0cfb66adef68779317ea40a27b55c7330cf4ca23bdc85ec91169a"
+  },
+  "site-polishedoriginal-courses": {
+   "variant": "polishedoriginal",
+   "path": "/courses",
+   "snapshot_sha256": "2ee4a7be2bd0cfb66adef68779317ea40a27b55c7330cf4ca23bdc85ec91169a"
+  },
+  "site-polishedoriginal-courses-wheel-thrown-pottery": {
+   "variant": "polishedoriginal",
+   "path": "/courses/wheel-thrown-pottery",
+   "snapshot_sha256": "2ee4a7be2bd0cfb66adef68779317ea40a27b55c7330cf4ca23bdc85ec91169a"
+  },
+  "site-modifiedpolished-home": {
+   "variant": "modifiedpolished",
+   "path": "/",
+   "snapshot_sha256": "2a16c38be474b38f4634307e44a782eddadd1dba48b45d9c85dcb3059530569f"
+  },
+  "site-modifiedpolished-courses": {
+   "variant": "modifiedpolished",
+   "path": "/courses",
+   "snapshot_sha256": "2a16c38be474b38f4634307e44a782eddadd1dba48b45d9c85dcb3059530569f"
+  },
+  "site-modifiedpolished-courses-wheel-thrown-pottery": {
+   "variant": "modifiedpolished",
+   "path": "/courses/wheel-thrown-pottery",
+   "snapshot_sha256": "2a16c38be474b38f4634307e44a782eddadd1dba48b45d9c85dcb3059530569f"
   }
  },
  "page_audit": {
@@ -1300,6 +1330,626 @@
       "memory": "Found 3 courses meeting both criteria (<= $180 and <=6 weeks) from compare table.",
       "goal": "Return final answer with qualifying courses.",
       "frame": "11ee-polished2-t3-s2"
+     }
+    ]
+   }
+  }
+ },
+ "before": {
+  "id": "eval-ea13944e8ba5c08e8893426b2f8b1c8f",
+  "title": "Live evaluation · Larkspur Community College · Before",
+  "started_at": "2026-11-03T23:31:41.657393+00:00",
+  "finished_at": "2026-11-03T23:36:59.386287+00:00",
+  "agent": {
+   "model": "muse-spark-1.3",
+   "reasoning_effort": "low",
+   "max_completion_tokens": 4096,
+   "profile": "suite-v2-compat2"
+  },
+  "cost_usd": 0.521494,
+  "tasks": [
+   {
+    "n": 1,
+    "task_id": "gen-23f1802ee0-n",
+    "wording": "I need a course that costs $250 or less and still has at least 5 seats left. What qualifies?",
+    "capability": "multi_condition_filter"
+   },
+   {
+    "n": 2,
+    "task_id": "gen-8334922e62-n",
+    "wording": "I work full-time on weekdays, so I can only do Saturday or Sunday. List Beginner courses that meet on Saturday or Sunday.",
+    "capability": "either_of"
+   },
+   {
+    "n": 3,
+    "task_id": "gen-f302fa8fe2-n",
+    "wording": "I just graduated and need a cheap, quick skill for my CV. Find courses costing $180 or less that last 6 weeks or less.",
+    "capability": "multi_condition_filter"
+   }
+  ],
+  "totals": {
+   "polishedoriginal": {
+    "requests": 36,
+    "seconds": 311,
+    "cost_usd": 0.521491
+   }
+  },
+  "passed": {
+   "polishedoriginal": 0
+  },
+  "correct": {
+   "polishedoriginal": 0
+  },
+  "trials": [
+   {
+    "task": 1,
+    "variant": "polishedoriginal",
+    "passed": false,
+    "correct": false,
+    "requests": 13,
+    "limit": 14,
+    "seconds": 89.0,
+    "cost_usd": 0.180829,
+    "dead_end": true,
+    "path": [
+     "/",
+     "/courses",
+     "/courses/watercolour-foundations",
+     "/courses",
+     "/courses/life-drawing-studio",
+     "/courses",
+     "/courses/introduction-to-python",
+     "/courses",
+     "/courses/intro-to-python",
+     "/courses"
+    ]
+   },
+   {
+    "task": 2,
+    "variant": "polishedoriginal",
+    "passed": false,
+    "correct": false,
+    "requests": 11,
+    "limit": 14,
+    "seconds": 106.4,
+    "cost_usd": 0.159292,
+    "dead_end": false,
+    "path": [
+     "/",
+     "/courses",
+     "/courses/watercolour-foundations",
+     "/courses",
+     "/courses/beginners-yoga",
+     "/courses",
+     "/courses/wheel-thrown-pottery",
+     "/courses"
+    ]
+   },
+   {
+    "task": 3,
+    "variant": "polishedoriginal",
+    "passed": false,
+    "correct": false,
+    "requests": 12,
+    "limit": 14,
+    "seconds": 115.3,
+    "cost_usd": 0.18137,
+    "dead_end": false,
+    "path": [
+     "/",
+     "/courses",
+     "/courses/watercolour-foundations",
+     "/courses",
+     "/courses/life-drawing-studio",
+     "/courses",
+     "/courses/mindful-meditation",
+     "/courses/beginners-yoga"
+    ]
+   }
+  ],
+  "journeys": {
+   "polishedoriginal-1": {
+    "answer": [
+     "No qualifying course confirmed within step budget - checked: Watercolour foundations $260 (7 seats) exceeds $250, Life drawing studio $210 (3 seats) below 5-seat minimum, Introduction to Python $340 exceeds $250. Remaining 11 courses not checked due to step limit."
+    ],
+    "steps": [
+     {
+      "step": 1,
+      "path": "/",
+      "memory": "Homepage shows 14 courses. Need to browse all to filter by price <=$250 and seats >=5.",
+      "goal": "Click Browse all courses to see course list",
+      "frame": null
+     },
+     {
+      "step": 2,
+      "path": "/courses",
+      "memory": "On /courses page with 14 courses visible. Need price and seats for each to filter <=$250 and >=5 seats.",
+      "goal": "Get course URLs to visit each detail page",
+      "frame": null
+     },
+     {
+      "step": 3,
+      "path": "/courses",
+      "memory": "14 courses URLs collected. Need to visit each to get price <=250 and seats >=5.",
+      "goal": "Visit first course page to get price and seats.",
+      "frame": null
+     },
+     {
+      "step": 4,
+      "path": "/courses/watercolour-foundations",
+      "memory": "Course 1/14 checked: Watercolour foundations $260 (too expensive). Need to check remaining 13 courses for price <=250 and seats >=5.",
+      "goal": "Return to courses list to get all course data efficiently.",
+      "frame": null
+     },
+     {
+      "step": 5,
+      "path": "/courses",
+      "memory": "Back on /courses list. Need to collect hrefs for 14 courses then visit each detail page for price and seats.",
+      "goal": "Extract course links with hrefs to visit each detail page.",
+      "frame": null
+     },
+     {
+      "step": 6,
+      "path": "/courses",
+      "memory": "1/14 checked: Watercolour $260 fails price. 13 remaining to check for <=$250 and >=5 seats.",
+      "goal": "Visit life-drawing-studio detail page for price and seats",
+      "frame": null
+     },
+     {
+      "step": 7,
+      "path": "/courses/life-drawing-studio",
+      "memory": "Checked 2/14: Watercolour $260 fails price, Life drawing $210 fails seats (3). Need price <=250 and seats >=5. Need efficient bulk check of remaining 12.",
+      "goal": "Return to courses list to bulk extract prices and seats",
+      "frame": null
+     },
+     {
+      "step": 8,
+      "path": "/courses",
+      "memory": "Checked 2/14: Watercolour $260 fails price, Life drawing $210 fails seats (3). Need to check remaining 12 for <=$250 and >=5 seats.",
+      "goal": "Visit Introduction to Python detail page to check price and seats",
+      "frame": "ea13-polishedoriginal-t1-s8"
+     },
+     {
+      "step": 9,
+      "path": "/courses/introduction-to-python",
+      "memory": "2 courses checked, python slug guess failed. Need to return to /courses to get correct slugs.",
+      "goal": "Navigate back to courses list to get correct URLs",
+      "frame": "ea13-polishedoriginal-t1-s9"
+     },
+     {
+      "step": 10,
+      "path": "/courses",
+      "memory": "Checked 2/14 courses. Need correct slugs with href extraction. Back on list page.",
+      "goal": "Extract course links with href attributes to get correct slugs",
+      "frame": null
+     },
+     {
+      "step": 11,
+      "path": "/courses",
+      "memory": "Have 14 slugs. Checked 2 fail. Need to check remaining 12 with only 3 steps left. Will check high-likelihood courses.",
+      "goal": "Visit intro-to-python detail page for price and seats",
+      "frame": null
+     },
+     {
+      "step": 12,
+      "path": "/courses/intro-to-python",
+      "memory": "Checked 3/14: Watercolour $260 fail price, Life drawing $210 fail seats (3), Intro Python $340 fail price. Need courses <=$250 and >=5 seats. Returning to list to see all prices/seats at once.",
+      "goal": "Navigate to courses list to view all prices and seats together.",
+      "frame": null
+     },
+     {
+      "step": 13,
+      "path": "/courses",
+      "memory": "Checked 3/14 courses, none met both criteria. Step budget exhausted, consolidating partial results.",
+      "goal": "Call done with partial findings due to step limit.",
+      "frame": "ea13-polishedoriginal-t1-s13"
+     }
+    ]
+   },
+   "polishedoriginal-2": {
+    "answer": [
+     "Beginners yoga",
+     "Wheel-thrown pottery"
+    ],
+    "steps": [
+     {
+      "step": 1,
+      "path": "/",
+      "memory": "Homepage shows 14 courses. Need to browse all courses to filter Beginner weekend courses.",
+      "goal": "Navigate to courses listing page",
+      "frame": "ea13-polishedoriginal-t2-s1"
+     },
+     {
+      "step": 2,
+      "path": "/courses",
+      "memory": "On /courses page listing 14 courses. Need to check each for Beginner level + Sat/Sun meeting.",
+      "goal": "Open first course detail page to check level and schedule.",
+      "frame": "ea13-polishedoriginal-t2-s2"
+     },
+     {
+      "step": 3,
+      "path": "/courses/watercolour-foundations",
+      "memory": "Checked 1/14: Watercolour foundations (Beginner, Tuesday) excluded. Need to check remaining 13 courses.",
+      "goal": "Return to courses listing to systematically check remaining courses",
+      "frame": "ea13-polishedoriginal-t2-s3"
+     },
+     {
+      "step": 4,
+      "path": "/courses",
+      "memory": "Checked 1/14: Watercolour foundations excluded. Got listing of 14 courses, need hrefs to visit systematically.",
+      "goal": "Get all course URLs to visit each detail page.",
+      "frame": "ea13-polishedoriginal-t2-s4"
+     },
+     {
+      "step": 5,
+      "path": "/courses",
+      "memory": "Checked 1/14 Watercolour (Beginner Tue, excluded). Have 14 URLs. Now checking beginners-yoga.",
+      "goal": "Open beginners-yoga detail to check level and meeting days.",
+      "frame": "ea13-polishedoriginal-t2-s5"
+     },
+     {
+      "step": 6,
+      "path": "/courses/beginners-yoga",
+      "memory": "Checked 2/14: Watercolour excluded, Beginners yoga qualifies (Beginner Sat). Need to check remaining 12 efficiently.",
+      "goal": "Return to courses listing to extract all levels/days at once",
+      "frame": "ea13-polishedoriginal-t2-s6"
+     },
+     {
+      "step": 7,
+      "path": "/courses",
+      "memory": "2/14 checked: Watercolour excluded (Tue), Beginners yoga qualifies (Beginner Sat). Need remaining 12 courses details.",
+      "goal": "Get all course URLs to systematically check level and schedule",
+      "frame": "ea13-polishedoriginal-t2-s7"
+     },
+     {
+      "step": 8,
+      "path": "/courses",
+      "memory": "2/14 checked: Watercolour excluded (Beginner Tue), Beginners yoga qualifies (Beginner Sat). Have all 14 URLs. Need to check remaining 12 for Beginner + Sat/Sun with limited steps.",
+      "goal": "Check wheel-thrown-pottery detail for level and meeting days.",
+      "frame": "ea13-polishedoriginal-t2-s8"
+     },
+     {
+      "step": 9,
+      "path": "/courses/wheel-thrown-pottery",
+      "memory": "3/14 checked: Watercolour excluded (Beginner Tue), Beginners yoga qualifies (Beginner Sat), Wheel-thrown pottery qualifies (Beginner Sat). Need to check remaining 11 efficiently via listing page details.",
+      "goal": "Return to courses listing to see if level and day are visible without opening each course.",
+      "frame": "ea13-polishedoriginal-t2-s9"
+     },
+     {
+      "step": 10,
+      "path": "/courses",
+      "memory": "3/14 checked: Watercolour excluded (Beginner Tue), Yoga qualifies (Beginner Sat), Pottery qualifies (Beginner Sat). Need remaining 11 but low on steps (step 10/14). Trying efficient bulk check.",
+      "goal": "Enumerate remaining course URLs and reveal lower courses on page.",
+      "frame": "ea13-polishedoriginal-t2-s10"
+     },
+     {
+      "step": 11,
+      "path": "/courses",
+      "memory": "Checked 3/14: Watercolour excluded (Beginner Tue), Beginners yoga qualifies (Beginner Sat), Wheel-thrown pottery qualifies (Beginner Sat). Out of steps, returning confirmed 2 weekend Beginner courses.",
+      "goal": "Return confirmed Beginner weekend courses with available evidence.",
+      "frame": "ea13-polishedoriginal-t2-s11"
+     }
+    ]
+   },
+   "polishedoriginal-3": {
+    "answer": [
+     "Beginners yoga - $150, 6 weeks",
+     "Mindful meditation - $120, 4 weeks"
+    ],
+    "steps": [
+     {
+      "step": 1,
+      "path": "/",
+      "memory": "Homepage shows 14 courses. Need to browse all to filter by price <=$180 and duration <=6 weeks.",
+      "goal": "Click Browse all courses to see course list",
+      "frame": null
+     },
+     {
+      "step": 2,
+      "path": "/courses",
+      "memory": "On /courses page listing 14 courses, need price and duration for each",
+      "goal": "Get URLs for all course pages",
+      "frame": null
+     },
+     {
+      "step": 3,
+      "path": "/courses",
+      "memory": "Have 14 course links. Need to visit each to check price <=180 and duration <=6 weeks. Starting visits.",
+      "goal": "Visit watercolour foundations course page to get price and duration",
+      "frame": null
+     },
+     {
+      "step": 4,
+      "path": "/courses/watercolour-foundations",
+      "memory": "Watercolour foundations: $260, 6 weeks - excluded (too expensive). Need to check remaining 13 courses.",
+      "goal": "Return to courses list to get all course URLs",
+      "frame": null
+     },
+     {
+      "step": 5,
+      "path": "/courses",
+      "memory": "Watercolour excluded ($260). Need to check 13 remaining courses for price <=180 and duration <=6 weeks.",
+      "goal": "Get all course page URLs to visit them systematically",
+      "frame": null
+     },
+     {
+      "step": 6,
+      "path": "/courses",
+      "memory": "Watercolour excluded $260. Have 14 URLs. Trying multi-tab navigation to check 3 at once.",
+      "goal": "Open three course pages in new tabs to read price and duration",
+      "frame": null
+     },
+     {
+      "step": 7,
+      "path": "/courses/life-drawing-studio",
+      "memory": "Watercolour $260 6w excluded, Life drawing $210 8w excluded. Need 12 more courses checked for price <=180 and duration <=6w.",
+      "goal": "Switch to courses list and search for price data on listing page",
+      "frame": null
+     },
+     {
+      "step": 8,
+      "path": "/courses",
+      "memory": "Watercolour $260 excluded, Life drawing $210 8w excluded. Need price/duration for 12 remaining courses with only 6 steps left.",
+      "goal": "Get exact course URLs to visit them systematically",
+      "frame": null
+     },
+     {
+      "step": 9,
+      "path": "/courses",
+      "memory": "Excluded Watercolour $260 and Life drawing $210 8w. Need price/duration for 12 remaining courses. Checking if listing page contains hidden price/duration data to avoid visiting each page.",
+      "goal": "Check if courses listing page contains price or duration info via search",
+      "frame": null
+     },
+     {
+      "step": 10,
+      "path": "/courses",
+      "memory": "Watercolour $260 excluded, Life drawing $210 8w excluded. Need price/duration for 12 remaining. Trying to get hrefs and check likely-cheap meditation course.",
+      "goal": "Get all course hrefs and open meditation course to check price/duration.",
+      "frame": null
+     },
+     {
+      "step": 11,
+      "path": "/courses/mindful-meditation",
+      "memory": "Confirmed: Mindful meditation $120 4w qualifies. Excluded Watercolour $260, Life drawing $210 8w. Need to check 11 remaining courses with 3 steps left by opening multiple tabs.",
+      "goal": "Open three more course pages to check price/duration",
+      "frame": null
+     },
+     {
+      "step": 12,
+      "path": "/courses/beginners-yoga",
+      "memory": "Confirmed 2 qualifying courses: mindful-meditation $120 4w, beginners-yoga $150 6w. Excluded watercolour $260 and life-drawing $210 8w. Out of steps, delivering partial.",
+      "goal": "Done with verified qualifying courses.",
+      "frame": "ea13-polishedoriginal-t3-s12"
+     }
+    ]
+   }
+  }
+ },
+ "after": {
+  "id": "eval-5cf934b372942da74f5157c5fca39fd6",
+  "title": "Live evaluation · Larkspur Community College · After",
+  "started_at": "2026-11-03T23:42:34.293195+00:00",
+  "finished_at": "2026-11-03T23:44:41.882603+00:00",
+  "agent": {
+   "model": "muse-spark-1.3",
+   "reasoning_effort": "low",
+   "max_completion_tokens": 4096,
+   "profile": "suite-v2-compat2"
+  },
+  "cost_usd": 0.204389,
+  "tasks": [
+   {
+    "n": 1,
+    "task_id": "gen-23f1802ee0-n",
+    "wording": "I need a course that costs $250 or less and still has at least 5 seats left. What qualifies?",
+    "capability": "multi_condition_filter"
+   },
+   {
+    "n": 2,
+    "task_id": "gen-8334922e62-n",
+    "wording": "I work full-time on weekdays, so I can only do Saturday or Sunday. List Beginner courses that meet on Saturday or Sunday.",
+    "capability": "either_of"
+   },
+   {
+    "n": 3,
+    "task_id": "gen-f302fa8fe2-n",
+    "wording": "I just graduated and need a cheap, quick skill for my CV. Find courses costing $180 or less that last 6 weeks or less.",
+    "capability": "multi_condition_filter"
+   }
+  ],
+  "totals": {
+   "modifiedpolished": {
+    "requests": 15,
+    "seconds": 121,
+    "cost_usd": 0.204388
+   }
+  },
+  "passed": {
+   "modifiedpolished": 1
+  },
+  "correct": {
+   "modifiedpolished": 3
+  },
+  "trials": [
+   {
+    "task": 1,
+    "variant": "modifiedpolished",
+    "passed": false,
+    "correct": true,
+    "requests": 6,
+    "limit": 14,
+    "seconds": 48.1,
+    "cost_usd": 0.083718,
+    "dead_end": false,
+    "path": [
+     "/",
+     "/courses"
+    ]
+   },
+   {
+    "task": 2,
+    "variant": "modifiedpolished",
+    "passed": true,
+    "correct": true,
+    "requests": 6,
+    "limit": 14,
+    "seconds": 45.8,
+    "cost_usd": 0.080993,
+    "dead_end": false,
+    "path": [
+     "/",
+     "/courses"
+    ]
+   },
+   {
+    "task": 3,
+    "variant": "modifiedpolished",
+    "passed": false,
+    "correct": true,
+    "requests": 3,
+    "limit": 14,
+    "seconds": 27.2,
+    "cost_usd": 0.039677,
+    "dead_end": false,
+    "path": [
+     "/",
+     "/courses"
+    ]
+   }
+  ],
+  "journeys": {
+   "modifiedpolished-1": {
+    "answer": [
+     "Spreadsheets for small business - $180, 9 seats left",
+     "Conversational Italian 1 - $230, 6 seats left",
+     "Spanish conversation 2 - $230, 8 seats left",
+     "Beginners yoga - $150, 12 seats left",
+     "Mindful meditation - $120, 15 seats left"
+    ],
+    "steps": [
+     {
+      "step": 1,
+      "path": "/",
+      "memory": "Homepage shows 14 courses. Need to browse all to find cost <=250 and seats >=5.",
+      "goal": "Click Browse all courses to see course list",
+      "frame": "5cf9-modifiedpolished-t1-s1"
+     },
+     {
+      "step": 2,
+      "path": "/courses",
+      "memory": "Seen first row: no qualifier yet. Need to scroll for more courses.",
+      "goal": "Scroll down to see remaining courses fees and seats",
+      "frame": "5cf9-modifiedpolished-t1-s2"
+     },
+     {
+      "step": 3,
+      "path": "/courses",
+      "memory": "Identified 5 qualifiers so far: Spreadsheets ($180,9), Italian1 ($230,6), Spanish2 ($230,8), Yoga ($150,12), Meditation ($120,15). Need to verify top courses Life drawing ($210) seats.",
+      "goal": "Scroll up to check seats for top courses",
+      "frame": "5cf9-modifiedpolished-t1-s3"
+     },
+     {
+      "step": 4,
+      "path": "/courses",
+      "memory": "Top row verified: Watercolour $260/7 fails cost, Life drawing $210/3 fails seats, Wheel $395/2 fails, Python $340/11 fails cost. Need to document lower courses seats/fees.",
+      "goal": "Scroll down to view middle and bottom course cards with fees and seats.",
+      "frame": "5cf9-modifiedpolished-t1-s4"
+     },
+     {
+      "step": 5,
+      "path": "/courses",
+      "memory": "Confirmed middle section: Spreadsheets 180/9 qualifies, Italian1 230/6 qualifies, Japanese 245/0 fails, Spanish2 230/8 qualifies, Yoga 150/12 qualifies, Meditation 120/15 qualifies. Need full seats list to be thorough.",
+      "goal": "Search page for seats and fee data to verify all courses.",
+      "frame": "5cf9-modifiedpolished-t1-s5"
+     },
+     {
+      "step": 6,
+      "path": "/courses",
+      "memory": "Verified all 14 courses. 5 qualify for cost <=250 and seats >=5: Spreadsheets, Italian1, Spanish2, Yoga, Meditation.",
+      "goal": "Return final answer with qualifying courses.",
+      "frame": "5cf9-modifiedpolished-t1-s6"
+     }
+    ]
+   },
+   "modifiedpolished-2": {
+    "answer": [
+     "Wheel-thrown pottery",
+     "Beginners yoga",
+     "Mindful meditation",
+     "Home electrical basics"
+    ],
+    "steps": [
+     {
+      "step": 1,
+      "path": "/",
+      "memory": "Homepage shows 14 courses. Need to browse all courses to filter Beginner + weekend.",
+      "goal": "Navigate to Courses listing page",
+      "frame": "5cf9-modifiedpolished-t2-s1"
+     },
+     {
+      "step": 2,
+      "path": "/courses",
+      "memory": "Seen 12 courses; identified 4 candidates: Wheel-thrown pottery (Sat), Beginners yoga (Sat), Mindful meditation (Sun), Home electrical basics (Sat). Need to check remaining courses below.",
+      "goal": "Scroll down to see remaining courses to ensure complete list",
+      "frame": "5cf9-modifiedpolished-t2-s2"
+     },
+     {
+      "step": 3,
+      "path": "/courses",
+      "memory": "Full 14-course catalog reviewed. 4 qualify: Wheel-thrown pottery (Sat), Beginners yoga (Sat), Mindful meditation (Sun), Home electrical basics (Sat). Need final scroll to confirm no additional courses below.",
+      "goal": "Scroll down to confirm catalog end and no missing courses.",
+      "frame": "5cf9-modifiedpolished-t2-s3"
+     },
+     {
+      "step": 4,
+      "path": "/courses",
+      "memory": "Full catalog of 14 courses reviewed. 4 Beginner weekend: Wheel-thrown pottery Sat, Beginners yoga Sat, Mindful meditation Sun, Home electrical basics Sat. Need to scroll up to verify exact titles for output.",
+      "goal": "Scroll to top to verify exact course names for final answer.",
+      "frame": "5cf9-modifiedpolished-t2-s4"
+     },
+     {
+      "step": 5,
+      "path": "/courses",
+      "memory": "Verified top section exact titles. Need to scroll down to verify bottom Beginner weekend titles and confirm no missing courses.",
+      "goal": "Scroll down to verify remaining Beginner weekend course titles.",
+      "frame": "5cf9-modifiedpolished-t2-s5"
+     },
+     {
+      "step": 6,
+      "path": "/courses",
+      "memory": "Full 14-course catalog reviewed. 4 Beginner courses meet on Saturday/Sunday: Wheel-thrown pottery (Sat), Beginners yoga (Sat), Mindful meditation (Sun), Home electrical basics (Sat). Ready to answer.",
+      "goal": "Return final list of 4 Beginner weekend courses.",
+      "frame": "5cf9-modifiedpolished-t2-s6"
+     }
+    ]
+   },
+   "modifiedpolished-3": {
+    "answer": [
+     "Spreadsheets for small business - $180, 4 weeks",
+     "Beginners yoga - $150, 6 weeks",
+     "Mindful meditation - $120, 4 weeks"
+    ],
+    "steps": [
+     {
+      "step": 1,
+      "path": "/",
+      "memory": "Homepage shows 14 courses. Need to browse all courses to filter by price and duration.",
+      "goal": "Browse all courses list",
+      "frame": "5cf9-modifiedpolished-t3-s1"
+     },
+     {
+      "step": 2,
+      "path": "/courses",
+      "memory": "Found 3 matching so far: Spreadsheets $180 4w, Yoga $150 6w, Meditation $120 4w. Need to see remaining courses.",
+      "goal": "Scroll down to see remaining courses",
+      "frame": "5cf9-modifiedpolished-t3-s2"
+     },
+     {
+      "step": 3,
+      "path": "/courses",
+      "memory": "Reviewed all 14 courses. Only 3 meet both criteria ($180 or less AND 6 weeks or less): Spreadsheets, Yoga, Meditation.",
+      "goal": "Done - return qualifying courses",
+      "frame": "5cf9-modifiedpolished-t3-s3"
      }
     ]
    }

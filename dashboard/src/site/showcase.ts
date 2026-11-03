@@ -23,9 +23,20 @@ export const LIVE = data.live as unknown as LiveRecord;
 /** The first live evaluation (Original vs Modified, six tasks, 12 agents): the run the recommendations came from. Kept as history. */
 export const FIRST_LIVE = data.first_live as unknown as LiveRecord;
 
-/** Polished Larkspur, evaluated ON ITS OWN (no baseline beside it), then changed from that evaluation's findings and evaluated again (2026-11-04). */
-export const POLISHED_V1 = data.polished_v1 as unknown as LiveRecord;
-export const POLISHED_V2 = data.polished_v2 as unknown as LiveRecord;
+/** The featured experiment (2026-11-04): "Before" = the original college site visually redesigned (snapshot polishedoriginal), evaluated alone;
+ *  "After" = the same design with that evaluation's recommendations applied (snapshot modifiedpolished), evaluated alone. Same frozen tasks and agent. */
+export const BEFORE = data.before as unknown as LiveRecord;
+export const AFTER = data.after as unknown as LiveRecord;
+export const BEFORE_V = 'polishedoriginal', AFTER_V = 'modifiedpolished';
+/** The three changes the Before evaluation recommended, as applied to the After website (sites/larkspur/modified_polished.py). */
+export const AFTER_CHANGES: { id: string; title: string; change: string }[] = [
+  { id: 'facts', title: 'Every fact on every course card', change: 'Fee, duration, level, class day, campus, seats left and materials on each card, so a comparison needs no course page.' },
+  { id: 'dead-end', title: 'No dead end', change: 'An agent guessed /courses/introduction-to-python from the course name and got “not found”. Course addresses that follow the name now lead to the course.' },
+  { id: 'structured', title: 'Structured course data', change: 'Each course page describes the course in schema.org data with the same values the page shows, and the catalogue lists every course.' },
+];
+/** Superseded earlier redesign trials A and B (built on the already-improved site; kept as history, never featured). */
+export const TRIAL_A = data.polished_v1 as unknown as LiveRecord;
+export const TRIAL_B = data.polished_v2 as unknown as LiveRecord;
 
 /** The product's own page audit (the readiness report's structural rules) of each version: what is still wrong with the pages themselves. */
 export const PAGE_AUDIT = data.page_audit as Record<'original' | 'modified' | 'improved', string[]>;

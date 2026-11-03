@@ -30,11 +30,18 @@ RUNS = {"live": ("eval-c04fdb100d6b1c877de96dabe76eb052", {("original", 2): (2, 
         # Polished v1 evaluated alone (2026-11-04): task 2 is the friction trace (finder, 3 of 4 results visible, scroll, answer)
         "polished_v1": ("eval-abc5fc838a5428b6753a424e189ba1cc", {("polished", 2): (1, 2, 3, 4), ("polished", 1): (1, 2), ("polished", 3): (2,)}),
         # Polished v2 evaluated alone (2026-11-04): the same task 2 trace after the change (read options, select, submit, verify-scroll, answer)
-        "polished_v2": ("eval-11ee8a1e6dad19998865db7187c8cb5e", {("polished2", 2): (1, 2, 3, 4, 5), ("polished2", 1): (1, 2), ("polished2", 3): (2,)})}
+        "polished_v2": ("eval-11ee8a1e6dad19998865db7187c8cb5e", {("polished2", 2): (1, 2, 3, 4, 5), ("polished2", 1): (1, 2), ("polished2", 3): (2,)}),
+        # the corrected showcase: "Before" (Original redesigned) and "After" (its recommendations applied), each evaluated alone (2026-11-04)
+        "before": ("eval-ea13944e8ba5c08e8893426b2f8b1c8f", {("polishedoriginal", 2): tuple(range(1, 12)), ("polishedoriginal", 1): (8, 9, 13),
+                                                              ("polishedoriginal", 3): (12,)}),
+        "after": ("eval-5cf934b372942da74f5157c5fca39fd6", {("modifiedpolished", 1): tuple(range(1, 15)), ("modifiedpolished", 2): tuple(range(1, 15)),
+                                                             ("modifiedpolished", 3): tuple(range(1, 15))})}
 PREVIEWS = [("original", "/courses"), ("modified", "/courses"), ("improved", "/courses"), ("improved", "/courses?level=Beginner&campus=&day=Weekend"),
             ("improved", "/courses/compare"), ("improved", "/courses/intro-to-python"), ("polished", "/courses"), ("polished", "/"),
             ("polished", "/courses/wheel-thrown-pottery"),
-            ("polished", "/courses?level=Beginner&campus=&day=Weekend"), ("polished2", "/courses"), ("polished2", "/courses?level=Beginner&campus=&day=Weekend")]
+            ("polished", "/courses?level=Beginner&campus=&day=Weekend"), ("polished2", "/courses"), ("polished2", "/courses?level=Beginner&campus=&day=Weekend"),
+            ("polishedoriginal", "/"), ("polishedoriginal", "/courses"), ("polishedoriginal", "/courses/wheel-thrown-pottery"),
+            ("modifiedpolished", "/"), ("modifiedpolished", "/courses"), ("modifiedpolished", "/courses/wheel-thrown-pottery")]
 
 
 def _get(base: str, path: str):
