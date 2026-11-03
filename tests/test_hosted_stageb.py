@@ -257,3 +257,19 @@ def test_hosted_status_of_a_stage_b_job_before_its_runs_exist(env):
         assert c.get("/api/ironbark/config").json()["worker"]["state"] == "busy"
     finally:
         gate.set()
+
+
+def test_m9_config_reports_the_used_launch_as_not_authorised_and_the_launch_path_agrees(env):
+    """M9 final sprint: after the single armed launch, the worker is still healthy (idle) but no launch is authorised; the config says so from
+    the arming summary, and the real launch path (StageBExecutor.admit) refuses, reserving nothing."""
+    _arm(env, launches=1)
+    c, ex, a = _app(env, ceiling=10_736_000)
+    before = c.get("/api/ironbark/config").json()
+    assert before["launch"]["authorized"] and before["launch"]["ready"] and before["available"] and before["worker"]["state"] == "idle"
+    job = c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers=OP).json()["id"]
+    _wait(a, job)
+    after = c.get("/api/ironbark/config").json()
+    assert after["worker"]["state"] == "idle" and after["service"]["state"] == "operational"
+    assert after["launch"]["authorized"] is False and after["launch"]["reason"] == "launches_exhausted" and after["available"] is False and after["repetitions"] == []
+    n = len(a.recent())
+    assert c.post("/api/ironbark/jobs", json={"repetitions": 1}, headers={**OP, "x-client": "2"}).status_code in (409, 429) and len(a.recent()) == n

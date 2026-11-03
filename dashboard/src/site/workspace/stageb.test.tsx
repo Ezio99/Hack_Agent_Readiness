@@ -100,3 +100,39 @@ it('keeps a withheld report withheld while showing that every agent run finished
   expect(host.textContent).toContain('only the readiness report is withheld');
   expect(f.mock.calls.some(c => String(c[0]).includes('/api/lifecycle/evaluations/'))).toBe(false);   // never requested
 });
+
+// M9 final sprint: worker health, launch authorisation and a running evaluation are distinct; the intro describes the product, not Ironbark.
+const used = { ...armed, launches: { max: 1, used: 1, left: 0 }, options: armed.options.map(o => ({ ...o, available: false })) };
+const exhausted = config({ evaluation: used, available: false, repetitions: [], reason: 'launches_exhausted', remaining_repetitions: 0,
+  launch: { authorized: false, ready: false, reason: 'launches_exhausted', detail: 'The authorised launch has been used. A new launch needs a new owner authorisation.', launches_left: 0 } });
+
+it('does not call the worker "available" when the authorised launch has been used', async () => {
+  server(url => url.endsWith('/config') ? exhausted : []);
+  const host = await mount();
+  const banner = host.querySelector('.ws-worker')!;
+  expect(banner.textContent).toContain('Worker ready · no launch authorised');
+  expect(banner.textContent).toContain('The authorised launch has been used');
+  expect(banner.textContent).not.toContain('Ready to start a new evaluation');
+  expect(banner.className).toContain('blocked');
+  expect(button(host, 'Run evaluation').disabled).toBe(true);
+  expect(host.querySelector('#ws-run-note')!.textContent).toContain('A new launch needs a new owner authorisation');
+});
+
+it('says "Worker available" only when a launch is authorised', async () => {
+  server(url => url.endsWith('/config') ? config({ launch: { authorized: true, ready: true, reason: null, detail: null, launches_left: 2 } }) : []);
+  const host = await mount();
+  expect(host.querySelector('.ws-worker')!.textContent).toContain('Worker available');
+});
+
+it('describes the product generically and says Modified is a manually prepared demonstration', async () => {
+  server(url => url.endsWith('/config') ? config({ evaluation: null, available: false, repetitions: [], tasks: [], reason: 'not_armed',
+    launch: { authorized: false, ready: false, reason: 'not_armed', detail: 'No evaluation is authorised. The owner authorises one at the server terminal.', launches_left: null } }) : []);
+  const host = await mount();
+  const intro = host.querySelector('.ws-intro')!.textContent ?? '';
+  expect(intro).toContain('Agent Readiness evaluates an existing website');
+  expect(intro).toContain('re-evaluate');
+  expect(intro).toContain('manually prepared');
+  expect(intro).toContain('does not change websites');
+  for (const old of ['Ironbark', 'four frozen tasks', 'eight new agent runs', '4 owner-approved']) expect(intro).not.toContain(old);
+  expect(host.textContent).not.toContain('Ironbark Hire');
+});

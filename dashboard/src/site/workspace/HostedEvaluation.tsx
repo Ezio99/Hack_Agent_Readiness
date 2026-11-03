@@ -28,7 +28,8 @@ interface Worker { state: 'idle' | 'busy' | 'unavailable'; job: string | null; s
 interface ArmedEvaluation { arming_id: string; mode: 'paid' | 'rehearsal'; site: string; suite: string; frozen_suite: string; frozen_suite_sha256: string; variants: string[]; armed_at: string;
   launches: { max: number; used: number; left: number }; options: { repetitions: number; trials: number; reservation_usd: number; manifest_sha256: string; available: boolean; fits_hosted_ceiling: boolean | null }[];
   agent: { model: string; reasoning_effort: string | null; max_completion_tokens: number; profile: string } }
-interface Config { engine?: 'stage-b'; evaluation?: ArmedEvaluation | null; ceiling?: { ceiling_usd: number; reserved_usd: number }; agent_settings?: { profile: string; profile_file_sha256: string; reasoning_effort: string | null; max_completion_tokens: number | null } | null; worker?: Worker; repetition_duration?: { seconds: number; basis: 'measured' | 'first genuine run' | 'default'; samples: number }; available: boolean; mode: 'live' | 'rehearsal' | null; access?: 'public' | 'operator'; reason?: string | null; repetitions: number[]; model: string; agent_profile: string; tasks: { task: number; question: string; capability?: string; limits?: { max_steps?: number; timeout_seconds?: number; max_model_requests?: number } }[]; remaining_repetitions: number; active: string | null }
+interface LaunchState { authorized: boolean; ready: boolean; reason: string | null; detail: string | null; launches_left: number | null }
+interface Config { engine?: 'stage-b'; launch?: LaunchState; service?: { state: 'operational' | 'unavailable'; reason: string | null }; evaluation?: ArmedEvaluation | null; ceiling?: { ceiling_usd: number; reserved_usd: number }; agent_settings?: { profile: string; profile_file_sha256: string; reasoning_effort: string | null; max_completion_tokens: number | null } | null; worker?: Worker; repetition_duration?: { seconds: number; basis: 'measured' | 'first genuine run' | 'default'; samples: number }; available: boolean; mode: 'live' | 'rehearsal' | null; access?: 'public' | 'operator'; reason?: string | null; repetitions: number[]; model: string; agent_profile: string; tasks: { task: number; question: string; capability?: string; limits?: { max_steps?: number; timeout_seconds?: number; max_model_requests?: number } }[]; remaining_repetitions: number; active: string | null }
 
 const ACTIVE = ['reserved', 'running'];
 const STORE = 'ironbark-hosted-job';
@@ -233,6 +234,7 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
   const worker = config?.worker;
   const basis = config?.repetition_duration?.basis === 'measured' ? `measured over ${config.repetition_duration.samples} completed evaluation${config.repetition_duration.samples > 1 ? 's' : ''}` : 'based on the first genuine Muse Spark run';
   const note = !config ? 'Connecting to the evaluation service…'
+    : stageB && config.launch && !config.launch.authorized ? `${config.launch.detail ?? 'No launch is authorised.'} Recorded evaluations remain available.`
     : stageB && !ev ? 'No evaluation is armed. The owner arms a frozen suite at the server terminal; recorded evaluations remain available.'
     : !config.available ? 'New evaluations are currently unavailable. Recorded and previous evaluations remain available.'
     : othersRunning ? 'Another evaluation is running. Start yours when the worker is available again.'
@@ -247,14 +249,15 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
       <div>
         <p className="eyebrow">Evaluation workspace</p>
         <h1 className="ws-title">Run real agents on a website.</h1>
-        {stageB ? <p className="ws-lede">Each repetition gives the {nTasks} owner-approved customer tasks of a frozen suite to fresh browser agents on the <strong>Original</strong> and the <strong>Modified</strong> site: {runsPerRep} new agent runs, graded independently of what the agent claims, reported in six dimensions.</p>
-          : <p className="ws-lede">Each repetition gives four frozen tasks to fresh browser agents on the <strong>Original</strong> and the <strong>Modified</strong> site: eight new agent runs, graded independently of what the agent claims.</p>}
+        <p className="ws-lede">Agent Readiness evaluates an existing website: fresh browser agents attempt realistic customer tasks, an independent grader checks every answer against the site's own data, and the report shows where agents get stuck and what to change. After you change your site, re-evaluate it to measure the effect.</p>
+        <p className="ws-lede-note">{stageB && ev ? <>The armed suite has {nTasks} owner-approved tasks, run on the <strong>Original</strong> and a <strong>Modified</strong> version: {runsPerRep} agent runs per repetition. </> : null}In this demonstration, Modified is a manually prepared version of the controlled Larkspur site; Agent Readiness does not change websites itself.</p>
       </div>
-      {config && <div className={`ws-worker ${worker?.state ?? 'unavailable'}`} role="status">
+      {config && <div className={`ws-worker ${worker?.state === 'idle' && stageB && config.launch && !config.launch.authorized ? 'blocked' : worker?.state ?? 'unavailable'}`} role="status">
         <span className="ws-dot" aria-hidden="true" />
         <div>
-          {worker?.state === 'idle' ? <><strong>Worker available</strong><span>Ready to start a new evaluation · one evaluation runs at a time · {minutes(perRep)} per repetition ({basis})</span></>
-          : worker?.state === 'busy' ? <><strong>Worker busy</strong><span>{worker.job === job?.id ? 'Running your selected evaluation' : 'Another evaluation is running'}: {worker.finished_runs ?? 0} of {worker.total_runs ?? '–'} agent runs finished{worker.estimated_remaining_seconds ? `, ${minutes(worker.estimated_remaining_seconds)} left (estimate)` : ''}. Completed evaluations below remain available.</span>
+          {worker?.state === 'idle' && stageB && config.launch && !config.launch.authorized ? <><strong>Worker ready · no launch authorised</strong><span>{config.launch.detail} Completed evaluations remain available.</span></>
+          : worker?.state === 'idle' ? <><strong>Worker available</strong><span>Ready to start a new evaluation · one evaluation runs at a time · {minutes(perRep)} per repetition ({basis})</span></>
+          : worker?.state === 'busy' ? <><strong>Evaluation running</strong><span>{worker.job === job?.id ? 'Running your selected evaluation' : 'Another evaluation is running'}: {worker.finished_runs ?? 0} of {worker.total_runs ?? '–'} agent runs finished{worker.estimated_remaining_seconds ? `, ${minutes(worker.estimated_remaining_seconds)} left (estimate)` : ''}. Completed evaluations below remain available.</span>
               {worker.job && worker.job !== job?.id && <button className="ws-link" onClick={() => select(worker.job!)}>Watch it live →</button>}</>
           : <><strong>Evaluations unavailable</strong><span>New evaluations are paused. Recorded and completed evaluations remain available.</span></>}
         </div>
@@ -269,7 +272,7 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
             {stageB ? <div className="ws-target" aria-label="Selected website">{ev ? <><strong>{ev.site === 'larkspur' ? 'Larkspur Community College' : ev.site === 'ironbark' ? 'Ironbark Hire Co.' : ev.site}</strong>
                 <small>Frozen suite {ev.suite} (owner-approved, {nTasks} tasks) · {ev.variants.join(' vs ')} · armed {ev.armed_at.slice(0, 10)} · {ev.launches.left} of {ev.launches.max} launch{ev.launches.max === 1 ? '' : 'es'} left</small></>
                 : <><strong>No evaluation armed</strong><small>The owner selects and authorises the frozen suite at the server terminal.</small></>}</div>
-              : <div className="ws-target" aria-label="Selected website"><strong>Ironbark Hire Co.</strong><small>Controlled rental-equipment site · Original vs Modified listing cards</small></div>}</li>
+              : <div className="ws-target" aria-label="Selected website"><strong>No evaluation available</strong><small>New evaluations are not available on this server right now; recorded evaluations remain available.</small></div>}</li>
           <li><span className="ws-step">02 · Repetitions</span>
             <div className="ws-reps" role="radiogroup" aria-label="Paired repetitions">{(config?.repetitions ?? [1, 3, 5]).map(n =>
               <button key={n} role="radio" aria-checked={reps === n} disabled={running} onClick={() => setReps(n)}><strong>{n}</strong><small>{n * (stageB ? runsPerRep : 8)} agent runs</small><small>{minutes(perRep * n)}</small>
@@ -294,7 +297,7 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
           <p><strong>Grading.</strong> Official grades are grader v1; grader v2 is a labelled post-hoc rescore; prospective rules are shown, never applied. The report separates observed facts from hypotheses.</p>
           <p><strong>Isolation.</strong> Each browser runs in its own network namespace that can reach only the frozen website copy; model credentials never enter the browser.</p>
         </details>}
-        {!stageB && <details className="ws-method"><summary>Methodology &amp; provenance</summary>
+        {!stageB && job && job.engine !== 'stage-b' && <details className="ws-method"><summary>Methodology &amp; provenance (historical Ironbark evaluation)</summary>
           <p><strong>Agent.</strong> Browser Use agent driven by <code>{config?.model ?? 'unavailable'}</code> with the frozen profile <code>{config?.agent_settings?.profile ?? config?.agent_profile ?? 'unavailable'}</code>{config?.agent_settings && <> (reasoning_effort <code>{show(config.agent_settings.reasoning_effort)}</code>, max_completion_tokens <code>{show(config.agent_settings.max_completion_tokens)}</code>, read from the profile file)</>}; each task is limited to {config?.tasks[0]?.limits?.max_steps ?? 14} steps and {config?.tasks[0]?.limits?.timeout_seconds ?? 240} seconds; no retries.</p>
           {job?.reps.find(r => r.provenance)?.provenance && <ProvenanceNote p={job.reps.find(r => r.provenance)!.provenance!} />}
           <p><strong>Tasks.</strong> The same four frozen tasks run on both versions, in a counterbalanced order, for every repetition:</p>

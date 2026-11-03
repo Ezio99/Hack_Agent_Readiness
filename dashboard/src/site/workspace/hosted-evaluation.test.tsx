@@ -69,7 +69,7 @@ it('offers to watch another visitor’s running evaluation instead of starting a
   server(url => url.endsWith('/config') ? config({ active: other, worker: { state: 'busy', job: other, finished_runs: 5, total_runs: 24, estimated_remaining_seconds: 1500 } }) : url.endsWith('/jobs') ? [] : url.endsWith('/live') ? { active: true, trial: null } : job({ id: other }));
   const { host } = await mount();
   expect(button(host, 'Run evaluation').disabled).toBe(true);
-  expect(host.textContent).toContain('Worker busy');
+  expect(host.textContent).toContain('Evaluation running');
   expect(host.textContent).toContain('5 of 24 agent runs finished, about 25 min left (estimate)');
   expect(host.textContent).toContain('Completed evaluations below remain available');
   await act(async () => { button(host, 'Watch it live').click(); });

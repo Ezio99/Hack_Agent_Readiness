@@ -419,6 +419,36 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
         except Exception:
             return None
 
+    LAUNCH_DETAIL = {
+        'service_unavailable': 'The evaluation service is unavailable; recorded evaluations remain available.',
+        'not_armed': 'No evaluation is authorised. The owner authorises one at the server terminal.',
+        'arming_mode_mismatch': "The authorised evaluation does not match this service's mode.",
+        'arming_invalid': 'The authorised evaluation no longer verifies; the owner must authorise again.',
+        'launches_exhausted': 'The authorised launch has been used. A new launch needs a new owner authorisation.',
+        'arming_total_exhausted': "The authorisation's total reservation has been used.",
+        'budget_exhausted': 'The remaining hosted budget does not cover another launch.',
+    }
+
+    def launch_state(cfg: dict, active: list) -> dict:
+        """Whether a NEW launch is authorised now, from the same server-side facts the launch path enforces (StageBExecutor.admit and the
+        hosted admission): the service is enabled, an arming of this mode verifies, it has a launch left, and an armed option's reservation
+        fits both the arming's remaining total and the hosted ceiling (`arming.summary`). Display only: every launch is still checked by
+        `admit`. `authorized` excludes a running evaluation (the single slot, reported separately); `ready` = authorised and the slot is free."""
+        reason = None
+        ev = cfg.get('evaluation') or {}
+        if not enabled():
+            reason = 'service_unavailable'
+        elif not cfg.get('armed'):
+            reason = cfg.get('reason') or 'not_armed'
+        elif (ev.get('launches') or {}).get('left', 0) <= 0:
+            reason = 'launches_exhausted'
+        elif not any(o.get('available') for o in ev.get('options') or []):
+            reason = 'budget_exhausted' if any(o.get('fits_hosted_ceiling') is False for o in ev.get('options') or []) else 'arming_total_exhausted'
+        authorized = reason is None
+        return {'authorized': authorized, 'ready': authorized and not active, 'reason': reason,
+                'detail': None if authorized else LAUNCH_DETAIL.get(reason, 'No launch is authorised.'),
+                'launches_left': (ev.get('launches') or {}).get('left') if ev else None}
+
     @app.get('/api/ironbark/config')
     def config():
         totals = admission.totals()
@@ -428,9 +458,12 @@ def create_app(root: Path, admission: Admission, *, client_key: bytes, executor:
             cfg = executor.configuration()
             ev = cfg.get('evaluation') or {}
             left = (ev.get('launches') or {}).get('left', 0)
+            launch = launch_state(cfg, active)
             return {'engine': stageb.ENGINE, 'worker': worker_state(), 'repetition_duration': {'seconds': 50 * max(1, len(cfg['tasks']) * 2), 'basis': 'M7 mean agent time per trial', 'samples': 0},
-                    'available': enabled() and cfg['armed'], 'mode': getattr(executor, 'mode', None) if enabled() else None, 'access': 'public' if public_start else 'operator',
-                    'reason': None if enabled() and cfg['armed'] else (unavailable_reason or cfg.get('reason') or 'disabled'),
+                    'service': {'state': 'operational' if enabled() else 'unavailable', 'reason': None if enabled() else (unavailable_reason or 'disabled')},
+                    'launch': launch,
+                    'available': launch['authorized'], 'mode': getattr(executor, 'mode', None) if enabled() else None, 'access': 'public' if public_start else 'operator',
+                    'reason': None if launch['authorized'] else launch['reason'],
                     'repetitions': cfg['repetitions'], 'model': (ev.get('agent') or {}).get('model') or ModelConfig().model, 'agent_profile': (ev.get('agent') or {}).get('profile') or AGENT_PROFILE,
                     'agent_settings': ev.get('agent'), 'tasks': cfg['tasks'], 'evaluation': ev or None, 'remaining_repetitions': left,
                     'ceiling': {'ceiling_usd': totals['ceiling_microusd'] / 1e6, 'reserved_usd': totals['reserved_microusd'] / 1e6},
