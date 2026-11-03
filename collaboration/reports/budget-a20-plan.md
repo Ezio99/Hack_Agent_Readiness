@@ -1,4 +1,6 @@
-# Independent A$20 evaluation budget and actual-cost accounting: review and implementation plan (NOT implemented)
+# Independent A$20 evaluation budget and actual-cost accounting: review and implementation plan
+
+> **Implemented (owner-approved, Option A) — see [budget-a20-implementation.md](budget-a20-implementation.md).** Not deployed.
 
 **Date:** 2026-11-03 (Sydney). **Branch:** `final-showcase` (production `dde7e22`, image `d40199ef…`). **Cost:** US$0. Read-only review; nothing deployed, migrated, settled or launched.
 **Owner requirements (2026-11-03):** a new, independent **A$20** budget for further evaluations and development, starting at A$20 available; historical costs and reservations never reduce it; only spending explicitly assigned to it counts; tracked apart from the A$50 programme; no transfer or double count; 1.50 AUD/USD. Actual settled cost is expenditure, a reservation is a temporary safety commitment. Existing judge launches are **not** assumed to belong to the new budget.

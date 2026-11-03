@@ -1,0 +1,20 @@
+{
+ "schema": "programme-ledger-append-proposal-v1",
+ "entry": {
+  "id": "hosted-stageb-judge-1",
+  "label": "Hosted production evaluation eval-c04fdb100d6b1c877de96dabe76eb052 (Stage B engine, owner arming larkspur-judge-1, judge launch 1 of 3): larkspur-core v3 (frozen db2eb1cb64eb; manifest c32cfc6fa1a0), 3 natural tasks x Original/Improved x 1 repetition = 6 jailed trials, muse-spark-1.3, reasoning_effort low, profile suite-v2-compat2; 6/6 completed; hosted reservation US$3.740, settled 2026-11-03T10:49:36Z",
+  "usd": 0.631751,
+  "hosted_job": "eval-c04fdb100d6b1c877de96dabe76eb052",
+  "basis": "CALCULATED from provider-reported usage, verified durable ledger (stage-b launch larkspur-judge-1-l1: 45/45 requests settled); not a bill",
+  "source": "hosted admission settlement (ledger sha256 243deaca801e04fec9fb2b0ca4170b817a3c8b975c3bcbc8f09bfecce7de90b1, 45 requests, 0 unsettled)",
+  "hosted_reservation_usd": 3.74,
+  "hosted_reservation_note": "Admission hold against the hosted ceiling; a temporary safety commitment, not spend, and not counted here.",
+  "authorized_by": "PENDING: owner confirmation required before this entry is appended",
+  "recorded_on": "PENDING"
+ },
+ "known_usd_before": 18.786306,
+ "known_usd_after": 19.418057,
+ "entries_before": 21,
+ "entries_after": 22,
+ "problems_after": []
+}
