@@ -13,7 +13,51 @@
 
 Plan: [budget-a20-plan.md](budget-a20-plan.md).
 
-## 1. What changed
+## 0. Revision (2026-11-04): one-click operator evaluations; this supersedes the budget arming below
+
+**Owner requirement:** an authorised operator clicks "Run evaluation" and it runs. That means:
+- no repeated token entry, typed attestation, arming or launch count per run;
+- the A$20 budget is the only limit;
+- automatic settlement;
+- the judge path and the A$50 programme stay unchanged.
+
+| Piece | Design |
+|---|---|
+| What runs | Fixed **once**, when the owner opens the budget: `budget open … --frozen larkspur-core@v3 --variants original improved` also records the write-once **budget pool** `<STAGE_B>/budget-pools/ar-a20-2026-11.json` (frozen suite, versions, exact manifest, model; `hosted-budget-pool-v1`). It is part of the same single typed confirmation. It has **no launch count**. The earlier `hosted-arming-v2` was removed: armings are v1 only, unchanged |
+| Operator sign-in | Once per browser: `POST /api/operator/session` with the token as a Bearer header.<br>The server stores only the SHA-256 of a random 256-bit session id, in `operator-sessions.sqlite` beside the admission database.<br>The cookie is `__Host-ar_operator`: HttpOnly, Secure, SameSite=Strict, Path=/, 7 days. Sign-out revokes it server-side.<br>Failed sign-ins are rate-limited (10 per 10 min).<br>The token is never stored, returned or logged; the page clears it after sending |
+| CSRF | A cookie-authenticated launch or sign-out needs the header `X-Agent-Readiness: 1` (no CORS is ever granted) and a same-origin `Origin` when one is sent. GET reads are unchanged. Bearer auth is unchanged |
+| Launch routing | **Operator** (session or Bearer) → the budget pool only. **Judge code** → the owner's arming only.<br>The operator can never consume the judge pool: with no budget open its launch is refused (409), and it never touches `armings/ACTIVE` |
+| Each launch | Atomic, as before: single slot + rate limit + the budget (reserve the launch's maximum, A$5.61, against what remains) + global cap. Refused only by those, the pool's verification or the service state.<br>Then its own experiment `ar-a20-2026-11-l<N>` (N unbounded), its claim, and a PaidAuthorization whose instruction is the owner's pool confirmation verbatim. The per-request caps and reserve-before-send ledger are unchanged.<br>The worker re-checks the pool claim independently |
+| Duplicates | Per-click `Idempotency-Key` (server table keyed per caller): a double-click or retry returns the same job (`duplicate: true`), never a second reservation. The page also guards synchronously. A new click while a run is active is refused by the single slot |
+| Completion | Automatic settlement at the verified actual cost (unchanged); the unused reservation is released. Failed or interrupted runs keep their full reservation |
+| Workspace | Signed in, the panel shows:<br>• "Signed in as operator · Sign out";<br>• "A$x of A$20.00 left in ar-a20-2026-11 (spent, held)";<br>• the suite, versions and tasks;<br>• **Run evaluation**;<br>• "Each run reserves up to A$5.61 until it finishes, then only its actual cost counts · the budget covers N more runs now".<br>The job bar shows "Reserved up to US$3.74 until settled", then "Actual cost US$0.63 · ar-a20-2026-11". Not signed in: the judge's access-code flow is unchanged, with a small "Operator sign-in" |
+
+**Tests (zero cost):**
+- `test_operator_session.py` (8, in critical) covers:
+  - secure cookie attributes; only a hash stored; failed sign-in rate limit; the judge code cannot sign in;
+  - no budget → 409 and the judge pool untouched;
+  - a one-click launch charged to the budget, with a cost line;
+  - a cross-site or header-less cookie launch → 403;
+  - 4 concurrent identical clicks → one job and one reservation; a retry returns the same job;
+  - sign-out revokes a replayed cookie;
+  - the token and cookie in no response, file or output; the judge path unchanged.
+- `test_budget.py` (21) adds, on production copies:
+  - the pool never touches the judge arming (ACTIVE unchanged, 2 left);
+  - **16 consecutive operator runs** settle automatically from their ledgers (US$0.631755 each) before the budget refuses ("exhausted", not a count);
+  - failed or interrupted operator runs hold A$5.61 each.
+- **Existing tests:** arming launches in older tests now use the judge code, which is how production launches them.
+- **Real browser:** `test_showcase_judge_browser.py` (alone) passes: the judge run, then the operator's one-click run on a rehearsal pool (6/6 jailed trials, the worker's pool re-check, automatic settlement, judge pool still 2 left).
+- **Paid judge path with the network blocked:** unchanged.
+- **Suites:** critical 262; dev 1 742 (+2 known); dashboard 224 (one-click run, sign-in, refusal and cost line); build passed.
+
+**Owner steps (each separately approved):**
+1. Deploy.
+2. `budget open --id ar-a20-2026-11 --limit-aud 20 --rate 1.50 --frozen larkspur-core@v3 --variants original improved`, typed once.
+3. The operator signs in once in the Workspace.
+
+No arming. The judge pool `larkspur-judge-1` keeps its 2 launches. **Rollback** (`rollback-dde7e22`): that image ignores the budget tables, the pool and sessions, and counts budget jobs against the ceiling. It restores the old Bearer-token behaviour, in which an operator token launches the judge arming.
+
+## 1. What changed (first version; the budget-arming parts are superseded by §0)
 
 | Area | Change |
 |---|---|
@@ -89,7 +133,7 @@ docker compose exec app python -m agent_readiness.hosted.budget status --db /dat
 ```
 Expected: `ar-a20-2026-11` A$20.000000 available; global cap US$35.289333; the ceiling's scope unchanged (available US$10.588249); `larkspur-judge-1` 2 left, still charged to the programme.
 
-**C. Use the budget** (each separately approved):
+**C. Use the budget** (superseded by §0: the operator signs in once and clicks Run; no arming). Earlier text, kept for the record:
 - **Hosted launches:** a new arming that names the budget. Prepare first, then you type the attestation:
   ```sh
   python -m agent_readiness.lifecycle.arming prepare --arming <id> --mode paid --frozen larkspur-core@v3 --variants original improved --repetitions 1 --launches <n> --budget ar-a20-2026-11
