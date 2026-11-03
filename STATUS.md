@@ -4,6 +4,12 @@ Authoritative current handoff. Check it against the repository and production be
 
 ## Current state (2026-11-03 Sydney)
 
+> **Final showcase release candidate (2026-11-03; branch `final-showcase`; NOT deployed; zero cost):** [collaboration/reports/final-showcase-release.md](collaboration/reports/final-showcase-release.md).
+> - **Featured site: Larkspur** (owner decision). One story across Home, `#/lifecycle` (= `#/demo`), the workspace and reports: Website → Generate tasks → Review → Evaluate → Recommendations → Improve → Re-evaluate → Compare. Ironbark is archived at `#/demo/ironbark`.
+> - **New website version `larkspur@improved`** (`87e715d5…`): every actionable recommendation (all seven facts on every card, a working GET filter, browse pages, a comparison table, schema.org JSON-LD, redirects for every dead end), captured into the snapshot so it works through the jailed mirror. `original`/`modified` unchanged byte for byte. Registered as a re-evaluation target (`SiteDefinition.releases`); all six frozen tasks keep their answers. Page audit: Original 7 → Modified 4 → Improved 0.
+> - **Judge launch** unchanged from `4841166`; the featured pool is `larkspur-core@v3` on `--variants original improved` (US$2.508 per launch, 4 launches US$10.032, ceiling 10.736 → 20.768). Rehearsed at zero cost end to end (test, and the real service in rehearsal mode in a browser).
+> - **Fallback:** `3377d75` (Original vs Modified). Owner approvals needed: deploy, judge secret, v3 approval/freeze, ceiling migration, paid arming, first paid launch, any merge.
+
 > **Final showcase handoff (2026-11-03):** [collaboration/handoffs/final-showcase-handoff.md](collaboration/handoffs/final-showcase-handoff.md) is the entry point for the next agent: repository and production state, architecture map, Larkspur recommendation matrix, judge-launch status, budget, risks, implementation order and owner checkpoints.
 > - **Production:** `f36db53`; no launch capacity left.
 > - **Undeployed on `m9-release-readiness`:** `352f262` (presentation) and `4841166` (judge launch).
