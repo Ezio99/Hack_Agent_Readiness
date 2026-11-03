@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
 import { Lifecycle } from './Lifecycle';
 import { ReportPage } from './Report';
+import { useLoad } from './parts';
 import { parse } from '../router';
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 afterEach(() => { vi.unstubAllGlobals(); document.body.innerHTML = ''; window.location.hash = ''; });
@@ -120,7 +121,7 @@ it('labels the pre-recorded M7 dataset and a live run launched in this product d
   let host = await mount(<ReportPage id="m7-larkspur-browser-1" />);
   expect(host.textContent).toContain('Pre-recorded research run · sanitized dataset v1');
   expect(host.textContent).not.toContain('Live run launched in this product');
-  expect(host.textContent).toContain('12/12 completed');
+  expect(host.textContent).toContain('12/12 agent runs finished');
   document.body.innerHTML = '';
   const id = 'eval-' + 'e'.repeat(32);
   const trials = EV.trials.map((t: any, i: number) => i === 0 ? { ...t, answer: ['/courses/x'], answer_normalized: { fixture_origin_replaced: 1, note: 'shown as a site path' } } : t);
@@ -128,4 +129,42 @@ it('labels the pre-recorded M7 dataset and a live run launched in this product d
   host = await mount(<ReportPage id={id} />);
   expect(host.textContent).toContain('Live run launched in this product');
   expect(host.textContent).not.toContain('Pre-recorded research run');
+});
+
+it('I2: shows the retrospective evidence audit, labelled and separate, only for the audited evaluations; official grades unchanged', async () => {
+  server({ '/api/lifecycle/evaluations/m7-larkspur-browser-1': EV });
+  let host = await mount(<ReportPage id="m7-larkspur-browser-1" />);
+  const audit = host.querySelector('.lc-audit')!;
+  expect(audit).not.toBeNull();
+  const a = audit.textContent!;
+  expect(a).toContain('Retrospective evidence audit'); expect(a).toContain('not an official score'); expect(a).toContain('documented false negatives');
+  expect(a).toContain('3/6 → 5/6'); expect(a).toContain('1/6 → 4/6'); expect(a).toContain('v1 remains the grade of record');
+  const v1 = [...host.querySelectorAll('tr')].find(r => r.textContent?.startsWith('Official grader v1'))!;
+  expect(v1.textContent).toContain('2/6'); expect(v1.textContent).toContain('1/6');                      // the recorded official grades, as before
+  document.body.innerHTML = '';
+  const id = 'eval-' + 'f'.repeat(32);
+  server({ [`/api/lifecycle/evaluations/${id}`]: { ...EV, id, source: { kind: 'launched', job: id, state: 'completed' } } });
+  host = await mount(<ReportPage id={id} />);
+  expect(host.querySelector('.lc-audit')).toBeNull();                                                   // never shown for an unaudited evaluation
+});
+
+it('C2: useLoad never returns the previous key\'s data while the next key loads', async () => {
+  const seen: string[] = [];
+  let release: (v: string) => void = () => {};
+  function Probe({ k }: { k: string }) {
+    const r = useLoad(() => k === 'a' ? Promise.resolve('data-a') : new Promise<string>(res => { release = res; }), k);
+    seen.push(`${k}:${r.data ?? (r.loading ? 'loading' : 'none')}`);
+    return null;
+  }
+  const host = document.createElement('div'); document.body.append(host);
+  const root = createRoot(host);
+  await act(async () => { root.render(<Probe k="a" />); });
+  await act(async () => { await new Promise(r => setTimeout(r, 0)); });
+  expect(seen.at(-1)).toBe('a:data-a');
+  await act(async () => { root.render(<Probe k="b" />); });
+  expect(seen.filter(x => x.startsWith('b:'))).not.toContain('b:data-a');                               // the bug: b rendered with a's data
+  expect(seen.at(-1)).toBe('b:loading');
+  await act(async () => { release('data-b'); await new Promise(r => setTimeout(r, 0)); });
+  expect(seen.at(-1)).toBe('b:data-b');
+  act(() => root.unmount());
 });

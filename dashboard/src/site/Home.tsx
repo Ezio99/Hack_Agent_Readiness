@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { SiteFooter, SiteHeader } from './Shell';
-import { evidence, frame, headline, recordedOn, shortId, trial, row, isItemPage, ITEMS } from './evidence';
+import { evidence, frame, headline, recordedOn, shortId, trial, row, isItemPage, ITEMS, replication } from './evidence';
+import { LatestLive } from './LatestLive';
 import './home.css';
 
 const original = trial('original', 1);
@@ -72,6 +73,7 @@ export function Home({ section }: { section?: string }) {
               <a className="btn btn-ghost" href="#/demo">Watch the demo</a>
             </div>
             <p className="hero-lifecycle" data-reveal><a className="link" href="#/lifecycle">The full evaluation lifecycle</a> — from business context and AI-generated tasks to an owner-approved frozen suite, real browser agents and a six-dimension <a className="link" href="#/reports/m7-larkspur-browser-1">readiness report</a>.</p>
+            <LatestLive className="hero-latest" />
             <div className="hero-note" data-reveal><HeroNote /></div>
           </div>
           <div className="hero-visual" data-reveal><HeroFigure /></div>
@@ -134,12 +136,13 @@ export function Home({ section }: { section?: string }) {
             <h2 id="evidence-h" className="h2">One change to the listing cards. <em>Measured.</em></h2>
             <p className="lede">The Modified site copied three fields (refundable deposit, minimum hire, delivery and collection) from each product page onto its listing card. Same tasks, same model, fresh agents.</p></div>
           <dl className="numbers" data-reveal>
-            <div><dt>Tasks passed, evidence-supported</dt><dd><span className="n-o">{headline.passes.original}/{headline.passes.of}</span><span className="n-arrow" aria-hidden="true">→</span><span className="n-m">{headline.passes.modified}/{headline.passes.of}</span></dd><p>Original → Modified</p></div>
+            <div><dt>Tasks passed, evidence-supported (official grader v1)</dt><dd><span className="n-o">{headline.passes.original}/{headline.passes.of}</span><span className="n-arrow" aria-hidden="true">→</span><span className="n-m">{headline.passes.modified}/{headline.passes.of}</span></dd><p>Original → Modified</p></div>
             <div><dt>Model requests, all four tasks</dt><dd><span className="n-o">{headline.requests.original}</span><span className="n-arrow" aria-hidden="true">→</span><span className="n-m">{headline.requests.modified}</span></dd><p>{headline.requests.fewerPct}% fewer on Modified</p></div>
             <div><dt>Mean time per task</dt><dd><span className="n-o">{headline.seconds.original}s</span><span className="n-arrow" aria-hidden="true">→</span><span className="n-m">{headline.seconds.modified}s</span></dd><p>Wall-clock, per agent run</p></div>
             <div><dt>Item pages opened per task</dt><dd><span className="n-o">{st.Original.detail_views.toFixed(1)}</span><span className="n-arrow" aria-hidden="true">→</span><span className="n-m">{st.Modified.detail_views.toFixed(1)}</span></dd><p>Mean over four runs each</p></div>
           </dl>
           <p className="honest" data-reveal>One repetition of four paired tasks, recorded {recordedOn}. Every pair moved the same way, which gives p = {evidence.frozen_rule.p_pass}. That is the strongest result four pairs can produce, and it is still above the pre-registered α of {evidence.frozen_rule.alpha.toFixed(2)}. So the frozen rule reads <strong>{evidence.frozen_rule.verdict}</strong> and the exploratory listing rule reads <strong>consistent with the hypothesis</strong>. More repetitions resolve it, which is why the workspace runs 1, 3 or 5.</p>
+          <p className="honest" data-reveal>Replicated later the same day by a second live run of the same four tasks ({replication.second.job}): {replication.second.official.original}/{replication.of} → {replication.second.official.modified}/{replication.of} under the official grader v1 ({replication.second.postHoc.original}/{replication.of} → {replication.second.postHoc.modified}/{replication.of} under the labelled post-hoc grader v2), {replication.second.requests.original} → {replication.second.requests.modified} model requests. The headline figures are the first run's ({replication.first.job}).</p>
           <a className="btn" href="#/demo" data-reveal>See how it happened, step by step <span className="arr" aria-hidden="true">→</span></a>
         </div>
       </section>

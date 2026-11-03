@@ -3,16 +3,19 @@ import { ApiError, VARIANT_LABEL, variantClass, type Grade } from '../../lib/lif
 
 /** Load once per key; errors are shown, never replaced by invented data. */
 export function useLoad<T>(load: () => Promise<T>, key: string): { data: T | null; error: string | null; loading: boolean; reload: () => void } {
-  const [state, setState] = useState<{ data: T | null; error: string | null; loading: boolean }>({ data: null, error: null, loading: true });
+  // M9 (C2): the state remembers which key it belongs to, and data is returned only for the CURRENT key, so a view never combines a new key
+  // (e.g. another evaluation's id) with the previous key's data while the next load is in flight. A reload of the same key keeps its data.
+  const [state, setState] = useState<{ key: string | null; data: T | null; error: string | null; loading: boolean }>({ key: null, data: null, error: null, loading: true });
   const [tick, setTick] = useState(0);
   useEffect(() => {
     let live = true;
     setState(s => ({ ...s, loading: true, error: null }));
-    load().then(d => live && setState({ data: d, error: null, loading: false }),
-      e => live && setState({ data: null, error: e instanceof ApiError || e instanceof Error ? e.message : 'Unavailable.', loading: false }));
+    load().then(d => live && setState({ key, data: d, error: null, loading: false }),
+      e => live && setState({ key, data: null, error: e instanceof ApiError || e instanceof Error ? e.message : 'Unavailable.', loading: false }));
     return () => { live = false; };
   }, [key, tick]);
-  return { ...state, reload: () => setTick(t => t + 1) };
+  const current = state.key === key;
+  return { data: current ? state.data : null, error: current ? state.error : null, loading: !current || state.loading, reload: () => setTick(t => t + 1) };
 }
 
 export function Loading({ what }: { what: string }) { return <p className="lc-loading" aria-busy="true">Loading {what}…</p>; }

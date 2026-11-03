@@ -1,0 +1,7 @@
+/* I3 (M9): link to the latest live evaluation (home hero, demo outcome). */
+.latest-live{display:grid;gap:4px;margin-top:18px;padding:14px 16px;border:1px solid var(--line,#DDD8CC);border-left:3px solid var(--signal,#2B4BFF);border-radius:8px;background:var(--paper,#FBFAF6);color:var(--ink,#1A1A18);text-decoration:none;max-width:40em;font-size:14px;line-height:1.5}
+.latest-live:hover,.latest-live:focus-visible{border-color:var(--signal,#2B4BFF)}
+.latest-live-eyebrow{font:500 11.5px/1.2 var(--mono,ui-monospace,monospace);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3,#6B6A63)}
+.latest-live strong{font-weight:600}
+.latest-live-go{color:var(--signal,#2B4BFF);font-weight:500}
+.oc-latest{grid-column:1 / -1;opacity:var(--z,1)}

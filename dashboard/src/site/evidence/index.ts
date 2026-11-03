@@ -53,3 +53,12 @@ export function describe(a: Action): string {
   if (!a.target) return a.name;
   return `${a.name} · ${a.target}`;
 }
+
+/** The replication of this experiment (I1, M9): the SECOND live production evaluation of the same four Ironbark tasks, eval-aa23e330 (2 Nov 2026),
+ *  as recorded by the hosted API's own status of both jobs. Official = grader v1, evidence-supported passes (the grade of record); post-hoc = the
+ *  labelled grader v2 rescore. Shown beside the headline, which comes from the first run (eval-9aaac35c) only. */
+export const replication = {
+  first: { job: 'eval-9aaac35c', official: { original: 1, modified: 4 }, postHoc: { original: 1, modified: 4 }, requests: { original: 50, modified: 26 } },
+  second: { job: 'eval-aa23e330', official: { original: 0, modified: 3 }, postHoc: { original: 1, modified: 4 }, requests: { original: 52, modified: 26 } },
+  of: 4,
+} as const;

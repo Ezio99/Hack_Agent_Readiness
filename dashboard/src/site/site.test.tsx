@@ -6,7 +6,8 @@ import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import App from '../App';
 import { parse } from './router';
-import { evidence, headline, trial, isItemPage } from './evidence';
+import { evidence, headline, trial, isItemPage, replication } from './evidence';
+import { LATEST_LIVE } from './LatestLive';
 import { Home } from './Home';
 import { Demo } from './demo/Demo';
 import { Workspace } from './workspace/Workspace';
@@ -149,5 +150,38 @@ describe('workspace and app shell', () => {
     await act(async () => { root.render(<Workspace job={null} />); });
     expect(host.querySelector('.ar-skip')?.getAttribute('href')).toBe('#ws-main');
     expect(host.querySelector('nav[aria-label="Primary"] a[aria-current="page"]')?.textContent).toBe('Workspace');
+  });
+});
+
+describe('M9 presentation patch (I1, I3)', () => {
+  const REPL = ['Replicated later the same day by a second live run of the same four tasks (eval-aa23e330)', '0/4 → 3/4 under the official grader v1',
+                '1/4 → 4/4 under the labelled post-hoc grader v2', '52 → 26 model requests', "The headline figures are the first run's (eval-9aaac35c)"];
+  it('home: labels the headline as official v1, discloses the replication and links the latest live evaluation, still without calling any API', () => {
+    const f = noNetwork();
+    act(() => root.render(<Home />));
+    const text = host.textContent!;
+    expect(text).toContain('Tasks passed, evidence-supported (official grader v1)');
+    for (const r of REPL) expect(text).toContain(r);
+    for (const s of ['1/4', '4/4', 'inconclusive']) expect(text).toContain(s);                     // the earlier Ironbark story is kept
+    const link = [...host.querySelectorAll('a')].find(a => a.getAttribute('href') === `#/reports/${LATEST_LIVE.id}`)!;
+    expect(link).toBeTruthy();
+    expect(link.textContent).toContain('Latest live evaluation');
+    expect(link.textContent).toContain('12 agent runs finished');
+    expect(link.textContent).toContain('official grader v1: 1/6 → 2/6 passed');
+    expect(link.textContent).toContain('post-hoc grader v2: 2/6 → 4/6');
+    expect(f).not.toHaveBeenCalled();
+  });
+  it('demo: the outcome discloses the replication with both graders and links the latest live evaluation', () => {
+    reducedMotion(true); noNetwork();
+    act(() => root.render(<Demo scene="outcome" />));
+    const outcome = host.querySelector('#outcome')!;
+    expect(outcome.textContent).toContain('Tasks passed (official grader v1)');
+    for (const r of REPL) expect(outcome.textContent).toContain(r);
+    expect(outcome.querySelector(`a[href="#/reports/${LATEST_LIVE.id}"]`)).not.toBeNull();
+  });
+  it('the replication figures are the recorded ones (first run = the bundled evidence)', () => {
+    expect(replication.first.official).toEqual({ original: headline.passes.original, modified: headline.passes.modified });
+    expect(replication.first.requests).toEqual({ original: headline.requests.original, modified: headline.requests.modified });
+    expect(evidence.source.job.startsWith(replication.first.job)).toBe(true);
   });
 });

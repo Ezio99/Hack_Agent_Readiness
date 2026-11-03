@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Brand, SiteFooter } from '../Shell';
 import { useReducedMotion } from '../router';
-import { evidence, frame, headline, isItemPage, ITEMS, recordedOn, row, shortId, trial } from '../evidence';
+import { evidence, frame, headline, isItemPage, ITEMS, recordedOn, replication, row, shortId, trial } from '../evidence';
+import { LatestLive } from '../LatestLive';
 import { easeInOut, easeOut, register, seg, Track } from './engine';
 import { Journey, type Notes } from './Journey';
 import './demo.css';
@@ -217,7 +218,7 @@ function Outcome({ reduce }: { reduce: boolean }) {
         <h2 className="h2">Four for four, <em>in about half the requests.</em></h2>
       </header>
       <dl className="oc-numbers">
-        <div style={{ ['--k' as string]: 'var(--n0)' }}><dt>Tasks passed</dt><dd><span className="o">{headline.passes.original}/{headline.passes.of}</span><i aria-hidden="true">→</i><span className="m">{headline.passes.modified}/{headline.passes.of}</span></dd></div>
+        <div style={{ ['--k' as string]: 'var(--n0)' }}><dt>Tasks passed (official grader v1)</dt><dd><span className="o">{headline.passes.original}/{headline.passes.of}</span><i aria-hidden="true">→</i><span className="m">{headline.passes.modified}/{headline.passes.of}</span></dd></div>
         <div style={{ ['--k' as string]: 'var(--n1)' }}><dt>Model requests</dt><dd><span className="o">{headline.requests.original}</span><i aria-hidden="true">→</i><span className="m">{headline.requests.modified}</span></dd><p>{headline.requests.fewerPct}% fewer</p></div>
         <div style={{ ['--k' as string]: 'var(--n2)' }}><dt>Mean time per task</dt><dd><span className="o">{headline.seconds.original}s</span><i aria-hidden="true">→</i><span className="m">{headline.seconds.modified}s</span></dd></div>
       </dl>
@@ -233,7 +234,8 @@ function Outcome({ reduce }: { reduce: boolean }) {
             </div>; })}
         </li>)}</ul>
       </figure>
-      <p className="oc-honest">Every pair moved the same way, giving p = {fr.p_pass}: the strongest result four pairs can produce, and still above the pre-registered α of {fr.alpha.toFixed(2)}. The frozen rule reads <strong>{fr.verdict}</strong>; the exploratory listing rule reads <strong>consistent with the hypothesis</strong>. More repetitions settle it.</p>
+      <p className="oc-honest">Every pair moved the same way, giving p = {fr.p_pass}: the strongest result four pairs can produce, and still above the pre-registered α of {fr.alpha.toFixed(2)}. The frozen rule reads <strong>{fr.verdict}</strong>; the exploratory listing rule reads <strong>consistent with the hypothesis</strong>. More repetitions settle it. Replicated later the same day by a second live run of the same four tasks ({replication.second.job}): {replication.second.official.original}/{replication.of} → {replication.second.official.modified}/{replication.of} under the official grader v1 ({replication.second.postHoc.original}/{replication.of} → {replication.second.postHoc.modified}/{replication.of} under the labelled post-hoc grader v2), {replication.second.requests.original} → {replication.second.requests.modified} model requests. The headline figures are the first run's ({replication.first.job}).</p>
+      <LatestLive className="oc-latest" />
     </div>
   </Track>;
 }

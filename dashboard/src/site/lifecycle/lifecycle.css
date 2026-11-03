@@ -255,3 +255,9 @@
 .lc-live-grid ul{display:grid;gap:6px;font-size:13px;color:var(--ink-2)}
 .lc-live-grid small{display:block;color:var(--ink-3)}
 @media (max-width:900px){.lc-live-grid{grid-template-columns:1fr}}
+/* I2 (M9): retrospective evidence audit, visibly separate from the grades */
+.lc-audit{margin-top:18px;padding:14px 16px;border:1px dashed var(--line,#CFCAB9);border-radius:8px;background:var(--paper-2,#F3F1EA);font-size:14px;line-height:1.55}
+.lc-audit .eyebrow{margin-bottom:6px}
+.lc-audit-nums{display:flex;flex-wrap:wrap;gap:8px 28px;margin:10px 0}
+.lc-audit-nums dt{font-size:12.5px;color:var(--ink-3,#6B6A63)}
+.lc-audit-nums dd{margin:0;font-weight:600}

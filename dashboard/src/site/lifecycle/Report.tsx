@@ -3,6 +3,7 @@ import { SiteFooter, SiteHeader } from '../Shell';
 import { api, fmtSec, fmtUsd, variantClass, words, type Evaluation, type Finding, type Trial } from '../../lib/lifecycleApi';
 import { Failed, GradeTag, Hash, Loading, ModeBadge, PairBars, Section, useLoad, VariantName } from './parts';
 import { TraceCompare } from './Trace';
+import { AUDIT_DATE, GRADING_AUDIT } from './gradingAudit';
 import './lifecycle.css';
 
 /** `#/reports/<id>` and `#/reports/<id>/tasks/<n>`: one readiness report for any evaluation (the preloaded M7 dataset and evaluations launched in the
@@ -40,7 +41,7 @@ export function Report({ ev }: { ev: Evaluation }) {
       {ev.caveat && <p className="lc-caveat" role="note"><strong>Read this first.</strong> {ev.caveat} Official grades are grader v1 as recorded; grader v2 is a labelled post-hoc rescore; rules marked prospective are shown, never applied.</p>}
       <dl className="lc-facts">
         <div><dt>Agent runs</dt><dd>{(() => { const ex = Object.values(ev.execution); const planned = ex.reduce((a, x) => a + (x.planned ?? 0), 0); const done = ev.trials.filter(t => t.status === 'completed').length; const v = ev.trials.filter(t => t.void).length;
-          return <><strong>{done}/{planned || ev.trials.length} completed</strong>{v ? ` · ${v} void` : ' · none void'}{ex.some(x => x.stopped) ? ' · the run stopped early' : ''}</>; })()}</dd></div>
+          return <><strong>{done}/{planned || ev.trials.length} agent runs finished</strong>{v ? ` · ${v} void` : ' · none void'}{ex.some(x => x.stopped) ? ' · the run stopped early' : ''} · finishing is not passing (see Task success)</>; })()}</dd></div>
         <div><dt>Frozen suite</dt><dd>{ev.suite.name} v{ev.suite.version} · <Hash sha={ev.frozen_suite.sha256} /></dd></div>
         <div><dt>Approval</dt><dd>{ev.approval.decision} by the {ev.approval.role}{ev.approval.synthetic ? ' (SYNTHETIC fixture)' : ''}, {new Date(ev.approval.decided_at).toUTCString().slice(5, 22)} UTC · <Hash sha={ev.approval.sha256} /></dd></div>
         <div><dt>Manifest</dt><dd><Hash sha={ev.manifest.sha256} /> · {ev.manifest.repetitions} repetition · seed {ev.manifest.seed} · plan {ev.manifest.plan}</dd></div>
@@ -107,6 +108,21 @@ function TaskMatrix({ ev, vs }: { ev: Evaluation; vs: string[] }) {
   </Section>;
 }
 
+/** I2 (M9): the retrospective evidence audit, labelled as such and kept apart from the grades; it replaces nothing. */
+function AuditNote({ id, vs }: { id: string; vs: string[] }) {
+  const a = GRADING_AUDIT[id];
+  const v = (x: { original: number; modified: number }) => vs.map(n => `${(x as Record<string, number>)[n]}/${a.of}`).join(' → ');
+  return <aside className="lc-audit" aria-label="Retrospective evidence audit">
+    <p className="eyebrow">Retrospective evidence audit · {AUDIT_DATE} · not an official score</p>
+    <p>The official grader v1 has documented false negatives. A read-only audit of every trial of the two paid runs of this suite checked each answer against the frozen website data and the pages the agent was actually shown. It found no false facts in any answer and no wrong expected answer, but official v1 failed correct answers that add supporting detail (in this run: Original {a.v1FalseNegatives.original}, Modified {a.v1FalseNegatives.modified}). Grader v2 also errs: it fails a correct answer that names the rejected alternative, and it credits some correct answers the agent could not have verified.</p>
+    <dl className="lc-audit-nums">
+      <div><dt>Correct answers (audit)</dt><dd>{v(a.correct)}</dd></div>
+      <div><dt>Correct and verifiable from the pages shown (audit)</dt><dd>{v(a.verified)}</dd></div>
+    </dl>
+    <p className="muted">The official v1 grades and the post-hoc v2 grades above are unchanged; v1 remains the grade of record. Six tasks and one repetition support no statistical claim.</p>
+  </aside>;
+}
+
 function Success({ ev, vs }: { ev: Evaluation; vs: string[] }) {
   const ts = ev.dimensions.task_success.variants;
   const an = Object.values(ev.analysis)[0];
@@ -119,6 +135,7 @@ function Success({ ev, vs }: { ev: Evaluation; vs: string[] }) {
     {an && <div className="lc-analysis"><p><strong>{an.label}.</strong> {an.outcome}. Exact sign-flip test over {an.official_v1.pairs} task pairs: official v1 mean difference {an.official_v1.mean_difference ?? '–'} (p = {an.official_v1.p_value ?? '–'}); post-hoc v2 mean difference {an.post_hoc_v2.mean_difference ?? '–'} (p = {an.post_hoc_v2.p_value ?? '–'}).</p>
       <p className="muted">Per task (Modified − Original), v1 / v2: {an.official_v1.per_task.map((x, i) => <span key={x.task} className="lc-inline">task {x.task}: {x.difference > 0 ? '+' : ''}{x.difference} / {(an.post_hoc_v2.per_task[i]?.difference ?? 0) > 0 ? '+' : ''}{an.post_hoc_v2.per_task[i]?.difference ?? '–'}</span>)}</p></div>}
     <p className="lc-note">Why two graders: v1 accepts only the bare expected names (a correct answer with its fee and seats attached fails); v2 accepts consistent supporting detail and rejects hedges and contradictions. v1 stays the grade of record.</p>
+    {GRADING_AUDIT[ev.id] && <AuditNote id={ev.id} vs={vs} />}
   </>;
 }
 
@@ -224,7 +241,7 @@ function Provenance({ ev }: { ev: Evaluation }) {
   return <Section id="provenance" n="Provenance" title="Where these numbers come from">
     <ul className="lc-prov">
       {ev.source?.kind === 'dataset' && <li>Preloaded from dataset <code>{ev.source.id}</code> v{ev.source.version} (built {ev.source.built_at}): {ev.source.description} Runs: {ev.source.runs?.join(', ')}.</li>}
-      <li>Execution: {ex?.executed}/{ex?.planned ?? '–'} trials, {ex?.stopped ? `stopped: ${ex.stopped}` : 'no halt'}; browser jail self-test {ex?.jail_selftest_ok ? 'passed' : 'not recorded'}{ev.mode === 'paid' ? `; paid authorisation ${ex?.authorization_verified ? 'verified against the exact frozen suite and manifest' : 'not recorded'}` : ''}.</li>
+      <li>Execution: {ex?.executed}/{ex?.planned ?? '–'} agent runs finished, {ex?.stopped ? `stopped: ${ex.stopped}` : 'no halt'}; browser jail self-test {ex?.jail_selftest_ok ? 'passed' : 'not recorded'}{ev.mode === 'paid' ? `; paid authorisation ${ex?.authorization_verified ? 'verified against the exact frozen suite and manifest' : 'not recorded'}` : ''}.</li>
       <li>Graders: {ev.graders.official}; {ev.graders.post_hoc}; prospective: {ev.graders.prospective.map(p => p.id).join(', ')} (never applied).</li>
       <li>Privacy: expected answers, criteria and required evidence pages stay on the server; this page shows the agent's own answers and counts derived from the oracle.</li>
       <li>Suite hash <Hash sha={ev.suite.sha256} /> · prepared by {ev.suite.created_by}.</li>
