@@ -237,3 +237,23 @@ No grading code was changed.
 | Browser (production) | Banner: "**Worker ready · no launch authorised** · The authorised launch has been used. A new launch needs a new owner authorisation." "Ready to start" appears nowhere. Generic intro (manual Modified; no Ironbark). 0 console errors, 0 ≥400, 0 non-GET |
 
 **Rollback:** `docker tag agent-readiness-app:rollback-e7e35e1 agent-readiness-app:latest && docker compose up -d --no-build --no-deps app`. No database or `.env` change is involved.
+
+## 10. Judge-facing presentation patch (`352f262`; NOT deployed; awaiting owner approval)
+
+**Scope:** presentation only. No change to grading logic, task suites, evidence, security policy, model configuration or admission controls. 11 frontend files.
+
+| Item | Change |
+|---|---|
+| I1 | Home and Demo label the Ironbark headline "(official grader v1)" and add: "Replicated later the same day by a second live run of the same four tasks (eval-aa23e330): 0/4 → 3/4 under the official grader v1 (1/4 → 4/4 under the labelled post-hoc grader v2), 52 → 26 model requests. The headline figures are the first run's (eval-9aaac35c)." The figures come from the two jobs' recorded production status |
+| I2 | The Larkspur reports (M7 dataset and `eval-e529…` only) show a separately styled block: "**Retrospective evidence audit · 3 Nov 2026 · not an official score**". It states that v1 has documented false negatives (per run: M7 Original 1 / Modified 4; live 1 / 3) and that v2 errs too. Audit counts: correct answers (M7 3/6 → 5/6; live 2/6 → 5/6) and correct and verifiable (M7 1/6 → 4/6; live 1/6 → 5/6). It says "official v1 … and post-hoc v2 grades above are unchanged; v1 remains the grade of record. Six tasks and one repetition support no statistical claim." Not shown for any other evaluation |
+| I3 | A "Latest live evaluation · 3 Nov 2026" card (Larkspur, 12 agent runs finished with a real model, official v1 1/6 → 2/6, post-hoc v2 2/6 → 4/6, link to `#/reports/eval-e529…`) in the home hero and the demo outcome. It is a recorded constant, because home and demo deliberately call no API (an existing test enforces this). The Ironbark story is kept |
+| C1 | "12/12 agent runs finished · none void · finishing is not passing (see Task success)"; provenance "12/12 agent runs finished" |
+| C2 | `lifecycle/parts.tsx` `useLoad` remembers which key its data belongs to and returns data only for the current key. The new test fails on the old hook |
+
+**Tests:**
+- 5 new dashboard tests: home (I1, I3, still no API call); demo outcome (I1, I3); the replication constants equal the bundled first-run evidence; the I2 note is shown only for audited evaluations while the official grades are unchanged; C2.
+- Totals: dashboard **209 passed**; build CHECK PASSED; deployment-safety and export checks 40 passed.
+- Visually checked on a local preview build: home hero and evidence, demo outcome. The demo card fades in with the scene.
+- Python is unchanged.
+
+**Deployment:** the same procedure as `f36db53`, with rollback `rollback-f36db53`.

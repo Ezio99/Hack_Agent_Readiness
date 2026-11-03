@@ -150,6 +150,7 @@ verification of the M8 release candidate. Report: [collaboration/reports/m9-rele
 - **Deployed with owner approval** 2026-11-03 01:07 UTC: `f36db53`, image `sha256:6fa8b107…` (rollback `rollback-e7e35e1`). Verified: launch state `launches_exhausted`, banner 'Worker ready · no launch authorised', report recovery and evidence unchanged.
 - **Programme ledger appended with owner approval** (`98d5ec6`): 21 entries, **US$18.786306 = A$28.18; A$21.82 left** of A$50.
 - Grading policy unchanged (official v1 stays the grade of record).
+- **Presentation patch `352f262`** (I1 replication disclosure, I2 retrospective audit note, I3 latest live link, C1 wording, C2 trace race): tested (dashboard 209, build CHECK PASSED); **NOT deployed, awaiting owner approval**.
 
 ## Budget
 
