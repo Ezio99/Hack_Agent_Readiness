@@ -55,10 +55,15 @@ class StageBExecutor(J.LifecycleExecutor):
         """The operator's budget pool: recorded by the owner when the budget was opened, its budget open in THIS admission database, its mode this
         service's mode, and still verifying. Independent of the judge arming."""
         open_ = {b["budget"] for b in (self.admission.totals().get("budgets") or [])} if hasattr(self.admission, "capacity_microusd") else set()
-        cands = [p for p in AR.pools() if p.budget in open_]
-        if not cands:
+        budgets = sorted(b for b in open_ if AR.pool_path(b).exists())
+        if not budgets:
             return None, "no_budget"
-        pool = cands[0]
+        try:
+            pool = AR.load_pool(AR.selected_pool_id(budgets[0]))                   # the owner's selected evaluation (default: the one recorded at opening)
+        except Exception:
+            return None, "pool_invalid"
+        if pool.budget != budgets[0]:
+            return None, "pool_invalid"
         if pool.mode != ("paid" if self.mode == "live" else "rehearsal"):
             return None, "pool_mode_mismatch"
         if AR.verify(self.store(), pool):

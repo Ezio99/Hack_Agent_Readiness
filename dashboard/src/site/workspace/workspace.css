@@ -295,3 +295,4 @@ button.ws-cell-button:hover{background:var(--paper)}
 
 .ws-shared-budget{margin:0 0 10px;font-size:14px}.ws-shared-budget small{display:block;color:var(--ink-3);font-size:12px}
 .ws-cost{font-variant-numeric:tabular-nums}
+.ws-soft-cap{display:block;margin-top:4px}

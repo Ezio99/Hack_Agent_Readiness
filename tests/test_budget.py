@@ -567,3 +567,42 @@ def test_the_workspace_api_separates_programme_ceiling_and_budget(prod, monkeypa
     assert s["global"]["cap_usd"] == 35.289333 and s["available"] == 10.588249 and s["programme"]["spent_usd"] == 19.418057
     rows = {r["id"]: r for r in c2.get("/api/ironbark/jobs").json()}
     assert rows[C04]["cost_usd"] == 0.631751 and rows[C04]["budget"] is None
+
+
+@need_prod
+def test_the_owner_can_switch_the_budget_to_another_approved_immutable_pair(prod, monkeypatch):
+    """E.g. Original vs Polished once Polished ships as a registered version: only an owner-approved frozen suite and registered (content-hashed)
+    website versions; selected at the terminal; the next launch runs it; the launch counter, accounting and earlier records continue unchanged."""
+    AR, store, a, ex, sb = _pool_env(prod, monkeypatch)
+    _open_pool(a, store)
+    first = ex.admit(jid(1100), "%064x" % 1100, 1, charge="budget")["id"]
+    a.transition(first, "reserved", "failed")
+    before = {p: sha(p) for p in sb.rglob("*") if p.is_file()}
+    with pytest.raises(BG.BudgetRefused, match="registered variants"):              # an unregistered website version (e.g. Polished before it ships)
+        BG.plan_evaluation(a, store, budget=B, pool_id="ar-a20-polished", frozen="larkspur-core@v3", variants=["original", "polished"])
+    with pytest.raises(BG.BudgetRefused, match="no frozen suite"):                  # an unreviewed / unknown suite
+        BG.plan_evaluation(a, store, budget=B, pool_id="ar-a20-x", frozen="larkspur-core@v99", variants=["original", "modified"])
+    with pytest.raises(BG.BudgetRefused, match="not open"):
+        BG.plan_evaluation(a, store, budget="other-budget", pool_id="x-y-z", frozen="larkspur-core@v3", variants=["original", "modified"])
+    t = BG.plan_evaluation(a, store, budget=B, pool_id="ar-a20-orig-mod", frozen="larkspur-core@v3", variants=["original", "modified"])
+    with pytest.raises(BG.BudgetRefused, match="does not match"):
+        BG.add_evaluation(a, store, budget=B, pool_id="ar-a20-orig-mod", frozen="larkspur-core@v3", variants=["original", "modified"], typed="yes", at="t")
+    BG.add_evaluation(a, store, budget=B, pool_id="ar-a20-orig-mod", frozen="larkspur-core@v3", variants=["original", "modified"], typed=t["attestation"],
+                      at="2026-11-04T00:00:00+00:00")
+    assert ex.budget_pool()[0].pool_id == B                                           # recorded, not yet selected
+    BG.use_evaluation(B, "ar-a20-orig-mod")
+    pool, _ = ex.budget_pool()
+    assert (pool.pool_id, [n for n, _ in pool.variants]) == ("ar-a20-orig-mod", ["original", "modified"])
+    assert ex.configuration()["evaluation"]["variants"] == ["original", "modified"]
+    j = ex.admit(jid(1101), "%064x" % 1101, 1, charge="budget")["id"]
+    claim = next(c for c in AR.claims(B) if c["job"] == j)
+    assert (claim["budget_pool"], claim["launch"], claim["experiment_id"]) == ("ar-a20-orig-mod", 2, f"{B}-l2")   # one launch counter per budget
+    assert a.job_budget(j) == B and budget_fig(a)["outstanding_micro_aud"] == 2 * 5_610_000
+    import agent_readiness.lifecycle.jobs as LJ
+    job = LJ.load_job(prod / "live" / "stageb", j)
+    assert AR.check_launch(store, job)["budget_pool"] == "ar-a20-orig-mod"           # the worker's independent re-check accepts it
+    assert all(sha(p) == h for p, h in before.items() if p.exists())                  # nothing recorded earlier changed
+    with pytest.raises(BG.BudgetRefused):
+        BG.use_evaluation(B, "never-recorded")
+    st = BG.status(Admission.open_read_only(a.path))["budgets"][0]
+    assert st["selected_evaluation"] == "ar-a20-orig-mod" and {e["id"] for e in st["evaluations"]} == {B, "ar-a20-orig-mod"}

@@ -447,7 +447,8 @@ POOL_RECORDED_BY = "owner at an interactive terminal (agent_readiness.hosted.bud
 class BudgetPool(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
     schema_: Literal["hosted-budget-pool-v1"] = Field(default=POOL_SCHEMA, alias="schema")
-    budget: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{2,40}$")                     # also the pool id and the launch-experiment prefix
+    budget: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{2,40}$")                     # the launch-experiment prefix (one launch counter per budget)
+    pool_id: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{2,60}$")                    # this evaluation's id: the budget's first one is the budget id
     mode: Literal["paid", "rehearsal"]
     site: str
     frozen_suite: str
@@ -475,10 +476,27 @@ def pools_root() -> Path:
     return AU.STAGE_B / "budget-pools"
 
 
-def pool_path(budget: str) -> Path:
-    if not ARMING_ID.match(budget or "") or len(budget) > 41:
-        raise ArmingRefused("invalid_budget", "budget ids are 3-41 lowercase letters, digits or hyphens", 422)
-    return pools_root() / f"{budget}.json"
+def pool_path(pool_id: str) -> Path:
+    if not ARMING_ID.match(pool_id or "") or len(pool_id) > 61:
+        raise ArmingRefused("invalid_budget", "evaluation ids are 3-61 lowercase letters, digits or hyphens", 422)
+    return pools_root() / f"{pool_id}.json"
+
+
+def selected_pool_id(budget: str) -> str:
+    """Which recorded evaluation the budget's launches run: the owner's selection (`budget evaluation-use`), else the one recorded at opening."""
+    p = pools_root() / f"SELECTED-{budget}"
+    if p.is_file():
+        return json.loads(p.read_text()).get("pool") or budget
+    return budget
+
+
+def select_pool(budget: str, pool_id: str) -> None:
+    rec = load_pool(pool_id)
+    if rec.budget != budget:
+        raise ArmingRefused("wrong_budget", f"evaluation {pool_id} belongs to budget {rec.budget}", 409)
+    tmp = pools_root() / f"SELECTED-{budget}.tmp"
+    tmp.write_text(json.dumps({"pool": pool_id, "at": time.time()}))
+    os.replace(tmp, pools_root() / f"SELECTED-{budget}")
 
 
 def pool_attestation(a: dict) -> str:
@@ -487,41 +505,42 @@ def pool_attestation(a: dict) -> str:
     ag = a["agent"]
     verb = "authorise paid evaluations launched by any holder of a valid evaluation access code" if a["mode"] == "paid" else \
         "allow zero-cost rehearsals launched by any holder of a valid evaluation access code"
-    return (f"I am the owner and I {verb} charged ONLY to the separate budget {a['budget']}: frozen suite {a['frozen_suite']} {a['frozen_suite_sha256']} on "
+    return (f"I am the owner and I {verb} as evaluation {a.get('pool_id', a['budget'])}, charged ONLY to the separate budget {a['budget']}: frozen suite {a['frozen_suite']} {a['frozen_suite_sha256']} on "
             f"{a['site']} ({', '.join(f'{n} {s}' for n, s in a['variants'])}), model {ag['model']} at {ag['endpoint']} (reasoning {ag['reasoning_effort']}, "
             f"{ag['max_completion_tokens']} completion tokens, profile {ag['profile']} {ag['profile_sha256'][:12]}); {opts}; every launch reserves its maximum "
             f"before it starts and settles at its verified actual cost; launches continue only while the budget covers a reservation (no launch count)")
 
 
-def pool_terms(store, *, budget: str, mode: str, frozen_ref: str, variants: list[str], repetitions: list[int]) -> dict:
-    """The pool's exact terms and confirmation text (read-only)."""
-    if pool_path(budget).exists():
-        raise ArmingRefused("pool_exists", f"the budget pool {budget} is already recorded (write-once)", 409)
-    if (root() / f"{budget}.json").exists() or claims(budget):
+def pool_terms(store, *, budget: str, mode: str, frozen_ref: str, variants: list[str], repetitions: list[int], pool_id: str | None = None) -> dict:
+    """The evaluation's exact terms and confirmation text (read-only). `pool_id` None: the budget's first evaluation (its id is the budget id)."""
+    pid = pool_id or budget
+    if pool_path(pid).exists():
+        raise ArmingRefused("pool_exists", f"the budget evaluation {pid} is already recorded (write-once)", 409)
+    if pool_id is None and ((root() / f"{budget}.json").exists() or claims(budget)):
         raise ArmingRefused("id_in_use", f"{budget} is already an arming id; launch experiment ids must stay unique", 409)
     p = plan(store, arming_id=budget, mode=mode, frozen_ref=frozen_ref, variants=variants, repetitions=repetitions, launches=1, _pool=True)
-    a = {"budget": budget, **{k: p[k] for k in ("mode", "site", "frozen_suite", "frozen_suite_sha256", "variants", "options", "agent")}}
+    a = {"budget": budget, "pool_id": pid, **{k: p[k] for k in ("mode", "site", "frozen_suite", "frozen_suite_sha256", "variants", "options", "agent")}}
     return {**a, "attestation": pool_attestation(a), "manifest_basis": p["manifest_basis"], "synthetic": p["synthetic"]}
 
 
 def record_pool(store, terms: dict, *, at: str) -> BudgetPool:
     """Write-once (exclusive create). Called by `hosted.budget open` after the owner's typed confirmation, which includes the pool text."""
-    rec = BudgetPool(**{"schema": POOL_SCHEMA, **{k: terms[k] for k in ("budget", "mode", "site", "frozen_suite", "frozen_suite_sha256", "attestation")},
+    rec = BudgetPool(**{"schema": POOL_SCHEMA, **{k: terms[k] for k in ("budget", "pool_id", "mode", "site", "frozen_suite", "frozen_suite_sha256", "attestation")},
                         "variants": tuple(tuple(v) for v in terms["variants"]), "options": tuple(Option(**o) for o in terms["options"]), "agent": terms["agent"],
                         "recorded_at": at, "recorded_by": POOL_RECORDED_BY})
     problems = verify(store, rec)
     if problems:
         raise ArmingRefused("verification_failed", "; ".join(problems))
     pools_root().mkdir(parents=True, exist_ok=True)
-    path = pool_path(rec.budget)
+    path = pool_path(rec.pool_id)
     with open(path, "x") as f:
         f.write(json.dumps(rec.content(), indent=1, sort_keys=True))
     os.chmod(path, 0o444)
     return rec
 
 
-def load_pool(budget: str) -> BudgetPool:
-    return BudgetPool.model_validate(json.loads(pool_path(budget).read_text()))
+def load_pool(pool_id: str) -> BudgetPool:
+    return BudgetPool.model_validate(json.loads(pool_path(pool_id).read_text()))
 
 
 def pools() -> list[BudgetPool]:
@@ -548,7 +567,7 @@ def pool_launch(store, pool: BudgetPool, *, repetitions: int, job_id: str, at: s
     experiment = f"{pool.budget}-l{n}"
     claims_dir().mkdir(parents=True, exist_ok=True)
     cp = claims_dir() / f"{experiment}.json"
-    claim = {"budget_pool": pool.budget, "pool_sha256": pool.sha256, "launch": n, "experiment_id": experiment, "job": job_id, "repetitions": repetitions,
+    claim = {"budget_pool": pool.pool_id, "budget": pool.budget, "pool_sha256": pool.sha256, "launch": n, "experiment_id": experiment, "job": job_id, "repetitions": repetitions,
              "manifest_sha256": opt.manifest_sha256, "reservation_microusd": opt.reservation_microusd, "mode": pool.mode, "claimed_at": at}
     try:
         with open(cp, "x") as f:
@@ -563,7 +582,7 @@ def pool_launch(store, pool: BudgetPool, *, repetitions: int, job_id: str, at: s
             raise ArmingRefused("ledger_used", "the launch's experiment ledger already has entries; it is never re-run", 409)
         auth = AU.PaidAuthorization(experiment_id=experiment, frozen_suite_sha256=pool.frozen_suite_sha256, manifest_sha256=opt.manifest_sha256,
                                     max_trials=opt.trials, cap_usd=opt.cap_usd, instruction=pool.attestation, recorded_at=at,
-                                    recorded_by=f"server, under the owner's budget pool {pool.budget} ({pool.sha256[:12]}), operator launch {n}")
+                                    recorded_by=f"server, under the owner's budget evaluation {pool.pool_id} ({pool.sha256[:12]}), launch {n} of budget {pool.budget}")
         probs = AU.verify(auth, store, opt.manifest_sha256, planned_trials=opt.trials)
         if probs:
             raise ArmingRefused("verification_failed", "; ".join(probs))
@@ -583,7 +602,7 @@ def pool_summary(store, pool: BudgetPool | None, admission=None) -> dict | None:
         name = f"{store.get('suite', fz.suite_sha256).suite_name} v{store.get('suite', fz.suite_sha256).version}"
     except Exception:
         name = pool.frozen_suite
-    return {"arming_id": pool.budget, "budget": pool.budget, "pool_sha256": pool.sha256, "mode": pool.mode, "site": pool.site, "suite": name,
+    return {"arming_id": pool.pool_id, "budget": pool.budget, "pool_id": pool.pool_id, "pool_sha256": pool.sha256, "mode": pool.mode, "site": pool.site, "suite": name,
             "frozen_suite": pool.frozen_suite, "frozen_suite_sha256": pool.frozen_suite_sha256, "variants": [n for n, _ in pool.variants],
             "armed_at": pool.recorded_at, "launches": None, "launches_so_far": len(claims(pool.budget)),
             "capacity": None if room is None else {"available_usd": room / 1e6, "launches_affordable": None},

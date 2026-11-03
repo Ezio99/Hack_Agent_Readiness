@@ -294,7 +294,8 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
   const elapsed = job?.started_at ? (job.finished_at ?? now) - job.started_at : 0;
   const mode = job?.mode ?? config?.mode;
   const shared = config?.spending?.charged_to ? (config.spending.budgets ?? []).find(b => b.id === config.spending!.charged_to) ?? null : null;
-  const noCount = !!ev && ev.launches === null;                       // the shared budget's evaluation: no launch count, the budget is the limit
+  const noCount = !!ev && ev.launches === null;
+  const maxRun = (ev?.options[0]?.reservation_usd ?? 0) * (shared?.rate_aud_per_usd ?? 1.5);   // one run's maximum, in A$ (its reservation)                       // the shared budget's evaluation: no launch count, the budget is the limit
   const budgetOk = stageB ? (config?.repetitions ?? []).includes(reps) && (noCount || (config?.remaining_repetitions ?? 0) > 0) : (config?.remaining_repetitions ?? 0) >= reps;
   const canRun = !!config?.available && !busy && !running && !othersRunning && budgetOk && (!operatorOnly || token.length >= 24);
   const judgeAccess = !!config?.judge_access;
@@ -360,7 +361,8 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
               <p id="ws-operator-help" className="ws-operator-help">Held in this page's memory only (never saved; re-enter it after a reload) and sent only as an authorization header when you start. The server checks it.</p>
             </div>}
             {shared && <p className="ws-shared-budget" aria-label="Evaluation budget"><strong>A${Math.max(0, shared.available_aud).toFixed(2)}</strong> of A${shared.limit_aud.toFixed(2)} evaluation budget left
-              <small>spent A${shared.spent_aud.toFixed(2)}{shared.outstanding_aud > 0 ? ` · A$${shared.outstanding_aud.toFixed(2)} held for a run not yet reconciled` : ''} · new evaluations start while less than A${shared.limit_aud.toFixed(0)} has been used</small></p>}
+              <small>spent A${shared.spent_aud.toFixed(2)}{shared.outstanding_aud > 0 ? ` · A$${shared.outstanding_aud.toFixed(2)} committed to a run not yet reconciled` : ''}</small>
+              <small className="ws-soft-cap">A new evaluation starts while less than A${shared.limit_aud.toFixed(0)} is committed. Each run can cost at most A${maxRun.toFixed(2)}, so the last one can take the total to at most A${(shared.limit_aud + maxRun).toFixed(2)}.</small></p>}
             <button className="btn btn-signal ws-run" disabled={!canRun} aria-describedby="ws-run-note" onClick={() => void start()}>{busy ? 'Starting…' : running ? 'Evaluation running' : liveRun ? 'Run live evaluation' : 'Run evaluation'}</button>
             <p className="ws-note" id="ws-run-note">{note}</p></li>
         </ol>

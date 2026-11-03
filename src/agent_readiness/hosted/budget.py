@@ -170,7 +170,7 @@ def _plan_with_existing_pool(admission, budget_id, limit_aud, rate, store, froze
     from ..lifecycle import arming as AR
     rec = AR.load_pool(budget_id)
     p = plan_open(admission, budget_id, limit_aud, rate)
-    a = {"budget": budget_id, "mode": mode, "site": rec.site, "frozen_suite": frozen, "frozen_suite_sha256": rec.frozen_suite_sha256,
+    a = {"budget": budget_id, "pool_id": rec.pool_id, "mode": mode, "site": rec.site, "frozen_suite": frozen, "frozen_suite_sha256": rec.frozen_suite_sha256,
          "variants": [list(v) for v in rec.variants], "options": [o.model_dump() for o in rec.options], "agent": rec.agent}
     if rec.attestation != AR.pool_attestation(a) or [n for n, _ in rec.variants] != list(variants or []) or AR.verify(store, rec):
         raise BudgetRefused("pool_differs", "a different budget pool is already recorded for this budget")
@@ -263,6 +263,50 @@ def settle_allocation(admission: Admission, ref: str, ledgers: list[Path], *, ac
     return {"ref": ref, "settled_microusd": a["commit_microusd"], "already": False}
 
 
+# ----------------------------------------------------------------------------------------------------------------------------- evaluations
+def plan_evaluation(admission: Admission, store, *, budget: str, pool_id: str, frozen: str, variants: list[str], mode: str = "paid") -> dict:
+    """Another approved evaluation for an open budget (e.g. Original vs Polished): an owner-approved FROZEN suite and two website versions that are
+    registered (immutable, content-hashed snapshots shipped in a reviewed release). Its per-run maximum may not exceed the one-run allowance the
+    global cap was raised by at opening, so the soft cap's bound (A$20 + one run) still holds. Read-only."""
+    from ..lifecycle import arming as AR
+    with admission.connect() as db:
+        led = admission._ledger(db)
+    if budget not in led["budgets"]:
+        raise BudgetRefused("no_budget", f"budget {budget} is not open")
+    try:
+        first = AR.load_pool(budget)
+        terms = AR.pool_terms(store, budget=budget, mode=mode, frozen_ref=frozen, variants=list(variants), repetitions=[1], pool_id=pool_id)
+    except AR.ArmingRefused as exc:
+        raise BudgetRefused(exc.code, exc.detail) from None
+    except FileNotFoundError:
+        raise BudgetRefused("no_pool", f"budget {budget} has no evaluation recorded at opening") from None
+    if terms["mode"] == "paid" and terms["synthetic"]:
+        raise BudgetRefused("synthetic_suite", "a synthetic fixture suite can never be evaluated with a paid model")
+    allowance = max((o.reservation_microusd for o in first.options), default=0) if first.mode == "paid" else 0
+    worst = max(o["reservation_microusd"] for o in terms["options"]) if terms["mode"] == "paid" else 0
+    if worst > allowance:
+        raise BudgetRefused("over_allowance", f"a run of this evaluation may cost up to {usd(worst)}, more than the one-run allowance {usd(allowance)} "
+                                              "of the global cap; it needs a reviewed change")
+    return terms
+
+
+def add_evaluation(admission: Admission, store, *, budget: str, pool_id: str, frozen: str, variants: list[str], typed: str, at: str, mode: str = "paid") -> None:
+    from ..lifecycle import arming as AR
+    terms = plan_evaluation(admission, store, budget=budget, pool_id=pool_id, frozen=frozen, variants=variants, mode=mode)
+    if typed.strip() != terms["attestation"]:
+        raise BudgetRefused("confirmation_mismatch", "the typed confirmation does not match; nothing was recorded")
+    AR.record_pool(store, terms, at=at)
+
+
+def use_evaluation(budget: str, pool_id: str) -> None:
+    """Select which recorded evaluation the budget's launches run (takes effect for the next launch; a running one is unaffected)."""
+    from ..lifecycle import arming as AR
+    try:
+        AR.select_pool(budget, pool_id)
+    except (AR.ArmingRefused, FileNotFoundError) as exc:
+        raise BudgetRefused("no_evaluation", getattr(exc, "detail", f"no evaluation {pool_id}")) from None
+
+
 # ----------------------------------------------------------------------------------------------------------------------------- status
 def status(admission: Admission) -> dict:
     """Read-only statement of every budget: its figures, every job and allocation charged to it (with reservation, settlement and ledger)."""
@@ -278,8 +322,10 @@ def status(admission: Admission) -> dict:
                           "LEFT JOIN settlements s ON s.job_id=j.id ORDER BY j.created").fetchall()
         allocs = db.execute("SELECT a.budget_id, a.ref, a.purpose, a.max_microusd, x.settled, x.ledger_sha256 FROM budget_allocations a "
                             "LEFT JOIN allocation_settlements x ON x.ref=a.ref ORDER BY a.opened_at").fetchall()
+    from ..lifecycle import arming as AR
     for b in t["budgets"]:
-        out["budgets"].append({**b, **meta.get(b["budget"], {}),
+        evs = [{"id": p.pool_id, "frozen_suite": p.frozen_suite, "variants": [n for n, _ in p.variants], "mode": p.mode} for p in AR.pools() if p.budget == b["budget"]]
+        out["budgets"].append({**b, **meta.get(b["budget"], {}), "evaluations": evs, "selected_evaluation": AR.selected_pool_id(b["budget"]) if evs else None,
                                "jobs_detail": [{"job": r[1], "state": r[2], "reserved_microusd": r[3], "settled_microusd": r[4], "ledger_sha256": r[5]}
                                                for r in jobs if r[0] == b["budget"]],
                                "allocations_detail": [{"ref": r[1], "purpose": r[2], "max_microusd": r[3], "settled_microusd": r[4], "ledger_sha256": r[5]}
@@ -297,6 +343,8 @@ def _print_status(st: dict) -> None:
     for b in st["budgets"]:
         print(f"budget          {b['budget']}: limit {aud(b['limit_micro_aud'])} ({usd(b['limit_microusd'])} at {b['rate_num']}/{b['rate_den']}); spent {aud(b['spent_micro_aud'])}; "
               f"outstanding {aud(b['outstanding_micro_aud'])}; available {aud(b['available_micro_aud'])} ({usd(b['available_microusd'])})")
+        for e in b.get("evaluations") or []:
+            print(f"  evaluation    {e['id']}: {e['frozen_suite']}, {' vs '.join(e['variants'])} ({e['mode']})" + ("  <- selected" if e["id"] == b.get("selected_evaluation") else ""))
         for j in b["jobs_detail"]:
             print(f"  job           {j['job']} {j['state']}: reserved {usd(j['reserved_microusd'])}" + (f", settled {usd(j['settled_microusd'])}" if j["settled_microusd"] is not None else ", held in full"))
         for a in b["allocations_detail"]:
@@ -316,6 +364,15 @@ def main(argv=None) -> int:
     s.add_argument("--variants", nargs=2, required=True, help="the two website versions, e.g. original improved")
     s.add_argument("--mode", choices=("paid", "rehearsal"), default="paid")
     s.add_argument("--store", help="lifecycle store (default: AR_LIFECYCLE_STORE)")
+    s = sub.add_parser("evaluation-add", help="record another approved evaluation (frozen suite + two registered website versions)")
+    s.add_argument("--budget", required=True)
+    s.add_argument("--id", required=True)
+    s.add_argument("--frozen", required=True)
+    s.add_argument("--variants", nargs=2, required=True)
+    s.add_argument("--store")
+    s = sub.add_parser("evaluation-use", help="select which recorded evaluation every new launch runs")
+    s.add_argument("--budget", required=True)
+    s.add_argument("--id", required=True)
     s = sub.add_parser("allocate")
     s.add_argument("--budget", required=True)
     s.add_argument("--ref", required=True)
@@ -351,6 +408,26 @@ def main(argv=None) -> int:
             typed = input("Type the line above exactly to confirm: ")
             open_budget(adm, a.id, a.limit_aud, a.rate, actor=actor, typed=typed, **kw)
             print(f"opened {a.id}: available {aud(p['limit_micro_aud'])}; global hosted cap {usd(p['global_cap_after'])}")
+            return 0
+        if a.cmd in ("evaluation-add", "evaluation-use"):
+            from ..lifecycle import arming as AR
+            if a.cmd == "evaluation-add":
+                store = AR.open_store(Path(a.store or os.environ.get("AR_LIFECYCLE_STORE") or "/data/hosted/lifecycle/store"))
+                t = plan_evaluation(adm, store, budget=a.budget, pool_id=a.id, frozen=a.frozen, variants=a.variants)
+                print(t["attestation"])
+                from datetime import datetime, timezone
+                add_evaluation(adm, store, budget=a.budget, pool_id=a.id, frozen=a.frozen, variants=a.variants,
+                               typed=input("Type the line above exactly to confirm: "), at=datetime.now(timezone.utc).isoformat(timespec="seconds"))
+                print(f"recorded evaluation {a.id} (not selected; `evaluation-use` selects it)")
+                return 0
+            rec = AR.load_pool(a.id)
+            text = f"I am the owner and every new launch of budget {a.budget} runs evaluation {a.id}: {rec.frozen_suite}, {' vs '.join(n for n, _ in rec.variants)}"
+            print(text)
+            if input("Type the line above exactly to confirm: ").strip() != text:
+                print("refused: the confirmation did not match; nothing changed", file=sys.stderr)
+                return 1
+            use_evaluation(a.budget, a.id)
+            print(f"selected {a.id}")
             return 0
         if a.cmd == "allocate":
             text = f"I am the owner and I allocate up to US${a.max_usd} from budget {a.budget} to {a.ref}: {a.purpose.strip()}"

@@ -275,7 +275,8 @@ it('everyone uses one access code and one Run button; the shared budget is shown
     : url.endsWith('/jobs') ? [] : { ...job, accounting: { reserved_usd: 3.74, cost_usd: 0.631755, settled: true, budget: B } });
   const host = await mount();
   expect(host.querySelector('.ws-shared-budget')!.textContent).toContain('A$19.05 of A$20.00 evaluation budget left');
-  expect(host.querySelector('.ws-shared-budget')!.textContent).toContain('spent A$0.95 · new evaluations start while less than A$20 has been used');
+  expect(host.querySelector('.ws-shared-budget')!.textContent).toContain('spent A$0.95');
+  expect(host.querySelector('.ws-soft-cap')!.textContent).toBe('A new evaluation starts while less than A$20 is committed. Each run can cost at most A$5.61, so the last one can take the total to at most A$25.61.');
   expect(host.querySelector('.ws-target')!.textContent).toContain('runs while the budget lasts');
   expect(host.textContent).not.toMatch(/live runs? left/);
   expect(host.textContent).not.toMatch(/operator sign-in|Signed in as operator/i);
