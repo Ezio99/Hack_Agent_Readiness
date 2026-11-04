@@ -49,7 +49,7 @@ Meta Muse Spark via the Meta Model API, Browser Use, Playwright/Chromium, Python
 - Evidence and reproducibility for judges (no credentials needed for the evidence; optional local runs with a judge-owned key): the README's "Evaluate it" section.
 - Historical reports (separate runs, one per website): `#/reports/eval-ea13944e8ba5c08e8893426b2f8b1c8f`, `#/reports/eval-5cf934b372942da74f5157c5fca39fd6`
 - Repository: https://github.com/Ezio99/Hack_Agent_Readiness/tree/final-showcase (or link the exact commit).
-- **Demo video (official hackathon demo, 2:59, YouTube):** https://www.youtube.com/watch?v=jWPLlQgWeS0
+- **Demo video (official hackathon demo, 2:59, YouTube):** https://youtu.be/cgkxzWAKVDQ
   It is built from the product's real footage and recorded agent runs, narrated. Its results are the canonical paired evaluation above (0/3 → 3/3, 39 → 10 requests, 326 → 57 s, US$0.571 → US$0.134); the earlier diagnostic run it shows first is labelled as separate. Storyboard: [FINAL_VIDEO_SCRIPT.md](FINAL_VIDEO_SCRIPT.md).
 
 ## Honesty notes

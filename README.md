@@ -4,7 +4,7 @@
 
 Built for the Meta Global AI Developer Hackathon 2026.
 
-- **Demo video (official hackathon demo, 2:59):** https://www.youtube.com/watch?v=jWPLlQgWeS0
+- **Demo video (official hackathon demo, 2:59):** https://youtu.be/cgkxzWAKVDQ
 - **Live application:** https://209-38-84-72.sslip.io
 - **Reference results (canonical paired evaluation):** [`#/reports/eval-1cf64d5e…`](https://209-38-84-72.sslip.io/#/reports/eval-1cf64d5eae90bcaeab531b4886140c14)
 - **The workflow on a real example:** [the Larkspur journey](https://209-38-84-72.sslip.io/#/lifecycle)
