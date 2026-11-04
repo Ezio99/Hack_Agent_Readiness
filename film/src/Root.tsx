@@ -18,7 +18,8 @@ const TOTAL = OFFSET.act5 + ACT5_FRAMES;
 
 /** Three separate tracks: music (one continuous score, ducked under the voice), sound effects (placed inside the scenes at recorded events) and
  *  voiceover (one file per act, each line placed by the cue sheet). Placeholder acts render without voice; their captions show the planned lines. */
-function Tracks({ from, acts }: { from: number; acts: Act[] }) {
+function Tracks({ from, acts, sfxOnly = false }: { from: number; acts: Act[]; sfxOnly?: boolean }) {
+  if (sfxOnly) return null;   // the offline mixdown (scripts/mixdown.mjs) renders this composition's SFX alone, then adds music and voice sample-accurately
   const spoken: [number, number][] = [];
   { let o = 0; for (const a of acts) { if (a.status === 'recorded') for (const l of a.lines) spoken.push([o + l.at, o + l.end]); o += a.frames; } }
   let at = 0;
@@ -48,7 +49,7 @@ const ActThree = ({ captions }: { captions: boolean }) => <AbsoluteFill><Act3 ca
 const ActFour = ({ captions }: { captions: boolean }) => <AbsoluteFill><Act4 captions={captions} /><Tracks from={OFFSET.act4} acts={[ACT4]} /></AbsoluteFill>;
 const ActFive = ({ captions }: { captions: boolean }) => <AbsoluteFill><Act5 captions={captions} /><Tracks from={OFFSET.act5} acts={[ACT5]} /></AbsoluteFill>;
 const ActTwo = ({ captions }: { captions: boolean }) => <AbsoluteFill><Act2 captions={captions} /><Tracks from={OFFSET.act2} acts={[ACT2]} /></AbsoluteFill>;
-const Preview = ({ captions }: { captions: boolean }) => <AbsoluteFill>
+const Preview = ({ captions, sfxOnly = false }: { captions: boolean; sfxOnly?: boolean }) => <AbsoluteFill>
   <Series>
     <Series.Sequence durationInFrames={OPENING_FRAMES}><Opening captions={captions} /></Series.Sequence>
     <Series.Sequence durationInFrames={ACT2_FRAMES}><Act2 captions={captions} /></Series.Sequence>
@@ -56,7 +57,7 @@ const Preview = ({ captions }: { captions: boolean }) => <AbsoluteFill>
     <Series.Sequence durationInFrames={ACT4_FRAMES}><Act4 captions={captions} /></Series.Sequence>
     <Series.Sequence durationInFrames={ACT5_FRAMES}><Act5 captions={captions} /></Series.Sequence>
   </Series>
-  <Tracks from={0} acts={[ACT1, ACT2, ACT3, ACT4, ACT5]} />
+  <Tracks from={0} acts={[ACT1, ACT2, ACT3, ACT4, ACT5]} sfxOnly={sfxOnly} />
 </AbsoluteFill>;
 
 const v = { fps: 30, width: 1920, height: 1080 } as const;

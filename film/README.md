@@ -41,6 +41,16 @@ npx remotion render src/index.ts Preview out/film-0-180.mp4        # the whole f
 ```
 Every composition has a `…Captions` variant that shows the narration lines at their cue times.
 
+### v2 delivery (YouTube) — production e18ba36 terminology, sample-accurate audio master
+```bash
+python scripts/capture_final.py                     # current product screens (read-only) -> public/captures/final, data/final.json
+npx remotion render Preview out/final-v2/sfx-stem.wav --codec=wav --props='{"captions":false,"sfxOnly":true}'
+node scripts/mixdown.mjs out/final-v2/sfx-stem.wav out/final-v2/audio-master.wav     # one gain, true peak <= -2.0 dBTP, no compression
+out/final-v2/render.sh                              # silent video: PNG frames, BT.709, x264 slow, CRF 12 (1440p: --scale=4/3, CRF 6)
+# then mux: ffmpeg -i video.mp4 -i audio-master-aac.mp4 -map 0:v -map 1:a -c copy -movflags +faststart film.mp4
+```
+The approved first final is tagged `film-approved-179s`.
+
 ### Voiceover
 ```bash
 node scripts/vo.mjs align          # measure public/audio/vo/act1..act5, level to -17 LUFS, place every line -> data/vo.json

@@ -1,4 +1,5 @@
 import { AbsoluteFill, interpolate, Sequence, useCurrentFrame } from 'remotion';
+import FINAL from '../../data/final.json';
 import product from '../../data/product.json';
 import T from '../../data/transform.json';
 import { BrowserWindow } from '../components/BrowserWindow';
@@ -29,7 +30,7 @@ const MATCHES = T.hero_matches;
 const DEAD = T.recorded_dead_end;
 if (!DEAD.memory.includes('python slug guess failed')) throw new Error('dead-end note changed');
 const LD = after.featured.json_ld[0] as Record<string, any>;
-const FINDING = product.pages['report-before-t2'];
+const FINDING = FINAL.pages['report-hist-t2'];
 
 const clamp = { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' } as const;
 const k = (f: number, i: readonly number[], o: number[], easing = ease) => interpolate(f, i as number[], o, { ...clamp, easing });
@@ -117,11 +118,11 @@ function Hero({ f }: { f: number }) {
   return <AbsoluteFill style={{ opacity: inn * (1 - exit) }}>
     {/* labels */}
     <div style={{ position: 'absolute', left: LX, top: WY - 58, width: WW, opacity: 1 - leftOut }}>
-      <p style={label}>Before · the course page</p>
+      <p style={label}>Original website · the course page</p>
       <p style={{ margin: '6px 0 0', fontFamily: F.sans, fontSize: 20, color: C.ink2 }}>{FEATURED}: one of the courses the agent never reached</p>
     </div>
     <div style={{ position: 'absolute', left: RX, top: WY - 58, width: WW, opacity: 1 - grow }}>
-      <p style={label}>{resolve < 0.5 ? 'Before' : <span style={{ color: C.pass }}>After</span>} · the catalogue</p>
+      <p style={label}>{resolve < 0.5 ? 'Original website' : <span style={{ color: C.pass }}>Agent-ready website</span>} · the catalogue</p>
       <p style={{ margin: '6px 0 0', fontFamily: F.sans, fontSize: 20, color: C.ink2 }}>Facts on catalogue cards: <b style={{ color: resolve < 0.5 ? C.rust : C.pass }}>{factsOnCards} of 14</b></p>
     </div>
 
@@ -138,7 +139,7 @@ function Hero({ f }: { f: number }) {
     {/* right: the catalogue, Before -> After (the genuine After snapshot) */}
     <div style={{ position: 'absolute', left: rX, top: rY, transform: `scale(${rScale})`, transformOrigin: '0 0' }}>
       <BrowserWindow width={WW} height={WH} path="/courses" style={{ position: 'relative' }}
-        badge={resolve > 0.5 ? <span style={{ fontFamily: F.mono, fontSize: 13, letterSpacing: '.12em', color: C.pass }}>AFTER</span> : <span style={{ fontFamily: F.mono, fontSize: 13, letterSpacing: '.12em', color: C.ink3 }}>BEFORE</span>}>
+        badge={resolve > 0.5 ? <span style={{ fontFamily: F.mono, fontSize: 13, letterSpacing: '.12em', color: C.pass }}>AGENT-READY WEBSITE</span> : <span style={{ fontFamily: F.mono, fontSize: 13, letterSpacing: '.12em', color: C.ink3 }}>ORIGINAL WEBSITE</span>}>
         <PageImage src={before.courses.image} cssWidth={1265} scale={S} scrollY={scrollB} opacity={1 - resolve} />
         <PageImage src={after.courses.image} cssWidth={1265} scale={sR} scrollY={scrollRight} opacity={resolve} />
         {pageCard(cardB.box, scrollB, C.signal, k(f, [B.hiFacts + 30, B.hiFacts + 44], [0, 1]) * (1 - resolve), S)}
@@ -169,7 +170,7 @@ function Hero({ f }: { f: number }) {
 
     {/* the payoff line, once the whole catalogue is on screen */}
     <div style={{ position: 'absolute', left: 90, bottom: 26, opacity: k(f, [B.scrollAll - 20, B.scrollAll], [0, 1]) * (1 - k(f, [B.matches - 10, B.matches + 6], [0, 1])) }}>
-      <p style={{ ...label, color: C.pass }}>After · facts on catalogue cards: 14 of 14</p>
+      <p style={{ ...label, color: C.pass }}>Agent-ready website · facts on catalogue cards: 14 of 14</p>
       <p style={{ margin: '8px 0 0', fontFamily: F.serif, fontSize: 40, color: C.ink }}>Same design. Same pages. The facts, where agents look.</p>
     </div>
     <div style={{ position: 'absolute', left: 90, bottom: 26, opacity: k(f, [B.matches + 4, B.matches + 20], [0, 1]) }}>
@@ -185,10 +186,10 @@ function DeadEnd({ f }: { f: number }) {
   const W2 = 760, S2 = W2 / 1265, H2 = Math.round(960 * S2 * 0.78);
   return <AbsoluteFill style={{ opacity: o }}>
     <p style={{ position: 'absolute', left: 120, top: 70, ...label, color: C.signal2 }}>02 · Fix the dead end</p>
-    {[{ x: 120, title: 'Before · recorded', sub: `Task ${DEAD.task}, step ${DEAD.step}: the agent guessed this address. Its note: “python slug guess failed”`, img: DEAD.image, css: 1280,
+    {[{ x: 120, title: 'Original website · recorded (diagnostic run)', sub: `Task ${DEAD.task}, step ${DEAD.step}: the agent guessed this address. Its note: “python slug guess failed”`, img: DEAD.image, css: 1280,
         path: DEAD.path, color: C.rust, badge: 'RECORDED' },
-      { x: 1040, title: 'After', sub: `The same address now opens the course page (${after.dead_end.final_path})`, img: after.dead_end.image, css: 1265,
-        path: after.dead_end.requested, color: C.pass, badge: 'AFTER' }].map(p =>
+      { x: 1040, title: 'Agent-ready website', sub: `The same address now opens the course page (${after.dead_end.final_path})`, img: after.dead_end.image, css: 1265,
+        path: after.dead_end.requested, color: C.pass, badge: 'AGENT-READY' }].map(p =>
       <div key={p.title}>
         <div style={{ position: 'absolute', left: p.x, top: 130, width: W2 }}>
           <p style={{ ...label, color: p.color }}>{p.title}</p>
@@ -216,7 +217,7 @@ function Data({ f }: { f: number }) {
   return <AbsoluteFill style={{ opacity: o }}>
     <p style={{ position: 'absolute', left: 120, top: 70, ...label, color: C.signal2 }}>03 · Describe each course in structured data</p>
     <BrowserWindow width={W3} height={600} path={after.featured.path} style={{ left: 120, top: 150 }}
-      badge={<span style={{ fontFamily: F.mono, fontSize: 12, letterSpacing: '.12em', color: C.pass }}>AFTER</span>}>
+      badge={<span style={{ fontFamily: F.mono, fontSize: 12, letterSpacing: '.12em', color: C.pass }}>AGENT-READY WEBSITE</span>}>
       <PageImage src={after.featured.image} cssWidth={1265} scale={S3} />
     </BrowserWindow>
     <div style={{ position: 'absolute', left: 990, top: 150, width: 840, padding: '26px 30px', borderRadius: 16, background: '#141413', border: `1px solid ${C.rule}` }}>
@@ -235,7 +236,7 @@ function Again({ f }: { f: number }) {
   const fill = k(f, [B.again + 30, B.again + 70], [0, 14], camera);
   return <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center', opacity: o }}>
     <div style={{ textAlign: 'center' }}>
-      <p style={{ ...label, color: C.pass }}>The improved website · After</p>
+      <p style={{ ...label, color: C.pass }}>The Agent-ready website</p>
       <p style={{ margin: '24px 0 0', fontFamily: F.serif, fontSize: 92, letterSpacing: '-.02em', color: C.ink }}>Same task. Same agent. <em>Same limits.</em></p>
       <div style={{ marginTop: 40, display: 'flex', justifyContent: 'center', gap: 8 }}>
         {Array.from({ length: 14 }, (_, i) => <span key={i} style={{ width: 40, height: 16, borderRadius: 3, background: i < fill ? C.signal : 'rgba(237,234,227,.1)' }} />)}

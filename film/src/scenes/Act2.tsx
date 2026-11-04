@@ -1,4 +1,5 @@
 import type React from 'react';
+import FINAL from '../../data/final.json';
 import { AbsoluteFill, Img, interpolate, Sequence, staticFile, useCurrentFrame } from 'remotion';
 import product from '../../data/product.json';
 import { BrowserWindow } from '../components/BrowserWindow';
@@ -47,7 +48,7 @@ CHECKED.forEach(c => excerpt(st(c.step), c.ok ? `${c.name.split(' ')[0]}` : 'exc
 if (!after.official_v1 || !after.correct_v2) throw new Error('the After task-2 answer is no longer graded correct');
 const RIGHT = after.answer;
 const FOUND = new Set(before.answer);
-const PAGE = product.pages['report-before-t2'];
+const PAGE = FINAL.pages['report-hist-t2'];   // the diagnostic run's report as production shows it now (e18ba36), with its 'historical run' note
 
 const clamp = { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' } as const;
 const k = (f: number, i: readonly number[], o: number[], easing = ease) => interpolate(f, i as number[], o, { ...clamp, easing });
@@ -67,7 +68,7 @@ export function Act2({ captions = false }: { captions?: boolean }) {
     {/* HUD: provenance + the draining budget */}
     <div style={{ position: 'absolute', left: 90, right: 80, top: 44, display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: intro * (1 - loopOut) }}>
       <span style={{ fontFamily: F.mono, fontSize: 15, letterSpacing: '.14em', color: C.ink3, textTransform: 'uppercase' }}>
-        <span style={{ color: C.signal2 }}>●</span>{'  '}Recorded · a real Meta Muse Spark browser agent · {runDate(before.started_at)}</span>
+        <span style={{ color: C.signal2 }}>●</span>{'  '}Recorded · Meta Muse Spark agent · Original website · diagnostic run · {runDate(before.started_at)}</span>
       <Budget f={f} used={used} stepAt={AT[cur]} final={f >= STOP} />
     </div>
 
@@ -200,7 +201,7 @@ function Diagnosis({ f }: { f: number }) {
   };
   return <AbsoluteFill style={{ opacity: appear }}>
     <div style={{ position: 'absolute', left: L0, top: T0, transform: `translate(${tx}px, ${ty + 30 * (1 - appear)}px) scale(${zoom})`, transformOrigin: '0 0' }}>
-      <BrowserWindow width={RW} height={RH} site="Agent Readiness" path="/ live report · Before · task 2" style={{ position: 'relative' }}>
+      <BrowserWindow width={RW} height={RH} site="Agent Readiness" path="/ reports · Original website · task 2 · diagnostic run" style={{ position: 'relative' }}>
         <div style={{ position: 'absolute', inset: 0, background: '#F2F0EB' }} />
         <PageImage src={PAGE.image} cssWidth={1440} scale={RS} scrollY={scrollY} />
         {hi(b.stats, DIAG + 24, DIAG + 96)}{hi(b.answer, DIAG + 34, DIAG + 96)}
@@ -209,7 +210,7 @@ function Diagnosis({ f }: { f: number }) {
       </BrowserWindow>
     </div>
     <div style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 120, background: 'linear-gradient(rgba(11,11,10,.96) 45%, rgba(11,11,10,0))' }} />
-    <p style={{ position: 'absolute', left: 90, top: 44, ...label, color: C.signal2 }}>Agent Readiness · the readiness report for this run, as the product shows it</p>
+    <p style={{ position: 'absolute', left: 90, top: 44, ...label, color: C.signal2 }}>Agent Readiness · the report for this diagnostic run (separate from the canonical evaluation), as the product shows it</p>
     <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 230, background: 'linear-gradient(rgba(11,11,10,0), rgba(11,11,10,.96) 55%)' }} />
     <div style={{ position: 'absolute', left: 90, bottom: 44, width: 1740, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
       {[['Evidence', 'Every step, screenshot and note, recorded', DIAG + 20, DIAG + 100], ['Diagnosis', 'Level and class day: on course pages only', DIAG + 110, CAUSE - 20],

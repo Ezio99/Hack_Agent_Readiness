@@ -1,4 +1,5 @@
 import { AbsoluteFill, interpolate, Sequence, useCurrentFrame } from 'remotion';
+import FINAL from '../../data/final.json';
 import P from '../../data/paired.json';
 import { BrowserWindow } from '../components/BrowserWindow';
 import { PageImage } from '../components/Evidence';
@@ -38,7 +39,7 @@ const NB: Record<number, string> = {
   13: ex(HB.steps[12], 'Remaining 10 unchecked due to step budget, returning partial verified result.'),
 };
 const NA2 = ex(HA.steps[1], 'Found 4 candidates: Wheel-thrown pottery (Sat), Beginners yoga (Sat), Mindful meditation (Sun), Home electrical basics (Sat) - all Beginner.');
-const REPORT = P.product.live;
+const REPORT = FINAL.pages['report-canon'];   // the canonical evaluation's report as production shows it now (e18ba36)
 
 const clamp = { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' } as const;
 const k = (f: number, i: readonly number[], o: number[], easing = ease) => interpolate(f, i as number[], o, { ...clamp, easing });
@@ -73,13 +74,13 @@ function Title({ f }: { f: number }) {
   return <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center', opacity: o }}>
     <div style={{ textAlign: 'center' }}>
       <p style={{ ...label, color: C.pass }}>A new live evaluation · {when}</p>
-      <p style={{ margin: '22px 0 0', fontFamily: F.serif, fontSize: 100, letterSpacing: '-.02em', color: C.ink, lineHeight: 1.04 }}>Before and After,<br /><em>side by side.</em></p>
+      <p style={{ margin: '22px 0 0', fontFamily: F.serif, fontSize: 100, letterSpacing: '-.02em', color: C.ink, lineHeight: 1.04 }}>Original and Agent-ready<br /><em>websites, side by side.</em></p>
       <div style={{ marginTop: 40, display: 'flex', gap: 16, justifyContent: 'center' }}>
         {chips.map((c, i) => { const co = k(f, [30 + i * 10, 46 + i * 10], [0, 1]);
           return <span key={c} style={{ opacity: co, padding: '10px 20px', borderRadius: 999, border: `1px solid ${C.rule}`, fontFamily: F.sans, fontSize: 22, color: C.ink2 }}>{c}</span>; })}
       </div>
       <p style={{ margin: '28px 0 0', fontFamily: F.mono, fontSize: 15, letterSpacing: '.1em', color: C.ink3, opacity: k(f, [70, 90], [0, 1]) }}>
-        Both versions in one evaluation · run {P.evaluation.slice(5, 13)}</p>
+        The canonical paired evaluation · both websites in one run · {P.evaluation.slice(5, 13)}</p>
     </div>
   </AbsoluteFill>;
 }
@@ -100,7 +101,7 @@ function Hero({ f }: { f: number }) {
     <p style={{ position: 'absolute', left: 90, top: 40, ...label, color: C.ink2 }}>Task 2 · “{P.tasks[1].customer_wording}”</p>
     {/* Before */}
     <div style={{ position: 'absolute', left: 90, top: 100, width: W, opacity: bDim }}>
-      <Side name="Before" color={C.rust} used={bUsed} limit={LIMIT} />
+      <Side name="Original website" color={C.rust} used={bUsed} limit={LIMIT} />
       <div style={{ position: 'relative', height: H + 46 + 44, marginTop: 14 }}>
         {HB.steps.slice(Math.max(0, bi - 4), bi + 1).map((s, j, arr) => { const d = arr.length - 1 - j; const enter = d === 0 ? k(f, [B.bStep0 + bi * BSTEP, B.bStep0 + bi * BSTEP + 6], [0, 1]) : 1;
           return <BrowserWindow key={s.step} width={W} height={H} path={s.path} site=""
@@ -114,7 +115,7 @@ function Hero({ f }: { f: number }) {
     </div>
     {/* After */}
     <div style={{ position: 'absolute', left: 1030, top: 100, width: W, opacity: aOn ? 1 : 0.25 }}>
-      <Side name="After" color={C.pass} used={aOn ? Math.max(0, ai + 1) : 0} limit={LIMIT} />
+      <Side name="Agent-ready website" color={C.pass} used={aOn ? Math.max(0, ai + 1) : 0} limit={LIMIT} />
       <div style={{ position: 'relative', height: H + 46 + 44, marginTop: 14 }}>
         <BrowserWindow width={W} height={H} path={ai >= 0 ? HA.steps[ai].path : '/'} site="" style={{ left: 0, top: 44 }}
           badge={<span style={{ fontFamily: F.mono, fontSize: 12, color: C.pass }}>{ai >= 0 ? `STEP ${ai + 1}` : 'WAITING'}</span>}>
@@ -130,10 +131,10 @@ function Hero({ f }: { f: number }) {
 
 function Side({ name, color, used, limit }: { name: string; color: string; used: number; limit: number }) {
   return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-    <span style={{ fontFamily: F.serif, fontSize: 40, color: C.ink }}><span style={{ display: 'inline-block', width: 14, height: 14, borderRadius: 3, background: color, marginRight: 14 }} />{name}</span>
+    <span style={{ fontFamily: F.serif, fontSize: 34, color: C.ink, whiteSpace: 'nowrap' }}><span style={{ display: 'inline-block', width: 14, height: 14, borderRadius: 3, background: color, marginRight: 14 }} />{name}</span>
     <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
       <span style={{ display: 'flex', gap: 4 }}>{Array.from({ length: limit }, (_, i) =>
-        <span key={i} style={{ width: 22, height: 10, borderRadius: 2, background: i < used ? 'rgba(237,234,227,.1)' : limit - used <= 3 ? C.rust : C.signal }} />)}</span>
+        <span key={i} style={{ width: 18, height: 10, borderRadius: 2, background: i < used ? 'rgba(237,234,227,.1)' : limit - used <= 3 ? C.rust : C.signal }} />)}</span>
       <span style={{ fontFamily: F.mono, fontSize: 22, color: limit - used <= 3 ? C.rust : C.ink, minWidth: 70, textAlign: 'right' }}>{limit - used}<span style={{ fontSize: 13, color: C.ink3 }}> left</span></span>
     </span>
   </div>;
@@ -176,19 +177,19 @@ function Metrics({ f }: { f: number }) {
   const rows = [
     { pct: RED.requests, what: 'fewer model requests', b: BEF.requests, a: AFT.requests, fmt: (n: number) => `${n}` },
     { pct: RED.time, what: 'less agent time', b: BEF.seconds, a: AFT.seconds, fmt: (n: number) => `${Math.round(n)} s` },
-    { pct: RED.cost, what: 'lower model cost', b: BEF.cost_usd, a: AFT.cost_usd, fmt: (n: number) => `US$${n.toFixed(2)}` },
+    { pct: RED.cost, what: 'lower model cost', b: BEF.cost_usd, a: AFT.cost_usd, fmt: (n: number) => `US$${n.toFixed(3)}` },   // as the report shows it: US$0.571 -> US$0.134
   ];
   const t0 = cue('a4.metrics');
   return <AbsoluteFill style={{ opacity: o, justifyContent: 'center', paddingLeft: 160 }}>
-    <p style={{ ...label }}>All {P.tasks.length} tasks · Before → After · the same evaluation</p>
+    <p style={{ ...label }}>All {P.tasks.length} tasks · Original website → Agent-ready website · the canonical paired evaluation</p>
     {rows.map((r, i) => { const at = t0 + i * 46, s = k(f, [at, at + 16], [0, 1]), grow = k(f, [at + 6, at + 30], [0, 1], camera);
       return <div key={r.what} style={{ display: 'flex', alignItems: 'center', gap: 50, marginTop: 34, opacity: s, transform: `translateY(${16 * (1 - s)}px)` }}>
         <span style={{ fontFamily: F.serif, fontSize: 130, color: C.ink, width: 360, letterSpacing: '-.03em', lineHeight: 1 }}>{r.pct}%</span>
         <div style={{ width: 1100 }}>
           <p style={{ margin: 0, fontFamily: F.serif, fontSize: 40, color: C.ink2 }}>{r.what}</p>
-          <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '90px 1fr 140px', rowGap: 8, alignItems: 'center', fontFamily: F.mono, fontSize: 16, color: C.ink3 }}>
-            <span>Before</span><span style={{ height: 12, borderRadius: 3, background: C.rust, width: '100%' }} /><span style={{ textAlign: 'right' }}>{r.fmt(r.b)}</span>
-            <span>After</span><span style={{ height: 12, borderRadius: 3, background: C.pass, width: `${100 * (1 - (1 - r.a / r.b) * grow)}%` }} /><span style={{ textAlign: 'right', color: C.ink }}>{r.fmt(r.a)}</span>
+          <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '130px 1fr 140px', rowGap: 8, alignItems: 'center', fontFamily: F.mono, fontSize: 16, color: C.ink3 }}>
+            <span>Original</span><span style={{ height: 12, borderRadius: 3, background: C.rust, width: '100%' }} /><span style={{ textAlign: 'right' }}>{r.fmt(r.b)}</span>
+            <span>Agent-ready</span><span style={{ height: 12, borderRadius: 3, background: C.pass, width: `${100 * (1 - (1 - r.a / r.b) * grow)}%` }} /><span style={{ textAlign: 'right', color: C.ink }}>{r.fmt(r.a)}</span>
           </div>
         </div>
       </div>; })}
@@ -201,12 +202,12 @@ function Live({ f }: { f: number }) {
   const W = 1300, S = W / 1440;
   const push = k(f, [B.works, ACT4.frames], [0, 1], camera);
   return <AbsoluteFill style={{ opacity: o }}>
-    <p style={{ position: 'absolute', left: 90, top: 46, ...label, color: C.signal2 }}>The Live report for this evaluation, as the product shows it</p>
+    <p style={{ position: 'absolute', left: 90, top: 46, ...label, color: C.signal2 }}>The canonical evaluation’s report, as the product shows it</p>
     <div style={{ position: 'absolute', left: 310, top: 110, transform: `scale(${1 + 0.08 * push})`, transformOrigin: '50% 75%' }}>
-      <BrowserWindow width={W} height={760} site="Agent Readiness" path="/ live report" style={{ position: 'relative' }}>
+      <BrowserWindow width={W} height={760} site="Agent Readiness" path="/ see the results" style={{ position: 'relative' }}>
         <div style={{ position: 'absolute', inset: 0, background: '#F2F0EB' }} />
         <PageImage src={REPORT.image} cssWidth={1440} scale={S} scrollY={150} />
-        <div style={{ position: 'absolute', left: 80 * S, top: (598 - 150) * S, width: 1280 * S, height: 205 * S, border: `3px solid ${C.signalStrong}`, borderRadius: 14,
+        <div style={{ position: 'absolute', left: 80 * S, top: (678 - 150) * S, width: 1280 * S, height: 205 * S, border: `3px solid ${C.signalStrong}`, borderRadius: 14,
           opacity: k(f, [B.works + 30, B.works + 44], [0, 1]) }} />
       </BrowserWindow>
     </div>

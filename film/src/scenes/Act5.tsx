@@ -1,4 +1,5 @@
 import { AbsoluteFill, interpolate, Sequence, useCurrentFrame } from 'remotion';
+import FINAL from '../../data/final.json';
 import P from '../../data/paired.json';
 import { BrowserWindow } from '../components/BrowserWindow';
 import { PageImage } from '../components/Evidence';
@@ -34,7 +35,7 @@ export function Act5({ captions = false }: { captions?: boolean }) {
 function Today({ f }: { f: number }) {
   const o = k(f, [0, 20], [0, 1]) * (1 - k(f, [B.concept, B.concept + 24], [0, 1]));
   const drift = k(f, [0, B.concept + 24], [0, 1], camera);
-  const ws = P.product.workspace, rep = P.product.live, WS = 1000 / 1440 * 1.12;
+  const ws = FINAL.pages.workspace, rep = FINAL.pages['report-canon'], WS = 1000 / 1440 * 1.12;   // production e18ba36; the Workspace opened on the canonical run
   return <AbsoluteFill style={{ opacity: o }}>
     <p style={{ position: 'absolute', left: 90, top: 46, ...label, color: C.signal2 }}>Today · the working product</p>
     <div style={{ position: 'absolute', left: 90 - 30 * drift, top: 120, transform: `scale(${1 - 0.03 * drift})`, transformOrigin: 'top left' }}>
@@ -47,11 +48,11 @@ function Today({ f }: { f: number }) {
       <p style={{ margin: '14px 0 0', fontFamily: F.serif, fontSize: 30, color: C.ink }}>Workspace <span style={{ color: C.ink3 }}>· run real agents on a website</span></p>
     </div>
     <div style={{ position: 'absolute', left: 860 + 30 * drift, top: 330, transform: `scale(${1 + 0.03 * drift})`, transformOrigin: 'top left', opacity: k(f, [24, 44], [0, 1]) }}>
-      <BrowserWindow width={980} height={560} site="Agent Readiness" path="/ live report" style={{ position: 'relative' }}>
+      <BrowserWindow width={980} height={560} site="Agent Readiness" path="/ see the results" style={{ position: 'relative' }}>
         <div style={{ position: 'absolute', inset: 0, background: '#F2F0EB' }} />
-        <PageImage src={rep.image} cssWidth={1440} scale={980 / 1440 * 1.1} scrollY={430} scrollX={60} />
+        <PageImage src={rep.image} cssWidth={1440} scale={980 / 1440 * 1.1} scrollY={510} scrollX={60} />
       </BrowserWindow>
-      <p style={{ margin: '14px 0 0', fontFamily: F.serif, fontSize: 30, color: C.ink }}>Live report <span style={{ color: C.ink3 }}>· evidence, diagnosis, verification</span></p>
+      <p style={{ margin: '14px 0 0', fontFamily: F.serif, fontSize: 30, color: C.ink }}>Readiness report <span style={{ color: C.ink3 }}>· evidence, diagnosis, verification</span></p>
     </div>
   </AbsoluteFill>;
 }
