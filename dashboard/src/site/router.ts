@@ -4,15 +4,12 @@ import { useEffect, useState } from 'react';
  *  Persistent evaluation URLs (`#/run/eval-<32 hex>`) are unchanged from the previous release. */
 export type Route =
   | { name: 'home'; section?: string }
-  | { name: 'demo'; scene?: string }
+  | { name: 'demo' }
   | { name: 'run'; job: string | null }
   | { name: 'lifecycle'; step?: string; suite?: string }
   | { name: 'report'; id: string; task?: number }
-  | { name: 'studio' }
-  | { name: 'showcase' }
-  | { name: 'classic'; page: string };
+  | { name: 'showcase' };
 
-export const CLASSIC = ['investigation', 'overview', 'scopes', 'evidence', 'replay', 'scanner'] as const;
 export const HOME_SECTIONS = ['problem', 'how', 'learn', 'evidence', 'trust'] as const;
 
 export const LIFECYCLE_STEPS = ['website', 'tasks', 'review', 'evaluate', 'recommendations', 'improve', 'reevaluate', 'compare'] as const;
@@ -29,11 +26,9 @@ export function parse(hash: string): Route {
   if (rep) return { name: 'report', id: rep[1], task: rep[2] ? Number(rep[2]) : undefined };
   const run = h.match(/^run(?:\/(eval-[0-9a-f]{32}))?$/);
   if (run) return { name: 'run', job: run[1] ?? null };
-  const demo = h.match(/^demo(?:\/([a-z-]+))?$/);
-  if (demo) return { name: 'demo', scene: demo[1] };
-  if (h === 'studio') return { name: 'studio' };
+  if (h === 'demo') return { name: 'demo' };                       // the Larkspur journey (same page as #/lifecycle)
+  // The earlier Ironbark case study, the replay archive and the pre-redesign pages are not part of the public experience: they open Home.
   if (h === 'showcase' || h === 'story') return { name: 'showcase' };
-  if ((CLASSIC as readonly string[]).includes(h)) return { name: 'classic', page: h };
   if ((HOME_SECTIONS as readonly string[]).includes(h)) return { name: 'home', section: h };
   return { name: 'home' };
 }

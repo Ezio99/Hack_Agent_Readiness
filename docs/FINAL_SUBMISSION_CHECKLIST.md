@@ -41,7 +41,7 @@ Both re-read 2026-11-04.
 | Before and After totals, per-task requests, correct/exact counts, settled costs (showcase data vs `/api/lifecycle/evaluations`) | ✅ 0 mismatches |
 | Derived figures: 58 % fewer requests, 61 % less time, 61 % lower cost, US$0.73 total | ✅ recomputed |
 | Quoted agent memories (showcase, Home, video) match the recorded steps | ✅ |
-| Earlier experiments (3 Nov Original vs Improved: 0/3 → 3/3, 39 → 6) labelled as history | ✅ |
+| Public site shows only the final Before → After experiment; earlier experiments, Ironbark and the Archive are removed from navigation and listings (records kept for audit, not linked) | ✅ |
 | Budget A$1.433917 spent, 4 runs, all settled | ✅ |
 | One over-strong sentence ("came back to the catalogue each time") | ✅ fixed locally → "kept going back to the catalogue" (one agent went course to course) |
 
@@ -75,3 +75,14 @@ The application is frozen.
 3. 👤 Record the video from the storyboard; upload; check it plays while signed out.
 4. 👤 Fill in the form from `FINAL_SUBMISSION.md`: demo URL, video, repo (branch or commit), judge access code delivered privately, team.
 5. 👤 Submit **before 12:00 AEDT Thu 5 Nov** and keep the confirmation.
+
+## 7. Final public cleanup (2026-11-04, after the freeze; owner-requested)
+- **Public experience:** only the final Larkspur Before → After experiment: Home, Workspace, Journey, Showcase, and the Before and After reports.
+- **Removed from routes and links:** Ironbark (case study, archive and replay), the Original vs Improved experiments, the superseded redesign trials, the Archive navigation and the pre-redesign pages. Their old URLs open Home.
+- **Old evaluation URLs:**
+  - `#/run/<old>` shows a notice, never the old job's data.
+  - `#/reports/<old>` shows a notice, with an audit-only reveal.
+  - Records are unchanged.
+- **Workspace:** lists only the Before and After runs. It opens the latest After run by default (or a running one) and follows a new run automatically while the visitor has not chosen one.
+- **Journey:** rebuilt on the Before and After evidence. The chapter bar follows scrolling, and chapter clicks land below the sticky bar.
+- **Showcase:** composition and sticky-scene fixes at 6 viewport sizes, scrolling forward and backward.

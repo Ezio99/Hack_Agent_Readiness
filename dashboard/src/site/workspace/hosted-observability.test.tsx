@@ -1,12 +1,16 @@
 // @vitest-environment jsdom
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi, beforeAll, afterAll } from 'vitest';
 import { HostedEvaluation, type Job } from './HostedEvaluation';
 import { TrialView, type Trial } from './LiveAgent';
 import { Insights } from './Insights';
 import { History, type HistoryItem } from './History';
 import { Analytics, perTask } from './Analytics';
+import { PUBLIC_SCOPE } from '../../lib/lifecycleApi';
+// These tests exercise the mechanics with fixtures of earlier evaluations: the public scope (final Larkspur experiment only) is lifted here and
+// tested on its own in public-scope.test.tsx.
+const SCOPE = PUBLIC_SCOPE.versions; beforeAll(() => { PUBLIC_SCOPE.versions = null; }); afterAll(() => { PUBLIC_SCOPE.versions = SCOPE; });
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 afterEach(() => { vi.unstubAllGlobals(); localStorage.clear(); sessionStorage.clear(); document.body.innerHTML = ''; });
 

@@ -4,8 +4,19 @@ import { Analytics } from './Analytics';
 import { Insights } from './Insights';
 import { History, type HistoryItem } from './History';
 import { Report } from '../lifecycle/Report';
-import { VARIANT_LABEL, type Evaluation } from '../../lib/lifecycleApi';
-import { showcaseFrame } from '../showcase';
+import { PUBLIC_SCOPE, VARIANT_LABEL, inPublicScope, type Evaluation } from '../../lib/lifecycleApi';
+import { AFTER_V, BEFORE_V, showcaseFrame } from '../showcase';
+
+/** The public Workspace shows ONLY the final Larkspur experiment (Before and After). Earlier evaluations stay in the records but are never listed,
+ *  selected or rendered here; an old job URL shows a notice instead of its data, so current configuration and historical jobs never mix. */
+const PUBLIC_LABELS = [VARIANT_LABEL(BEFORE_V), VARIANT_LABEL(AFTER_V)];
+export const isPublicItem = (i: HistoryItem) => !PUBLIC_SCOPE.versions || (i.engine === 'stage-b' && !!i.arm_display && !i.arm_display.Modified && PUBLIC_LABELS.includes(i.arm_display.Original));
+export const isPublicJob = (j: { evaluation?: { variants?: string[] | null } | null }) => inPublicScope(j.evaluation?.variants);
+/** The run the Workspace opens by default: a running public evaluation, else the newest completed After run, else the newest public run. */
+export const defaultRun = (items: HistoryItem[], active?: string | null) => {
+  const byNew = [...items].sort((a, b) => b.created_at - a.created_at);
+  return byNew.find(i => i.id === active) ?? byNew.find(i => i.arm_display?.Original === 'After' && (i.execution_state ?? i.state) === 'completed') ?? byNew[0] ?? null;
+};
 
 /** Hosted evaluation workspace: compose (website, repetitions, run) → live progress → results → history.
  *  Every number shown here comes from the server's job status; nothing is simulated in the browser.
@@ -26,7 +37,7 @@ type ArmV2 = { completed: number; evidence_supported_passes: number; strict_pass
 interface ArmSummary { planned: number; completed: number; failed: number; evidence_supported_passes: number; strict_passes: number; requests_total: number; requests_mean: number | null; page_views_mean: number | null; steps_mean: number | null; elapsed_mean: number | null }
 export interface Execution { state: string; trials_planned: number | null; trials_completed: number; trials_failed: number; trials_void: number }
 export interface ReportStatus { state: 'available' | 'withheld' | 'pending' | 'unavailable' | 'unknown'; detail?: string }
-export interface Job { engine?: 'stage-b'; execution?: Execution; report_status?: ReportStatus; record_note?: string | null; report?: string | null; error?: string | null; stopped?: string | null; id: string; state: string; mode: 'live' | 'rehearsal' | null; repetitions: number | null; recovery_required?: boolean; created_at: number; started_at: number | null; finished_at: number | null; reps: Rep[]; summary: { Original: ArmSummary; Modified: ArmSummary }; arm_display?: ArmNames | null; accounting?: { reserved_usd: number; cost_usd: number | null; settled: boolean; budget: string | null }; summary_v2?: ({ label: string; repetitions: number } & Record<'Original' | 'Modified', ArmV2>) | null }
+export interface Job { engine?: 'stage-b'; execution?: Execution; report_status?: ReportStatus; record_note?: string | null; report?: string | null; error?: string | null; stopped?: string | null; id: string; state: string; mode: 'live' | 'rehearsal' | null; repetitions: number | null; recovery_required?: boolean; created_at: number; started_at: number | null; finished_at: number | null; reps: Rep[]; summary: { Original: ArmSummary; Modified: ArmSummary }; arm_display?: ArmNames | null; evaluation?: { frozen_suite?: string | null; variants?: string[] | null; repetitions?: number | null } | null; accounting?: { reserved_usd: number; cost_usd: number | null; settled: boolean; budget: string | null }; summary_v2?: ({ label: string; repetitions: number } & Record<'Original' | 'Modified', ArmV2>) | null }
 interface Worker { state: 'idle' | 'busy' | 'unavailable'; job: string | null; started_at?: number | null; repetitions?: number; finished_runs?: number; total_runs?: number | null; estimated_remaining_seconds?: number | null }
 interface ArmedEvaluation { arming_id: string; mode: 'paid' | 'rehearsal'; site: string; suite: string; frozen_suite: string; frozen_suite_sha256: string; variants: string[]; armed_at: string;
   /** null: the shared budget's evaluation has no launch count (the budget is the limit) */
@@ -196,7 +207,10 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
   const [now, setNow] = useState(Date.now() / 1000);
   const [tab, setTab] = useState<'watch' | 'results' | 'insights'>('watch');
   const [selection, setSelection] = useState<Selection | null>(null);
-  const [token, setToken] = useState('');   // memory only: never written to browser storage; re-entered after a reload
+  const [token, setToken] = useState('');
+  const [archived, setArchived] = useState<string | null>(null);
+  const auto = useRef(true);
+  const activeRef = useRef<string | null>(null);   // memory only: never written to browser storage; re-entered after a reload
   const clickKey = useRef<string | null>(null);   // one idempotency key per click: a double-click or retry returns the same run
   const inFlight = useRef(false);                 // synchronous guard: a second click before re-render sends nothing
   useEffect(() => { sessionStorage.removeItem(LEGACY_TOKEN); }, []);
@@ -210,19 +224,28 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
     const changed = current.current !== id;
     current.current = id;
     const next = await getJSON<Job>(`/api/ironbark/jobs/${encodeURIComponent(id)}`);
+    if (current.current === id && !isPublicJob(next)) { setJob(null); setArchived(id); if (localStorage.getItem(STORE) === id) localStorage.removeItem(STORE); return next; }
     if (current.current === id) {
+      setArchived(null);
       setJob(next);
       if (changed) { setSelection(null); setTab(ACTIVE.includes(next.state) ? 'watch' : 'results'); }
     }
     return next;
   }
-  const refreshList = () => getJSON<HistoryItem[]>('/api/ironbark/jobs').then(setRecent).catch(() => {});
-  const refreshConfig = () => getJSON<Config>('/api/ironbark/config').then(setConfig).catch(() => setConfig(null));
+  // auto: the visitor has not chosen a run, so the Workspace follows the default run (and moves to a newer one when it completes)
+  const refreshList = () => getJSON<HistoryItem[]>('/api/ironbark/jobs').then(all => {
+    const list = all.filter(isPublicItem); setRecent(list);
+    if (auto.current && PUBLIC_SCOPE.versions) { const pick = defaultRun(list, activeRef.current); if (pick && pick.id !== current.current) load(pick.id).catch(() => {}); }
+    return list;
+  }).catch(() => [] as HistoryItem[]);
+  const refreshConfig = () => getJSON<Config>('/api/ironbark/config').then(c => { setConfig(c); activeRef.current = c.active ?? null; return c; }).catch(() => { setConfig(null); return null; });
 
   useEffect(() => {
-    void refreshConfig(); void refreshList();
-    const id = initialJob || localStorage.getItem(STORE);
-    if (id) load(id).catch(() => localStorage.removeItem(STORE));
+    auto.current = !initialJob;
+    // Public scope: an explicit URL opens that run; otherwise the default run (refreshList). Without scoping (tests), the last opened run is restored.
+    const stored = !PUBLIC_SCOPE.versions ? localStorage.getItem(STORE) : null;
+    if (initialJob || stored) load((initialJob || stored)!).catch(() => { if (!initialJob) localStorage.removeItem(STORE); else setMessage('That evaluation could not be opened.'); });
+    void refreshConfig().then(() => refreshList());
   }, [initialJob]);
   useEffect(() => {
     if (!job || !ACTIVE.includes(job.state)) return;
@@ -251,7 +274,7 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
       if (operatorOnly && token) headers.Authorization = `Bearer ${token}`;
       const data = await getJSON<{ id: string }>('/api/ironbark/jobs', { method: 'POST', headers, body: JSON.stringify({ repetitions: reps }) });
       clickKey.current = null;
-      localStorage.setItem(STORE, data.id);
+      auto.current = false; localStorage.setItem(STORE, data.id);
       history.replaceState(null, '', `#/run/${data.id}`);
       await load(data.id); setTab('watch'); void refreshConfig(); void refreshList();
     } catch (e) {
@@ -273,7 +296,7 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
     try { onOpen(await getJSON(`/api/ironbark/jobs/${job.id}/repetitions/${rep.index}/export`), `Evaluation ${job.id.slice(5, 13)} · repetition ${rep.index}`); }
     catch (e) { setMessage(e instanceof Error ? e.message : 'Sanitized results are unavailable.'); }
   }
-  const select = (id: string) => { localStorage.setItem(STORE, id); history.replaceState(null, '', `#/run/${id}`); setMessage(''); load(id).catch(e => setMessage(e.message)); top.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }); };
+  const select = (id: string) => { auto.current = false; localStorage.setItem(STORE, id); history.replaceState(null, '', `#/run/${id}`); setMessage(''); load(id).catch(e => setMessage(e.message)); top.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }); };
   const reduce = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   // Selecting a run brings the agent view (below the sticky job bar) into view.
   const watch = (s: Selection) => { setSelection(s); setTab('watch'); requestAnimationFrame(() => agent.current?.scrollIntoView?.({ behavior: reduce() ? 'auto' : 'smooth', block: 'start' })); };
@@ -322,7 +345,7 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
     : operatorOnly && token.length < 24 ? (judgeAccess ? 'Enter your access code to start a live evaluation. Anyone can watch running and completed evaluations.' : 'New evaluations are not open to the public yet: starting one needs the operator token (above). Anyone can watch and inspect existing evaluations.')
     : stageB ? `${reps * runsPerRep} browser agents · ${minutes(perRep * reps)}, varies with the agent${noCount && shared ? ` · each run costs at most A$${((ev?.options[0]?.reservation_usd ?? 0) * shared.rate_aud_per_usd).toFixed(2)}; only its actual cost is counted` : ''}`
     : `${reps * 8} fresh agent runs · ${minutes(perRep * reps)}, varies with the agent`;
-  const latest = recent.find(r => r.id !== job?.id && r.summary);
+  const latest = defaultRun(recent.filter(r => r.id !== job?.id && r.summary));
 
   return <div className="ws-eval">
     <div className="ws-intro">
@@ -402,7 +425,12 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
 
       <div className="ws-main" ref={top}>
         {message && <p role="alert" className="ws-alert">{message}</p>}
-        {!job && <div className="ws-empty">
+        {!job && archived && <div className="ws-empty" role="note">
+          <p className="eyebrow">Not part of this experiment</p>
+          <h2>This evaluation is not part of the current Larkspur Community College experiment.</h2>
+          {latest && <button className="btn btn-ghost" onClick={() => select(latest.id)}>Open the latest evaluation · {when(latest.created_at)} <span className="arr" aria-hidden="true">→</span></button>}
+        </div>}
+        {!job && !archived && <div className="ws-empty">
           <p className="eyebrow">No evaluation open</p>
           <h2>Start an evaluation, or open one from the history below.</h2>
           {latest && <button className="btn btn-ghost" onClick={() => select(latest.id)}>Open the latest evaluation · {when(latest.created_at)} <span className="arr" aria-hidden="true">→</span></button>}
@@ -415,7 +443,7 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
               {shown !== job.state && <span className="ws-record" title="The job record is kept exactly as it was written">Job record: {label(job.state).toLowerCase()}</span>}
               <span>{done} / {total || '–'} agent runs finished</span>{job.started_at && <span>{clock(elapsed)} elapsed</span>}
               {job.accounting && job.mode === 'live' && <span className="ws-cost">{job.accounting.cost_usd != null ? `Actual cost US$${job.accounting.cost_usd.toFixed(2)}` : `Reserved up to US$${job.accounting.reserved_usd.toFixed(2)} until settled`}{job.accounting.budget ? ` · ${job.accounting.budget}` : ''}</span>}</div>
-            <div className="ws-job-meta"><span>{job.repetitions} repetition{job.repetitions === 1 ? '' : 's'} · started {when(job.created_at)}</span><code title={job.id}>{job.id.slice(0, 13)}</code></div>
+            <div className="ws-job-meta"><span className="ws-version">Website version: <strong>{names.Original}{names.Modified ? ` vs ${names.Modified}` : ''}</strong></span><span>{job.repetitions} repetition{job.repetitions === 1 ? '' : 's'} · started {when(job.created_at)}</span><code title={job.id}>{job.id.slice(0, 13)}</code></div>
           </header>
           <div className="ws-bar" role="progressbar" aria-label="Agent runs finished" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}><i style={{ width: `${total ? 100 * done / total : 0}%` }} /></div>
           <div className="ws-tabs" role="tablist" aria-label="Evaluation views">{(job.engine === 'stage-b' ? [['watch', running ? 'Watch live' : 'Agent runs'], ['results', 'Readiness report']] as const : [['watch', running ? 'Watch live' : 'Agent runs'], ['results', 'Results'], ['insights', 'Insights']] as const).map(([k, l]) =>

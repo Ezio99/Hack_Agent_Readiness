@@ -40,7 +40,7 @@ Meta Muse Spark via the Meta Model API, Browser Use, Playwright/Chromium, Python
 - Live product: https://209-38-84-72.sslip.io
   - Showcase: `#/showcase`
   - Workspace (runs the After site): `#/run`
-  - Journey: `#/lifecycle`
+  - Journey (the evaluation and improvement process, step by step): `#/lifecycle`
 - Reports:
   - Before: `#/reports/eval-ea13944e8ba5c08e8893426b2f8b1c8f`
   - After: `#/reports/eval-5cf934b372942da74f5157c5fca39fd6`
@@ -50,9 +50,6 @@ Meta Muse Spark via the Meta Model API, Browser Use, Playwright/Chromium, Python
 ## Honesty notes
 - Larkspur is fictional. The tasks are frozen and owner-approved.
 - Costs are calculated from provider-reported token usage and settled from each run's ledger; they are not invoices.
-- Earlier experiments are kept as labelled history:
-  - 3 Nov: plain original site vs a fully improved version, 0/3 → 3/3.
-  - Superseded redesign trials that started from the already-improved site.
 - The hackathon implementation began 2026-10-27 (Sydney). The earlier repository is a disclosed pre-event prototype.
 - AI coding assistants helped build the project under the owner's direction.
 

@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { SiteFooter, SiteHeader } from '../Shell';
 import { Track, easeInOut, easeOut, seg } from '../demo/engine';
 import { reducedMotion } from '../router';
-import { AFTER, AFTER_V, BEFORE, BEFORE_V, LIVE, TRIAL_A, TRIAL_B, showcaseFrame, type LiveRecord, type LiveStep } from '../showcase';
+import { AFTER, AFTER_V, BEFORE, BEFORE_V, showcaseFrame, type LiveRecord, type LiveStep } from '../showcase';
 import './story.css';
 
 /** The cinematic showcase: a website that looks great to people → AI agents struggle → Agent Readiness finds why → the website is improved → agents
  *  are evaluated again → measured results. "Before" and "After" are the two live evaluations of 4 Nov 2026 (each version alone, same frozen tasks,
  *  same agent). Every number, frame and quote comes from those recorded runs (showcase/larkspur.json, exported from the product's own reports);
- *  the page calls no API. Earlier experiments appear only as clearly labelled history. */
+ *  the page calls no API. */
 
 const B = BEFORE.totals[BEFORE_V], A = AFTER.totals[AFTER_V];
 const trial = (r: LiveRecord, v: string, n: number) => r.trials.find(t => t.variant === v && t.task === n)!;
@@ -124,9 +124,10 @@ function Trace({ id, reduce, kicker, title, list, highlight, version }: { id: st
       <div className="st-copy">
         <p className="st-kicker">{kicker}</p>
         <h2 className="st-h2">{title}</h2>
-        <ol className="st-steps">{list.map(s => <li key={s.step} className={`${s.step === cur?.step ? 'on' : ''}${s.step === highlight ? ' hot' : ''}`}>
+        <ol className="st-steps">{list.map((s, k) => { const at = list.findIndex(x => x.step === cur?.step), far = !reduce && list.length > 5 && Math.abs(k - Math.min(Math.max(at, 2), list.length - 3)) > 2;
+          return <li key={s.step} className={`${s.step === cur?.step ? 'on' : ''}${s.step === highlight ? ' hot' : ''}${far ? ' far' : ''}`}>
           <span className="st-step-n">Step {s.step}</span><span className="st-step-where">{where(s.path)}</span>
-          <blockquote>“{s.memory}”</blockquote></li>)}</ol>
+          <blockquote>“{s.memory}”</blockquote></li>; })}</ol>
       </div>
       <figure className="st-trace-fig">
         <Browser src={showcaseFrame(cur?.frame)} url={cur?.path ?? '/'} alt={`Recorded screenshot, ${version}, task 2, step ${cur?.step}: what the agent saw.`} />
@@ -188,21 +189,6 @@ function Verdict() {
   </section>;
 }
 
-function History() {
-  return <section className="st-section st-context" aria-label="Earlier experiments">
-    <div className="st-wrap">
-      <p className="st-kicker" data-reveal>Earlier experiments · kept as history</p>
-      <h2 className="st-h2" data-reveal>How we got here.</h2>
-      <div className="st-arc two">
-        <a data-reveal href={`#/reports/${LIVE.id}`}><span>3 Nov · first experiment</span><b>{LIVE.correct.original}/3 → {LIVE.correct.improved}/3</b>
-          <small>The plain original site against a version with every recommendation · {LIVE.totals.original.requests} → {LIVE.totals.improved.requests} requests</small></a>
-        <a data-reveal href={`#/reports/${TRIAL_A.id}`}><span>4 Nov · earlier redesign trials A and B</span><b>Superseded</b>
-          <small>A redesign built on the already-improved site, so its agents started with every improvement. Reports kept: <u>trial A</u> · trial B ({TRIAL_B.id.slice(5, 13)})</small></a>
-      </div>
-    </div>
-  </section>;
-}
-
 function Finale() {
   return <section className="st-section st-finale" aria-label="Try it">
     <div className="st-wrap center">
@@ -232,7 +218,6 @@ export function Story() {
       <Trace id="st-retest" reduce={reduce} kicker="Chapter 6 · Agents, again" version="After" list={sA} highlight={sA[sA.length - 1].step}
         title={<>Every answer <em>on one page.</em></>} />
       <Verdict />
-      <History />
       <Finale />
     </main>
     <SiteFooter />

@@ -3,7 +3,10 @@
  *  exported from the product's own report of the paid live evaluation (scripts/showcase/export_larkspur_showcase.py). Nothing here is simulated. */
 import data from './showcase/larkspur.json';
 
-const frameUrls = import.meta.glob('./showcase/frames/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+// Only the final experiment's frames ship with the public app (Before = ea13…/polishedoriginal, After = 5cf9…/modifiedpolished); earlier experiments'
+// frames stay in the repository as recorded exports but are not bundled.
+const frameUrls = import.meta.glob(['./showcase/frames/ea13-*.webp', './showcase/frames/5cf9-*.webp', './showcase/frames/site-polishedoriginal-*.webp',
+  './showcase/frames/site-modifiedpolished-*.webp'], { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 export const showcaseFrame = (name: string | null | undefined): string | undefined => name ? frameUrls[`./showcase/frames/${name}.webp`] : undefined;
 
 export interface LiveTrial { task: number; variant: string; passed: boolean; correct: boolean; requests: number; limit: number; seconds: number; cost_usd: number; dead_end: boolean; path?: string[] }

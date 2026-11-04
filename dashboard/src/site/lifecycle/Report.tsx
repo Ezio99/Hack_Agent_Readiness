@@ -1,24 +1,38 @@
 import { useState } from 'react';
 import { SiteFooter, SiteHeader } from '../Shell';
-import { api, displayTitle, fmtSec, fmtUsd, variantClass, words, type Evaluation, type Finding, type Trial } from '../../lib/lifecycleApi';
+import { PUBLIC_SCOPE, api, displayTitle, inPublicScope, fmtSec, fmtUsd, variantClass, words, type Evaluation, type Finding, type Trial } from '../../lib/lifecycleApi';
 import { Failed, GradeTag, Hash, Loading, ModeBadge, PairBars, plain, Section, useLoad, VariantName } from './parts';
 import { TraceCompare } from './Trace';
+import { AFTER, BEFORE } from '../showcase';
 import './lifecycle.css';
 
 /** `#/reports/<id>` and `#/reports/<id>/tasks/<n>`: one readiness report for any evaluation (the recorded first evaluation and evaluations launched in
  *  the product share this page, because the server projects both into the same document). The grades shown are the recorded ones: "correct" is the
  *  recorded grade that accepts a right answer with consistent extra detail (grader v2), and "exact match" is the official grader (v1). */
+/** The public experience is the final Larkspur experiment only (Before and After, and later runs of those versions). Any other evaluation is an
+ *  archived record: it stays reachable by its exact URL for audit, behind a notice, and is never linked from the public pages. */
+export const isPublicEvaluation = (ev: Evaluation) => !PUBLIC_SCOPE.versions || (ev.site.id === 'larkspur' && inPublicScope(ev.manifest.variants.map(v => v.name)));
+
 export function ReportPage({ id, task }: { id: string; task?: number }) {
   const ev = useLoad(() => api.evaluation(id), id);
+  const [audit, setAudit] = useState(false);
   return <div className="ar lc">
     <a className="ar-skip" href="#lc-main" onClick={e => { e.preventDefault(); document.getElementById('lc-main')?.focus(); }}>Skip to content</a>
     <SiteHeader active="report" cta={false} />
     <main id="lc-main" tabIndex={-1} className="wrap lc-wrap">
-      <nav className="lc-crumbs" aria-label="Breadcrumb"><a href="#/lifecycle">Journey</a><span aria-hidden="true">/</span><a href="#/lifecycle/compare">Evaluations</a>
+      <nav className="lc-crumbs" aria-label="Breadcrumb"><a href="#/lifecycle">Journey</a><span aria-hidden="true">/</span><a href="#/lifecycle/compare">Before and after</a>
         {task != null && <><span aria-hidden="true">/</span><a href={`#/reports/${id}`}>{ev.data ? displayTitle(ev.data) : id}</a></>}</nav>
       {ev.loading && <Loading what="the evaluation" />}
       {ev.error && <Failed error={ev.error} what="This evaluation" />}
-      {ev.data && (task != null ? <TraceCompare ev={ev.data} n={task} /> : <Report ev={ev.data} />)}
+      {ev.data && !isPublicEvaluation(ev.data) && !audit && <div className="lc-archived" role="note">
+        <p className="eyebrow">Not part of this experiment</p>
+        <h1 className="lc-title sm">This evaluation is not part of the current Larkspur Community College experiment.</h1>
+        <p className="lede sm">The public reports are the <a className="link" href={`#/reports/${BEFORE.id}`}>Before</a> and <a className="link" href={`#/reports/${AFTER.id}`}>After</a> evaluations.
+          Earlier records are kept unchanged for audit.</p>
+        <p><button type="button" className="btn btn-ghost btn-sm" onClick={() => setAudit(true)}>Show the archived record (audit)</button></p></div>}
+      {ev.data && (isPublicEvaluation(ev.data) || audit) && <>
+        {!isPublicEvaluation(ev.data) && <p className="lc-notice" role="note">Archived record, shown for audit: not part of the current experiment.</p>}
+        {task != null ? <TraceCompare ev={ev.data} n={task} /> : <Report ev={ev.data} />}</>}
     </main>
     <SiteFooter />
   </div>;

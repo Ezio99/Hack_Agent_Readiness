@@ -135,6 +135,12 @@ export const displayTitle = (ev: { title: string; mode?: string; site?: { label:
   ev.source?.kind === 'launched' && ev.manifest && typeof ev.site === 'object'
     ? `${ev.mode === 'paid' ? 'Live evaluation' : 'Rehearsal evaluation'} · ${ev.site.label} · ${ev.manifest.variants.map(v => VARIANT_LABEL(v.name)).join(' vs ')}`
     : audienceText(ev.title);
+/** The public experience: ONLY the final Larkspur experiment, Before (polishedoriginal) and After (modifiedpolished). Evaluations of any other version
+ *  stay in the records but are never listed, selected or rendered on public pages (an exact old URL shows a notice). `versions: null` = no scoping
+ *  (used by component tests that exercise the mechanics with older fixtures). */
+export const PUBLIC_SCOPE: { versions: Set<string> | null } = { versions: new Set(['polishedoriginal', 'modifiedpolished']) };
+export const inPublicScope = (variants: readonly string[] | null | undefined) =>
+  !PUBLIC_SCOPE.versions || (!!variants && variants.length > 0 && variants.every(v => PUBLIC_SCOPE.versions!.has(v)));
 export const variantClass = (v: string) => v === 'original' ? 'o' : v === 'modified' ? 'm' : v === 'improved' ? 'i' : v === 'polishedoriginal' ? 'o' : v === 'modifiedpolished' ? 'i' : v.startsWith('polished') ? 'p' : 'x';
 export const fmtUsd = (n: number | null | undefined, d = 3) => n == null ? '–' : `US$${n.toFixed(d)}`;
 export const fmtSec = (n: number | null | undefined) => n == null ? '–' : `${Math.round(n)} s`;

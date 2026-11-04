@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import fontLicense from './fonts/OFL-Newsreader.txt?url';
 import monoLicense from './fonts/OFL-GeistMono.txt?url';
 import sansLicense from './fonts/OFL-Geist.txt?url';
-import { AFTER, BEFORE, FEATURED, TRIAL_A } from './showcase';
+import { AFTER, BEFORE, FEATURED } from './showcase';
 
 /** The mark: a viewport with the agent's focus in one quadrant. */
 export function Mark({ className = 'brand-mark' }: { className?: string }) {
@@ -17,14 +17,13 @@ export function Brand() {
   return <a className="brand" href="#/" aria-label="Agent Readiness home"><Mark />Agent Readiness</a>;
 }
 
-type Active = 'home' | 'demo' | 'run' | 'archive' | 'lifecycle' | 'report' | 'showcase';
+type Active = 'home' | 'demo' | 'run' | 'lifecycle' | 'report' | 'showcase';
 const NAV: { id: Active | 'how'; href: string; label: string }[] = [
   { id: 'how', href: '#/how', label: 'How it works' },
   { id: 'showcase', href: '#/showcase', label: 'Showcase' },
   { id: 'lifecycle', href: '#/lifecycle', label: `The ${FEATURED.short} journey` },
   { id: 'report', href: `#/reports/${AFTER.id}`, label: 'Live report' },
   { id: 'run', href: '#/run', label: 'Workspace' },
-  { id: 'archive', href: '#/studio', label: 'Archive' },
 ];
 
 export function SiteHeader({ active, cta = true }: { active?: Active; cta?: boolean }) {
@@ -52,9 +51,9 @@ export function SiteFooter() {
   return <footer className="site-foot">
     <div className="wrap">
       <div><Brand /><p className="about">Agent Readiness measures whether AI agents can complete real tasks on a website, where they struggle, and whether a change helps.</p></div>
-      <div><h4>Product</h4><ul><li><a href="#/lifecycle">The {FEATURED.short} journey</a></li><li><a href="#/run">Run a live evaluation</a></li><li><a href={`#/reports/${AFTER.id}`}>{FEATURED.short} live report</a></li><li><a href="#/how">How it works</a></li></ul></div>
-      <div><h4>Evidence</h4><ul><li><a href="#/showcase">Before and after: the showcase</a></li><li><a href={`#/reports/${BEFORE.id}`}>Before, live report</a></li><li><a href={`#/reports/${AFTER.id}`}>After, live report</a></li><li><a href={`#/reports/${FEATURED.liveEvaluation}`}>Earlier: Original vs Improved, live</a></li><li><a href={`#/reports/${TRIAL_A.id}`}>Earlier: redesign trials (superseded)</a></li><li><a href={`#/reports/${FEATURED.firstLiveEvaluation}`}>Earlier: Original vs Modified, live</a></li><li><a href={`#/reports/${FEATURED.researchRun}`}>Earlier: first {FEATURED.short} evaluation</a></li><li><a href="#/demo/ironbark">Earlier case study: Ironbark Hire</a></li><li><a href="#/studio">Replay archive</a></li></ul></div>
-      <div><h4>Method</h4><ul><li><a href="#/trust">Isolation &amp; limits</a></li><li><a href="#/overview">Earlier experiments</a></li><li><a href="#/investigation">Investigation report</a></li></ul></div>
+      <div><h4>Product</h4><ul><li><a href="#/lifecycle">The {FEATURED.short} journey</a></li><li><a href="#/run">Run a live evaluation</a></li><li><a href="#/showcase">Before and after</a></li></ul></div>
+      <div><h4>Evidence</h4><ul><li><a href="#/showcase">Before and after: the showcase</a></li><li><a href={`#/reports/${BEFORE.id}`}>Before: live report</a></li><li><a href={`#/reports/${AFTER.id}`}>After: live report</a></li></ul></div>
+      <div><h4>Method</h4><ul><li><a href="#/how">How it works</a></li><li><a href="#/trust">Isolation &amp; limits</a></li></ul></div>
       <div className="fine"><span>Built for the Meta Global AI Hackathon, 2026. Model costs shown are calculated estimates, not bills.</span>
         <span>Type: <a href={fontLicense}>Newsreader</a>, <a href={sansLicense}>Geist</a>, <a href={monoLicense}>Geist Mono</a> (SIL OFL)</span></div>
     </div>

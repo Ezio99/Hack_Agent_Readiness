@@ -1,23 +1,62 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { SiteFooter, SiteHeader } from '../Shell';
-import { api, fmtUsd, words, type EvaluationSummary, type Finding, type Generation, type Overview, type Suite } from '../../lib/lifecycleApi';
-import { CARD_FACTS, FEATURED, FEATURED_TASK, FIRST_LIVE, IMPROVEMENTS, JOURNEY, LIVE, PAGE_AUDIT, VERSIONS, fewerPct, journeyOf, showcaseFrame, trialOf, type LiveRecord, AFTER, AFTER_V, BEFORE, BEFORE_V } from '../showcase';
+import { api, fmtUsd, inPublicScope, words, type EvaluationSummary, type Finding, type Generation, type Overview, type Suite } from '../../lib/lifecycleApi';
+import { AFTER, AFTER_CHANGES, AFTER_V, BEFORE, BEFORE_V, FEATURED, FEATURED_TASK, JOURNEY, fewerPct, journeyOf, showcaseFrame, trialOf } from '../showcase';
 import { Failed, Loading, useLoad, VariantName } from './parts';
 import './lifecycle.css';
 
-/** `#/lifecycle[/<step>]` (and `#/demo`): the featured website's journey through the product, as one page: website -> generated tasks -> owner
- *  review -> live evaluation -> recommendations -> the improved website -> re-evaluation -> comparison. Recorded artefacts come from the API (the
- *  generation, the frozen suite, the evaluations and their reports) or, for the recorded live run, from showcase.ts. Nothing is simulated; a live
- *  run is started only from the workspace. */
+/** `#/lifecycle[/<step>]` (and `#/demo`): Larkspur Community College's journey through the product, as one page: website -> generated tasks ->
+ *  owner review -> live evaluation (Before) -> recommendations -> the improved website (After) -> re-evaluation -> comparison. Recorded artefacts
+ *  come from the API (the generation, the frozen suite, the Before and After reports) or from showcase.ts. Nothing is simulated; a live run is
+ *  started only from the workspace. The chapter bar follows the reader's scroll position (scroll spy) and chapter links scroll below the sticky
+ *  header and bar. */
+
+const SITE_HEADER_PX = 64;
+/** Height that sticky chrome covers at the top of the viewport: the site header, plus the chapter bar when it is sticky (desktop). */
+function stickyOffset(): number {
+  const nav = document.querySelector<HTMLElement>('.lc-stepper');
+  const head = document.querySelector<HTMLElement>('.site-head');
+  const h = head ? head.getBoundingClientRect().height : SITE_HEADER_PX;
+  return h + (nav && getComputedStyle(nav).position === 'sticky' ? nav.getBoundingClientRect().height : 0);
+}
+export function scrollToStep(id: string, smooth: boolean) {
+  const el = document.getElementById(`lc-${id}`);
+  if (!el) return;
+  window.scrollTo({ top: Math.max(0, el.getBoundingClientRect().top + window.scrollY - stickyOffset() - 12), behavior: smooth ? 'smooth' : 'auto' });
+}
+/** The chapter in view: the last section whose top has passed the line just below the sticky chrome (the last one at the end of the page). */
+export function activeStep(): string {
+  const line = stickyOffset() + 24;
+  let cur: string = JOURNEY[0].id;
+  for (const s of JOURNEY) { const el = document.getElementById(`lc-${s.id}`); if (el && el.getBoundingClientRect().top <= line) cur = s.id; }
+  if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) cur = JOURNEY[JOURNEY.length - 1].id;
+  return cur;
+}
 export function Lifecycle({ step, suite }: { step?: string; suite?: string }) {
   const ov = useLoad(() => api.overview(), 'overview');
-  const current = step ?? 'website';
-  useEffect(() => {                      // deep link: scroll now, and again once the sections above have loaded their data and images
+  const [active, setActive] = useState<string>(step ?? 'website');
+  const lock = useRef(0);                // while a chapter click scrolls the page, the spy keeps the clicked chapter
+  useEffect(() => {                      // scroll spy: one passive listener, at most one update per frame
+    let queued = false;
+    const update = () => { queued = false; if (Date.now() < lock.current) return; setActive(a => { const n = activeStep(); return n === a ? a : n; }); };
+    const on = () => { if (!queued) { queued = true; requestAnimationFrame(update); } };
+    window.addEventListener('scroll', on, { passive: true }); window.addEventListener('resize', on, { passive: true });
+    update();
+    return () => { window.removeEventListener('scroll', on); window.removeEventListener('resize', on); };
+  }, []);
+  useEffect(() => {                      // deep link or chapter click: scroll now, and again once the sections above have loaded (unless the reader scrolls)
     if (!step) return;
-    const go = () => document.getElementById(`lc-${step}`)?.scrollIntoView?.({ block: 'start' });
+    setActive(step); lock.current = Date.now() + 1500;
+    let user = false;
+    const stop = () => { user = true; lock.current = 0; };
+    const go = () => { if (!user) scrollToStep(step, false); };
     go(); const t = [setTimeout(go, 400), setTimeout(go, 1200)];
-    return () => t.forEach(clearTimeout);
+    window.addEventListener('wheel', stop, { passive: true }); window.addEventListener('touchmove', stop, { passive: true }); window.addEventListener('keydown', stop);
+    return () => { t.forEach(clearTimeout); window.removeEventListener('wheel', stop); window.removeEventListener('touchmove', stop); window.removeEventListener('keydown', stop); };
   }, [step]);
+  const choose = (id: string) => (e: React.MouseEvent) => {            // the same chapter again: no hash change, so scroll here
+    if (window.location.hash === `#/lifecycle/${id}`) { e.preventDefault(); setActive(id); lock.current = Date.now() + 1200; scrollToStep(id, !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches); }
+  };
   return <div className="ar lc">
     <a className="ar-skip" href="#lc-main" onClick={e => { e.preventDefault(); document.getElementById('lc-main')?.focus(); }}>Skip to content</a>
     <SiteHeader active="lifecycle" />
@@ -27,11 +66,11 @@ export function Lifecycle({ step, suite }: { step?: string; suite?: string }) {
         <h1 className="lc-title">From a website to one <em>agents can use.</em></h1>
         <p className="lede">{FEATURED.name} runs evening and weekend short courses. Follow its website through Agent Readiness: customer tasks generated from
           its own catalogue, approved by the owner, run by real Muse Spark browser agents, turned into recommendations, applied to the site, and run again.</p>
-        <p className="lc-note">This walkthrough follows the college’s first experiment (3 Nov 2026: the original site against a fully improved version). The latest
-          before-and-after evaluation of its redesigned website is in the <a className="link" href="#/showcase">showcase</a>.</p>
+        <p className="lc-note">Every step below uses the college’s real evaluation: its redesigned website (Before), the changes Agent Readiness recommended, and the
+          improved website (After), each evaluated live with the same questions on 4 Nov 2026.</p>
       </header>
       <nav className="lc-stepper" aria-label="Journey steps"><ol>{JOURNEY.map(s =>
-        <li key={s.id}><a href={`#/lifecycle/${s.id}`} aria-current={current === s.id ? 'step' : undefined}>
+        <li key={s.id}><a href={`#/lifecycle/${s.id}`} onClick={choose(s.id)} aria-current={active === s.id ? 'step' : undefined}>
           <span className="lc-step-n">{s.n}</span><strong>{s.label}</strong><small>{s.blurb}</small></a></li>)}</ol></nav>
       <div className="lc-journey">
         <Step id="website"><WebsiteStep /></Step>
@@ -75,10 +114,11 @@ function WebsiteStep() {
         <div><h3>What they come to do</h3><ul className="lc-list">{ctx.journeys.map(j => <li key={j.id}>{j.name}{j.attributes.length ? <small> · {j.attributes.join(', ')}</small> : null}</li>)}</ul></div>
       </div>
     </div>}
-    <h3>Three versions of the website</h3>
-    <ul className="lc-versions">{(['original', 'modified', 'improved'] as const).map(v => <li key={v}>
-      <figure><img src={showcaseFrame(`site-${v}-courses`)} alt={`The ${VERSIONS[v].label} course catalogue.`} loading="lazy" /></figure>
-      <VariantName v={v} /><p>{VERSIONS[v].blurb}</p></li>)}</ul>
+    <h3>Two versions of the website</h3>
+    <ul className="lc-versions two">{([[BEFORE_V, 'The college’s freshly redesigned website. Each course card shows a name, a subject and a summary; the fee, class day, level and seats left are on the course’s own page.'],
+      [AFTER_V, 'The same design and pages, with the three changes Agent Readiness recommended: every fact on every card, no dead end, structured course data.']] as const).map(([v, blurb]) => <li key={v}>
+      <figure><img src={showcaseFrame(`site-${v}-courses`)} alt={`The ${v === BEFORE_V ? 'Before' : 'After'} course catalogue.`} loading="lazy" /></figure>
+      <VariantName v={v} /><p>{blurb}</p></li>)}</ul>
   </>;
 }
 
@@ -122,7 +162,7 @@ function GenerationView({ g }: { g: Generation }) {
 function ReviewStep({ selected }: { selected?: string }) {
   const suites = useLoad(() => api.suites(), 'suites');
   const mine = (suites.data ?? []).filter(s => s.site === FEATURED.site && !s.synthetic);
-  const id = selected ?? mine.find(s => s.state === 'frozen' && s.name === 'larkspur-core' && s.version === 2)?.sha256 ?? mine.find(s => s.state === 'frozen')?.sha256;
+  const id = selected ?? mine.find(s => `${s.name}@v${s.version}` === FEATURED.judgeSuite && s.state === 'frozen')?.sha256 ?? mine.find(s => s.state === 'frozen')?.sha256;
   const s = useLoad(() => id ? api.suite(id) : Promise.resolve(null), `suite-${id}`);
   const judge = mine.find(x => `${x.name}@v${x.version}` === FEATURED.judgeSuite);
   return <>
@@ -130,11 +170,7 @@ function ReviewStep({ selected }: { selected?: string }) {
       uses the very same questions, so the comparison is fair. Approval happens at the owner’s terminal, never on the web.</p>
     {suites.error && <Failed error={suites.error} what="Task sets" />}
     {s.data && <SuiteView s={s.data} />}
-    {judge && s.data && <p className="lc-note">Live runs started by judges use <strong>{FEATURED.judgeSuite}</strong>: {(() => {
-      const ids = [...s.data.tasks].map(t => t.task_id).sort();
-      const n = FEATURED.judgeTasks.map(id => ids.indexOf(id) + 1).filter(x => x > 0);
-      return `task${n.length === 1 ? '' : 's'} ${n.length > 1 ? `${n.slice(0, -1).join(', ')} and ${n.at(-1)}` : n.join('')}`;
-    })()} of this set ({judge.state}).</p>}
+    {judge && s.data && <p className="lc-note">Both the Before and the After evaluation, and every live run started in the workspace, use exactly these questions.</p>}
   </>;
 }
 
@@ -151,92 +187,91 @@ function SuiteView({ s }: { s: Suite }) {
 }
 
 // --------------------------------------------------------------------------------------------------------------- 04 evaluate
+const T = FEATURED_TASK;                                                             // the weekend-courses question
+const bt = (n: number) => trialOf(BEFORE_V, n, BEFORE)!, at = (n: number) => trialOf(AFTER_V, n, AFTER)!;
+const B = BEFORE.totals[BEFORE_V], A = AFTER.totals[AFTER_V];
+
 function EvaluateStep() {
-  const R = FIRST_LIVE;
-  const o = R.totals.original, m = R.totals.modified;
-  const a = journeyOf('original', 1, R), b = journeyOf('modified', 1, R);
-  const shot = (j: typeof a, n: number) => j.steps.find(x => x.step === n);
+  const j = journeyOf(BEFORE_V, T, BEFORE), last = j.steps[j.steps.length - 1], mid = j.steps.find(x => x.step === 2) ?? j.steps[0];
+  const dead = journeyOf(BEFORE_V, 1, BEFORE).steps.find(x => x.step === 9);
   return <>
-    <p className="lede sm">Each task goes to a fresh Muse Spark browser agent on each version of the site, in a browser that can reach nothing but the frozen copy.
-      Every page, screenshot, action and the agent’s own notes are recorded, and the answer is graded against the course records.</p>
+    <p className="lede sm">Each task goes to a fresh Muse Spark browser agent, in a browser that can reach nothing but the frozen copy of the website. Every page,
+      screenshot, action and the agent’s own notes are recorded, and the answer is graded against the course records. This is the Before website.</p>
     <dl className="lc-kpis">
-      <div><dt>Agents</dt><dd>{R.trials.length}</dd><small>first live evaluation · {R.tasks.length} tasks × Original and Modified (the first fix) · {FEATURED.liveDate}</small></div>
-      <div><dt>Model requests</dt><dd>{o.requests} <span className="lc-arrow">→</span> {m.requests}</dd><small>Original → Modified · {fewerPct(o.requests, m.requests)}% fewer</small></div>
-      <div><dt>Correct answers</dt><dd>{R.correct.original} <span className="lc-arrow">→</span> {R.correct.modified}</dd><small>of {R.tasks.length} tasks</small></div>
-      <div><dt>Model cost</dt><dd>{fmtUsd(R.cost_usd, 2)}</dd><small>{R.agent.model} · all {R.trials.length} agents</small></div>
+      <div><dt>Agents</dt><dd>{BEFORE.trials.length}</dd><small>{BEFORE.tasks.length} tasks · Before · 4 Nov 2026</small></div>
+      <div><dt>Correct answers</dt><dd>{BEFORE.correct[BEFORE_V]}/{BEFORE.tasks.length}</dd><small>checked against the course records</small></div>
+      <div><dt>Model requests</dt><dd>{B.requests}</dd><small>{BEFORE.trials.map(t => t.requests).join(' · ')} per task (limit {bt(1).limit})</small></div>
+      <div><dt>Model cost</dt><dd>{fmtUsd(B.cost_usd, 2)}</dd><small>{BEFORE.agent.model} · {B.seconds} s of browsing</small></div>
     </dl>
     <div className="lc-sbs">
-      {[['original', a, 13], ['modified', b, 2]].map(([v, j, n]) => { const jj = j as typeof a; const st = shot(jj, n as number) ?? jj.steps[jj.steps.length - 1]; const tr = trialOf(v as string, 1, R)!;
-        return <figure key={v as string} className={`lc-side ${v === 'original' ? 'o' : 'm'}`}>
-          <figcaption><VariantName v={v as string} /> · task 1 · {tr.requests} requests · {Math.round(tr.seconds)} s</figcaption>
-          <img src={showcaseFrame(st.frame)} alt={`Recorded screenshot: ${v} site, step ${st.step}, ${st.path}.`} loading="lazy" />
-          <blockquote>“{jj.steps[jj.steps.length - 1].memory}”</blockquote>
-        </figure>; })}
+      <figure className="lc-side o"><figcaption><VariantName v={BEFORE_V} /> · task {T} · step {mid.step}: the catalogue</figcaption>
+        <img src={showcaseFrame(mid.frame)} alt="Recorded screenshot: the Before catalogue, course cards with a name and summary only." loading="lazy" />
+        <blockquote>“{mid.memory}”</blockquote></figure>
+      <figure className="lc-side o"><figcaption><VariantName v={BEFORE_V} /> · task {T} · step {last.step}: the answer · {bt(T).requests} requests</figcaption>
+        <img src={showcaseFrame(last.frame)} alt={`Recorded screenshot: the Before site, step ${last.step}.`} loading="lazy" />
+        <blockquote>“{last.memory}”</blockquote></figure>
     </div>
-    <p className="lc-cta-row"><a className="btn btn-signal" href={`#/reports/${R.id}/tasks/1`}>Replay task 1 side by side <span className="arr" aria-hidden="true">→</span></a>
-      <a className="btn btn-ghost" href={`#/reports/${R.id}`}>Open the first live report</a></p>
+    {dead && <p className="lc-note">Task 1: the agent guessed <code>{dead.path}</code> from the course name and got “not found” (step {dead.step}).</p>}
+    <p className="lc-cta-row"><a className="btn btn-signal" href={`#/reports/${BEFORE.id}/tasks/${T}`}>Replay task {T} step by step <span className="arr" aria-hidden="true">→</span></a>
+      <a className="btn btn-ghost" href={`#/reports/${BEFORE.id}`}>Open the Before report</a></p>
   </>;
 }
 
 // --------------------------------------------------------------------------------------------------------------- 05 recommendations
-/** Which Improved change answers a recommendation (by the finding's subject). */
+/** Which After change answers a recommendation (by the finding's subject). */
 function appliedBy(f: Finding): string | null {
   const t = `${f.title} ${f.recommendation}`.toLowerCase();
   if (/structured data|json-ld/.test(t)) return 'structured';
-  if (/dead end|failing link/.test(t)) return 'dead-ends';
+  if (/dead end|failing link/.test(t)) return 'dead-end';
   if (/listing|card/.test(t)) return 'facts';
-  if (/budget|loop|revisit|unnecessary navigation/.test(t)) return 'compare';
   return null;
 }
 
 function RecommendationsStep() {
-  const ev = useLoad(() => api.evaluation(FIRST_LIVE.id), FIRST_LIVE.id);
+  const ev = useLoad(() => api.evaluation(BEFORE.id), BEFORE.id);
   const d = ev.data ? Object.values(ev.data.diagnostics)[0] : null;
-  const fs = d?.findings ?? [];
+  const fs = (d?.findings ?? []).filter(f => f.variant === BEFORE_V);
   const causes = fs.filter(f => f.basis === 'hypothesis' && f.severity !== 'info');
-  const structural = fs.filter(f => f.basis === 'observed' && f.layer === 'structural' && f.variant === 'original');
+  const structural = fs.filter(f => f.basis === 'observed' && f.layer === 'structural');
+  const dead = fs.filter(f => f.basis === 'observed' && f.rule === 'dead-end');
   const behaviour = new Map<string, number>();
-  fs.filter(f => f.basis === 'observed' && f.layer === 'behavioral' && f.variant === 'original' && !f.title.startsWith('v1 format')).forEach(f => {
+  fs.filter(f => f.basis === 'observed' && f.layer === 'behavioral' && !f.title.startsWith('v1 format')).forEach(f => {
     const k = f.title.replace(/ on task \d+.*$/, ''); behaviour.set(k, (behaviour.get(k) ?? 0) + 1); });
-  const recs = [...new Map([...causes, ...structural].map(f => [f.recommendation, f])).values()];
+  const recs = [...new Map([...causes, ...dead, ...structural].map(f => [f.recommendation, f])).values()];
   return <>
     <p className="lede sm">The report reads what the agents did and what the pages contain, and turns it into specific changes. Each recommendation cites its
-      evidence: the steps where an agent ran out of requests, the page that returned a 404, the fact that sat one click too deep.</p>
-    {ev.loading && <Loading what="the live report" />}
-    {ev.error && <Failed error={ev.error} what="The live report" />}
+      evidence: the steps where an agent ran out of requests, the page that returned “not found”, the fact that sat one click too deep.</p>
+    {ev.loading && <Loading what="the Before report" />}
+    {ev.error && <Failed error={ev.error} what="The Before report" />}
     {d && <div className="lc-recs">
-      <div><h3>What the agents ran into <small>(Original site)</small></h3>
+      <div><h3>What the agents ran into <small>(Before)</small></h3>
         <ul className="lc-counts">{[...behaviour.entries()].map(([k, n]) => <li key={k}><span>{k[0].toUpperCase() + k.slice(1)}</span><b>{n} task{n === 1 ? '' : 's'}</b></li>)}</ul></div>
       <div><h3>Recommendations</h3>
-        <ul className="lc-rec-list">{recs.map(f => { const a = appliedBy(f); const imp = IMPROVEMENTS.find(x => x.id === a);
+        <ul className="lc-rec-list">{recs.map(f => { const a = appliedBy(f); const imp = AFTER_CHANGES.find(x => x.id === a);
           return <li key={f.id + f.recommendation}><p>{f.recommendation}</p>
             <small>{f.basis === 'hypothesis' ? `Likely cause of the extra navigation on task ${f.tasks.join(', ')}` : f.title}</small>
             {imp && <a className="tag tag-pass" href="#/lifecycle/improve">✓ Applied: {imp.title}</a>}</li>; })}</ul></div>
     </div>}
-    <p className="lc-cta-row"><a className="btn btn-ghost" href={`#/reports/${FIRST_LIVE.id}#diagnostics`}>Every finding, with its evidence</a></p>
+    <p className="lc-cta-row"><a className="btn btn-ghost" href={`#/reports/${BEFORE.id}#diagnostics`}>Every finding, with its evidence</a></p>
   </>;
 }
 
 // --------------------------------------------------------------------------------------------------------------- 06 improve
+const FACTS = ['Course fee', 'Duration', 'Level', 'Class day', 'Campus', 'Seats left', 'Materials'];
+
 function ImproveStep() {
   return <>
-    <p className="lede sm">The Modified site was a first, single fix: fee, duration, level and seats on the cards. The Improved site applies every recommendation.
-      The course records are unchanged, so every frozen task keeps exactly the same correct answer.</p>
+    <p className="lede sm">The After website keeps every page and the whole design, and changes only what the report recommended. The course records are
+      unchanged, so every frozen task keeps exactly the same correct answer.</p>
     <div className="lc-before-after">
-      <figure className="lc-side o"><figcaption><VariantName v="original" /> · /courses</figcaption><img src={showcaseFrame('site-original-courses')} alt="Original catalogue: name, subject and summary only." loading="lazy" /></figure>
-      <figure className="lc-side i"><figcaption><VariantName v="improved" /> · /courses</figcaption><img src={showcaseFrame('site-improved-courses')} alt="Improved catalogue: a filter form and every fact on each card." loading="lazy" /></figure>
+      <figure className="lc-side o"><figcaption><VariantName v={BEFORE_V} /> · /courses</figcaption><img src={showcaseFrame(`site-${BEFORE_V}-courses`)} alt="Before catalogue: name, subject and summary only." loading="lazy" /></figure>
+      <figure className="lc-side i"><figcaption><VariantName v={AFTER_V} /> · /courses</figcaption><img src={showcaseFrame(`site-${AFTER_V}-courses`)} alt="After catalogue: every fact on each card." loading="lazy" /></figure>
     </div>
     <div className="lc-table-wrap"><table className="lc-table lc-facts-grid"><caption>What each version shows on its course cards</caption>
-      <thead><tr><th scope="col">Fact</th>{(['original', 'modified', 'improved'] as const).map(v => <th scope="col" key={v}><VariantName v={v} /></th>)}</tr></thead>
-      <tbody>{CARD_FACTS.map(f => <tr key={f.fact}><th scope="row">{f.fact}</th>{[f.original, f.modified, f.improved].map((x, i) => <td key={i} className={x ? 'yes' : 'no'}>{x ? '✓ on the card' : 'course page only'}</td>)}</tr>)}</tbody></table></div>
-    <dl className="lc-kpis">{(['original', 'modified', 'improved'] as const).map(v => <div key={v}><dt>Page audit · {VERSIONS[v].label}</dt><dd>{PAGE_AUDIT[v].length}</dd>
-      <small>{PAGE_AUDIT[v].length ? `problems in the pages themselves (${PAGE_AUDIT[v].length === 1 ? 'one' : 'e.g.'} ${PAGE_AUDIT[v][0]})` : 'nothing left for the page audit to flag'}</small></div>)}</dl>
-    <ol className="lc-improvements">{IMPROVEMENTS.map((x, i) => <li key={x.id} id={`improve-${x.id}`}>
-      <div className="lc-imp-text">
-        <span className="lc-tn">Change {i + 1}</span><h3>{x.title}</h3>
-        <dl><div><dt>What agents hit</dt><dd>{x.problem}</dd></div><div><dt>Recommendation</dt><dd>{x.recommendation}</dd></div><div><dt>On the Improved site</dt><dd>{x.change} <code>{x.tryPath}</code></dd></div></dl>
-      </div>
-      {x.preview && <figure><img src={showcaseFrame(x.preview)} alt={`Improved site: ${x.title}.`} loading="lazy" /></figure>}
+      <thead><tr><th scope="col">Fact</th><th scope="col"><VariantName v={BEFORE_V} /></th><th scope="col"><VariantName v={AFTER_V} /></th></tr></thead>
+      <tbody>{FACTS.map(f => <tr key={f}><th scope="row">{f}</th><td className="no">course page only</td><td className="yes">✓ on the card</td></tr>)}</tbody></table></div>
+    <ol className="lc-improvements">{AFTER_CHANGES.map((x, i) => <li key={x.id} id={`improve-${x.id}`}>
+      <div className="lc-imp-text"><span className="lc-tn">Change {i + 1}</span><h3>{x.title}</h3><p>{x.change}</p></div>
     </li>)}</ol>
   </>;
 }
@@ -245,69 +280,63 @@ function ImproveStep() {
 function ReevaluateStep({ ov }: { ov: Overview | null }) {
   const ev = ov?.evaluation?.evaluation ?? null;
   const ready = !!ev && (ev.launches === null || ev.launches.left > 0) && ev.mode === 'paid';     // launches null: the shared budget's evaluation
+  const j = journeyOf(AFTER_V, T, AFTER), st = j.steps.find(x => x.step === 2) ?? j.steps[0];
   return <>
-    <p className="lede sm">The same frozen tasks run again on the changed website, with fresh agents, the same model and the same limits. The product re-checks
+    <p className="lede sm">The same frozen tasks run again on the After website, with fresh agents, the same model and the same limits. The product re-checks
       every task on the new site first: a task whose correct answer changed would be set aside, with the reason.</p>
-    <div className="lc-launch">
-      <div>
-        <h3>{ready ? 'Ready for a live run' : 'Live runs'}</h3>
-        {ev ? <p>{ev.variants.map(v => <VariantName key={v} v={v} />)} · {ev.suite} · {ev.options[0]?.trials ?? '–'} browser agents per run ·{' '}
-          <strong>{ev.launches ? `${ev.launches.left} of ${ev.launches.max} live run${ev.launches.max === 1 ? '' : 's'} left` : 'runs while the A$20 evaluation budget lasts'}</strong></p>
-          : <p>No live run is open right now. The owner opens a set number of runs; completed evaluations stay available to everyone.</p>}
-        <p className="muted">Start it in the workspace with your access code, watch every agent work live, and the report appears when they finish (about 6–9 minutes for {ev?.options[0]?.trials ?? 6} agents).</p>
-        <p>Latest, 4 Nov: <strong>before {BEFORE.correct[BEFORE_V]}/{BEFORE.tasks.length} → after {AFTER.correct[AFTER_V]}/{AFTER.tasks.length}</strong> correct, {BEFORE.totals[BEFORE_V].requests} → {AFTER.totals[AFTER_V].requests} model requests. <a className="link" href="#/showcase">Watch before and after</a></p>
-        <p className="muted">This journey’s first experiment, {FEATURED.liveDate}: {LIVE.correct.original}/{LIVE.tasks.length} on Original → {LIVE.correct.improved}/{LIVE.tasks.length} on Improved, {LIVE.totals.original.requests} → {LIVE.totals.improved.requests} requests. <a className="link" href={`#/reports/${LIVE.id}`}>Open its report</a></p>
+    <div className="lc-sbs">
+      <figure className="lc-side i"><figcaption><VariantName v={AFTER_V} /> · task {T} · step {st.step} · {at(T).requests} requests in total</figcaption>
+        <img src={showcaseFrame(st.frame)} alt="Recorded screenshot: the After catalogue, every fact on each card." loading="lazy" />
+        <blockquote>“{st.memory}”</blockquote></figure>
+      <div className="lc-launch">
+        <div>
+          <h3>{ready ? 'Run it yourself' : 'Live runs'}</h3>
+          {ev ? <p>{ev.variants.map(v => <VariantName key={v} v={v} />)} · {ev.options[0]?.trials ?? '–'} browser agents per run ·{' '}
+            <strong>{ev.launches ? `${ev.launches.left} of ${ev.launches.max} live run${ev.launches.max === 1 ? '' : 's'} left` : 'runs while the A$20 evaluation budget lasts'}</strong></p>
+            : <p>No live run is open right now. Completed evaluations stay available to everyone.</p>}
+          <p className="muted">Start it in the workspace with your access code, watch every agent work live, and read the report when they finish.</p>
+        </div>
+        <a className="btn btn-signal" href="#/run">{ready ? 'Run it live' : 'Open the workspace'} <span className="arr" aria-hidden="true">→</span></a>
       </div>
-      <a className="btn btn-signal" href="#/run">{ready ? 'Run it live' : 'Open the workspace'} <span className="arr" aria-hidden="true">→</span></a>
     </div>
   </>;
 }
 
 // --------------------------------------------------------------------------------------------------------------- 08 compare
-/** The featured result: Original vs Improved, live, on the class-day task (recorded; showcase.ts). */
-function FeaturedResult({ r }: { r: LiveRecord }) {
-  const T = FEATURED_TASK, o = r.totals.original, i = r.totals.improved;
-  const side = (v: 'original' | 'improved') => { const j = journeyOf(v, T, r), tr = trialOf(v, T, r)!; const last = j.steps[j.steps.length - 1];
-    const st = v === 'original' ? last : j.steps.find(x => x.path === '/courses/compare') ?? last;
-    return <figure key={v} className={`lc-side ${v === 'original' ? 'o' : 'i'}`}>
-      <figcaption><VariantName v={v} /> · {tr.correct ? '✓ correct' : '✕ not correct'} · {tr.requests} requests · {Math.round(tr.seconds)} s</figcaption>
-      <img src={showcaseFrame(st.frame)} alt={`Recorded screenshot: ${v} site, step ${st.step}, ${st.path}.`} loading="lazy" />
-      <blockquote>“{last.memory}”</blockquote></figure>; };
-  return <div className="lc-featured">
-    <p className="eyebrow">Live evaluation · {FEATURED.liveDate} · Original vs Improved</p>
-    <dl className="lc-kpis">
-      <div><dt>Correct answers</dt><dd>{r.correct.original}/{r.tasks.length} <span className="lc-arrow">→</span> {r.correct.improved}/{r.tasks.length}</dd><small>the same {r.tasks.length} customer tasks</small></div>
-      <div><dt>Model requests</dt><dd>{o.requests} <span className="lc-arrow">→</span> {i.requests}</dd><small>{fewerPct(o.requests, i.requests)}% fewer on Improved</small></div>
-      <div><dt>Agent time</dt><dd>{o.seconds} s <span className="lc-arrow">→</span> {i.seconds} s</dd><small>all tasks</small></div>
-      <div><dt>Model cost (US$)</dt><dd>${o.cost_usd.toFixed(2)} <span className="lc-arrow">→</span> ${i.cost_usd.toFixed(2)}</dd><small>{r.trials.length} agents · {r.agent.model}</small></div>
-    </dl>
-    <p className="lc-note">Task {T}: “{r.tasks[T - 1].wording}”</p>
-    <div className="lc-sbs">{side('original')}{side('improved')}</div>
-    <p className="lc-cta-row"><a className="btn btn-signal" href={`#/reports/${r.id}/tasks/${T}`}>Replay this task side by side <span className="arr" aria-hidden="true">→</span></a>
-      <a className="btn btn-ghost" href={`#/reports/${r.id}`}>Open the live report</a></p>
-  </div>;
-}
-
 const versionsOf = (e: EvaluationSummary) => e.variants ?? [];
 
 function CompareStep() {
   const evs = useLoad(() => api.evaluations(), 'evaluations');
-  const list = (evs.data ?? []).filter(e => (e.site_id ?? e.site) === FEATURED.site && e.state === 'completed' && e.mode === 'paid');
-  const day = (s?: string | null) => s ? new Date(s).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Australia/Sydney' }) : '';
-  const improved = list.filter(e => versionsOf(e).includes('improved'));
+  const list = (evs.data ?? []).filter(e => (e.site_id ?? e.site) === FEATURED.site && e.state === 'completed' && e.mode === 'paid' && versionsOf(e).length > 0
+    && inPublicScope(versionsOf(e)));
+  const day = (s?: string | null) => s ? new Date(s).toLocaleString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Australia/Sydney' }) : '';
+  const side = (r: typeof BEFORE, v: string, cls: string) => { const jj = journeyOf(v, T, r), last = jj.steps[jj.steps.length - 1], tr = trialOf(v, T, r)!;
+    return <figure key={v} className={`lc-side ${cls}`}><figcaption><VariantName v={v} /> · {tr.correct ? '✓ correct' : '✕ not correct'} · {tr.requests} requests · {Math.round(tr.seconds)} s</figcaption>
+      <img src={showcaseFrame(last.frame)} alt={`Recorded screenshot: ${v === BEFORE_V ? 'Before' : 'After'}, task ${T}, step ${last.step}.`} loading="lazy" />
+      <blockquote>“{last.memory}”</blockquote></figure>; };
   return <>
-    <FeaturedResult r={LIVE} />
-    <h3>Every live evaluation of {FEATURED.short}</h3>
-    <p className="lede sm">Each opens its full report with every agent’s trace.</p>
+    <div className="lc-featured">
+      <p className="eyebrow">Live evaluations · 4 Nov 2026 · Before and After</p>
+      <dl className="lc-kpis">
+        <div><dt>Correct answers</dt><dd>{BEFORE.correct[BEFORE_V]}/{BEFORE.tasks.length} <span className="lc-arrow">→</span> {AFTER.correct[AFTER_V]}/{AFTER.tasks.length}</dd><small>the same {BEFORE.tasks.length} customer tasks</small></div>
+        <div><dt>Model requests</dt><dd>{B.requests} <span className="lc-arrow">→</span> {A.requests}</dd><small>{fewerPct(B.requests, A.requests)}% fewer after the change</small></div>
+        <div><dt>Agent time</dt><dd>{B.seconds} s <span className="lc-arrow">→</span> {A.seconds} s</dd><small>all tasks</small></div>
+        <div><dt>Model cost (US$)</dt><dd>${B.cost_usd.toFixed(2)} <span className="lc-arrow">→</span> ${A.cost_usd.toFixed(2)}</dd><small>{BEFORE.agent.model}</small></div>
+      </dl>
+      <p className="lc-note">Task {T}: “{BEFORE.tasks[T - 1].wording}” One agent per question on each version: a measured result for these tasks, not a statistical guarantee.</p>
+      <div className="lc-sbs">{side(BEFORE, BEFORE_V, 'o')}{side(AFTER, AFTER_V, 'i')}</div>
+      <p className="lc-cta-row"><a className="btn btn-signal" href="#/showcase">Watch before and after <span className="arr" aria-hidden="true">→</span></a>
+        <a className="btn btn-ghost" href={`#/reports/${BEFORE.id}`}>Before report</a><a className="btn btn-ghost" href={`#/reports/${AFTER.id}`}>After report</a></p>
+    </div>
+    <h3>Every live evaluation of these two versions</h3>
     {evs.error && <Failed error={evs.error} what="Evaluations" />}
-    {evs.data && <div className="lc-table-wrap"><table className="lc-table lc-compare"><caption>Live evaluations of {FEATURED.name}</caption>
-      <thead><tr><th scope="col">Evaluation</th><th scope="col">Versions</th><th scope="col">Correct answers</th><th scope="col">Model requests</th><th scope="col"><span className="sr-only">Report</span></th></tr></thead>
+    {evs.data && <div className="lc-table-wrap"><table className="lc-table lc-compare"><caption>Live evaluations of {FEATURED.name}, Before and After</caption>
+      <thead><tr><th scope="col">Evaluation</th><th scope="col">Version</th><th scope="col">Correct answers</th><th scope="col">Model requests</th><th scope="col"><span className="sr-only">Report</span></th></tr></thead>
       <tbody>{list.map(e => { const vs = versionsOf(e); return <tr key={e.id}>
-        <th scope="row">{e.source === 'dataset' ? 'First evaluation' : 'Live evaluation'} · {day(e.started_at)}<small>{e.suite} · {e.tasks} tasks · {e.trials} agents</small></th>
+        <th scope="row">Live evaluation · {day(e.started_at)}<small>{e.tasks} tasks · {e.trials} agents</small></th>
         <td>{vs.map(v => <VariantName key={v} v={v} />)}</td>
         <td>{vs.map(v => <span key={v} className="lc-inline">{e.success?.[v]?.v2_passed ?? '–'}/{e.success?.[v]?.trials ?? '–'}</span>)}</td>
         <td>{vs.map(v => <span key={v} className="lc-inline">{e.requests?.[v] ?? '–'}</span>)}</td>
         <td><a className="btn btn-sm btn-ghost" href={`#/reports/${e.id}`}>Report →</a></td></tr>; })}</tbody></table></div>}
-    {evs.data && !improved.length && <p className="lc-note"><strong>The Improved site has not had a live run yet.</strong> Start the first one in the <a className="link" href="#/run">workspace</a>; it appears here when the agents finish.</p>}
   </>;
 }

@@ -75,7 +75,7 @@ def test_a_judge_opens_the_site_enters_the_code_runs_watches_and_inspects(tmp_pa
     AP.freeze(st, V3_SUITE, appr, at="2026-11-04T00:02:00+00:00")
     root = tmp_path / "hosted"
     a = Admission(tmp_path / "a.sqlite", ceiling_microusd=12_000_000, job_cap_microusd=1_650_000, min_interval_seconds=60)
-    kw = dict(store=st, frozen="larkspur-core@v3", variants=["original", "improved"], mode="rehearsal")
+    kw = dict(store=st, frozen="larkspur-core@v3", variants=["modifiedpolished"], mode="rehearsal")   # as in production: the After website alone
     p = BG.plan_open(a, "ar-a20-2026-11", "20", "1.50", **kw)
     BG.open_budget(a, "ar-a20-2026-11", "20", "1.50", actor="owner (test copy)", typed=p["text"], **kw)
     ex = StageBExecutor(root, st.root, a, mode="rehearsal", timeout=1800)
@@ -122,25 +122,24 @@ def test_a_judge_opens_the_site_enters_the_code_runs_watches_and_inspects(tmp_pa
             visitor.goto(base + "#/run")
             visitor.wait_for_selector(".ws-worker.busy", timeout=30_000)
             assert "Another evaluation is running" in visitor.inner_text(".ws-worker") or "Running your selected evaluation" in visitor.inner_text(".ws-worker")
-            visitor.get_by_role("button", name="Watch it live →").click()
-            visitor.wait_for_selector(".ws-job-head")
+            visitor.wait_for_selector(".ws-job-head", timeout=30_000)                  # the public Workspace opens the running evaluation by itself
             assert job[:13] in visitor.inner_text(".ws-job-meta")
             visitor.screenshot(path=str(SHOTS / "judge-2-visitor-watching.png"))
             # 4. watch progress to completion
             judge.screenshot(path=str(SHOTS / "judge-3-running.png"))
             expect(judge.locator(".ws-status")).to_contain_text("Completed", timeout=1_200_000)
-            assert "6 / 6 agent runs finished" in judge.inner_text(".ws-status")
+            assert "3 / 3 agent runs finished" in judge.inner_text(".ws-status")
             # 5. inspect the results: the readiness report and an agent trace
             judge.get_by_role("tab", name="Readiness report").click()
             judge.wait_for_selector(".ws-report", timeout=60_000)
             report = judge.inner_text(".ws-report")
-            assert "Original" in report and "Improved" in report and "Task success" in report
+            assert "After" in report and "Task success" in report and "Original" not in report and "Improved" not in report
             judge.screenshot(path=str(SHOTS / "judge-4-report.png"))
             judge.get_by_role("tab", name="Agent runs").click()
             cells = judge.locator(".ws-grid tbody td button, .ws-grid tbody td[role=button], .ws-grid tbody td")
-            assert cells.count() >= 6
+            assert cells.count() >= 3
             assert judge.locator(".ws-grid tbody tr").count() == 3
-            judge.locator(".ws-grid tbody td").nth(1).click()
+            judge.locator(".ws-grid tbody td").nth(0).click()
             judge.wait_for_selector(".ws-agent, .ws-trace, [class*=step]", timeout=30_000)
             judge.screenshot(path=str(SHOTS / "judge-5-trace.png"))
             assert not errors, errors

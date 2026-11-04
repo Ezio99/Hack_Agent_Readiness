@@ -317,3 +317,5 @@
 .lc-journey>*,.lc-jstep,.lc-jstep-head>*{min-width:0}
 .lc-jstep .lc-h2,.lc-jstep .lede{overflow-wrap:anywhere}
 @media (max-width:600px){.lc-mode{white-space:normal;height:auto;min-height:26px;padding:5px 10px;line-height:1.35}}
+
+.lc-versions.two{grid-template-columns:repeat(2,minmax(0,1fr))}@media (max-width:640px){.lc-versions.two{grid-template-columns:1fr}}

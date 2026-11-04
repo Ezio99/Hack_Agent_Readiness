@@ -1,12 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { SiteFooter, SiteHeader } from './Shell';
-import { AFTER, AFTER_CHANGES, AFTER_V, BEFORE, BEFORE_V, FEATURED, FEATURED_TASK, JOURNEY, LIVE, fewerPct, journeyOf, showcaseFrame, trialOf, type LiveStep } from './showcase';
+import { AFTER, AFTER_CHANGES, AFTER_V, BEFORE, BEFORE_V, FEATURED, FEATURED_TASK, JOURNEY, fewerPct, journeyOf, showcaseFrame, trialOf, type LiveStep } from './showcase';
 import { LatestLive } from './LatestLive';
 import './home.css';
 
 /** The product homepage. It tells the featured story with the recorded evidence of the two live evaluations of 4 Nov 2026: "Before" (the college's
  *  redesigned website) and "After" (the same design with Agent Readiness's recommendations applied), each evaluated alone with the same frozen tasks
- *  and agent (showcase.ts). The 3 Nov Original vs Improved run appears only as labelled history. It calls no API. */
+ *  and agent (showcase.ts). It calls no API. */
 
 const T = FEATURED_TASK;                                     // the weekend-courses question
 const lost = journeyOf(BEFORE_V, T, BEFORE);
@@ -104,7 +104,7 @@ export function Home({ section }: { section?: string }) {
       <section className="polished-band ar-night" aria-labelledby="polished-h">
         <div className="wrap polished-grid">
           <div data-reveal>
-            <p className="eyebrow">Latest · {FEATURED.name} · live, 4 Nov 2026</p>
+            <p className="eyebrow">{FEATURED.name} · live, 4 Nov 2026</p>
             <h2 id="polished-h" className="h2">Looks great to people. <em>Agents couldn’t use it.</em></h2>
             <p>The college’s redesigned website hid every fee, class day and seat count one click deep. Live agents got {BEFORE.correct[BEFORE_V]} of 3 questions right.
               Agent Readiness showed why; the site was changed exactly as recommended, and the same agents were sent back: {AFTER.correct[AFTER_V]} of 3, with {fewerPct(BEFORE.totals[BEFORE_V].requests, AFTER.totals[AFTER_V].requests)}% fewer model requests.</p>
@@ -135,7 +135,7 @@ export function Home({ section }: { section?: string }) {
         <div className="wrap">
           <div className="sec-head" data-reveal><p className="eyebrow"><b>02</b> — How it works</p>
             <h2 id="how-h" className="h2">Evaluate, improve, <em>evaluate again.</em></h2>
-            <p className="lede">Eight steps, shown here with the real {FEATURED.short} evaluations. The journey walks through each step with the college’s first experiment.</p></div>
+            <p className="lede">Eight steps, shown here with the real {FEATURED.short} evaluations. Every step opens in the journey.</p></div>
           <ol className="how-list how-journey">
             {JOURNEY.map(s => <li key={s.id} data-reveal>
               <span className="how-n">{s.n}</span>
@@ -168,7 +168,6 @@ export function Home({ section }: { section?: string }) {
           </dl>
           <div data-reveal><TaskBars /></div>
           <p className="honest" data-reveal>After the change every agent read the fourteen course cards on one page and answered without opening a single course page, in {AFTER.trials.map(t => t.requests).sort((a, b) => a - b).join(', ')} requests. Before it, every agent opened course pages one at a time; one guessed a course address and hit a dead end, and none answered correctly. One agent per question on each version: a measured result for these tasks, not a statistical guarantee.</p>
-          <p className="honest" data-reveal>Earlier experiment (3 Nov), on the plain original site against a version with every recommendation: correct {LIVE.correct.original}/3 → {LIVE.correct.improved}/3, {LIVE.totals.original.requests} → {LIVE.totals.improved.requests} requests. <a className="link" href={`#/reports/${LIVE.id}`}>That report</a></p>
           <div className="hero-cta" data-reveal><a className="btn" href={`#/reports/${BEFORE.id}`}>Before: the report <span className="arr" aria-hidden="true">→</span></a><a className="btn" href={`#/reports/${AFTER.id}`}>After: the report <span className="arr" aria-hidden="true">→</span></a></div>
         </div>
       </section>

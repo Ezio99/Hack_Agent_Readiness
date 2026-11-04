@@ -3,12 +3,16 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi, beforeAll, afterAll } from 'vitest';
 import { Lifecycle } from './Lifecycle';
 import { ReportPage } from './Report';
 import { useLoad } from './parts';
 import { parse } from '../router';
-import { FIRST_LIVE, LIVE } from '../showcase';
+import { AFTER, BEFORE, LIVE } from '../showcase';
+import { PUBLIC_SCOPE } from '../../lib/lifecycleApi';
+// These tests exercise the mechanics with fixtures of earlier evaluations: the public scope (final Larkspur experiment only) is lifted here and
+// tested on its own in public-scope.test.tsx.
+const SCOPE = PUBLIC_SCOPE.versions; beforeAll(() => { PUBLIC_SCOPE.versions = null; }); afterAll(() => { PUBLIC_SCOPE.versions = SCOPE; });
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 afterEach(() => { vi.unstubAllGlobals(); document.body.innerHTML = ''; window.location.hash = ''; });
 
@@ -79,15 +83,16 @@ it('compares the availability task side by side from real screenshots and timeli
   expect(t).toContain('step 1 / 12'); expect(t).toContain('step 1 / 3');
 });
 
-it('the journey is one page with all eight steps, and #/demo opens it', async () => {
+it('the journey is one page with all eight steps on the final Before -> After experiment, and #/demo opens it', async () => {
   server({});
   const host = await mount(<Lifecycle />);
   expect(host.querySelector('h1')?.textContent).toBe('From a website to one agents can use.');
   for (const id of ['website', 'tasks', 'review', 'evaluate', 'recommendations', 'improve', 'reevaluate', 'compare']) expect(host.querySelector(`#lc-${id}`)).not.toBeNull();
   expect(host.querySelectorAll('.lc-stepper a')).toHaveLength(8);
-  expect(host.textContent).toContain('Every deciding fact on every card');                                  // the improvements are static and always shown
-  expect(host.querySelectorAll('.lc-versions img')).toHaveLength(3);
-  expect(host.querySelector('main')!.textContent).not.toContain('Ironbark');                                    // featured site only (the footer keeps an archive link)
+  expect(host.textContent).toContain('Every fact on every course card');                                       // the After changes are static and always shown
+  expect(host.querySelectorAll('.lc-versions img')).toHaveLength(2);                                          // Before and After only
+  const main = host.querySelector('main')!.textContent!;
+  for (const old of ['Ironbark', 'Original', 'Improved', 'Modified', 'first experiment', 'Earlier']) expect(main).not.toContain(old);
   expect(host.querySelector('[role=radiogroup]')).toBeNull();                                                 // no site selector
   document.body.innerHTML = '';
   window.location.hash = '#/demo';
@@ -108,7 +113,7 @@ it('shows the frozen task set as approved and frozen, with no approval control o
   const first = [...suite.tasks].sort((a: any, b: any) => a.task_id.localeCompare(b.task_id))[0];
   expect(t).toContain(`Task 1${first.customer_wording}`);                                                  // numbered as in every report
   expect(t).toContain('never on the web');
-  expect(t).toContain('Live runs started by judges use larkspur-core@v3: tasks 1, 3 and 6 of this set (frozen)');   // numbered as in every report
+  expect(t).toContain('Both the Before and the After evaluation');
   expect([...host.querySelectorAll('button')].some(b => /approve/i.test(b.textContent ?? ''))).toBe(false);
   expect(f.mock.calls.some(c => (c[1] as RequestInit | undefined)?.method === 'POST')).toBe(false);
 });
@@ -128,7 +133,7 @@ it('re-evaluation sends launches to the workspace (the one launch path) and show
   server({ '/api/lifecycle/overview': armed, '/api/lifecycle/evaluations': [] });
   await mount(<Lifecycle step="reevaluate" />);
   const t = sec().textContent!;
-  expect(t).toContain('Ready for a live run'); expect(t).toContain('4 of 4 live runs left'); expect(t).toContain('Improved');
+  expect(t).toContain('Run it yourself'); expect(t).toContain('4 of 4 live runs left'); expect(t).toContain('Improved');
   expect(sec().querySelector('a[href="#/run"]')!.textContent).toContain('Run it live');
   document.body.innerHTML = '';
   // the shared A$20 budget's evaluation has NO launch count (launches: null): the journey must render, not crash (production regression 2026-11-04)
@@ -136,7 +141,7 @@ it('re-evaluation sends launches to the workspace (the one launch path) and show
   server({ '/api/lifecycle/overview': shared, '/api/lifecycle/evaluations': [] });
   await mount(<Lifecycle step="reevaluate" />);
   const u = sec().textContent!;
-  expect(u).toContain('Ready for a live run'); expect(u).toContain('runs while the A$20 evaluation budget lasts'); expect(u).not.toMatch(/live runs? left/);
+  expect(u).toContain('Run it yourself'); expect(u).toContain('runs while the A$20 evaluation budget lasts'); expect(u).not.toMatch(/live runs? left/);
   expect(sec().querySelector('a[href="#/run"]')!.textContent).toContain('Run it live');
 });
 
@@ -151,42 +156,35 @@ it('shows the recorded task generation: proposed, accepted and its model cost; n
   expect([...document.querySelectorAll('#lc-tasks button')].some(b => /generate/i.test(b.textContent ?? ''))).toBe(false);
 });
 
-it('maps every recommendation of the live report to the change on the Improved site that applies it', async () => {
-  server({ [`/api/lifecycle/evaluations/${FIRST_LIVE.id}`]: { ...EV, id: FIRST_LIVE.id } });                    // the run the recommendations came from
+it('maps every recommendation of the Before report to the After change that applies it', async () => {
+  const d0 = EV.diagnostics[Object.keys(EV.diagnostics)[0]];
+  const ev = { ...EV, id: BEFORE.id, diagnostics: { natural: { ...d0, findings: d0.findings.map((f: any) => ({ ...f, variant: f.variant === 'original' ? 'polishedoriginal' : f.variant })) } } };
+  server({ [`/api/lifecycle/evaluations/${BEFORE.id}`]: ev });                                                  // the run the recommendations came from
   await mount(<Lifecycle step="recommendations" />);
   const sec = document.querySelector('#lc-recommendations')!;
   const items = [...sec.querySelectorAll('.lc-rec-list li')];
   expect(items.length).toBeGreaterThan(3);
   expect(items.filter(li => li.textContent!.includes('Applied:')).length).toBeGreaterThanOrEqual(items.length - 1);
   expect(sec.textContent).toContain('State campus on each card');
-  expect(sec.textContent).toContain('What the agents ran into');
+  expect(sec.textContent).toContain('What the agents ran into (Before)');
 });
 
-it('compares the live evaluations and says when the Improved site has not had a live run yet', async () => {
-  const row = (id: string, variants: string[], extra = {}) => ({ id, title: id, mode: 'paid', state: 'completed', source: 'launched', site: 'Larkspur Community College', site_id: 'larkspur', variants, started_at: '2026-11-04T01:00:00+00:00', tasks: 2, trials: 4,
-    success: Object.fromEntries(variants.map(v => [v, { trials: 2, v1_passed: 1, v1_evidence_backed: 1, v2_passed: 2, v2_evidence_backed: 2, v2_1_contrast_review_passes: 0 }])), requests: Object.fromEntries(variants.map((v, i) => [v, 20 - 10 * i])), ...extra });
-  server({ '/api/lifecycle/evaluations': [row(LIVE.id, ['original', 'modified'])] });
-  await mount(<Lifecycle step="compare" />);
-  expect(document.querySelector('#lc-compare')!.textContent).toContain('The Improved site has not had a live run yet');
-  document.body.innerHTML = '';
-  const imp = 'eval-' + 'd'.repeat(32);
-  server({ '/api/lifecycle/evaluations': [row(LIVE.id, ['original', 'modified']), row(imp, ['original', 'improved']), row('eval-' + '9'.repeat(32), ['original', 'improved'], { mode: 'rehearsal' })] });
-  await mount(<Lifecycle step="compare" />);
-  const sec = document.querySelector('#lc-compare')!;
-  expect(sec.textContent).not.toContain('has not had a live run yet');
-  expect(sec.querySelector(`a[href="#/reports/${imp}"]`)).not.toBeNull();
-  expect(sec.querySelectorAll('tbody tr')).toHaveLength(2);                                                   // rehearsals are not live results
-});
-
-it('features the live Original vs Improved run in Compare and Re-evaluate, with the 6–9 minute estimate', async () => {
-  server({ '/api/lifecycle/evaluations': [] });
-  await mount(<Lifecycle step="compare" />);
-  const f = document.querySelector('#lc-compare .lc-featured')!;
-  expect(f.textContent).toContain('Original vs Improved'); expect(f.textContent).toContain('0/3'); expect(f.textContent).toContain('3/3');
-  expect(f.querySelector(`a[href="#/reports/${LIVE.id}/tasks/2"]`)).not.toBeNull();
-  expect(f.querySelectorAll('img')).toHaveLength(2);
-  expect(document.querySelector('#lc-reevaluate')!.textContent).toContain('about 6–9 minutes');
-  expect(document.querySelector('#lc-reevaluate')!.textContent).toContain('3/3 on Improved');
+it('compares only the final Before and After evaluations (never earlier experiments or rehearsals), with the recorded result featured', async () => {
+  const row = (id: string, variants: string[], extra = {}) => ({ id, title: id, mode: 'paid', state: 'completed', source: 'launched', site: 'Larkspur Community College', site_id: 'larkspur', variants, started_at: '2026-11-04T01:00:00+00:00', tasks: 3, trials: 3,
+    success: Object.fromEntries(variants.map(v => [v, { trials: 3, v1_passed: 1, v1_evidence_backed: 1, v2_passed: 3, v2_evidence_backed: 3, v2_1_contrast_review_passes: 0 }])), requests: Object.fromEntries(variants.map(v => [v, 15])), ...extra });
+  PUBLIC_SCOPE.versions = SCOPE;                                                                               // the public scope, as deployed
+  try {
+    server({ '/api/lifecycle/evaluations': [row(LIVE.id, ['original', 'improved']), row(BEFORE.id, ['polishedoriginal']), row(AFTER.id, ['modifiedpolished']),
+      row('eval-' + '9'.repeat(32), ['modifiedpolished'], { mode: 'rehearsal' }), row('eval-' + 'e'.repeat(32), ['polished'])] });
+    await mount(<Lifecycle step="compare" />);
+    const sec = document.querySelector('#lc-compare')!;
+    expect(sec.querySelectorAll('tbody tr')).toHaveLength(2);
+    expect(sec.querySelector(`a[href="#/reports/${BEFORE.id}"]`)).not.toBeNull(); expect(sec.querySelector(`a[href="#/reports/${AFTER.id}"]`)).not.toBeNull();
+    expect(sec.querySelector(`a[href="#/reports/${LIVE.id}"]`)).toBeNull();
+    const f = sec.querySelector('.lc-featured')!;
+    expect(f.textContent).toContain('0/3'); expect(f.textContent).toContain('3/3'); expect(f.textContent).toContain('Before'); expect(f.textContent).toContain('After');
+    expect(f.querySelectorAll('img')).toHaveLength(2);
+  } finally { PUBLIC_SCOPE.versions = null; }
 });
 
 it('labels the recorded first evaluation and a live run in this product differently, and shows the finished agent runs', async () => {

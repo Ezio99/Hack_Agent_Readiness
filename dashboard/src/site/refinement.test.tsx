@@ -1,11 +1,15 @@
 // @vitest-environment jsdom
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi, beforeAll, afterAll } from 'vitest';
 import { TrialView, type Trial } from './workspace/LiveAgent';
 import { HostedEvaluation, type Job } from './workspace/HostedEvaluation';
 import { Demo } from './demo/Demo';
 import { trial } from './evidence';
+import { PUBLIC_SCOPE } from '../lib/lifecycleApi';
+// These tests exercise the mechanics with fixtures of earlier evaluations: the public scope (final Larkspur experiment only) is lifted here and
+// tested on its own in public-scope.test.tsx.
+const SCOPE = PUBLIC_SCOPE.versions; beforeAll(() => { PUBLIC_SCOPE.versions = null; }); afterAll(() => { PUBLIC_SCOPE.versions = SCOPE; });
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
 let host: HTMLDivElement, root: Root;

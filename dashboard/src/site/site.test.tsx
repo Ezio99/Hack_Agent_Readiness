@@ -21,23 +21,20 @@ const reducedMotion = (on: boolean) => vi.stubGlobal('matchMedia', (q: string) =
 const noNetwork = () => { const f = vi.fn(async () => { throw new Error('no network expected'); }); vi.stubGlobal('fetch', f); return f; };
 
 describe('routes', () => {
-  it('keeps persistent evaluation URLs and adds home, demo scenes and the archive', () => {
+  it('keeps persistent evaluation URLs; the Ironbark case study, the replay archive and the pre-redesign pages are not public routes', () => {
     const id = 'eval-' + 'a'.repeat(32);
     expect(parse(`#/run/${id}`)).toEqual({ name: 'run', job: id });
     expect(parse('#/run')).toEqual({ name: 'run', job: null });
     expect(parse('#/run/eval-short').name).toBe('home');
-    expect(parse('#/demo')).toEqual({ name: 'demo', scene: undefined });
-    expect(parse('#/demo/friction')).toEqual({ name: 'demo', scene: 'friction' });
-    expect(parse('#/demo/ironbark')).toEqual({ name: 'demo', scene: 'ironbark' });
+    expect(parse('#/demo')).toEqual({ name: 'demo' });                                          // the Larkspur journey
+    expect(parse('#/showcase')).toEqual({ name: 'showcase' });
+    for (const old of ['#/demo/friction', '#/demo/ironbark', '#/studio', '#/investigation', '#/overview', '#/replay']) expect(parse(old)).toEqual({ name: 'home' });
     expect(parse('#/lifecycle/improve')).toEqual({ name: 'lifecycle', step: 'improve' });
     expect(parse('#/lifecycle/report')).toEqual({ name: 'lifecycle', step: 'recommendations' });   // an earlier step name still lands
     expect(parse('#/how')).toEqual({ name: 'home', section: 'how' });
-    expect(parse('#/studio')).toEqual({ name: 'studio' });
-    expect(parse('#/investigation')).toEqual({ name: 'classic', page: 'investigation' });
     expect(parse('')).toEqual({ name: 'home' });
     expect(parse('#/<script>')).toEqual({ name: 'home' });
-  });
-});
+  });});
 
 describe('recorded evidence (eval-9aaac35c)', () => {
   it('matches the recorded outcomes and verdicts exactly', () => {
@@ -80,14 +77,16 @@ describe('homepage (the featured Larkspur story)', () => {
     act(() => root.render(<Home />));
     expect(host.querySelector('h1')?.textContent).toBe('See your website the way an agent does.');
     const hrefs = [...host.querySelectorAll('a')].map(a => a.getAttribute('href'));
-    for (const h of ['#/run', '#/lifecycle', '#/showcase', `#/reports/${BEFORE.id}`, `#/reports/${AFTER.id}`, `#/reports/${LIVE.id}`]) expect(hrefs).toContain(h);
+    for (const h of ['#/run', '#/lifecycle', '#/showcase', `#/reports/${BEFORE.id}`, `#/reports/${AFTER.id}`]) expect(hrefs).toContain(h);
+    for (const h of hrefs) expect(h ?? '').not.toMatch(/#\/(studio|demo\/|investigation|overview|replay|scopes|evidence$|scanner)/);   // no archive links anywhere (footer included)
+    expect(hrefs.filter(h => h?.startsWith('#/reports/'))).toEqual(expect.arrayContaining([]));
+    for (const h of hrefs.filter(h => h?.startsWith('#/reports/'))) expect([`#/reports/${BEFORE.id}`, `#/reports/${AFTER.id}`]).toContain(h!.split('#diagnostics')[0].replace(/\/tasks\/\d+$/, ''));
     const text = host.textContent!;
     const O = BEFORE.totals.polishedoriginal, M = AFTER.totals.modifiedpolished;
     for (const s of [`${O.requests}`, `${M.requests}`, `${Math.round(100 * (O.requests - M.requests) / O.requests)}% fewer after the change`, '0/3', '3/3',
                      'Larkspur Community College', 'Measured live', 'Before', 'After', ...AFTER_CHANGES.map(i => i.title)]) expect(text).toContain(s);
     expect(text).toContain(BEFORE.journeys['polishedoriginal-2'].steps.at(-1)!.memory!);         // the agent's own words, unedited
-    expect(text).toContain(`${LIVE.totals.original.requests} → ${LIVE.totals.improved.requests}`);   // the earlier experiment, labelled as history
-    expect(text).not.toMatch(/[Pp]olished|Original vs Improved site|Run Original vs Improved/);       // no internal snapshot names; no stale call to action
+    expect(text).not.toMatch(/[Pp]olished|Original|Improved|Modified|Ironbark|Earlier|earlier experiment|Archive/);   // only the final experiment, in audience words
     for (const s of ['post-hoc', 'inconclusive', 'p =', 'xploratory', 'verified', 'pre-registered']) expect(text).not.toContain(s);
     expect(host.querySelector('main')!.textContent).not.toContain('Ironbark');
     expect(f).not.toHaveBeenCalled();
