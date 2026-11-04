@@ -29,6 +29,15 @@ jobs:
           python -m pip check
           python -m playwright install --with-deps chromium
       - run: mkdir -p artifacts   # pytest --basetemp needs its parent to exist on a fresh checkout (it is git-ignored); without it the first tests error at setup
+      - name: Let the browser jail build its namespaces (Ubuntu 24.04 AppArmor; this job's Python interpreter only)
+        # Ubuntu 24.04 sets kernel.apparmor_restrict_unprivileged_userns=1: a new user namespace gets no capabilities, so the jail's setup
+        # (setgroups, loopback up, its private mounts) fails with EACCES/EPERM and the jail fails closed. This grants only the AppArmor `userns`
+        # permission, only to the interpreter that runs the jail, on this ephemeral runner. The jail code, its isolation and its self-test are
+        # unchanged; production runs the jail in a container with its own settings (deploy/compose.yaml).
+        run: |
+          PY=$(readlink -f "$(command -v python)")
+          printf 'abi <abi/4.0>,\ninclude <tunables/global>\nprofile ar-jail-python %s flags=(unconfined) {\n  userns,\n}\n' "$PY" | sudo tee /etc/apparmor.d/ar-jail-python
+          sudo apparmor_parser -r /etc/apparmor.d/ar-jail-python
       - run: python -m pytest -q --basetemp=artifacts/browser-tests
       - name: Credential-free CLI smoke
         run: readiness smoke --output runs

@@ -88,8 +88,17 @@ jobs:
           python -m pip install --no-deps --no-build-isolation -e .
           python -m pip check
           python -m playwright install --with-deps chromium
+      - name: Let the browser jail build its namespaces (Ubuntu 24.04 AppArmor; this job's Python interpreter only)
+        # Ubuntu 24.04 sets kernel.apparmor_restrict_unprivileged_userns=1: a new user namespace gets no capabilities, so the jail's setup
+        # (setgroups, loopback up, its private mounts) fails with EACCES/EPERM and the jail fails closed. This grants only the AppArmor `userns`
+        # permission, only to the interpreter that runs the jail, on this ephemeral runner. The jail code, its isolation and its self-test are
+        # unchanged; production runs the jail in a container with its own settings (deploy/compose.yaml).
+        run: |
+          PY=$(readlink -f "$(command -v python)")
+          printf 'abi <abi/4.0>,\ninclude <tunables/global>\nprofile ar-jail-python %s flags=(unconfined) {\n  userns,\n}\n' "$PY" | sudo tee /etc/apparmor.d/ar-jail-python
+          sudo apparmor_parser -r /etc/apparmor.d/ar-jail-python
       - name: Browser information boundary checks (shard ${{ matrix.shard }}/4)
-        run: python -m pytest -m browser -q --basetemp=artifacts/browser-tests --num-shards 4 --shard-id ${{ matrix.shard }} --shard-ids-file artifacts/shards/browser/shard-${{ matrix.shard }}.ids
+        run: python -m pytest -m browser -q --durations=25 --basetemp=artifacts/browser-tests --num-shards 4 --shard-id ${{ matrix.shard }} --shard-ids-file artifacts/shards/browser/shard-${{ matrix.shard }}.ids
       - uses: actions/upload-artifact@v4
         if: always()
         with:
