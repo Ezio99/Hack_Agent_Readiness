@@ -63,7 +63,7 @@ export function TrialView({ jobId, trial, live, scripted, focus, onFocus, host =
           <p aria-live="polite"><strong>Step {current?.step ?? '–'}</strong><span> of {steps.length}</span>{current?.actions[0] && <em>{current.actions.map(a => a.name).join(' · ')}</em>}</p>
           <button className="ws-tool" aria-label="Next step" disabled={at < 0 || at >= steps.length - 1} onClick={() => go(at + 1)}>→</button>
         </div>}
-        <figcaption>{scripted ? 'Real jailed browser · scripted rehearsal agent (not a model)' : 'Real jailed browser · screenshot captured by the agent harness'}</figcaption>
+        <figcaption>{scripted ? 'Isolated browser · scripted rehearsal agent (not a model)' : 'Isolated browser · screenshot recorded during the run'}</figcaption>
         {memory && <p className="ws-memory"><b>Agent memory at step {shown!.step}</b>“{memory}”</p>}
         {answer && <p className="ws-answer"><b>Final answer:</b> {answer}</p>}
       </figure>

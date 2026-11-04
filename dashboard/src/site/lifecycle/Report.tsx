@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { SiteFooter, SiteHeader } from '../Shell';
-import { PUBLIC_SCOPE, api, displayTitle, inPublicScope, latestPaired, fmtSec, fmtUsd, variantClass, words, type Evaluation, type Finding, type Trial } from '../../lib/lifecycleApi';
+import { PUBLIC_SCOPE, VARIANT_LABEL, api, displayTitle, inPublicScope, latestPaired, fmtSec, fmtUsd, variantClass, type Evaluation, type Finding, type Trial } from '../../lib/lifecycleApi';
 import { Failed, GradeTag, Hash, Loading, ModeBadge, PairBars, plain, Section, useLoad, VariantName } from './parts';
 import { TraceCompare } from './Trace';
 import { AFTER, AFTER_V, BEFORE, BEFORE_V } from '../showcase';
@@ -91,7 +91,7 @@ export function Report({ ev }: { ev: Evaluation }) {
         <div><dt>Agent runs</dt><dd><strong>{done}/{planned || ev.trials.length} finished</strong>{ex.some(x => x.stopped) ? ' · the run stopped early' : ''} · {ev.tasks.filter(t => t.executed).length} tasks on {vs.length === 1 ? 'one version of the site, evaluated on its own' : `${vs.length} versions of the site`}</dd></div>
         <div><dt>Website versions</dt><dd>{vs.map(v => <span key={v} className="lc-inline"><VariantName v={v} /></span>)}</dd></div>
         <div><dt>Agent</dt><dd>{ev.mode === 'paid' ? `${ev.agent.model}, reasoning ${ev.agent.reasoning_effort ?? '–'}` : `${ev.execution_provider} (the declared model ${ev.agent.model} was not called)`} · Browser Use in an isolated Chromium</dd></div>
-        <div><dt>Task set</dt><dd>{ev.suite.name} v{ev.suite.version} · approved by the {ev.approval.role}{ev.approval.synthetic ? ' (test fixture)' : ''}</dd></div>
+        <div><dt>Tasks</dt><dd>{ev.tasks.filter(t => t.executed).length} customer tasks{vs.length > 1 ? ', the same for both versions' : ''}{ev.approval.synthetic ? ' (test fixture)' : ''}</dd></div>
         <div><dt>Model cost</dt><dd>{ev.mode === 'paid' ? <>{fmtUsd(ev.cost.settled_spend?.settled_usd ?? ev.cost.total_usd, 4)} for all agents · calculated from the provider’s token counts</> : 'US$0 · no model was called'}</dd></div>
       </dl>
     </header>
@@ -101,15 +101,14 @@ export function Report({ ev }: { ev: Evaluation }) {
 
     <Section id="diagnostics" n="Recommendations" title="What slowed the agents down, and what to change"
              basis="Observations are measured page properties and recorded agent behaviour, each with its evidence. Likely causes link a missing fact to the extra navigation on the tasks that needed it.">
-      {diag ? <DiagnosticsView d={diag} /> : <p className="muted">No recommendations for this evaluation.</p>}
+      {diag ? <DiagnosticsView d={diag} ev={ev} /> : <p className="muted">No recommendations for this evaluation.</p>}
     </Section>
-    <Section id="dim-success" n="Dimension 1" title="Task success" basis="Every answer is checked against the site’s own records, which the agent never sees. Correct: the answer is right (consistent extra detail allowed). Exact match: the answer matches the expected answer exactly (the official grader).">
+    <Section id="dim-success" n="Dimension 1" title="Task success" basis="Every answer is checked against the college’s own records, which the agent never sees. Correct: the answer names the right courses (extra detail allowed). Exact match: nothing but the course names.">
       <Success ev={ev} vs={vs} /></Section>
-    <Section id="dim-nav" n="Dimension 2" title="Navigation efficiency" basis={ev.dimensions.navigation_efficiency.basis}><Navigation ev={ev} vs={vs} /></Section>
+    <Section id="dim-nav" n="Dimension 2" title="Navigation efficiency" basis="What each agent spent: model requests (one per decision the agent makes), steps, pages viewed and time. A revisit is a return to a page already seen."><Navigation ev={ev} vs={vs} /></Section>
     <Section id="dim-evidence" n="Dimension 3" title="Evidence" basis="Whether the agent was actually shown the pages that hold the answer, rather than guessing."><Evidence ev={ev} vs={vs} /></Section>
-    <Section id="dim-access" n="Dimension 4" title="Information accessibility" basis={ev.dimensions.information_accessibility.basis}><Access ev={ev} vs={vs} /></Section>
-    <Section id="dim-reliability" n="Dimension 5" title="Agent reliability" basis={ev.dimensions.agent_reliability.basis}><Reliability ev={ev} vs={vs} /></Section>
-    <Section id="dim-coverage" n="Dimension 6" title="Coverage" basis="Which customers and journeys the task set covers. The customer profiles are illustrative, written for this fictional college."><Coverage ev={ev} /></Section>
+    <Section id="dim-access" n="Dimension 4" title="Information accessibility" basis="Where each fact appears on the website: on the course cards, or only on each course’s own page; and, per task, how far the facts it needs are from the home page."><Access ev={ev} vs={vs} /></Section>
+    <Section id="dim-reliability" n="Dimension 5" title="Agent reliability" basis="Failures and limits, per agent: dead ends, partial or empty answers, and runs that reached the request limit."><Reliability ev={ev} vs={vs} /></Section>
     <Provenance ev={ev} />
   </article>;
 }
@@ -143,7 +142,7 @@ function TaskMatrix({ ev, vs }: { ev: Evaluation; vs: string[] }) {
     <div className="lc-table-wrap"><table className="lc-matrix">
       <thead><tr><th scope="col">Task</th>{vs.map(v => <th scope="col" key={v}><VariantName v={v} /></th>)}<th scope="col"><span className="sr-only">Replay</span></th></tr></thead>
       <tbody>{ev.tasks.filter(t => t.executed).map(t => { const ts = trialsFor(ev, t.n); return <tr key={t.n}>
-        <th scope="row"><span className="lc-tn">Task {t.n}</span><q>{t.customer_wording}</q><small>{words(t.capability)}{t.persona ? ` · ${words(t.persona)}` : ''}</small></th>
+        <th scope="row"><span className="lc-tn">Task {t.n}</span><q>{t.customer_wording}</q></th>
         {vs.map(v => { const tr = ts.find(x => x.variant === v); return <td key={v} className={`lc-cell ${variantClass(v)}`}>{tr ? <>
           <div className="lc-grades"><GradeTag g={tr.grades.v2 ?? tr.grades.v1} which="v2" /><GradeTag g={tr.grades.v1} which="v1" /></div>
           <small>{[cover(tr), `${tr.metrics.model_requests ?? '–'} requests`, fmtSec(tr.metrics.elapsed_seconds), tr.reliability.dead_end ? 'hit a dead end' : null, tr.reliability.empty_answer ? 'no answer' : null].filter(Boolean).join(' · ')}</small>
@@ -160,9 +159,9 @@ function Success({ ev, vs }: { ev: Evaluation; vs: string[] }) {
   return <>
     <div className="lc-table-wrap"><table className="lc-table"><thead><tr><th scope="col">Tasks</th>{vs.map(v => <th scope="col" key={v}><VariantName v={v} /></th>)}</tr></thead><tbody>
       <tr><th scope="row">Correct answers</th>{vs.map(v => <td key={v}><strong>{n(v)}/{ts[v].trials}</strong></td>)}</tr>
-      <tr><th scope="row">Exact match (official grader)</th>{vs.map(v => <td key={v}>{ts[v].v1_passed}/{ts[v].trials}</td>)}</tr>
+      <tr><th scope="row">Exact match</th>{vs.map(v => <td key={v}>{ts[v].v1_passed}/{ts[v].trials}</td>)}</tr>
     </tbody></table></div>
-    <p className="lc-note">An answer such as “Beginners yoga – $150, 12 seats left” is correct but not an exact match: the official grader accepts only the bare course names.</p>
+    <p className="lc-note">An answer such as “Beginners yoga – $150, 12 seats left” is correct but not an exact match, which needs the course names alone.</p>
   </>;
 }
 
@@ -187,7 +186,7 @@ function Evidence({ ev, vs }: { ev: Evaluation; vs: string[] }) {
     <tr><th scope="row">Shown the pages that hold the answer</th>{vs.map(v => <td key={v}>{e.variants[v].evidence_satisfied}/{e.variants[v].trials}</td>)}</tr>
     {vs.some(v => e.variants[v].evidence_satisfied_or_equivalent !== undefined) && <tr><th scope="row">…or an equivalent page that states every deciding fact for every course (e.g. a comparison table)</th>
       {vs.map(v => <td key={v}><strong>{e.variants[v].evidence_satisfied_or_equivalent ?? e.variants[v].evidence_satisfied}/{e.variants[v].trials}</strong></td>)}</tr>}
-    <tr><th scope="row">Correct without having seen the pages the answer needs (recorded rule)</th>{vs.map(v => <td key={v}>{e.variants[v].correct_but_unsupported_v2}</td>)}</tr>
+    <tr><th scope="row">Correct without being shown the answer pages</th>{vs.map(v => <td key={v}>{e.variants[v].correct_but_unsupported_v2}</td>)}</tr>
     <tr><th scope="row">Answer pages not shown (total)</th>{vs.map(v => <td key={v}>{e.variants[v].missing_pages_total}</td>)}</tr>
   </tbody></table></div>;
 }
@@ -215,46 +214,64 @@ function Reliability({ ev, vs }: { ev: Evaluation; vs: string[] }) {
     <tbody>{rows.map(([k, f]) => <tr key={k}><th scope="row">{k}</th>{vs.map(v => <td key={v}>{f(v) ?? '–'}</td>)}</tr>)}</tbody></table></div>;
 }
 
-function Coverage({ ev }: { ev: Evaluation }) {
-  const c = ev.dimensions.coverage;
-  const personaName = (id: string) => c.context?.personas.find(p => p.id === id)?.name ?? words(id);
-  const journeyName = (id: string) => c.context?.journeys.find(j => j.id === id)?.name ?? words(id);
-  return <>
-    <div className="lc-three">
-      <div><h3>Customers</h3><ul className="lc-counts">{Object.entries(c.personas ?? {}).map(([k, n]) => <li key={k}><span>{personaName(k)}</span><b>{n}</b></li>)}</ul></div>
-      <div><h3>Journeys</h3><ul className="lc-counts">{Object.entries(c.journeys ?? {}).map(([k, n]) => <li key={k} className={n ? '' : 'gap'}><span>{journeyName(k)}</span><b>{n}</b></li>)}</ul></div>
-      <div><h3>Kinds of question</h3><ul className="lc-counts">{Object.entries(c.capabilities ?? {}).map(([k, n]) => <li key={k} className={n ? '' : 'gap'}><span>{words(k)}</span><b>{n}</b></li>)}</ul></div>
-    </div>
-    {c.gaps.length > 0 && <p className="lc-gaps"><strong>Not covered by this task set:</strong> {c.gaps.join('; ')}.</p>}
-  </>;
+/** One evidence line in plain language: findings by their title, agent runs by version and task, page facts by page (no internal ids or selectors). */
+function evidenceLine(e: { type: string | null; ref: string | null; detail: string | null }, ev?: Evaluation): string {
+  const ref = plain(e.ref ?? ''), detail = plain(e.detail ?? '').replace(/; stop \w+/, '')
+    .replace('graded not passed by the exact-match grader and by the correctness grader', 'not correct')
+    .replace(/evidence-supported/g, 'exact match with evidence').replace(/ \(\/[a-z]+\/\{\}\)/g, '');
+  if (e.type === 'finding') return detail || ref;
+  if (e.type === 'trial') {
+    const m = ref.match(/^(.+?)-(gen-[0-9a-f]+-[a-z])-r\d+$/);
+    if (m) { const n = ev?.tasks.find(t => t.task_id === m[2])?.n; return `${m[1]} agent${n ? `, task ${n}` : ''}: ${detail}`; }
+    const g = ref.match(/^(.+?): \d+ trials?$/);
+    return `${g ? g[1] : ref}: ${detail}`;
+  }
+  if (e.type === 'listing_field') return `${ref.split('#')[1] ?? ref}: ${detail}`;
+  if (e.type === 'page') return /</.test(detail) ? ref : `${ref}${detail ? ` (${detail})` : ''}`;
+  return detail ? `${ref}: ${detail}` : ref;
 }
 
-export function FindingCard({ f }: { f: Finding }) {
+export function FindingCard({ f, ev }: { f: Finding; ev?: Evaluation }) {
   return <li className={`lc-finding ${f.basis}`}>
     <div className="lc-finding-head"><span className={`lc-sev ${f.severity}`}>{f.severity}</span>{f.variant && <VariantName v={f.variant} />}{f.tasks.length > 0 && <span className="muted">task {f.tasks.join(', ')}</span>}</div>
     <p className="lc-finding-t">{plain(f.title)}</p>
     <p className="lc-finding-i">{plain(f.impact)}</p>
     <p className="lc-finding-r"><b>Recommendation.</b> {plain(f.recommendation)}</p>
     <details><summary>Evidence ({f.evidence.length})</summary>
-      <ul className="lc-ev">{f.evidence.map((e, i) => <li key={i}><code>{e.type}</code> {plain(e.ref)}{e.detail ? ` — ${plain(e.detail)}` : ''}</li>)}</ul>
+      <ul className="lc-ev">{f.evidence.map((e, i) => <li key={i}>{evidenceLine(e, ev)}</li>)}</ul>
       <p className="muted"><b>How to check the fix.</b> {plain(f.verify)}</p></details>
   </li>;
 }
 
-function DiagnosticsView({ d }: { d: NonNullable<Evaluation['diagnostics'][string]> }) {
+/** Agent-behaviour observations of the same kind are shown once with every task they occurred on (the recorded findings are per task). */
+function groupBehaviour(fs: Finding[]): Finding[] {
+  const out: Finding[] = [], byKey = new Map<string, Finding>();
+  const rank = (x: string) => ['info', 'low', 'medium', 'high'].indexOf(x);
+  for (const f of fs) {
+    if (f.layer !== 'behavioral') { out.push(f); continue; }
+    const kind = f.title.replace(/ on task \d+.*$/, ''), key = `${f.variant}|${kind}`, g = byKey.get(key);
+    if (!g) { const n = { ...f, title: kind[0].toUpperCase() + kind.slice(1), tasks: [...f.tasks], evidence: [...f.evidence] }; byKey.set(key, n); out.push(n); continue; }
+    g.tasks = [...new Set([...g.tasks, ...f.tasks])].sort(); g.evidence = [...g.evidence, ...f.evidence];
+    if (rank(f.severity) > rank(g.severity)) g.severity = f.severity;
+  }
+  return out;
+}
+
+function DiagnosticsView({ d, ev }: { d: NonNullable<Evaluation['diagnostics'][string]>; ev: Evaluation }) {
   const [layer, setLayer] = useState<'all' | 'structural' | 'behavioral'>('all');
-  if (!d.available) return <p className="muted">Recommendations unavailable: {d.reason}</p>;
+  if (!d.available) return <p className="muted">Recommendations unavailable.</p>;
   const fs = (d.findings ?? []).filter(f => !f.title.startsWith('v1 format'));   // grading-format notes, not website findings
-  const obs = fs.filter(f => f.basis === 'observed' && (layer === 'all' || f.layer === layer));
-  const hyp = fs.filter(f => f.basis === 'hypothesis');
+  const obs = groupBehaviour(fs.filter(f => f.basis === 'observed')).filter(f => layer === 'all' || f.layer === layer);
+  const hyp = fs.filter(f => f.basis === 'hypothesis' && f.status !== 'unverified');                 // unmeasured risk hints are not shown as causes
+  const first = ev.manifest.variants[0]?.name;
   return <>
     <p className="lc-note">{obs.length} observations, {hyp.length} likely causes
-      {Object.entries(d.structural_changes ?? {}).map(([k, c]) => <span key={k}> · the {words(k)} version fixed {c.resolved} of the page problems found on the first version{c.introduced ? ` and introduced ${c.introduced}` : ''}</span>)}.</p>
+      {Object.entries(d.structural_changes ?? {}).map(([k, c]) => <span key={k}> · {VARIANT_LABEL(k)} fixed {c.resolved} of the {c.resolved + c.persisting} page problems found on {first ? VARIANT_LABEL(first) : 'the first version'}{c.introduced ? ` and introduced ${c.introduced}` : ''}</span>)}.</p>
     <div className="lc-diag">
-      <div><h3>Likely causes and what to change</h3><ul className="lc-findings">{hyp.map(f => <FindingCard key={f.id + f.variant} f={f} />)}</ul></div>
+      <div><h3>Likely causes and what to change</h3><ul className="lc-findings">{hyp.map(f => <FindingCard key={f.id + f.variant} f={f} ev={ev} />)}</ul></div>
       <div><h3>Observations</h3>
         <div className="lc-seg" role="group" aria-label="Filter observations">{(['all', 'structural', 'behavioral'] as const).map(x => <button key={x} type="button" aria-pressed={layer === x} onClick={() => setLayer(x)}>{x === 'all' ? 'All' : x === 'structural' ? 'Page structure' : 'Agent behaviour'}</button>)}</div>
-        <ul className="lc-findings">{obs.map(f => <FindingCard key={f.id + f.variant} f={f} />)}</ul></div>
+        <ul className="lc-findings">{obs.map(f => <FindingCard key={f.id + f.variant} f={f} ev={ev} />)}</ul></div>
     </div>
   </>;
 }
@@ -264,10 +281,10 @@ function Provenance({ ev }: { ev: Evaluation }) {
   return <Section id="provenance" n="Provenance" title="Where these numbers come from">
     <ul className="lc-prov">
       {ev.source?.kind === 'dataset' && <li>Recorded evaluation <code>{ev.source.id}</code> (built {ev.source.built_at}): {ev.source.description}</li>}
-      <li>Execution: {ex?.executed}/{ex?.planned ?? '–'} agent runs finished{ex?.stopped ? `, stopped: ${ex.stopped}` : ''}; browser isolation self-test {ex?.jail_selftest_ok ? 'passed' : 'not recorded'}{ev.mode === 'paid' ? `; spending authorised in advance ${ex?.authorization_verified ? 'for exactly this task set and configuration' : '(not recorded)'}` : ''}.</li>
-      <li>Agent: {ev.agent.model}, reasoning {ev.agent.reasoning_effort ?? '–'}, {ev.agent.max_completion_tokens} completion tokens, profile {ev.agent.profile}; manifest <Hash sha={ev.manifest.sha256} /> · {ev.manifest.repetitions} repetition · seed {ev.manifest.seed}.</li>
-      <li>Task set: {ev.suite.name} v{ev.suite.version}, frozen <Hash sha={ev.frozen_suite.sha256} />, approved {new Date(ev.approval.decided_at).toUTCString().slice(5, 22)} UTC <Hash sha={ev.approval.sha256} />.</li>
-      <li>Website versions: {ev.manifest.variants.map(v => <span key={v.name} className="lc-inline"><VariantName v={v.name} /> <Hash sha={v.snapshot_sha256} /></span>)}</li>
+      <li>Execution: {ex?.executed}/{ex?.planned ?? '–'} agent runs finished{ex?.stopped ? `, stopped: ${ex.stopped}` : ''}; browser isolation check {ex?.jail_selftest_ok ? 'passed' : 'not recorded'}{ev.mode === 'paid' ? `; spending authorised in advance ${ex?.authorization_verified ? 'for exactly this task set and configuration' : '(not recorded)'}` : ''}.</li>
+      <li>Agent: {ev.agent.model}, reasoning {ev.agent.reasoning_effort ?? '–'}: the same agent and limits for every run · one agent per task{ev.manifest.variants.length > 1 ? ' on each version' : ''} · run <code>{ev.id}</code>.</li>
+      <li>Tasks: {ev.tasks.filter(t => t.executed).length} customer tasks, fixed before the run <Hash sha={ev.frozen_suite.sha256} />.</li>
+      <li>Website versions (frozen copies): {ev.manifest.variants.map(v => <span key={v.name} className="lc-inline"><VariantName v={v.name} /> <Hash sha={v.snapshot_sha256} /></span>)}</li>
       <li>Privacy: expected answers and grading criteria stay on the server; this page shows the agents’ own answers and counts.</li>
     </ul>
   </Section>;

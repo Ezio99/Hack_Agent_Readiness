@@ -145,11 +145,11 @@ export function Home({ section }: { section?: string }) {
               <p className="how-spec mono">{({
                 website: `${FEATURED.name} · 14 courses · 2 campuses`,
                 tasks: '24 customer questions proposed by Muse Spark · each checked against the course records',
-                review: `${N} tasks approved and frozen by the owner`,
+                review: `${N} customer tasks, fixed before the evaluation`,
                 evaluate: `${BEFORE.trials.length} live browser agents · isolated Chromium · ${t1o.limit} requests per task`,
                 recommendations: 'every fact on the course cards · fix the dead end · structured course data',
                 improve: `${AFTER_CHANGES.length} changes · same design, same pages`,
-                reevaluate: 'the same frozen tasks on the improved website · judges can run it',
+                reevaluate: 'the same tasks on both versions · anyone with an access code can run it',
                 compare: `live: correct ${C0}/${N} → ${C1}/${N} · ${O.requests} → ${M.requests} requests`,
               } as Record<string, string>)[s.id]}</p>
             </li>)}

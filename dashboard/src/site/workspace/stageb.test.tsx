@@ -70,7 +70,7 @@ it('shows a completed Stage B evaluation as the six-dimension readiness report',
   const t = host.textContent ?? '';
   expect(button(host, 'Readiness report')).toBeTruthy();
   expect(button(host, 'Insights')).toBeFalsy();
-  for (const d of ['Task success', 'Navigation efficiency', 'Evidence', 'Information accessibility', 'Agent reliability', 'Coverage', 'What slowed the agents down']) expect(t).toContain(d);
+  for (const d of ['Task success', 'Navigation efficiency', 'Evidence', 'Information accessibility', 'Agent reliability', 'What slowed the agents down']) expect(t).toContain(d);
   expect(t).toContain('Exact match'); expect(t).toContain('Correct');
   expect(t).not.toContain('post-hoc');
   expect(host.querySelector(`a[href="#/reports/${ID}/tasks/1"]`)).not.toBeNull();                       // the trace comparison

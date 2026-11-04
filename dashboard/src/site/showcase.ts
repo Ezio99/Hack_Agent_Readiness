@@ -116,7 +116,7 @@ export const IMPROVEMENTS: Improvement[] = [
 export const JOURNEY = [
   { id: 'website', n: '01', label: 'Website', blurb: 'The business and its customers' },
   { id: 'tasks', n: '02', label: 'Generate tasks', blurb: 'Customer questions, checked against the site' },
-  { id: 'review', n: '03', label: 'Review', blurb: 'The owner approves a frozen task set' },
+  { id: 'review', n: '03', label: 'Review', blurb: 'The questions are fixed before any run' },
   { id: 'evaluate', n: '04', label: 'Evaluate', blurb: 'Real browser agents, live' },
   { id: 'recommendations', n: '05', label: 'Recommendations', blurb: 'What slowed agents down, and what to change' },
   { id: 'improve', n: '06', label: 'Improve', blurb: 'The website, changed' },

@@ -62,7 +62,7 @@ it('renders the M7 report in plain product language: correct answers and exact m
   expect(row('Exact match')).toContain('2/6'); expect(row('Exact match')).toContain('1/6');                    // the recorded official grades (v1), unchanged
   expect(t).toContain('named 1 of 5'); expect(t).toContain('named 5 of 5');
   expect(t).toContain('US$1.5207');
-  for (const d of ['Task success', 'Navigation efficiency', 'Evidence', 'Information accessibility', 'Agent reliability', 'Coverage', 'What slowed the agents down, and what to change']) expect(t).toContain(d);
+  for (const d of ['Task success', 'Navigation efficiency', 'Evidence', 'Information accessibility', 'Agent reliability', 'What slowed the agents down, and what to change']) expect(t).toContain(d);
   expect(t).toContain('Likely causes and what to change'); expect(t).toContain('Observations');
   for (const s of ['post-hoc', 'prospective', 'xploratory', 'no statistical power', 'p =', 'Retrospective', 'grade of record', 'no composite']) expect(t).not.toContain(s);
   expect(host.querySelector('a[href="#/reports/m7-larkspur-browser-1/tasks/1"]')).not.toBeNull();
@@ -109,10 +109,10 @@ it('shows the frozen task set as approved and frozen, with no approval control o
     [`/api/lifecycle/suites/${sha}`]: suite });
   const host = await mount(<Lifecycle step="review" suite={sha} />);
   const t = host.querySelector('#lc-review')!.textContent!;
-  expect(t).toContain(`${suite.suite_name} v${suite.version}`);
+  expect(t).toContain(`${suite.tasks.length} customer tasks`); expect(t).not.toContain(suite.suite_name);
   const first = [...suite.tasks].sort((a: any, b: any) => a.task_id.localeCompare(b.task_id))[0];
   expect(t).toContain(`Task 1${first.customer_wording}`);                                                  // numbered as in every report
-  expect(t).toContain('never on the web');
+  expect(t).toContain('fixed as an exact set before any evaluation');
   expect(t).toContain('Both the Before and the After evaluation');
   expect([...host.querySelectorAll('button')].some(b => /approve/i.test(b.textContent ?? ''))).toBe(false);
   expect(f.mock.calls.some(c => (c[1] as RequestInit | undefined)?.method === 'POST')).toBe(false);
@@ -152,7 +152,7 @@ it('shows the recorded task generation: proposed, accepted and its model cost; n
   await mount(<Lifecycle step="tasks" />);
   const t = document.querySelector('#lc-tasks')!.textContent!;
   expect(t).toContain('Questions proposed24'); expect(t).toContain(`Accepted${(gen.post_fix_reevaluation ?? gen).admissions.natural}`);
-  expect(t).toContain('US$0.050'); expect(t).toContain('Accepted 18'); expect(t).toContain('Rejected 5');
+  expect(t).toContain('US$0.050'); expect(t).toContain('Not used4'); expect(t).not.toContain('Accepted 18');   // final counts only, no per-question status
   expect([...document.querySelectorAll('#lc-tasks button')].some(b => /generate/i.test(b.textContent ?? ''))).toBe(false);
 });
 
@@ -229,7 +229,7 @@ it('the production run eval-c04fdb10: correct 0/3 -> 3/3, exact match 0/3 both, 
   const host = await mount(<ReportPage id={C04.id} />);
   const row = (k: string) => [...host.querySelectorAll('tr')].find(r => r.textContent?.startsWith(k))!.textContent!;
   expect(row('Correct answers')).toBe('Correct answers0/33/3');
-  expect(row('Exact match')).toBe('Exact match (official grader)0/30/3');
+  expect(row('Exact match')).toBe('Exact match0/30/3');
   expect(row('Shown the pages that hold the answer')).toContain('0/3');                                      // the recorded rule, unchanged
   expect(row('…or an equivalent page')).toBe('…or an equivalent page that states every deciding fact for every course (e.g. a comparison table)0/33/3');
   expect(host.textContent).toContain('Original vs Improved');

@@ -19,7 +19,7 @@ export function useLoad<T>(load: () => Promise<T>, key: string): { data: T | nul
 }
 
 /** Display wording for recorded server text (finding details): the graders by what they check. The recorded data is unchanged. */
-export const plain = (t: string) => audienceText(t).replace(/the official grader v1/g, 'the exact-match grader').replace(/official grader v1/g, 'exact-match grader')
+export const plain = (t: string) => audienceText(t).replace(/ \(\d+\/\d+ trials?\)/g, '').replace(/Re-run diagnostics: /g, 'After the change, ').replace(/\bitem pages\b/g, 'course pages').replace(/\bitem-page\b/g, 'course-page').replace(/\blisting cards\b/g, 'course cards').replace(/the official grader v1/g, 'the exact-match grader').replace(/official grader v1/g, 'exact-match grader')
   .replace(/post-hoc grader v2/g, 'the correctness grader').replace(/grader v2/g, 'the correctness grader').replace(/grader v1/g, 'the exact-match grader');
 
 export function Loading({ what }: { what: string }) { return <p className="lc-loading" aria-busy="true">Loading {what}…</p>; }

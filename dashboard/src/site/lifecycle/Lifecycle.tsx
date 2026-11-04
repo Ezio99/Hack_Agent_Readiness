@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { SiteFooter, SiteHeader } from '../Shell';
 import { api, fmtUsd, inPublicScope, words, type EvaluationSummary, type Finding, type Generation, type Overview, type Suite } from '../../lib/lifecycleApi';
 import { AFTER, AFTER_CHANGES, AFTER_V, BEFORE, BEFORE_V, FEATURED, FEATURED_TASK, JOURNEY, fewerPct, journeyOf, showcaseFrame, trialOf } from '../showcase';
-import { Failed, Loading, useLoad, VariantName } from './parts';
+import { Failed, Loading, plain, useLoad, VariantName } from './parts';
 import './lifecycle.css';
 
 /** `#/lifecycle[/<step>]` (and `#/demo`): Larkspur Community College's journey through the product, as one page: website -> generated tasks ->
@@ -65,7 +65,7 @@ export function Lifecycle({ step, suite }: { step?: string; suite?: string }) {
         <p className="eyebrow">The {FEATURED.short} journey</p>
         <h1 className="lc-title">From a website to one <em>agents can use.</em></h1>
         <p className="lede">{FEATURED.name} runs evening and weekend short courses. Follow its website through Agent Readiness: customer tasks generated from
-          its own catalogue, approved by the owner, run by real Muse Spark browser agents, turned into recommendations, applied to the site, and run again.</p>
+          its own catalogue, fixed before any run, run by real Muse Spark browser agents, turned into recommendations, applied to the site, and run again.</p>
         <p className="lc-note">Every step below uses the college’s real evaluation: its redesigned website (Before), the changes Agent Readiness recommended, and the
           improved website (After), each evaluated live with the same questions on 4 Nov 2026.</p>
       </header>
@@ -123,7 +123,6 @@ function WebsiteStep() {
 }
 
 // --------------------------------------------------------------------------------------------------------------- 02 tasks
-const ADMISSION: Record<string, string> = { natural: 'Accepted', rejected: 'Rejected', rubric: 'Needs a person to grade' };
 
 function TasksStep() {
   const gens = useLoad(() => api.generations(), 'generations');
@@ -138,23 +137,16 @@ function TasksStep() {
 }
 
 function GenerationView({ g }: { g: Generation }) {
-  const [filter, setFilter] = useState('natural');
   const final = g.post_fix_reevaluation?.admissions ?? g.admissions;
-  const props = g.proposals.filter(p => filter === 'all' || p.admission === filter);
   return <div className="lc-gen">
     <dl className="lc-kpis">
-      <div><dt>Questions proposed</dt><dd>{g.proposals.length}</dd><small>{g.rounds.filter(r => r.sent).length} rounds · {String(g.generator.model)}</small></div>
-      <div><dt>Accepted</dt><dd>{final.natural ?? 0}</dd><small>answerable from the catalogue, in the customer’s words{g.post_fix_reevaluation ? ` (${g.admissions.natural ?? 0} as first checked; ${final.natural ?? 0} after a fix to the checker, re-checked at no cost)` : ''}</small></div>
+      <div><dt>Questions proposed</dt><dd>{g.proposals.length}</dd><small>by {String(g.generator.model)}</small></div>
+      <div><dt>Accepted</dt><dd>{final.natural ?? 0}</dd><small>answerable from the catalogue, in the customer’s words</small></div>
+      <div><dt>Not used</dt><dd>{(final.rejected ?? 0) + (final.rubric ?? 0)}</dd><small>{final.rejected ?? 0} not answerable exactly · {final.rubric ?? 0} would need a person to grade</small></div>
       <div><dt>Model cost</dt><dd>{fmtUsd(g.cost.calculated_usd, 3)}</dd><small>{g.cost.requests} model requests</small></div>
     </dl>
-    <div className="lc-seg" role="group" aria-label="Filter proposed questions">{['natural', 'rubric', 'rejected', 'all'].filter(k => k === 'all' || g.admissions[k]).map(k =>
-      <button key={k} type="button" aria-pressed={filter === k} onClick={() => setFilter(k)}>{k === 'all' ? `All ${g.proposals.length}` : `${ADMISSION[k] ?? words(k)} ${g.admissions[k]}`}</button>)}</div>
-    <ul className="lc-proposals">{props.map(p => <li key={p.id} className={p.admission}>
-      <div className="lc-prop-head"><span className={`tag ${p.admission === 'natural' ? 'tag-pass' : p.admission === 'rejected' ? 'tag-fail' : 'tag-neutral'}`}>{ADMISSION[p.admission] ?? words(p.admission)}</span>
-        <small>{words(p.capability)}{p.persona ? ` · ${words(p.persona)}` : ''}</small></div>
-      <q>{p.customer_wording ?? `[${p.withheld}]`}</q>
-      {p.rejection_reasons.length > 0 && <p className="lc-reject">{p.rejection_reasons.join('; ')}</p>}
-    </li>)}</ul>
+    <details className="lc-gen-list"><summary>The {g.proposals.length} proposed questions</summary>
+      <ul className="lc-proposals">{g.proposals.map(p => <li key={p.id}><q>{p.customer_wording ?? `[${p.withheld}]`}</q></li>)}</ul></details>
   </div>;
 }
 
@@ -166,8 +158,8 @@ function ReviewStep({ selected }: { selected?: string }) {
   const s = useLoad(() => id ? api.suite(id) : Promise.resolve(null), `suite-${id}`);
   const judge = mine.find(x => `${x.name}@v${x.version}` === FEATURED.judgeSuite);
   return <>
-    <p className="lede sm">The owner reads the accepted questions and approves an exact, frozen set. A frozen set never changes: re-evaluating the website later
-      uses the very same questions, so the comparison is fair. Approval happens at the owner’s terminal, never on the web.</p>
+    <p className="lede sm">The accepted questions are reviewed and fixed as an exact set before any evaluation. The set never changes, so every version of the
+      website is tested on the very same questions and the comparison is fair.</p>
     {suites.error && <Failed error={suites.error} what="Task sets" />}
     {s.data && <SuiteView s={s.data} />}
     {judge && s.data && <p className="lc-note">Both the Before and the After evaluation, and every live run started in the workspace, use exactly these questions.</p>}
@@ -177,11 +169,11 @@ function ReviewStep({ selected }: { selected?: string }) {
 function SuiteView({ s }: { s: Suite }) {
   const appr = s.approvals.find(a => a.decision === 'approved');
   return <div className="lc-suite">
-    <p className="lc-suite-state"><span className={`tag ${s.state === 'frozen' ? 'tag-signal' : 'tag-neutral'}`}>{s.state === 'frozen' ? 'Approved and frozen' : words(s.state)}</span>
-      <strong>{s.suite_name} v{s.version}</strong> · {s.counts.tasks} tasks{appr ? ` · approved by the ${appr.role} on ${new Date(appr.decided_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}</p>
+    <p className="lc-suite-state"><span className={`tag ${s.state === 'frozen' ? 'tag-signal' : 'tag-neutral'}`}>{s.state === 'frozen' ? 'Fixed for every evaluation' : words(s.state)}</span>
+      <strong>{s.counts.tasks} customer tasks</strong>{appr ? ` · fixed on ${new Date(appr.decided_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}</p>
     <ol className="lc-review-tasks">{[...s.tasks].sort((a, b) => a.task_id.localeCompare(b.task_id)).map((t, i) => <li key={t.task_id}>
       <span className="lc-tn">Task {i + 1}</span><q>{t.customer_wording}</q>
-      <small>{words(t.capability)}{t.persona ? ` · ${words(t.persona)}` : ''} · up to {t.limits.max_model_requests} model requests</small>
+      <small>up to {t.limits.max_model_requests} model requests per agent</small>
     </li>)}</ol>
   </div>;
 }
@@ -249,7 +241,7 @@ function RecommendationsStep() {
       <div><h3>Recommendations</h3>
         <ul className="lc-rec-list">{recs.map(f => { const a = appliedBy(f); const imp = AFTER_CHANGES.find(x => x.id === a);
           return <li key={f.id + f.recommendation}><p>{f.recommendation}</p>
-            <small>{f.basis === 'hypothesis' ? `Likely cause of the extra navigation on task ${f.tasks.join(', ')}` : f.title}</small>
+            <small>{f.basis === 'hypothesis' ? `Likely cause of the extra navigation on task ${f.tasks.join(', ')}` : plain(f.title)}</small>
             {imp && <a className="tag tag-pass" href="#/lifecycle/improve">✓ Applied: {imp.title}</a>}</li>; })}</ul></div>
     </div>}
     <p className="lc-cta-row"><a className="btn btn-ghost" href={`#/reports/${BEFORE.id}#diagnostics`}>Every finding, with its evidence</a></p>
