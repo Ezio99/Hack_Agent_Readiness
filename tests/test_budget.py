@@ -608,6 +608,7 @@ def test_the_owner_can_switch_the_budget_to_another_approved_immutable_pair(prod
     assert st["selected_evaluation"] == "ar-a20-orig-mod" and {e["id"] for e in st["evaluations"]} == {B, "ar-a20-orig-mod"}
 
 
+@need_prod   # integration test over the local production copies (scanner-data/, never committed), like every other `prod` test here
 def test_a_budget_evaluation_can_evaluate_one_registered_version_alone(prod, monkeypatch):
     """Polished v1 evaluated on its own (no Original baseline): the same frozen suite, agent and limits; half the trials and half the per-run maximum
     of a pair; recorded and selected only by the owner; judge armings stay paired; the job status has exactly one arm."""
@@ -634,6 +635,7 @@ def test_a_budget_evaluation_can_evaluate_one_registered_version_alone(prod, mon
     assert SB.arm_display(job) == {"Original": "Earlier trial A"} and SB._arm_labels(job) == {"polished": "Original"}
 
 
+@need_prod   # integration test over the local production copies (scanner-data/, never committed), like every other `prod` test here
 def test_the_agent_can_record_and_select_an_evaluation_under_delegated_authority_and_it_is_audited(prod, monkeypatch):
     """Non-interactive counterpart of the owner's typed lines (owner's standing authorization, 2026-11-04): the statement names the agent (it never
     claims to be the owner's typed confirmation), it is bound to the reviewed terms by sha256, every action is appended to DELEGATIONS.jsonl, and the
