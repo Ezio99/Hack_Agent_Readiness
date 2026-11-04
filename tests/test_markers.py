@@ -28,7 +28,7 @@ def test_ci_still_runs_every_test():
 
 def test_ci_shard_matrices_cover_every_shard():
     wf = _wf()
-    for suite, count in (("logic", 2), ("browser", 4)):
+    for suite, count in (("logic", 2), ("browser", 5)):
         m = re.search(rf"{suite}:.*?shard:\s*\[([^\]]*)\]", wf, re.S)
         assert m, f"{suite} job needs a shard matrix"
         assert [int(x) for x in m.group(1).split(",")] == list(range(1, count + 1))

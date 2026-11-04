@@ -4,7 +4,7 @@
 | Job | What | Typical time |
 |---|---|---|
 | `logic 1/2`, `logic 2/2` | `pytest -m "not browser"` split into 2 deterministic shards (+ `readiness smoke` on shard 1) | 2.0–2.9 min |
-| `browser 1/4` … `4/4` | `pytest -m browser` (real Chromium information-boundary tests) split into 4 shards | 2.7–4.1 min |
+| `browser 1/5` … `5/5` | `pytest -m browser` (real Chromium information-boundary tests) split into 5 shards (was 4 until 2026-11-05: the round-robin put about 15.5 min of long end-to-end tests in one shard, over its 15-minute limit; 5 shards measure at most about 10.5 min) | 7–11 min |
 | **`gate (required check)`** | fails unless every shard succeeded **and** the union of the shards' node ids equals a fresh full collection (`scripts/ci_check_shards.py`: no test lost, none duplicated, every shard present) | 0.6–0.7 min |
 
 `full.yml` runs the complete suite unsharded (`python -m pytest -q`) daily and on demand; it never gates a merge, it cross-checks the sharded result.

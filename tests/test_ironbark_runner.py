@@ -143,6 +143,14 @@ def test_full_paired_driver_with_recorded_trial_fixtures(tmp_path, monkeypatch):
 
 
 def test_prepare_refuses_to_reuse_existing_run(tmp_path, monkeypatch):
+    # A minimal completed source run, built here, stands in for the ignored local historical source (scanner-data/): fork() validates the source
+    # (its prerequisite stages done) BEFORE its exclusive-create check, and that check is what this test exercises. Deterministic; no local data.
+    from agent_readiness.investigate.fork import REQUIRED_DONE
+    from agent_readiness.investigate.run import InvestigationRun
+    src = InvestigationRun.create(tmp_path / 'sources', 'source', target='ironbark', mode='recorded', stages=REQUIRED_DONE)
+    for stage in REQUIRED_DONE:
+        src.set_status(stage, 'done')
+    monkeypatch.setattr(r, 'SOURCE', src.dir)
     class Fixed:
         hex = 'a' * 32
     monkeypatch.setattr(r.uuid, 'uuid4', lambda: Fixed())
