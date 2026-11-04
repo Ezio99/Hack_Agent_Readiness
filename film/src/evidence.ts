@@ -3,9 +3,10 @@ import raw from '../data/evidence.json';
 export type Box = { x: number; y: number; width: number; height: number };
 export type Step = { step: number; path: string; memory: string; goal: string; actions: { name: string; target: string | null }[]; done: boolean; screenshot: string; sha256: string };
 export const evidence = raw as unknown as {
-  site: { snapshot_sha256: string; viewport: [number, number]; boxes: Record<string, Box[]> };
+  site: { snapshot_sha256: string; viewport: [number, number]; boxes: Record<string, Box[]>; courses: { name: string; path: string; image: string }[] };
   hero: Record<'before' | 'after', { evaluation: string; version: string; started_at: string; agent: { model: string };
-    task: { n: number; customer_wording: string; max_model_requests: number }; steps: Step[] }>;
+    task: { n: number; customer_wording: string; max_model_requests: number }; steps: Step[];
+    answer: string[]; correct_v2: boolean; official_v1: boolean; metrics: { model_requests: number; steps: number; elapsed_seconds: number; course_pages_opened: number } }>;
 };
 export const before = evidence.hero.before;
 export const boxes = evidence.site.boxes;
@@ -13,3 +14,7 @@ export const boxes = evidence.site.boxes;
 export const actionLabel = (s: Step) => s.actions.map(a => `${a.name} ${(a.target ?? '').split(' · ')[0]}`.trim()).join(' · ');
 /** The run's date in Sydney (the hackathon's time zone): 2026-11-03T23:31Z -> "4 Nov 2026". */
 export const runDate = (iso: string) => new Date(iso).toLocaleDateString('en-AU', { timeZone: 'Australia/Sydney', day: 'numeric', month: 'short', year: 'numeric' });
+export const after = evidence.hero.after;
+export const courses = evidence.site.courses;
+/** A verbatim excerpt of a recorded note: throws at build time if the excerpt is not in the record, so on-screen quotes cannot drift. */
+export const excerpt = (s: Step, text: string) => { if (!s.memory.includes(text)) throw new Error(`step ${s.step}: "${text}" is not in the recorded note`); return text; };

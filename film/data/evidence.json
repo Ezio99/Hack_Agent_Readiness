@@ -39,8 +39,150 @@
     "path": "/courses/watercolour-foundations",
     "full_page": true,
     "sha256": "c80520c554aca0ada0a5badabbfa16071cdbf47ecdc12aedbe535287ff3792c1"
+   },
+   "before-course-watercolour-foundations-page.png": {
+    "path": "/courses/watercolour-foundations",
+    "full_page": false,
+    "sha256": "cd1a4acf932616a982cebf5a279c74877e4549d5799aaf39f8042697fe636265"
+   },
+   "before-course-life-drawing-studio-page.png": {
+    "path": "/courses/life-drawing-studio",
+    "full_page": false,
+    "sha256": "610b3c497d36a3195ae2f35809d9d62cac813b51a178511f0b554b24c189f350"
+   },
+   "before-course-wheel-thrown-pottery-page.png": {
+    "path": "/courses/wheel-thrown-pottery",
+    "full_page": false,
+    "sha256": "54125a546e6aa1b23373a791b896560d7188f05231da5936ab8a5d4cd3fdeed7"
+   },
+   "before-course-intro-to-python-page.png": {
+    "path": "/courses/intro-to-python",
+    "full_page": false,
+    "sha256": "390aa47fad3826c09dfd6ffbcdd6fc728e1d3fc17231a21c5e2bf3ee0da01347"
+   },
+   "before-course-spreadsheets-for-small-business-page.png": {
+    "path": "/courses/spreadsheets-for-small-business",
+    "full_page": false,
+    "sha256": "31c4b42a418e1cd616b5b4e8e4f5333504b5f0b5e887de275e2762ba935aed72"
+   },
+   "before-course-web-pages-from-scratch-page.png": {
+    "path": "/courses/web-pages-from-scratch",
+    "full_page": false,
+    "sha256": "41bd1e0c2bbd9c1c10436dbeec11d873fd9e9f0aaf2eaaeb28f3c8171c7679fb"
+   },
+   "before-course-conversational-italian-1-page.png": {
+    "path": "/courses/conversational-italian-1",
+    "full_page": false,
+    "sha256": "202e5a6abdc1a52e1c89ee089ad3eb6126bd938351921959b98510aeb573e1ae"
+   },
+   "before-course-japanese-for-travellers-page.png": {
+    "path": "/courses/japanese-for-travellers",
+    "full_page": false,
+    "sha256": "68fc4d8f0b0e1f43988776e27d1f740529c9557530f62a5ef6d3651d36260aff"
+   },
+   "before-course-spanish-conversation-2-page.png": {
+    "path": "/courses/spanish-conversation-2",
+    "full_page": false,
+    "sha256": "7fbf572293b17982dc7973c4d257c609228d1e7329d2da322366f7f26bef2340"
+   },
+   "before-course-beginners-yoga-page.png": {
+    "path": "/courses/beginners-yoga",
+    "full_page": false,
+    "sha256": "44a8ecf00c5f17bf7c47a28fa50e6331074b777b6244c8f31754cc7dd584cca9"
+   },
+   "before-course-mindful-meditation-page.png": {
+    "path": "/courses/mindful-meditation",
+    "full_page": false,
+    "sha256": "bfbfa3c3b375a75e4f2db04f5a8f40560d1db31d2851dc4652cbd51534bb75b8"
+   },
+   "before-course-home-electrical-basics-page.png": {
+    "path": "/courses/home-electrical-basics",
+    "full_page": false,
+    "sha256": "f3f2d3074f8eeed03aac8745530155004f9e9f4d9ac8ab2faf8c06c38c3b7803"
+   },
+   "before-course-furniture-restoration-page.png": {
+    "path": "/courses/furniture-restoration",
+    "full_page": false,
+    "sha256": "0466cde05bbdda0a199e04e8be9c79e38f2a3af2c2cc37ca3c5432415f33a58c"
+   },
+   "before-course-advanced-joinery-page.png": {
+    "path": "/courses/advanced-joinery",
+    "full_page": false,
+    "sha256": "3b1698015f47a3d8656e9b474c8a3bf8fcd98a81fbdeeb6a614bcb5c64068e19"
    }
   },
+  "courses": [
+   {
+    "name": "Watercolour foundations",
+    "path": "/courses/watercolour-foundations",
+    "image": "captures/site/before-course-watercolour-foundations-page.png"
+   },
+   {
+    "name": "Life drawing studio",
+    "path": "/courses/life-drawing-studio",
+    "image": "captures/site/before-course-life-drawing-studio-page.png"
+   },
+   {
+    "name": "Wheel-thrown pottery",
+    "path": "/courses/wheel-thrown-pottery",
+    "image": "captures/site/before-course-wheel-thrown-pottery-page.png"
+   },
+   {
+    "name": "Introduction to Python",
+    "path": "/courses/intro-to-python",
+    "image": "captures/site/before-course-intro-to-python-page.png"
+   },
+   {
+    "name": "Spreadsheets for small business",
+    "path": "/courses/spreadsheets-for-small-business",
+    "image": "captures/site/before-course-spreadsheets-for-small-business-page.png"
+   },
+   {
+    "name": "Web pages from scratch",
+    "path": "/courses/web-pages-from-scratch",
+    "image": "captures/site/before-course-web-pages-from-scratch-page.png"
+   },
+   {
+    "name": "Conversational Italian 1",
+    "path": "/courses/conversational-italian-1",
+    "image": "captures/site/before-course-conversational-italian-1-page.png"
+   },
+   {
+    "name": "Japanese for travellers",
+    "path": "/courses/japanese-for-travellers",
+    "image": "captures/site/before-course-japanese-for-travellers-page.png"
+   },
+   {
+    "name": "Spanish conversation 2",
+    "path": "/courses/spanish-conversation-2",
+    "image": "captures/site/before-course-spanish-conversation-2-page.png"
+   },
+   {
+    "name": "Beginners yoga",
+    "path": "/courses/beginners-yoga",
+    "image": "captures/site/before-course-beginners-yoga-page.png"
+   },
+   {
+    "name": "Mindful meditation",
+    "path": "/courses/mindful-meditation",
+    "image": "captures/site/before-course-mindful-meditation-page.png"
+   },
+   {
+    "name": "Home electrical basics",
+    "path": "/courses/home-electrical-basics",
+    "image": "captures/site/before-course-home-electrical-basics-page.png"
+   },
+   {
+    "name": "Furniture restoration",
+    "path": "/courses/furniture-restoration",
+    "image": "captures/site/before-course-furniture-restoration-page.png"
+   },
+   {
+    "name": "Advanced joinery",
+    "path": "/courses/advanced-joinery",
+    "image": "captures/site/before-course-advanced-joinery-page.png"
+   }
+  ],
   "boxes": {
    "home.browse_all": [
     {

@@ -1,36 +1,32 @@
-import React from 'react';
-import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
+import { AbsoluteFill, interpolate, Sequence, useCurrentFrame } from 'remotion';
 import { BrowserWindow } from '../components/BrowserWindow';
-import { ActionHighlight, PageImage, StepBudget, Typed } from '../components/Evidence';
+import { ActionHighlight, PageImage, StepBudget } from '../components/Evidence';
 import { Mark } from '../components/Mark';
+import { Sfx } from '../components/Sound';
 import { actionLabel, before, boxes, runDate } from '../evidence';
+import { ACT1, cue, cueEnd } from '../narration';
 import { C, F, camera, ease } from '../theme/tokens';
 
-/** Act 1, the opening (25 s). A: the Larkspur website, floating in the dark. B: it is beautiful and made for people. C: a recorded Meta Muse
- *  Spark agent receives the hero task and takes its first two real steps. D: the question, then Agent Readiness.
- *  Website = the frozen Before snapshot rendered at 2x (scripts/capture.py); agent view = the agent's own recorded screenshots. */
-export const OPENING_FRAMES = 750;
+/** Act 1, the opening (25 s). A: the Larkspur website, floating in the dark. B: beautifully designed, easy for people. Q: "But what happens when
+ *  an AI agent tries?" C: a recorded Meta Muse Spark agent takes its first two real steps; its own note becomes the headline. D: Agent Readiness.
+ *  Website = the frozen Before snapshot rendered at 2x (scripts/capture.py); agent view = the agent's own recorded screenshots.
+ *  Beats are anchored to narration cues (src/narration.ts) so they follow the recorded voice. */
+export const OPENING_FRAMES = ACT1.frames;
 
-const T = { aIn: 6, bMove: 120, bCourses: 128, bScroll: [160, 282], cWipe: 284, c1Note: 318, c1Hi: 342, c1Click: 366, c2Cut: 392, c2Note: 402,
-  c2Hi: 462, c2Click: 488, dOut: 525, q1: 545, q2: 585, qOut: 645, mark: 668, word: 694 } as const;
+const T = (() => {
+  const q = cue('a1.question'), wipe = cueEnd('a1.question'), click2 = cue('a1.browsing') + 5, watch = cue('a1.watching');
+  return { aIn: 6, bMove: 108, bCourses: 116, bScroll: [150, 236] as const, bText: cue('a1.designed'), q, wipe,
+    c1Hi: wipe + 28, c1Click: wipe + 52, c2Cut: wipe + 76, obs: wipe + 96, c2Hi: click2 - 26, c2Click: click2,
+    dOut: watch - 22, mark: watch, word: watch + 26, end: ACT1.frames - 34 };
+})();
 
-const W = 1100;                      // window content width, px
-const S = W / 1265;                  // px per CSS px (the agents' layout is 1265 CSS px wide)
-const H = Math.round(960 * S);       // content height: one agent viewport
+const W = 1100, S = W / 1265, H = Math.round(960 * S);      // window content: one agent viewport, 1265 CSS px wide
 const step1 = before.steps[0], step2 = before.steps[1];
+/** The agent's step-2 note, split for typography: both halves are verbatim and together are the whole recorded note. */
+const [OBS_LEAD, OBS] = (() => { const m = step2.memory; const i = m.indexOf('Need to check each'); if (i < 0) throw new Error('step 2 note changed'); return [m.slice(0, i).trim(), m.slice(i).trim()]; })();
 
 const clamp = { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' } as const;
 const k = (f: number, input: readonly number[], output: number[], easing = ease) => interpolate(f, input as number[], output, { ...clamp, easing });
-
-/** Proposed narration (not recorded yet), shown only in the captions render. ~140 wpm. */
-export const NARRATION: [number, number, string][] = [
-  [12, 112, 'This is Larkspur Community College.'],
-  [128, 280, 'Its new website is beautiful, clear, and easy for people to use.'],
-  [296, 398, 'Now, AI agents browse for us.'],
-  [402, 522, 'We asked one, powered by Meta Muse Spark: which beginner courses meet on weekends?'],
-  [536, 642, 'It works for people. But can an agent actually use it?'],
-  [668, 742, 'Agent Readiness finds out.'],
-];
 
 export function Opening({ captions = false }: { captions?: boolean }) {
   const f = useCurrentFrame();
@@ -38,37 +34,34 @@ export function Opening({ captions = false }: { captions?: boolean }) {
   // ---- the window (camera) ----
   const rise = k(f, [T.aIn, 72], [0, 1]);
   const toSide = k(f, [T.bMove, T.bMove + 42], [0, 1], camera);
-  const recede = k(f, [T.dOut, T.dOut + 40], [0, 1], camera);
+  const recede = k(f, [T.dOut, T.dOut + 36], [0, 1], camera);
+  const qDim = k(f, [T.q - 6, T.q + 14], [0, 1]) * (1 - k(f, [T.wipe, T.wipe + 16], [0, 1]));
   const push = interpolate(f, [0, T.bMove], [0, 0.035], clamp);
-  const scale = (0.9 + 0.1 * rise + push) * (1 - 0.2 * toSide) + 0.02 * k(f, [T.cWipe, T.dOut], [0, 1], camera) * (1 - recede) - 0.08 * recede;
-  const x = 330 * toSide * (1 - recede);
-  const y = 70 * (1 - rise) + 8 * toSide;
-  const winOpacity = Math.min(rise * 1.4, 1) * (1 - 0.88 * recede) * (1 - k(f, [T.qOut, T.qOut + 18], [0, 1]));
-  const blur = 14 * (1 - rise) + 7 * recede;
+  const scale = (0.9 + 0.1 * rise + push) * (1 - 0.2 * toSide) + 0.02 * k(f, [T.wipe, T.dOut], [0, 1], camera) * (1 - recede) - 0.1 * recede;
+  const x = 330 * toSide * (1 - recede), y = 70 * (1 - rise) + 8 * toSide;
+  const winOpacity = Math.min(rise * 1.4, 1) * (1 - 0.45 * qDim) * (1 - recede);
+  const blur = 14 * (1 - rise) + 4 * qDim + 8 * recede;
 
   // ---- window content ----
   const coursesIn = k(f, [T.bCourses, T.bCourses + 22], [0, 1]);
-  const scroll = k(f, [T.bScroll[0], T.bScroll[1]], [0, 560], camera);
-  const wipe = k(f, [T.cWipe, T.cWipe + 20], [0, 1], camera);            // website -> the agent's recorded view
+  const scroll = k(f, [T.bScroll[0], T.bScroll[1]], [0, 440], camera);
+  const wipe = k(f, [T.wipe, T.wipe + 20], [0, 1], camera);
   const cut2 = k(f, [T.c2Cut, T.c2Cut + 8], [0, 1]);
-  const recorded = f >= T.cWipe;
-  const path = f < T.bCourses + 10 ? '/' : !recorded ? '/courses' : f < T.c2Cut ? step1.path : step2.path;
+  const recorded = f >= T.wipe, inC2 = f >= T.c2Cut;
+  const step = inC2 ? step2 : step1;
+  const path = f < T.bCourses + 10 ? '/' : !recorded ? '/courses' : step.path;
   const badge = recorded ? <span style={{ opacity: wipe, display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 12px', borderRadius: 999,
     background: 'rgba(114,128,242,.16)', color: C.signal2, fontFamily: F.mono, fontSize: 13, letterSpacing: '.12em' }}>
     <span style={{ width: 7, height: 7, borderRadius: 4, background: C.signal }} />RECORDED</span> : null;
 
-  // ---- left column ----
-  const bText = (d: number) => k(f, [T.bMove + 18 + d, T.bMove + 46 + d], [0, 1]) * (1 - k(f, [262, 280], [0, 1]));
-  const cIn = (d: number) => k(f, [T.cWipe + 10 + d, T.cWipe + 34 + d], [0, 1]) * (1 - recede);
-  const inC2 = f >= T.c2Cut;
-  const step = inC2 ? step2 : step1;
-  const noteStart = inC2 ? T.c2Note : T.c1Note, actionAt = (inC2 ? T.c2Click : T.c1Click) - 8;
-  const noteSwap = inC2 ? k(f, [T.c2Cut - 6, T.c2Cut + 6], [0.35, 1]) : 1;
+  const bText = (d: number) => k(f, [T.bText + d, T.bText + d + 26], [0, 1]) * (1 - k(f, [T.q - 22, T.q - 6], [0, 1]));
+  const cIn = (d: number) => k(f, [T.wipe + 8 + d, T.wipe + 30 + d], [0, 1]) * (1 - recede);
+  const actionIn = k(f, [(inC2 ? T.c2Click : T.c1Click) - 10, (inC2 ? T.c2Click : T.c1Click)], [0, 1]) * (inC2 || f < T.c2Cut - 4 ? 1 : 0);
+  const obsWords = OBS.split(' ');
 
   return <AbsoluteFill style={{ background: C.bg, overflow: 'hidden' }}>
     <AbsoluteFill style={{ background: 'radial-gradient(ellipse 60% 55% at 55% 50%, rgba(237,234,227,.055), rgba(0,0,0,0) 70%)' }} />
 
-    {/* the website */}
     <AbsoluteFill style={{ transform: `translate(${x}px, ${y}px) scale(${scale})`, opacity: winOpacity, filter: blur > 0.05 ? `blur(${blur}px)` : undefined }}>
       <BrowserWindow width={W} height={H} path={path} badge={badge} style={{ left: 960 - W / 2, top: 540 - (H + 46) / 2 }}>
         <PageImage src="captures/site/before-home-view.png" cssWidth={1265} scale={S} opacity={1 - coursesIn} />
@@ -84,45 +77,40 @@ export function Opening({ captions = false }: { captions?: boolean }) {
     </AbsoluteFill>
 
     {/* B: made for people */}
-    {f >= T.bMove && f < 285 && <div style={{ position: 'absolute', left: 120, top: 340, width: 700 }}>
+    {f >= T.bText && f < T.q && <div style={{ position: 'absolute', left: 120, top: 380, width: 700 }}>
       <p style={{ margin: 0, fontFamily: F.mono, fontSize: 16, letterSpacing: '.16em', color: C.ink3, opacity: bText(0), textTransform: 'uppercase' }}>
         Larkspur Community College · a fictional college</p>
-      {['Beautifully designed.', 'Easy to browse.', 'Made for people.'].map((t, i) =>
-        <p key={t} style={{ margin: '22px 0 0', fontFamily: F.serif, fontSize: 68, lineHeight: 1.04, letterSpacing: '-.015em', color: i === 2 ? C.ink : C.ink2,
-          fontStyle: i === 2 ? 'italic' : 'normal', opacity: bText(14 + 16 * i), transform: `translateY(${18 * (1 - bText(14 + 16 * i))}px)` }}>{t}</p>)}
+      {['Beautifully designed.', 'Easy for people to browse.'].map((t, i) =>
+        <p key={t} style={{ margin: '22px 0 0', fontFamily: F.serif, fontSize: 68, lineHeight: 1.04, letterSpacing: '-.015em', color: i === 1 ? C.ink : C.ink2,
+          fontStyle: i === 1 ? 'italic' : 'normal', opacity: bText(8 + 40 * i), transform: `translateY(${18 * (1 - bText(8 + 40 * i))}px)` }}>{t}</p>)}
     </div>}
 
-    {/* C: a recorded agent takes the customer's task */}
-    {f >= T.cWipe && f < T.dOut + 42 && <div style={{ position: 'absolute', left: 110, top: 205, width: 690 }}>
-      <p style={{ margin: 0, fontFamily: F.mono, fontSize: 15, letterSpacing: '.16em', color: C.signal2, opacity: cIn(0), textTransform: 'uppercase' }}>
-        Recorded run · {runDate(before.started_at)} · Meta Muse Spark agent</p>
-      <div style={{ opacity: cIn(8), transform: `translateY(${14 * (1 - cIn(8))}px)`, marginTop: 30 }}>
-        <p style={{ margin: 0, fontFamily: F.mono, fontSize: 14, letterSpacing: '.16em', color: C.ink3, textTransform: 'uppercase' }}>Customer task</p>
-        <p style={{ margin: '12px 0 0', fontFamily: F.serif, fontSize: 38, lineHeight: 1.22, color: C.ink }}>“{before.task.customer_wording}”</p>
-      </div>
-      <div style={{ marginTop: 40, opacity: cIn(22) }}>
-        <StepBudget used={step.step} max={before.task.max_model_requests} label={`Step ${step.step} of ${before.task.max_model_requests}`} />
-      </div>
-      <div style={{ marginTop: 26, padding: '22px 26px', borderRadius: 14, background: 'rgba(237,234,227,.045)', border: `1px solid ${C.rule}`,
-        opacity: cIn(26) * noteSwap, minHeight: 190 }}>
-        <p style={{ margin: 0, fontFamily: F.mono, fontSize: 13, letterSpacing: '.16em', color: C.ink3, textTransform: 'uppercase' }}>The agent’s own note · step {step.step}</p>
-        <p style={{ margin: '14px 0 0', fontFamily: F.mono, fontSize: 21, lineHeight: 1.5, color: C.ink }}><Typed key={step.step} text={step.memory} start={noteStart} cps={62} /></p>
-        <p style={{ margin: '16px 0 0', fontFamily: F.mono, fontSize: 18, color: C.signal2, opacity: k(f, [actionAt, actionAt + 10], [0, 1]) }}>→ {actionLabel(step)}</p>
-      </div>
+    {/* Q: the question, before we see the agent */}
+    {f >= T.q - 4 && f < T.wipe + 20 && <div style={{ position: 'absolute', left: 120, top: 330, width: 760, opacity: k(f, [T.q, T.q + 20], [0, 1]) * (1 - k(f, [T.wipe, T.wipe + 18], [0, 1])) }}>
+      <p style={{ margin: 0, fontFamily: F.serif, fontSize: 96, lineHeight: 1.04, letterSpacing: '-.02em', color: C.ink }}>But what happens when an <em>AI agent</em> tries?</p>
     </div>}
 
-    {/* D: the question */}
-    {f >= T.q1 - 5 && f < T.qOut + 25 && <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center', opacity: 1 - k(f, [T.qOut, T.qOut + 16], [0, 1]) }}>
-      <div style={{ textAlign: 'center' }}>
-        <p style={{ margin: 0, fontFamily: F.serif, fontSize: 104, letterSpacing: '-.02em', color: C.ink2, opacity: k(f, [T.q1, T.q1 + 26], [0, 1]),
-          transform: `translateY(${20 * (1 - k(f, [T.q1, T.q1 + 26], [0, 1]))}px)` }}>It works for people.</p>
-        <p style={{ margin: '18px 0 0', fontFamily: F.serif, fontStyle: 'italic', fontSize: 104, letterSpacing: '-.02em', color: C.ink, opacity: k(f, [T.q2, T.q2 + 26], [0, 1]),
-          transform: `translateY(${20 * (1 - k(f, [T.q2, T.q2 + 26], [0, 1]))}px)` }}>Can an AI agent actually use it?</p>
-      </div>
-    </AbsoluteFill>}
+    {/* C: the recorded agent */}
+    {f >= T.wipe && f < T.dOut + 40 && <div style={{ position: 'absolute', left: 110, top: 128, width: 700 }}>
+      <p style={{ margin: 0, fontFamily: F.mono, fontSize: 14, letterSpacing: '.16em', color: C.ink3, opacity: cIn(0) * 0.9, textTransform: 'uppercase' }}>
+        Recorded · Meta Muse Spark agent · {runDate(before.started_at)}</p>
+      <p style={{ margin: '20px 0 0', fontFamily: F.serif, fontSize: 30, lineHeight: 1.25, color: C.ink2, opacity: cIn(6) }}>“{before.task.customer_wording}”</p>
+      <div style={{ marginTop: 26, opacity: cIn(14) }}><StepBudget used={step.step} max={before.task.max_model_requests} label={`Step ${step.step} of ${before.task.max_model_requests}`} /></div>
+      <p style={{ margin: '16px 0 0', fontFamily: F.mono, fontSize: 17, color: C.signal2, opacity: actionIn * (1 - recede) }}>→ {actionLabel(step)}</p>
+    </div>}
+    {f >= T.obs && f < T.dOut + 40 && <div style={{ position: 'absolute', left: 110, top: 560, width: 730, opacity: 1 - recede }}>
+      <p style={{ margin: 0, fontFamily: F.mono, fontSize: 14, letterSpacing: '.16em', color: C.ink3, textTransform: 'uppercase', opacity: k(f, [T.obs, T.obs + 14], [0, 1]) }}>
+        The agent’s own note · step {step2.step}</p>
+      <p style={{ margin: '14px 0 0', fontFamily: F.mono, fontSize: 19, color: C.ink3, opacity: k(f, [T.obs + 4, T.obs + 18], [0, 1]) }}>{OBS_LEAD}</p>
+      <p style={{ margin: '14px 0 0', fontFamily: F.serif, fontSize: 64, lineHeight: 1.08, letterSpacing: '-.015em', color: C.ink }}>
+        {obsWords.map((w, i) => { const o = k(f, [T.obs + 12 + i * 4, T.obs + 24 + i * 4], [0, 1]);
+          return <span key={i} style={{ opacity: o, display: 'inline-block', transform: `translateY(${10 * (1 - o)}px)`, marginRight: '0.24em',
+            color: /^(each|Beginner|Sat\/Sun)$/.test(w) ? C.signal2 : undefined }}>{w}</span>; })}
+      </p>
+    </div>}
 
-    {/* Agent Readiness */}
-    {f >= T.mark && <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center' }}>
+    {/* D: Agent Readiness (no tagline; the narration leads into Act 2) */}
+    {f >= T.mark && <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center', opacity: 1 - k(f, [T.end, T.end + 26], [0, 1]) }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 34 }}>
         <Mark size={112} start={T.mark} />
         <span style={{ fontFamily: F.sans, fontWeight: 500, fontSize: 84, letterSpacing: '-.02em', color: C.ink, opacity: k(f, [T.word, T.word + 24], [0, 1]),
@@ -130,14 +118,18 @@ export function Opening({ captions = false }: { captions?: boolean }) {
       </div>
     </AbsoluteFill>}
 
-    {captions && <Captions f={f} />}
+    {/* sound: soft clicks on the two recorded clicks */}
+    <Sequence from={T.c1Click} durationInFrames={20}><Sfx name="click" volume={0.5} /></Sequence>
+    <Sequence from={T.c2Click} durationInFrames={20}><Sfx name="click" volume={0.5} /></Sequence>
+    <Sequence from={T.mark + 20} durationInFrames={60}><Sfx name="chime" volume={0.35} /></Sequence>
+    {captions && <Captions act={ACT1} f={f} />}
   </AbsoluteFill>;
 }
 
-function Captions({ f }: { f: number }) {
-  const line = NARRATION.find(([a, b]) => f >= a && f <= b);
-  return <div style={{ position: 'absolute', left: 0, right: 0, bottom: 34, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-    <span style={{ fontFamily: F.mono, fontSize: 12, letterSpacing: '.16em', color: '#F2C14E' }}>PROPOSED NARRATION · NOT RECORDED</span>
-    {line && <span style={{ fontFamily: F.sans, fontSize: 30, color: '#fff', background: 'rgba(0,0,0,.72)', padding: '6px 16px', borderRadius: 6 }}>{line[2]}</span>}
+export function Captions({ act, f }: { act: typeof ACT1; f: number }) {
+  const line = act.lines.find(l => f >= l.at && f <= l.end + 12);
+  return <div style={{ position: 'absolute', left: 0, right: 0, bottom: 30, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+    <span style={{ fontFamily: F.mono, fontSize: 12, letterSpacing: '.16em', color: '#F2C14E' }}>NARRATION · {act.status === 'recorded' ? 'RECORDED' : 'PLACEHOLDER TIMING, NOT RECORDED'}</span>
+    {line && <span style={{ fontFamily: F.sans, fontSize: 30, color: '#fff', background: 'rgba(0,0,0,.72)', padding: '6px 16px', borderRadius: 6, maxWidth: 1500, textAlign: 'center' }}>{line.text}</span>}
   </div>;
 }

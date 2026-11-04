@@ -74,9 +74,21 @@ async def capture_site() -> dict:
                     f = out_dir / f"before-{name}-{kind}.png"
                     f.write_bytes(png)
                     files[f.name] = {"path": path, "full_page": full, "sha256": sha(png)}
+            # every course page (the facts an agent needs live here, one page per course), in catalogue order
+            await page.goto(base + "/courses")
+            links = await page.eval_on_selector_all("article.card h2 a", "els => els.map(a => [a.textContent.trim(), a.getAttribute('href')])")
+            courses = []
+            for name, href in links:
+                await page.goto(base + href)
+                await page.wait_for_load_state("networkidle")
+                png = await page.screenshot()
+                f = out_dir / f"before-course-{href.rsplit('/', 1)[-1]}-page.png"
+                f.write_bytes(png)
+                files[f.name] = {"path": href, "full_page": False, "sha256": sha(png)}
+                courses.append({"name": name, "path": href, "image": f"captures/site/{f.name}"})
             await ctx.close()
         await b.close()
-    return {"version": "Before", "snapshot_sha256": snap.sha256, "viewport": [1265, 960], "note": "1265 = the agents' 1280 px window minus its 15 px scrollbar, so layouts match the recorded screenshots", "device_scale_factor": 2, "files": files,
+    return {"version": "Before", "snapshot_sha256": snap.sha256, "viewport": [1265, 960], "note": "1265 = the agents' 1280 px window minus its 15 px scrollbar, so layouts match the recorded screenshots", "device_scale_factor": 2, "files": files, "courses": courses,
             "boxes": boxes, "boxes_note": "CSS px at scroll 0 in the 1265 px layout = the agents' screenshot coordinates"}
 
 

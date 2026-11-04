@@ -2,7 +2,7 @@
 
 The hackathon film, built programmatically with [Remotion](https://www.remotion.dev) 4 (React). It lives on the isolated `film` branch only. It is never deployed, and nothing in `dashboard/` or `src/` imports it. The product is not modified to make the film.
 
-**Status:** only the opening (Act 1, 25 s) exists, as a visual prototype for review. The other acts are not built yet.
+**Status:** Act 1, the opening (0:00–0:25), and Act 2, the investigation (0:25–1:15), are built. Acts 3–5 are not built yet. No voice is recorded; timings are placeholders (see `NARRATION.md`).
 
 ## What is real and what is drawn
 | On screen | Source |
@@ -11,6 +11,9 @@ The hackathon film, built programmatically with [Remotion](https://www.remotion.
 | "Recorded" browser view (shot C) | The agent's **own recorded screenshots**, unchanged bytes, from the public report API (Before run `eval-ea13944e…`, task 2) |
 | Customer task, agent notes, actions, step limit, run date | `data/evidence.json`, generated from the same records. Nothing is typed by hand |
 | Highlight outline, cursor, click pulse | Drawn by the film, but **only** on the target of an action the agent recorded at that step (step 1: Click "Browse all courses"; step 2: Click "Watercolour foundations"). Positions come from the frozen page's layout |
+| Act 2 browser windows, notes, ledger, budget | Each recorded step's own screenshot (steps 2–11), verbatim note excerpts (checked at build time), the recorded action, and the step limit (14) from the task record |
+| Act 2 report footage | The deployed product's own readiness report for the Before run, captured read-only (`scripts/capture_product.py` → `data/product.json`) |
+| Music and sound effects | Original, synthesised by `scripts/score.mjs` (no samples, no third-party audio) |
 | Typography, mark, camera moves | Motion design (the Agent Readiness mark is the product's own) |
 
 Audience names only: Larkspur Community College, Before, After, Agent Readiness, Meta Muse Spark. Internal snapshot names, Ironbark, access codes and credentials never appear.
@@ -22,6 +25,8 @@ npm install                         # Remotion 4.0.540 + its compositor/ffmpeg
 npx remotion browser ensure         # Remotion's headless Chrome
 ./scripts/agent-fonts.sh            # the agents' fonts, into film/.fonts only (nothing system-wide)
 cd .. && PYTHONPATH=src ../Hack_Agent_Readiness/.venv/bin/python film/scripts/capture.py   # any env with playwright + the repo's src
+../Hack_Agent_Readiness/.venv/bin/python film/scripts/capture_product.py                       # the product's report pages (read-only)
+cd film && node scripts/score.mjs                                                               # music + sound effects
 ```
 `capture.py` writes `public/captures/**` and `public/fonts/**` (gitignored, regenerable) and `data/evidence.json` (committed, with the SHA-256 of every captured file). It reads the public report API with GET requests only and calls no model.
 
@@ -31,18 +36,23 @@ cd .. && PYTHONPATH=src ../Hack_Agent_Readiness/.venv/bin/python film/scripts/ca
 ```bash
 npx remotion studio src/index.ts                                   # scrub and preview
 npx remotion render src/index.ts Opening out/opening.mp4           # 1920×1080, 30 fps, H.264 (CRF 16)
-npx remotion render src/index.ts OpeningCaptions out/opening-captions.mp4   # same, with the proposed narration as captions
+npx remotion render src/index.ts Act2 out/act2.mp4
+npx remotion render src/index.ts Preview out/preview-0-75.mp4      # Acts 1-2 back to back, one continuous score
 ```
+Every composition has a `…Captions` variant that shows the narration lines at their cue times.
 
 ## Layout
 ```
-src/Root.tsx            one composition per act (only Opening so far)
-src/scenes/Opening.tsx  Act 1 timeline and proposed narration timings
+src/Root.tsx            one composition per act + the running preview; music / SFX / voiceover tracks
+src/narration.ts        the narration cue sheet (text + timing per act); scenes anchor to its cue ids
+src/scenes/Opening.tsx  Act 1
+src/scenes/Act2.tsx     Act 2
 src/components/         BrowserWindow, PageImage, ActionHighlight, Typed, StepBudget, Mark
 src/theme/              product colours (dark theme) and OFL fonts (Newsreader, Geist, Geist Mono)
 src/evidence.ts         typed access to data/evidence.json
-scripts/                capture.py, agent-fonts.sh
-NARRATION.md            proposed voiceover + assets awaiting approval
+scripts/                capture.py, capture_product.py, agent-fonts.sh, score.mjs
+NARRATION.md            narration with timings, voiceover plan, approvals
+vo/AUDITION.md          the voice-audition lines
 ```
 
 ## Licences

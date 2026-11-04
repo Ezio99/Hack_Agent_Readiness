@@ -3,3 +3,6 @@ out/
 .fonts/
 public/captures/
 public/fonts/
+public/audio/music/
+public/audio/sfx/
+public/audio/vo/
