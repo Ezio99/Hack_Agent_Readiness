@@ -11,6 +11,11 @@ import './story.css';
  *  the page calls no API. */
 
 const B = BEFORE.totals[BEFORE_V], A = AFTER.totals[AFTER_V];
+/** Evaluation limits as recorded in the frozen manifests of BOTH runs (eval-ea13944e, eval-5cf934b3; checked against production 2026-11-04): 14 model
+ *  requests and 14 steps per agent (240 s), US$0.044 per request; each evaluation reserves at most US$1.892 (= A$2.84 at the budget's fixed
+ *  1.50 A$/US$), charged to the separate A$20 evaluation budget. */
+const LIMIT = BEFORE.trials[0].limit;
+const RUN_CAP_USD = 1.892;
 const trial = (r: LiveRecord, v: string, n: number) => r.trials.find(t => t.variant === v && t.task === n)!;
 const steps = (r: LiveRecord, key: string) => r.journeys[key].steps;
 const sB = steps(BEFORE, `${BEFORE_V}-2`), sA = steps(AFTER, `${AFTER_V}-2`);
@@ -105,6 +110,7 @@ function Numbers({ r, v, label }: { r: LiveRecord; v: string; label: string }) {
 function BeforeResult() {
   return <section className="st-section st-result" aria-label="Before: measured">
     <div className="st-wrap">
+      <p className="st-spec" data-reveal>{BEFORE.tasks.length} customer tasks · 1 agent each · max {LIMIT} requests/steps per agent · US${RUN_CAP_USD.toFixed(2)} (A${(RUN_CAP_USD * 1.5).toFixed(2)}) cap per evaluation, within the A$20 budget · same limits Before & After</p>
       <p className="st-kicker" data-reveal>Before · measured</p>
       <h2 className="st-h2 center" data-reveal>{BEFORE.correct[BEFORE_V] === 0 ? <>Not one right answer. <em>Every agent ran out of road.</em></> : <>The agents struggled.</>}</h2>
       <Numbers r={BEFORE} v={BEFORE_V} label="Before: live evaluation" />

@@ -65,7 +65,7 @@
 .st-numbers{margin-top:64px;display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(16px,3vw,48px);width:100%}
 .st-numbers div{text-align:center;padding:28px 10px;border-top:1px solid var(--line)}
 .st-numbers dt{font:600 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--dim-2)}
-.st-numbers dd{margin-top:16px;font:700 clamp(54px,8vw,120px)/.95 var(--sans);letter-spacing:-.05em;color:#fff}
+.st-numbers dd{margin-top:16px;font:700 clamp(40px,6.2vw,104px)/.95 var(--sans);letter-spacing:-.05em;color:#fff;white-space:nowrap}
 .st-numbers small{font-size:.4em;letter-spacing:-.01em;color:var(--dim);margin-left:4px}
 .st-numbers div:nth-child(2) dd,.st-numbers div:nth-child(3) dd{color:var(--violet)}
 
@@ -148,3 +148,6 @@
   .st-steps{margin-top:16px;gap:4px}.st-steps li{padding:9px 12px}.st-steps blockquote{-webkit-line-clamp:2;font-size:14px}
   .st-stack{max-height:calc(100vh - 140px);aspect-ratio:auto;height:calc(100vh - 160px)}
 }
+
+.st-spec{font:500 11.5px/1.6 var(--mono);letter-spacing:0;color:var(--dim-2);text-align:center;width:100%;margin:0 auto 22px;text-wrap:balance}
+@media (max-width:900px){.st-spec{font-size:11px}}

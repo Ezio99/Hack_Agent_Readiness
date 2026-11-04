@@ -34,6 +34,9 @@ describe('the cinematic showcase (#/showcase): Before -> After', () => {
     expect(text).toContain(last.memory);                                              // the agent's own recorded words
     expect(text).not.toMatch(/polished|Polished|v1|v2 /);                             // no internal names on the page
     expect(f).not.toHaveBeenCalled();
+    const spec = host.querySelector('.st-spec')!.textContent!;                         // one understated line of the recorded limits, identical for both runs
+    expect(spec).toBe('3 customer tasks · 1 agent each · max 14 requests/steps per agent · US$1.89 (A$2.84) cap per evaluation, within the A$20 budget · same limits Before & After');
+    expect([...b.trials, ...a.trials].every((t: any) => t.limit === 14)).toBe(true);
     for (const img of host.querySelectorAll('img')) expect(img.getAttribute('alt')).toBeTruthy();
   });
 });
