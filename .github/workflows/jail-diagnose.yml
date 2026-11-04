@@ -1,0 +1,73 @@
+name: TEMPORARY jail diagnosis (throwaway branch diag/jail-userns only; never merged)
+on:
+  push:
+    branches: [diag/jail-userns]
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock
+      - name: Install (as the browser job does)
+        run: |
+          python -m pip install -r requirements.lock
+          python -m pip install --no-deps --no-build-isolation -e .
+          python -m playwright install --with-deps chromium
+      - name: Kernel and AppArmor user-namespace settings
+        run: |
+          uname -r
+          sysctl kernel.apparmor_restrict_unprivileged_userns kernel.apparmor_restrict_unprivileged_unconfined kernel.unprivileged_userns_clone user.max_user_namespaces 2>&1 || true
+          sudo aa-status 2>&1 | head -5 || true
+          echo "python: $(readlink -f "$(command -v python)")"
+      - name: Replay the jail's setup steps, reporting each errno
+        run: |
+          cat > /tmp/steps.py <<'EOF'
+          import os, sys, ctypes, socket, fcntl, struct
+          def step(name, fn):
+              try: fn(); print(f"OK    {name}", flush=True); return True
+              except OSError as e: print(f"FAIL  {name}: errno {e.errno} ({os.strerror(e.errno)})", flush=True); return False
+          uid, gid = os.getuid(), os.getgid()
+          if not step("unshare(USER|NET|NS|PID)", lambda: os.unshare(os.CLONE_NEWUSER | os.CLONE_NEWNET | os.CLONE_NEWNS | os.CLONE_NEWPID)): sys.exit(0)
+          step("write /proc/self/setgroups", lambda: open('/proc/self/setgroups', 'w').write('deny'))
+          step("write /proc/self/uid_map", lambda: open('/proc/self/uid_map', 'w').write(f'0 {uid} 1'))
+          step("write /proc/self/gid_map", lambda: open('/proc/self/gid_map', 'w').write(f'0 {gid} 1'))
+          libc = ctypes.CDLL(None, use_errno=True)
+          def mount(src, tgt, fs, flags, data=None):
+              if libc.mount(src and src.encode(), tgt.encode(), fs and fs.encode(), ctypes.c_ulong(flags), data and data.encode()) != 0:
+                  e = ctypes.get_errno(); raise OSError(e, os.strerror(e))
+          def lo_up():
+              s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+              ifr = struct.pack('16sH14s', b'lo', 0x1 | 0x40, b'\0' * 14)    # IFF_UP | IFF_RUNNING
+              fcntl.ioctl(s, 0x8914, ifr)                                     # SIOCSIFFLAGS
+          pid = os.fork()
+          if pid:
+              os.waitpid(pid, 0); sys.exit(0)
+          step("loopback up (SIOCSIFFLAGS)", lo_up)
+          step("mount / MS_REC|MS_PRIVATE", lambda: mount(None, '/', None, 0x4000 | 0x40000))
+          step("mount proc on /proc", lambda: mount('proc', '/proc', 'proc', 0x2 | 0x4 | 0x8))
+          step("mount tmpfs (hide a directory)", lambda: mount('tmpfs', '/mnt', 'tmpfs', 0x2 | 0x4 | 0x8 | 0x1, 'size=4k,mode=0555'))
+          os._exit(0)
+          EOF
+          python /tmp/steps.py
+      - name: "Self-test A: unchanged runner"
+        run: python -c "from agent_readiness.hosted import jail; print(jail.selftest())"
+      - name: "Self-test B: AppArmor 'userns' permission for the Python interpreter only"
+        run: |
+          PY=$(readlink -f "$(command -v python)")
+          printf 'abi <abi/4.0>,\ninclude <tunables/global>\nprofile ar-jail-python %s flags=(unconfined) {\n  userns,\n  include if exists <local/ar-jail-python>\n}\n' "$PY" | sudo tee /etc/apparmor.d/ar-jail-python
+          sudo apparmor_parser -r /etc/apparmor.d/ar-jail-python
+          python /tmp/steps.py
+          python -c "from agent_readiness.hosted import jail; print(jail.selftest())"
+      - name: "Self-test C: runner-wide sysctl (for comparison)"
+        run: |
+          sudo apparmor_parser -R /etc/apparmor.d/ar-jail-python || true
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          python /tmp/steps.py
+          python -c "from agent_readiness.hosted import jail; print(jail.selftest())"
