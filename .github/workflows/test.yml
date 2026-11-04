@@ -64,13 +64,13 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
   browser:
-    name: browser ${{ matrix.shard }}/4
+    name: browser ${{ matrix.shard }}/5
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -97,8 +97,8 @@ jobs:
           PY=$(readlink -f "$(command -v python)")
           printf 'abi <abi/4.0>,\ninclude <tunables/global>\nprofile ar-jail-python %s flags=(unconfined) {\n  userns,\n}\n' "$PY" | sudo tee /etc/apparmor.d/ar-jail-python
           sudo apparmor_parser -r /etc/apparmor.d/ar-jail-python
-      - name: Browser information boundary checks (shard ${{ matrix.shard }}/4)
-        run: python -m pytest -m browser -q --durations=25 --basetemp=artifacts/browser-tests --num-shards 4 --shard-id ${{ matrix.shard }} --shard-ids-file artifacts/shards/browser/shard-${{ matrix.shard }}.ids
+      - name: Browser information boundary checks (shard ${{ matrix.shard }}/5)
+        run: python -m pytest -m browser -q --durations=25 --basetemp=artifacts/browser-tests --num-shards 5 --shard-id ${{ matrix.shard }} --shard-ids-file artifacts/shards/browser/shard-${{ matrix.shard }}.ids
       - uses: actions/upload-artifact@v4
         if: always()
         with:
