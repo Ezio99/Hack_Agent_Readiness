@@ -90,11 +90,11 @@ export function Home({ section }: { section?: string }) {
         <div className="hero-grid">
           <div className="hero-side">
             <p className="lede" data-reveal>Agent Readiness sends real Meta Muse Spark browser agents to do your customers’ tasks on your website, checks every answer against your own data, and tells you what to change. Then it runs the same tasks on your improved site and shows the difference.</p>
-            <div className="hero-cta" data-reveal>
-              <a className="btn btn-signal" href="#/run">Run a live evaluation <span className="arr" aria-hidden="true">→</span></a>
-              <a className="btn btn-ghost" href="#/lifecycle">Walk through the {FEATURED.short} journey</a>
-            </div>
             <LatestLive className="hero-latest" />
+            <div className="hero-cta" data-reveal>
+              <a className="btn btn-signal" href="#/showcase">Watch before and after <span className="arr" aria-hidden="true">→</span></a>
+              <a className="btn btn-ghost" href="#/run">Run a live evaluation</a>
+            </div>
             <div className="hero-note" data-reveal><HeroNote /></div>
           </div>
           <div className="hero-visual" data-reveal><HeroFigure /></div>

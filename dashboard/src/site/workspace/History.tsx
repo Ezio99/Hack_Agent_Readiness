@@ -17,7 +17,7 @@ export function History({ items, current, open }: { items: HistoryItem[]; curren
   const toggle = (id: string) => setPicked(p => p.includes(id) ? p.filter(x => x !== id) : [...p.slice(-1), id]);
   const compare = picked.map(id => items.find(i => i.id === id)).filter((x): x is HistoryItem => !!x?.summary);
   return <section className="history" aria-label="Evaluation history">
-    <div className="table-scroll"><table className="ws-table history-table"><thead><tr><th>Compare</th><th>Evaluation</th><th>Started</th><th>Runs</th><th>Mode</th><th>Versions</th><th>Passed</th><th>Requests / task</th><th>Cost</th><th /></tr></thead>
+    <div className="table-scroll"><table className="ws-table history-table"><thead><tr><th>Compare</th><th>Evaluation</th><th>Started</th><th>Runs</th><th>Mode</th><th>Versions</th><th>Exact match</th><th>Requests / task</th><th>Cost</th><th /></tr></thead>
       <tbody>{items.map(i => <tr key={i.id} aria-current={i.id === current ? 'true' : undefined}>
         <td><input type="checkbox" aria-label={`Compare ${i.id.slice(0, 13)}`} checked={picked.includes(i.id)} disabled={!i.summary} onChange={() => toggle(i.id)} /></td>
         <td><code>{i.id.slice(0, 13)}</code> <span className={`ws-pill ${i.execution_state ?? i.state}`}>{(i.execution_state ?? i.state).replaceAll('_', ' ')}</span>{i.execution_state && i.execution_state !== i.state && <small className="ws-record" title="The job record is kept exactly as it was written"> record: {i.state.replaceAll('_', ' ')}</small>}{i.report_state === 'withheld' && <small className="ws-record"> report withheld</small>}</td>
@@ -29,7 +29,7 @@ export function History({ items, current, open }: { items: HistoryItem[]; curren
     {compare.length === 2 && <div className="history-compare" aria-label="Comparison">{compare.map(i => <article key={i.id}>
       <p className="eyebrow">{i.mode === 'live' ? 'MUSE SPARK' : 'REHEARSAL · SCRIPTED'} · {when(i.created_at)} · {i.repetitions} REPETITION{i.repetitions > 1 ? 'S' : ''}</p>
       <dl>{armsOf(i).map(arm => <div key={arm}><dt>{names(i)[arm]}</dt>
-        <dd><strong>{i.summary![arm]!.evidence_supported_passes}/{i.summary![arm]!.completed}</strong> passed · {i.summary![arm]!.requests_mean ?? '—'} requests/task · {i.summary![arm]!.steps_mean ?? '—'} steps/task</dd></div>)}</dl></article>)}
+        <dd><strong>{i.summary![arm]!.evidence_supported_passes}/{i.summary![arm]!.completed}</strong> exact match · {i.summary![arm]!.requests_mean ?? '—'} requests/task · {i.summary![arm]!.steps_mean ?? '—'} steps/task</dd></div>)}</dl></article>)}
       {compare[0].mode !== compare[1].mode && <p className="ws-alert">These evaluations used different modes; rehearsal results are not comparable to Muse Spark results.</p>}</div>}
     {picked.length === 1 && <p className="ws-note">Select one more finished evaluation to compare.</p>}
   </section>;

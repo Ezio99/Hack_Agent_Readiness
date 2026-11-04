@@ -27,6 +27,8 @@ export function Lifecycle({ step, suite }: { step?: string; suite?: string }) {
         <h1 className="lc-title">From a website to one <em>agents can use.</em></h1>
         <p className="lede">{FEATURED.name} runs evening and weekend short courses. Follow its website through Agent Readiness: customer tasks generated from
           its own catalogue, approved by the owner, run by real Muse Spark browser agents, turned into recommendations, applied to the site, and run again.</p>
+        <p className="lc-note">This walkthrough follows the college’s first experiment (3 Nov 2026: the original site against a fully improved version). The latest
+          before-and-after evaluation of its redesigned website is in the <a className="link" href="#/showcase">showcase</a>.</p>
       </header>
       <nav className="lc-stepper" aria-label="Journey steps"><ol>{JOURNEY.map(s =>
         <li key={s.id}><a href={`#/lifecycle/${s.id}`} aria-current={current === s.id ? 'step' : undefined}>

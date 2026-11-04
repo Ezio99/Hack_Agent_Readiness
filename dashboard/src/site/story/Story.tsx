@@ -108,7 +108,7 @@ function BeforeResult() {
       <p className="st-kicker" data-reveal>Before · measured</p>
       <h2 className="st-h2 center" data-reveal>{BEFORE.correct[BEFORE_V] === 0 ? <>Not one right answer. <em>Every agent ran out of road.</em></> : <>The agents struggled.</>}</h2>
       <Numbers r={BEFORE} v={BEFORE_V} label="Before: live evaluation" />
-      <p className="st-body center" data-reveal>The agents opened {opened(BEFORE, BEFORE_V)} course pages one at a time, came back to the catalogue each time, and answered from what they had
+      <p className="st-body center" data-reveal>The agents opened {opened(BEFORE, BEFORE_V)} course pages one at a time, kept going back to the catalogue, and answered from what they had
         managed to check. One guessed a course address and hit a dead end.</p>
     </div>
   </section>;

@@ -1,6 +1,6 @@
 # Final submission materials (2026-11-04, prepared; submitting is the owner's action)
 
-**Deadline:** 2026-11-05 13:00 AEDT. Paste into the form, then check each field's length limit. Use audience wording only (Larkspur Community College, Before, After, Agent Readiness).
+**Deadline:** official "Nov 4, 9:00 PM ET" = 2026-11-05 13:00 AEDT. Submit by 12:00 AEDT to be safe. See [FINAL_SUBMISSION_CHECKLIST.md](FINAL_SUBMISSION_CHECKLIST.md) for which requirements are confirmed and which are assumed. Paste into the form, then check each field's length limit. Use audience wording only (Larkspur Community College, Before, After, Agent Readiness).
 
 ## Project name
 Agent Readiness
