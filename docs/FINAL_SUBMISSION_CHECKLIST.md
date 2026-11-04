@@ -95,3 +95,12 @@ The application is frozen.
 - **Workspace:** opens the latest completed paired run. Until one exists it opens nothing and links the two separate recorded runs. Previews and copy show that both websites are tested; the grid and the agent viewer name the version of each agent.
 - **Live report** (`#/reports/latest`): the same latest live paired run. Until one exists, it shows the two separate 4 Nov runs as two runs, with their run ids.
 - **Checks:** vitest 235 passed; paired judge e2e rehearsal passed (6/6, Before and After report); the production sweep and both layouts are clean.
+
+## 9. First live paired run (launched by the owner from the Workspace, 2026-11-04 ~04:20 UTC)
+- **Run:** `eval-1cf64d5eae90bcaeab531b4886140c14`: 6/6 agents completed, report available.
+- **Cost:** settled US$0.704994 from the ledger (49 requests, 0 unsettled); reserved US$3.74, the rest released.
+- **Before:** 0/3 correct, 39 model requests, 326 s, 10 course pages opened.
+- **After:** 3/3 correct (1/3 exact match), 10 model requests, 57 s, 0 course pages opened.
+- **Verified:** the Workspace opens this run by default and Live report (`#/reports/latest`) opens the same report, titled "Before vs After", on desktop and mobile with 0 errors.
+- **Budget:** `ar-a20-2026-11` spent A$2.49 of A$20 (5 runs).
+- **Showcase and Home** still use the two separate 4 Nov runs as their recorded evidence (unchanged).
