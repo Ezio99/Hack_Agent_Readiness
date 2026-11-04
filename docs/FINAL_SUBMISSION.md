@@ -43,7 +43,8 @@ Meta Muse Spark via the Meta Model API, Browser Use, Playwright/Chromium, Python
 - Live product: https://209-38-84-72.sslip.io
   - Canonical results ("See the results"): https://209-38-84-72.sslip.io/#/reports/eval-1cf64d5eae90bcaeab531b4886140c14
   - The Larkspur journey ("How it works"): `#/lifecycle`
-  - Workspace ("Run an evaluation"; every run evaluates both websites side by side, 6 agents; access code needed): `#/run`
+  - Workspace: `#/run`. Everyone can watch running and completed evaluations; starting a new live run needs an operator code, which is not distributed.
+- Evidence and reproducibility for judges (no credentials needed for the evidence; optional local runs with a judge-owned key): the README's "Evaluate it" section.
   - Technical methodology: `#/how`
   - Earlier evaluations (historical Showcase): `#/showcase`
 - Historical reports (separate runs, one per website): `#/reports/eval-ea13944e8ba5c08e8893426b2f8b1c8f`, `#/reports/eval-5cf934b372942da74f5157c5fca39fd6`
