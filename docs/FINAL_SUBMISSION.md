@@ -44,9 +44,9 @@ Meta Muse Spark via the Meta Model API, Browser Use, Playwright/Chromium, Python
   - Canonical results ("See the results"): https://209-38-84-72.sslip.io/#/reports/eval-1cf64d5eae90bcaeab531b4886140c14
   - The Larkspur journey ("How it works"): `#/lifecycle`
   - Workspace: `#/run`. Everyone can watch running and completed evaluations; starting a new live run needs an operator code, which is not distributed.
-- Evidence and reproducibility for judges (no credentials needed for the evidence; optional local runs with a judge-owned key): the README's "Evaluate it" section.
   - Technical methodology: `#/how`
   - Earlier evaluations (historical Showcase): `#/showcase`
+- Evidence and reproducibility for judges (no credentials needed for the evidence; optional local runs with a judge-owned key): the README's "Evaluate it" section.
 - Historical reports (separate runs, one per website): `#/reports/eval-ea13944e8ba5c08e8893426b2f8b1c8f`, `#/reports/eval-5cf934b372942da74f5157c5fca39fd6`
 - Repository: https://github.com/Ezio99/Hack_Agent_Readiness/tree/final-showcase (or link the exact commit).
 - **Demo video (official hackathon demo, 2:59, YouTube):** https://www.youtube.com/watch?v=jWPLlQgWeS0
