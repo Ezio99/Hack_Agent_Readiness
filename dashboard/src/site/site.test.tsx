@@ -107,6 +107,9 @@ describe('homepage (the featured Larkspur story)', () => {
     for (const s of ['39', '10', '74% fewer after the change', '0/3', '3/3', '326 s → 57 s, 83% less', 'US$0.571 → US$0.134, 77% less', 'weekend task: 1/4 → 4/4 courses found',
                      '1 of 4 courses found', 'All 4 courses found', QUALIFIER, 'Larkspur Community College', 'Measured live', 'Original website', 'Agent-ready website',
                      'View full paired evaluation report', ...AFTER_CHANGES.map(i => i.title)]) expect(text).toContain(s);
+    const toShowcase = [...host.querySelectorAll('main a[href="#/showcase"]')].map(a => a.textContent!.replace('→', '').trim());
+    expect(toShowcase.length).toBeGreaterThan(0); for (const t of toShowcase) expect(t).toBe('Explore an earlier evaluation');   // the historical runs, named as such
+    expect(text).not.toContain('Watch before and after');
     const O = BEFORE.totals.polishedoriginal, M = AFTER.totals.modifiedpolished;
     for (const s of [`${O.requests} → ${M.requests}`, `${O.seconds} s → ${M.seconds} s`, '58%', 'latest']) expect(text).not.toContain(s);   // never the separate historical runs
     expect(text).toContain(PAIRED.journeys['polishedoriginal-2'].steps.at(-1)!.memory!);          // the agent's own words, unedited

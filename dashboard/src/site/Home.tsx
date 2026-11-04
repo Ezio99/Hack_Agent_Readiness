@@ -98,7 +98,7 @@ export function Home({ section }: { section?: string }) {
             <p className="lede" data-reveal>Agent Readiness sends real Meta Muse Spark browser agents to do your customers’ tasks on your website, checks every answer against your own data, and tells you what to change. Then it runs the same tasks on your improved site and shows the difference.</p>
             <LatestLive className="hero-latest" />
             <div className="hero-cta" data-reveal>
-              <a className="btn btn-signal" href="#/showcase">Watch before and after <span className="arr" aria-hidden="true">→</span></a>
+              <a className="btn btn-signal" href="#/showcase">Explore an earlier evaluation <span className="arr" aria-hidden="true">→</span></a>
               <a className="btn btn-ghost" href="#/run">Run a live evaluation</a>
             </div>
             <div className="hero-note" data-reveal><HeroNote /></div>
@@ -117,7 +117,7 @@ export function Home({ section }: { section?: string }) {
             <p>On the original catalogue, agents answered {C0} of {N} questions correctly. Agent Readiness identified the obstacles and
               recommended targeted improvements. After implementing those changes, agents answered {C1} of {N} correctly, using {fewerPct(O.requests, M.requests)}% fewer model requests.</p>
             <p className="qualifier">{QUALIFIER}</p>
-            <p className="polished-cta"><a className="btn btn-signal" href="#/showcase">Watch before and after <span className="arr" aria-hidden="true">→</span></a>
+            <p className="polished-cta"><a className="btn btn-signal" href="#/showcase">Explore an earlier evaluation <span className="arr" aria-hidden="true">→</span></a>
               <a className="btn btn-ghost" href="#/run">Run it live</a></p>
           </div>
           <dl className="polished-nums" data-reveal>
@@ -188,7 +188,7 @@ export function Home({ section }: { section?: string }) {
           <p className="eyebrow"><b>04</b> — The improved website</p>
           <h2 id="learn-h" className="h2">Same design. <em>Readable by agents.</em></h2>
           <p className="lede">The improved {FEATURED.short} site keeps every page and the whole design. It changes only what the report recommended: every course card states all seven deciding facts, the dead end leads to the course, and each course describes itself in structured data.</p>
-          <div className="hero-cta"><a className="btn btn-signal" href="#/run">Run it live <span className="arr" aria-hidden="true">→</span></a><a className="btn btn-ghost" href="#/showcase">Watch before and after</a></div>
+          <div className="hero-cta"><a className="btn btn-signal" href="#/run">Run it live <span className="arr" aria-hidden="true">→</span></a><a className="btn btn-ghost" href="#/showcase">Explore an earlier evaluation</a></div>
           <table className="facts-table"><caption className="sr-only">Facts shown on the course cards, before and after</caption>
             <thead><tr><th scope="col">On the course cards</th><th scope="col">{ORIG}</th><th scope="col">{READY}</th></tr></thead>
             <tbody>{['Course fee', 'Duration', 'Level', 'Class day', 'Campus', 'Seats left', 'Materials'].map(f => <tr key={f}><th scope="row">{f}</th><td className="no">–</td><td className="yes">✓</td></tr>)}</tbody></table>
