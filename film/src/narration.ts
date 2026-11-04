@@ -47,7 +47,28 @@ export const ACT3: Act = {
   ],
 };
 
-export const ACTS = [ACT1, ACT2, ACT3];
+export const ACT4: Act = {
+  id: 'act4', vo: 'audio/vo/act4.wav', status: 'placeholder', frames: 1200, lines: [
+    { id: 'a4.again', at: 12, end: 125, text: 'We ran the same tasks again, this time with both versions side by side, in a new evaluation.' },
+    { id: 'a4.before', at: 165, end: 255, text: 'Before, the agent found just one of four matching courses.' },
+    { id: 'a4.after', at: 445, end: 610, text: 'After, it found all four, in three requests, without opening a single course page.' },
+    { id: 'a4.correct', at: 720, end: 805, text: 'Across the three tasks, correct answers went from zero to three.' },
+    { id: 'a4.metrics', at: 875, end: 1020, text: 'Seventy-four percent fewer requests. Eighty-three percent less time. Seventy-seven percent lower cost.' },
+    { id: 'a4.works', at: 1070, end: 1170, text: 'Same agent. Same tasks. A website that finally works for it.' },
+  ],
+};
+
+export const ACT5: Act = {
+  id: 'act5', vo: 'audio/vo/act5.wav', status: 'placeholder', frames: 750, lines: [
+    { id: 'a5.today', at: 15, end: 135, text: 'Today, Agent Readiness helps websites understand how AI agents experience them.' },
+    { id: 'a5.tomorrow', at: 165, end: 290, text: 'Tomorrow, it could help agents discover which websites they can actually use.' },
+    { id: 'a5.which', at: 330, end: 520, text: 'Which ones support their task. Which ones are reliable. And where they can succeed.' },
+    { id: 'a5.brand', at: 560, end: 600, text: 'Agent Readiness.' },
+    { id: 'a5.tagline', at: 615, end: 720, text: 'Building the discovery layer for the agentic web.' },
+  ],
+};
+
+export const ACTS = [ACT1, ACT2, ACT3, ACT4, ACT5];
 const ALL = new Map(ACTS.flatMap(a => a.lines.map(l => [l.id, l] as const)));
 /** The frame (act-local) a narration line starts; throws on an unknown id so a renamed line can never silently desync a scene. */
 export const cue = (id: string): number => { const l = ALL.get(id); if (!l) throw new Error(`unknown narration cue ${id}`); return l.at; };

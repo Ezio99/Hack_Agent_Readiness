@@ -1,0 +1,718 @@
+{
+ "evaluation": "eval-1cf64d5eae90bcaeab531b4886140c14",
+ "title": "Live evaluation · Larkspur Community College · Before vs After",
+ "mode": "paid",
+ "started_at": "2026-11-04T04:18:05.206347+00:00",
+ "finished_at": "2026-11-04T04:24:35.047013+00:00",
+ "agent": {
+  "model": "muse-spark-1.3",
+  "reasoning_effort": "low",
+  "max_completion_tokens": 4096,
+  "profile": "suite-v2-compat2"
+ },
+ "frozen_suite_sha256": "db2eb1cb64eb62448ded0168d849f8a0dad8ab6f2796db4aa4bacbe25a6fb045",
+ "snapshots": {
+  "Before": "2ee4a7be2bd0cfb66adef68779317ea40a27b55c7330cf4ca23bdc85ec91169a",
+  "After": "2a16c38be474b38f4634307e44a782eddadd1dba48b45d9c85dcb3059530569f"
+ },
+ "limit": 14,
+ "tasks": [
+  {
+   "n": 1,
+   "customer_wording": "I need a course that costs $250 or less and still has at least 5 seats left. What qualifies?"
+  },
+  {
+   "n": 2,
+   "customer_wording": "I work full-time on weekdays, so I can only do Saturday or Sunday. List Beginner courses that meet on Saturday or Sunday."
+  },
+  {
+   "n": 3,
+   "customer_wording": "I just graduated and need a cheap, quick skill for my CV. Find courses costing $180 or less that last 6 weeks or less."
+  }
+ ],
+ "cost_basis": "calculated from provider-reported token usage at published prices; not a bill",
+ "settled_total_usd": 0.704994,
+ "versions": {
+  "Before": {
+   "correct": 0,
+   "exact_match": 0,
+   "requests": 39,
+   "seconds": 326.07,
+   "cost_usd": 0.571451,
+   "course_pages_opened": 10,
+   "tasks": [
+    {
+     "n": 1,
+     "correct": false,
+     "exact_match": false,
+     "requests": 13,
+     "seconds": 104.83,
+     "course_pages_opened": 3,
+     "answer": [
+      "Checked 3 of 14 courses - none qualify (Watercolour foundations $260 / 7 seats fails price >$250, Life drawing studio $210 / 3 seats fails seats <5, Wheel-thrown pottery $395 / 2 seats fails both) - remaining 11 courses (Introduction to Python, Spreadsheets for small business, Web pages from scratch, Conversational Italian 1, Japanese for travellers, Spanish conversation 2, Beginners yoga, Mindful meditation, Home electrical basics, Furniture restoration, Advanced joinery) could not be checked within step budget, no confirmed qualifier found"
+     ],
+     "trial": "polishedoriginal-gen-23f1802ee0-n-r1"
+    },
+    {
+     "n": 2,
+     "correct": false,
+     "exact_match": false,
+     "requests": 13,
+     "seconds": 111.26,
+     "course_pages_opened": 4,
+     "answer": [
+      "Beginners yoga"
+     ],
+     "trial": "polishedoriginal-gen-8334922e62-n-r1"
+    },
+    {
+     "n": 3,
+     "correct": false,
+     "exact_match": false,
+     "requests": 13,
+     "seconds": 109.98,
+     "course_pages_opened": 3,
+     "answer": [
+      "Mindful meditation - $120, 4 weeks",
+      "Beginners yoga - $150, 6 weeks"
+     ],
+     "trial": "polishedoriginal-gen-f302fa8fe2-n-r1"
+    }
+   ]
+  },
+  "After": {
+   "correct": 3,
+   "exact_match": 1,
+   "requests": 10,
+   "seconds": 56.52,
+   "cost_usd": 0.133545,
+   "course_pages_opened": 0,
+   "tasks": [
+    {
+     "n": 1,
+     "correct": true,
+     "exact_match": false,
+     "requests": 4,
+     "seconds": 22.97,
+     "course_pages_opened": 0,
+     "answer": [
+      "Spreadsheets for small business - $180, 9 seats left",
+      "Conversational Italian 1 - $230, 6 seats left",
+      "Spanish conversation 2 - $230, 8 seats left",
+      "Beginners yoga - $150, 12 seats left",
+      "Mindful meditation - $120, 15 seats left"
+     ],
+     "trial": "modifiedpolished-gen-23f1802ee0-n-r1"
+    },
+    {
+     "n": 2,
+     "correct": true,
+     "exact_match": true,
+     "requests": 3,
+     "seconds": 17.86,
+     "course_pages_opened": 0,
+     "answer": [
+      "Wheel-thrown pottery",
+      "Beginners yoga",
+      "Mindful meditation",
+      "Home electrical basics"
+     ],
+     "trial": "modifiedpolished-gen-8334922e62-n-r1"
+    },
+    {
+     "n": 3,
+     "correct": true,
+     "exact_match": false,
+     "requests": 3,
+     "seconds": 15.69,
+     "course_pages_opened": 0,
+     "answer": [
+      "Spreadsheets for small business - $180, 4 weeks",
+      "Beginners yoga - $150, 6 weeks",
+      "Mindful meditation - $120, 4 weeks"
+     ],
+     "trial": "modifiedpolished-gen-f302fa8fe2-n-r1"
+    }
+   ]
+  }
+ },
+ "hero": {
+  "Before": {
+   "task": 2,
+   "answer": [
+    "Beginners yoga"
+   ],
+   "correct": false,
+   "requests": 13,
+   "seconds": 111.26,
+   "course_pages_opened": 4,
+   "steps": [
+    {
+     "step": 1,
+     "path": "/",
+     "memory": "Homepage shows 14 courses. Need to browse all courses and filter Beginner + Sat/Sun.",
+     "done": false,
+     "actions": [
+      {
+       "name": "Click",
+       "target": "“Browse all courses” · /courses"
+      }
+     ],
+     "screenshot": "captures/paired/before-t2-step-001.png",
+     "sha256": "8f126c0c489e0b67e01be1e6b907405f842383c86d53826684df98fe3b960bb4"
+    },
+    {
+     "step": 2,
+     "path": "/courses",
+     "memory": "On /courses page listing 14 courses. Need to check each course's level and meeting days for Beginner + Sat/Sun.",
+     "done": false,
+     "actions": [
+      {
+       "name": "Find elements",
+       "target": "a"
+      }
+     ],
+     "screenshot": "captures/paired/before-t2-step-002.png",
+     "sha256": "4e75d9d4085e6832da9d171f3ba3227fb5d754c53e1a03180493946b762ba33d"
+    },
+    {
+     "step": 3,
+     "path": "/courses",
+     "memory": "Have 14 course URLs. Starting detailed check for Beginner level + Sat/Sun meeting days. Checking course 1/14.",
+     "done": false,
+     "actions": [
+      {
+       "name": "Navigate",
+       "target": "/courses/watercolour-foundations"
+      }
+     ],
+     "screenshot": "captures/paired/before-t2-step-003.png",
+     "sha256": "4e75d9d4085e6832da9d171f3ba3227fb5d754c53e1a03180493946b762ba33d"
+    },
+    {
+     "step": 4,
+     "path": "/courses/watercolour-foundations",
+     "memory": "Checked 1/14: watercolour-foundations excluded (Tue). Need to systematically check remaining 13.",
+     "done": false,
+     "actions": [
+      {
+       "name": "Navigate",
+       "target": "/courses"
+      }
+     ],
+     "screenshot": "captures/paired/before-t2-step-004.png",
+     "sha256": "dfc9eabaebd4e8368958adf9a40b71028e7ceee820f8e206ee88cd1a4810c1db"
+    },
+    {
+     "step": 5,
+     "path": "/courses",
+     "memory": "1/14 checked: watercolour excluded. Need URLs for remaining.",
+     "done": false,
+     "actions": [
+      {
+       "name": "Find elements",
+       "target": "a"
+      }
+     ],
+     "screenshot": "captures/paired/before-t2-step-005.png",
+     "sha256": "6377b7117a281d246d0e989681a5b8cf1edd338240dfae5f2e7060b36b510482"
+    },
+    {
+     "step": 6,
+     "path": "/courses",
+     "memory": "1/14 checked (watercolour excluded Tue). Have full URL list. Need to check remaining 13 for Beginner+Sat/Sun with only ~8 steps left, so must visit one per step prioritizing likely matches.",
+     "done": false,
+     "actions": [
+      {
+       "name": "Find elements",
+       "target": "script"
+      },
+      {
+       "name": "Navigate",
+       "target": "/courses/life-drawing-studio"
+      }
+     ],
+     "screenshot": "captures/paired/before-t2-step-006.png",
+     "sha256": "6377b7117a281d246d0e989681a5b8cf1edd338240dfae5f2e7060b36b510482"
+    },
+    {
+     "step": 7,
+     "path": "/courses/life-drawing-studio",
+     "memory": "Checked 2/14: watercolour-foundations (Beg Tue excl), life-drawing-studio (Inter Thu excl). Need faster batch screening for Beginner+Sat/Sun.",
+     "done": false,
+     "actions": [
+      {
+       "name": "Navigate",
+       "target": "/courses"
+      }
+     ],
+     "screenshot": "captures/paired/before-t2-step-007.png",
+     "sha256": "82495a68bf8499e4254966eeafd27bb8502d8886b2f1b3d155c076d7617cdf77"
+    },
+    {
+     "step": 8,
+     "path": "/courses",
+     "memory": "Checked 2/14 excluded. Opening batch tabs for likely Beginner weekend candidates: yoga, Italian 1, Japanese.",
+     "done": false,
+     "actions": [
+      {
+       "name": "Navigate",
+       "target": "/courses/beginners-yoga"
+      },
+      {
+       "name": "Navigate",
+       "target": "/courses/conversational-italian-1"
+      },
+      {
+       "name": "Navigate",
+       "target": "/courses/japanese-for-travellers"
+      }
+     ],
+     "screenshot": "captures/paired/before-t2-step-008.png",
+     "sha256": "6377b7117a281d246d0e989681a5b8cf1edd338240dfae5f2e7060b36b510482"
+    },
+    {
+     "step": 9,
+     "path": "/courses/beginners-yoga",
+     "memory": "Matches so far: Beginners yoga (Beginner Sat). Excluded: watercolour Tue, life-drawing Thu. Need to screen remaining 11 quickly.",
+     "done": false,
+     "actions": [
+      {
+       "name": "Other action",
+       "target": null
+      }
+     ],
+     "screenshot": "captures/paired/before-t2-step-009.png",
+     "sha256": "70dff0f83fa3aeab043306405fc69442ca90bace7deb6f75c1e3776bd65e5a07"
+    },
+    {
+     "step": 10,
+     "path": "/courses",
+     "memory": "Confirmed MATCH: Beginners yoga (Beginner Saturday). Excluded 2. Need to check remaining 11 courses for Beginner+Sat/Sun.",
+     "done": false,
+     "actions": [
+      {
+       "name": "Find elements",
+       "target": "a"
+      }
+     ],
+     "screenshot": "captures/paired/before-t2-step-010.png",
+     "sha256": "4e75d9d4085e6832da9d171f3ba3227fb5d754c53e1a03180493946b762ba33d"
+    },
+    {
+     "step": 11,
+     "path": "/courses",
+     "memory": "Confirmed MATCH: Beginners yoga Beginner Sat. Excluded watercolour Tue, life-drawing Thu. Checking Italian 1 next.",
+     "done": false,
+     "actions": [
+      {
+       "name": "Navigate",
+       "target": "/courses/conversational-italian-1"
+      }
+     ],
+     "screenshot": "captures/paired/before-t2-step-011.png",
+     "sha256": "4e75d9d4085e6832da9d171f3ba3227fb5d754c53e1a03180493946b762ba33d"
+    },
+    {
+     "step": 12,
+     "path": "/courses/conversational-italian-1",
+     "memory": "Matches: Beginners yoga (Beginner Sat). Excluded: watercolour Tue, life-drawing Thu, Italian1 Mon. Need to confirm exact yoga title before done due to step budget.",
+     "done": false,
+     "actions": [
+      {
+       "name": "Other action",
+       "target": null
+      }
+     ],
+     "screenshot": "captures/paired/before-t2-step-012.png",
+     "sha256": "1f1ef7803d5f2f649a0d8d39d425547368020dad64eaec64d2fa7fc221f3f1de"
+    },
+    {
+     "step": 13,
+     "path": "/courses/beginners-yoga",
+     "memory": "Verified MATCH: Beginners yoga (Beginner Saturday). Excluded 3 courses. Remaining 10 unchecked due to step budget, returning partial verified result.",
+     "done": true,
+     "actions": [
+      {
+       "name": "Answer",
+       "target": "Beginners yoga"
+      }
+     ],
+     "screenshot": "captures/paired/before-t2-step-013.png",
+     "sha256": "70dff0f83fa3aeab043306405fc69442ca90bace7deb6f75c1e3776bd65e5a07"
+    }
+   ]
+  },
+  "After": {
+   "task": 2,
+   "answer": [
+    "Wheel-thrown pottery",
+    "Beginners yoga",
+    "Mindful meditation",
+    "Home electrical basics"
+   ],
+   "correct": true,
+   "requests": 3,
+   "seconds": 17.86,
+   "course_pages_opened": 0,
+   "steps": [
+    {
+     "step": 1,
+     "path": "/",
+     "memory": "Homepage shows 14 courses. Need to browse all courses and filter Beginner + weekend.",
+     "done": false,
+     "actions": [
+      {
+       "name": "Click",
+       "target": "“Browse all courses” · /courses"
+      }
+     ],
+     "screenshot": "captures/paired/after-t2-step-001.png",
+     "sha256": "8f126c0c489e0b67e01be1e6b907405f842383c86d53826684df98fe3b960bb4"
+    },
+    {
+     "step": 2,
+     "path": "/courses",
+     "memory": "Found 4 candidates: Wheel-thrown pottery (Sat), Beginners yoga (Sat), Mindful meditation (Sun), Home electrical basics (Sat) - all Beginner. Need to scroll to verify remaining 2 courses.",
+     "done": false,
+     "actions": [
+      {
+       "name": "Scroll",
+       "target": "down 1.0 page(s)"
+      }
+     ],
+     "screenshot": "captures/paired/after-t2-step-002.png",
+     "sha256": "6f0a18a99623fd2fed13ecaa4a22556c8194519cfe7c575feec41c5099ecff1f"
+    },
+    {
+     "step": 3,
+     "path": "/courses",
+     "memory": "Verified all 14 courses. Only 4 are Level Beginner AND Class day Saturday or Sunday: Wheel-thrown pottery (Sat), Beginners yoga (Sat), Mindful meditation (Sun), Home electrical basics (Sat). Furniture restoration is Sunday but Intermediate, so excluded.",
+     "done": true,
+     "actions": [
+      {
+       "name": "Answer",
+       "target": "Wheel-thrown pottery; Beginners yoga; Mindful meditation; Home electrical basics"
+      }
+     ],
+     "screenshot": "captures/paired/after-t2-step-003.png",
+     "sha256": "056a9dbf1d530da61330163456fde9db00ed36c7cd5173b420ee261e98371c3f"
+    }
+   ]
+  }
+ },
+ "product": {
+  "report": {
+   "route": "#/reports/eval-1cf64d5eae90bcaeab531b4886140c14",
+   "image": "captures/paired/product-report.png",
+   "sha256": "6b20c21cad31da0396d2b9845528fd509ec12107aec6ff5774293d54a0ee8968",
+   "height": 7324,
+   "boxes": {
+    "title": {
+     "x": 88,
+     "y": 178.4375,
+     "width": 1264,
+     "height": 122.375
+    },
+    "pairbars": {
+     "x": 88,
+     "y": 4701.96875,
+     "width": 616,
+     "height": 175.140625
+    },
+    "section0": {
+     "x": 88,
+     "y": 606.09375,
+     "width": 1264,
+     "height": 184.734375
+    },
+    "section1": {
+     "x": 88,
+     "y": 846.828125,
+     "width": 1264,
+     "height": 535.46875
+    },
+    "section2": {
+     "x": 88,
+     "y": 1438.296875,
+     "width": 1264,
+     "height": 2346
+    },
+    "section3": {
+     "x": 88,
+     "y": 3840.296875,
+     "width": 1264,
+     "height": 325.921875
+    },
+    "section4": {
+     "x": 88,
+     "y": 4222.21875,
+     "width": 1264,
+     "height": 654.890625
+    },
+    "section5": {
+     "x": 88,
+     "y": 4933.109375,
+     "width": 1264,
+     "height": 314.765625
+    },
+    "section6": {
+     "x": 88,
+     "y": 5303.875,
+     "width": 1264,
+     "height": 765.140625
+    },
+    "section7": {
+     "x": 88,
+     "y": 6125.015625,
+     "width": 1264,
+     "height": 485.515625
+    },
+    "section8": {
+     "x": 88,
+     "y": 6666.53125,
+     "width": 1264,
+     "height": 260.671875
+    }
+   },
+   "text": "Journey\n/\nBefore and after\n\nREADINESS REPORT · LARKSPUR COMMUNITY COLLEGE\n\nLive evaluation · Larkspur Community College · Before vs After\nLive · Meta Muse Spark\nLive run in this product · 4 Nov 2026, 03:18 pm AEDT\nAGENT RUNS\n6/6 finished · 3 tasks on 2 versions of the site\nWEBSITE VERSIONS\nBefore\nAfter\nAGENT\nmuse-spark-1.3, reasoning low · Browser Use in an isolated Chromium\nTASKS\n3 customer tasks, the same for both versions\nMODEL COST\nUS$0.7050 for all agents · calculated from the provider’s token counts\nBefore\nCORRECT ANSWERS\n0/3\nEXACT MATCH\n0/3\nMODEL REQUESTS\n39\nAGENT TIME\n326 s\nMODEL COST\nUS$0.571\nAfter\nCORRECT ANSWERS\n3/3\nEXACT MATCH\n1/3\nMODEL REQUESTS\n10\nAGENT TIME\n57 s\nMODEL COST\nUS$0.134\nTASKS\nEvery task, on every version of the site\n\nBasis. The customer’s own words, given to the agent unchanged. Each cell is one recorded browser agent; open a task to replay both side by side.\n\nTask\t\nBefore\t\nAfter\t\nReplay\n\nTASK 1\nI need a course that costs $250 or less and still has at least 5 seats left. What qualifies?\n\t\n✕ Not correct\n✕ Not an exact match\nnamed 5 of 5 + 9 other · 13 requests · 105 s\n\t\n✓ Correct\n✕ Not an exact match\nnamed 5 of 5 · 4 requests · 23 s\n\tReplay\n→\n\nTASK 2\nI work full-time on weekdays, so I can only do Saturday or Sunday. List Beginner courses that meet on Saturday or Sunday.\n\t\n✕ Not correct\n✕ Not an exact match\nnamed 1 of 4 · 13 requests · 111 s\n\t\n✓ Correct\n✓ Exact match\nnamed 4 of 4 · 3 requests · 18 s\n\tReplay\n→\n\nTASK 3\nI just graduated and need a cheap, quick skill for my CV. Find courses costing $180 or less that last 6 weeks or less.\n\t\n✕ Not correct\n✕ Not an exact match\nnamed 2 of 3 · 13 requests · 110 s\n\t\n✓ Correct\n✕ Not an exact match\nnamed 3 of 3 · 3 requests · 16 s\n\tReplay\n→\nRECOMMENDATIONS\nWhat slowed the agents down, and what to change\n\nBasis. Observations are measured page properties and recorded agent behaviour, each with its evidence. Likely causes link a missing fact to the extra navigation on the tasks that needed it.\n\n11 observations, 4 likely causes · After fixed 7 of the 7 page problems found on Before.\n\nLikely causes and what to change\nMEDIUM\nBefore\ntask 2\n\nListing cards omit 'class day': suspected contributor to course-page navigation on task(s) 2\n\ntasks 2 compare items by class day\n\nRecommendation. State class day on each card of /courses (visible text next to the item name).\n\nEvidence (7)\nMEDIUM\nBefore\ntask 1, 3\n\nListing cards omit 'course fee': suspected contributor to course-page navigation on task(s) 1, 3\n\ntasks 1, 3 compare items by course fee\n\nRecommendation. State course fee on each card of /courses (visible text next to the item name).\n\nEvidence (10)\nMEDIUM\nBefore\ntask 3\n\nListing cards omit 'duration': suspected contributor to course-page navigation on task(s) 3\n\ntasks 3 compare items by duration\n\nRecommendation. State duration on each card of /courses (visible text next to the item name).\n\nEvidence (6)\nMEDIUM\nBefore\ntask 1\n\nListing cards omit 'seats left': suspected contributor to course-page navigation on task(s) 1\n\ntasks 1 compare items by seats left\n\nRecommendation. State seats left on each card of /courses (visible text next to the item name).\n\nEvidence (7)\nObservations\nAll\nPage structure\nAgent behaviour\nMEDIUM\nBefore\n\n'campus' is only on course pages, not on the /courses listing\n\nan agent comparing items by campus must open up to 14 course pages\n\nRecommendation. State campus on each card of /courses (visible text next to the item name).\n\nEvidence (2)\nMEDIUM\nBefore\n\n'class day' is only on course pages, not on the /courses listing\n\nan agent comparing items by class day must open up to 14 course pages\n\nRecommendation. State class day on each card of /courses (visible text next to the item name).\n\nEvidence (2)\nMEDIUM\nBefore\n\n'course fee' is only on course pages, not on the /courses listing\n\nan agent comparing items by course fee must open up to 14 course pages\n\nRecommendation. State course fee on each card of /courses (visible text next to the item name).\n\nEvidence (2)\nMEDIUM\n"
+  },
+  "report-t2": {
+   "route": "#/reports/eval-1cf64d5eae90bcaeab531b4886140c14/tasks/2",
+   "image": "captures/paired/product-report-t2.png",
+   "sha256": "514a371483882423428709aea7231e96ff62dc8ce010abd926fce6bf6650f006",
+   "height": 2943,
+   "boxes": {
+    "title": {
+     "x": 88,
+     "y": 178.4375,
+     "width": 880,
+     "height": 134.390625
+    },
+    "sides": {
+     "x": 88,
+     "y": 472.5,
+     "width": 1264,
+     "height": 1332.328125
+    },
+    "section0": {
+     "x": 88,
+     "y": 472.5,
+     "width": 618,
+     "height": 1332.328125
+    },
+    "section1": {
+     "x": 734,
+     "y": 472.5,
+     "width": 618,
+     "height": 1086.9375
+    },
+    "section2": {
+     "x": 88,
+     "y": 1860.828125,
+     "width": 1264,
+     "height": 685.4375
+    }
+   },
+   "text": "Journey\n/\nBefore and after\n/\nLive evaluation · Larkspur Community College · Before vs After\n\nTASK 2\n\nI work full-time on weekdays, so I can only do Saturday or Sunday. List Beginner courses that meet on Saturday or Sunday.\n\nThe customer's own wording, executed unchanged on both versions (Before and After) by the same agent, with the same limits.\n\nFacts this question depends on: \nlevel\n—\nBefore: item pages only\nAfter: listing cards\nclass day\n—\nBefore: item pages only\nAfter: listing cards\n\nTask 1\nTask 2\nTask 3\nBefore\n✕ Not correct\n✕ Not an exact match\nANSWER\n1 of 4 expected items\nREQUESTS\n13 of 14\nTIME\n111 s\nMODEL COST\nUS$0.194\nPAGES\n6 distinct · 4 revisits\nEVIDENCE\n3 required page(s) not shown\nAGENT'S ANSWER, AS RECORDED\n\nBeginners yoga\n\nUsed 13 of 14 requests (at or near the limit)\nPartial answer\n\nPATH / → /courses → /courses/watercolour-foundations → /courses → /courses/life-drawing-studio → /courses → /courses/beginners-yoga → /courses → /courses/conversational-italian-1 → /courses/beginners-yoga\n\n/\n←\n→\nstep 1 / 13\n\nClick “Browse all courses” · /courses\n\nAGENT MEMORY Homepage shows 14 courses. Need to browse all courses and filter Beginner + Sat/Sun.\n\nNEXT GOAL Click Browse all courses to view course list\n\n1 Click /\n2 Find elements /courses\n3 Navigate /courses\n4 Navigate /courses/watercolour-foundations\n5 Find elements /courses\n6 Find elements, Navigate /courses\n7 Navigate /courses/life-drawing-studio\n8 Navigate, Navigate, Navigate /courses\n9 Other action /courses/beginners-yoga\n10 Find elements /courses\n11 Navigate /courses\n12 Other action /courses/conversational-italian-1\n13 Answer /courses/beginners-yoga\nAfter\n✓ Correct\n✓ Exact match\nANSWER\n4 of 4 expected items\nREQUESTS\n3 of 14\nTIME\n18 s\nMODEL COST\nUS$0.039\nPAGES\n2 distinct · 0 revisits\nEVIDENCE\nanswer pages shown\nAGENT'S ANSWER, AS RECORDED\n\nWheel-thrown pottery; Beginners yoga; Mindful meditation; Home electrical basics\n\nPATH / → /courses\n\n/\n←\n→\nstep 1 / 3\n\nClick “Browse all courses” · /courses\n\nAGENT MEMORY Homepage shows 14 courses. Need to browse all courses and filter Beginner + weekend.\n\nNEXT GOAL Click Browse all courses to see course list\n\n1 Click /\n2 Scroll /courses\n3 Answer /courses\nDiagnostics that cite task 2\n\nObserved facts and hypotheses are labelled separately; a hypothesis is a suspected contributor, not an established cause.\n\nHIGH\nBefore\ntask 2\n\nbudget exhaustion on task 2\n\nthe agent ran out of its request budget, or nearly did\n\nRecommendation. Find which pages consumed the budget (steps cited) and whether the needed facts could be reached in fewer steps.\n\nEvidence (1)\nHIGH\nBefore\ntask 2\n\nincorrect answer on task 2\n\nthe task was not completed correctly\n\nRecommendation. Compare the agent's answer with the pages it saw (trial steps cited) to see where the needed information was missing or misread.\n\nEvidence (1)\nLOW\nBefore\ntask 2\n\nrevisit on task 2\n\nthe same page was shown repeatedly\n\nRecommendation. Check why the agent returned to this page: it may be a listing it must consult repeatedly to compare items.\n\nEvidence (1)\nLOW\nBefore\ntask 2\n\nunnecessary navigation on task 2\n\nsteps spent on pages that do not hold the answer\n\nRecommendation. Check the pages visited off the evidence path: navigation labels may be misleading the agent.\n\nEvidence (1)\nMEDIUM\nBefore\ntask 2\n\nListing cards omit 'class day': suspected contributor to course-page navigation on task(s) 2\n\ntasks 2 compare items by class day\n\nRecommendation. State class day on each card of /courses (visible text next to the item name).\n\nEvidence (7)"
+  },
+  "live": {
+   "route": "#/reports/latest",
+   "image": "captures/paired/product-live.png",
+   "sha256": "6b20c21cad31da0396d2b9845528fd509ec12107aec6ff5774293d54a0ee8968",
+   "height": 7324,
+   "boxes": {
+    "title": {
+     "x": 88,
+     "y": 178.4375,
+     "width": 1264,
+     "height": 122.375
+    },
+    "pairbars": {
+     "x": 88,
+     "y": 4701.96875,
+     "width": 616,
+     "height": 175.140625
+    },
+    "section0": {
+     "x": 88,
+     "y": 606.09375,
+     "width": 1264,
+     "height": 184.734375
+    },
+    "section1": {
+     "x": 88,
+     "y": 846.828125,
+     "width": 1264,
+     "height": 535.46875
+    },
+    "section2": {
+     "x": 88,
+     "y": 1438.296875,
+     "width": 1264,
+     "height": 2346
+    },
+    "section3": {
+     "x": 88,
+     "y": 3840.296875,
+     "width": 1264,
+     "height": 325.921875
+    },
+    "section4": {
+     "x": 88,
+     "y": 4222.21875,
+     "width": 1264,
+     "height": 654.890625
+    },
+    "section5": {
+     "x": 88,
+     "y": 4933.109375,
+     "width": 1264,
+     "height": 314.765625
+    },
+    "section6": {
+     "x": 88,
+     "y": 5303.875,
+     "width": 1264,
+     "height": 765.140625
+    },
+    "section7": {
+     "x": 88,
+     "y": 6125.015625,
+     "width": 1264,
+     "height": 485.515625
+    },
+    "section8": {
+     "x": 88,
+     "y": 6666.53125,
+     "width": 1264,
+     "height": 260.671875
+    }
+   },
+   "text": "Journey\n/\nBefore and after\n\nREADINESS REPORT · LARKSPUR COMMUNITY COLLEGE\n\nLive evaluation · Larkspur Community College · Before vs After\nLive · Meta Muse Spark\nLive run in this product · 4 Nov 2026, 03:18 pm AEDT\nAGENT RUNS\n6/6 finished · 3 tasks on 2 versions of the site\nWEBSITE VERSIONS\nBefore\nAfter\nAGENT\nmuse-spark-1.3, reasoning low · Browser Use in an isolated Chromium\nTASKS\n3 customer tasks, the same for both versions\nMODEL COST\nUS$0.7050 for all agents · calculated from the provider’s token counts\nBefore\nCORRECT ANSWERS\n0/3\nEXACT MATCH\n0/3\nMODEL REQUESTS\n39\nAGENT TIME\n326 s\nMODEL COST\nUS$0.571\nAfter\nCORRECT ANSWERS\n3/3\nEXACT MATCH\n1/3\nMODEL REQUESTS\n10\nAGENT TIME\n57 s\nMODEL COST\nUS$0.134\nTASKS\nEvery task, on every version of the site\n\nBasis. The customer’s own words, given to the agent unchanged. Each cell is one recorded browser agent; open a task to replay both side by side.\n\nTask\t\nBefore\t\nAfter\t\nReplay\n\nTASK 1\nI need a course that costs $250 or less and still has at least 5 seats left. What qualifies?\n\t\n✕ Not correct\n✕ Not an exact match\nnamed 5 of 5 + 9 other · 13 requests · 105 s\n\t\n✓ Correct\n✕ Not an exact match\nnamed 5 of 5 · 4 requests · 23 s\n\tReplay\n→\n\nTASK 2\nI work full-time on weekdays, so I can only do Saturday or Sunday. List Beginner courses that meet on Saturday or Sunday.\n\t\n✕ Not correct\n✕ Not an exact match\nnamed 1 of 4 · 13 requests · 111 s\n\t\n✓ Correct\n✓ Exact match\nnamed 4 of 4 · 3 requests · 18 s\n\tReplay\n→\n\nTASK 3\nI just graduated and need a cheap, quick skill for my CV. Find courses costing $180 or less that last 6 weeks or less.\n\t\n✕ Not correct\n✕ Not an exact match\nnamed 2 of 3 · 13 requests · 110 s\n\t\n✓ Correct\n✕ Not an exact match\nnamed 3 of 3 · 3 requests · 16 s\n\tReplay\n→\nRECOMMENDATIONS\nWhat slowed the agents down, and what to change\n\nBasis. Observations are measured page properties and recorded agent behaviour, each with its evidence. Likely causes link a missing fact to the extra navigation on the tasks that needed it.\n\n11 observations, 4 likely causes · After fixed 7 of the 7 page problems found on Before.\n\nLikely causes and what to change\nMEDIUM\nBefore\ntask 2\n\nListing cards omit 'class day': suspected contributor to course-page navigation on task(s) 2\n\ntasks 2 compare items by class day\n\nRecommendation. State class day on each card of /courses (visible text next to the item name).\n\nEvidence (7)\nMEDIUM\nBefore\ntask 1, 3\n\nListing cards omit 'course fee': suspected contributor to course-page navigation on task(s) 1, 3\n\ntasks 1, 3 compare items by course fee\n\nRecommendation. State course fee on each card of /courses (visible text next to the item name).\n\nEvidence (10)\nMEDIUM\nBefore\ntask 3\n\nListing cards omit 'duration': suspected contributor to course-page navigation on task(s) 3\n\ntasks 3 compare items by duration\n\nRecommendation. State duration on each card of /courses (visible text next to the item name).\n\nEvidence (6)\nMEDIUM\nBefore\ntask 1\n\nListing cards omit 'seats left': suspected contributor to course-page navigation on task(s) 1\n\ntasks 1 compare items by seats left\n\nRecommendation. State seats left on each card of /courses (visible text next to the item name).\n\nEvidence (7)\nObservations\nAll\nPage structure\nAgent behaviour\nMEDIUM\nBefore\n\n'campus' is only on course pages, not on the /courses listing\n\nan agent comparing items by campus must open up to 14 course pages\n\nRecommendation. State campus on each card of /courses (visible text next to the item name).\n\nEvidence (2)\nMEDIUM\nBefore\n\n'class day' is only on course pages, not on the /courses listing\n\nan agent comparing items by class day must open up to 14 course pages\n\nRecommendation. State class day on each card of /courses (visible text next to the item name).\n\nEvidence (2)\nMEDIUM\nBefore\n\n'course fee' is only on course pages, not on the /courses listing\n\nan agent comparing items by course fee must open up to 14 course pages\n\nRecommendation. State course fee on each card of /courses (visible text next to the item name).\n\nEvidence (2)\nMEDIUM\n"
+  },
+  "workspace": {
+   "route": "#/run",
+   "image": "captures/paired/product-workspace.png",
+   "sha256": "5268da9f97ee103017c148078278b2aeaec43fc90ce5637d3702cfd282be0578",
+   "height": 8663,
+   "boxes": {
+    "title": {
+     "x": 88,
+     "y": 149.9375,
+     "width": 804,
+     "height": 68
+    },
+    "pairbars": {
+     "x": 461.1875,
+     "y": 5629.90625,
+     "width": 429.40625,
+     "height": 175.140625
+    },
+    "section0": {
+     "x": 461.1875,
+     "y": 467.625,
+     "width": 890.8125,
+     "height": 7530.640625
+    },
+    "section1": {
+     "x": 461.1875,
+     "y": 1071.5625,
+     "width": 890.8125,
+     "height": 249.78125
+    },
+    "section2": {
+     "x": 461.1875,
+     "y": 1377.34375,
+     "width": 890.8125,
+     "height": 647.421875
+    },
+    "section3": {
+     "x": 461.1875,
+     "y": 2080.765625,
+     "width": 890.8125,
+     "height": 2631.46875
+    },
+    "section4": {
+     "x": 461.1875,
+     "y": 4768.234375,
+     "width": 890.8125,
+     "height": 325.921875
+    },
+    "section5": {
+     "x": 461.1875,
+     "y": 5150.15625,
+     "width": 890.8125,
+     "height": 654.890625
+    },
+    "section6": {
+     "x": 461.1875,
+     "y": 5861.046875,
+     "width": 890.8125,
+     "height": 314.765625
+    },
+    "section7": {
+     "x": 461.1875,
+     "y": 6231.8125,
+     "width": 890.8125,
+     "height": 845.390625
+    },
+    "section8": {
+     "x": 461.1875,
+     "y": 7133.203125,
+     "width": 890.8125,
+     "height": 485.515625
+    },
+    "section9": {
+     "x": 461.1875,
+     "y": 7674.71875,
+     "width": 890.8125,
+     "height": 304.046875
+    },
+    "section10": {
+     "x": 461.1875,
+     "y": 8026.265625,
+     "width": 890.8125,
+     "height": 239.953125
+    },
+    "section11": {
+     "x": 461.1875,
+     "y": 8087.265625,
+     "width": 890.8125,
+     "height": 178.953125
+    }
+   },
+   "text": "EVALUATION WORKSPACE\n\nRun real agents on a website.\n\nFresh Muse Spark browser agents do real customer tasks on two versions of a website. Every answer is checked against the site’s own records, and the report shows where agents got stuck and what to change.\n\nThis live evaluation gives 3 customer tasks (the same for every version; see them) to browser agents on both versions of the college’s website: Before (the redesigned site) and After (the same site with Agent Readiness’s recommendations applied), three agents on each. Both websites are frozen copies of the fictional Larkspur Community College, run with the same tasks, agent and limits.\n\nWorker available\nReady to start a live evaluation · one evaluation runs at a time · about 8 min\nNew evaluation\nLive · Meta Muse Spark\n01 · WEBSITE\nLarkspur Community College\nBefore · /courses · the copy the agents browse\nAfter · /courses · the copy the agents browse\n3 customer tasks · Before vs After site · runs while the budget lasts\n02 · WHAT RUNS\n\n6 browser agents, one per task on each site · about 8 min\n\nI need a course that costs $250 or less and still has at least 5 seats left. What qualifies?\nI work full-time on weekdays, so I can only do Saturday or Sunday. List Beginner courses that meet on Saturday or Sunday.\nI just graduated and need a cheap, quick skill for my CV. Find courses costing $180 or less that last 6 weeks or less.\n03 · RUN\nAccess code\nFOR JUDGES\n\nHeld in this page's memory only (never saved; re-enter it after a reload) and sent only as an authorization header when you start. The server checks it.\n\nA$17.51 of A$20.00 evaluation budget left\nspent A$2.49\nA new evaluation starts while less than A$20 is committed. Each run can cost at most A$5.61, so the last one can take the total to at most A$25.61.\n\nRun live evaluation\n\nEnter your access code to start a live evaluation. Anyone can watch running and completed evaluations.\n\nMethodology & provenance\nCompleted\n6 / 6 agent runs finished\n6:43 elapsed\nActual cost US$0.70 · ar-a20-2026-11\nWebsite version: Before vs After\n1 repetition · started Nov 4, 03:17 PM\neval-1cf64d5e\nAgent runs\nReadiness report\n\nREADINESS REPORT · LARKSPUR COMMUNITY COLLEGE\n\nLive evaluation · Larkspur Community College · Before vs After\nLive · Meta Muse Spark\nLive run in this product · 4 Nov 2026, 03:18 pm AEDT\nAGENT RUNS\n6/6 finished · 3 tasks on 2 versions of the site\nWEBSITE VERSIONS\nBefore\nAfter\nAGENT\nmuse-spark-1.3, reasoning low · Browser Use in an isolated Chromium\nTASKS\n3 customer tasks, the same for both versions\nMODEL COST\nUS$0.7050 for all agents · calculated from the provider’s token counts\nBefore\nCORRECT ANSWERS\n0/3\nEXACT MATCH\n0/3\nMODEL REQUESTS\n39\nAGENT TIME\n326 s\nMODEL COST\nUS$0.571\nAfter\nCORRECT ANSWERS\n3/3\nEXACT MATCH\n1/3\nMODEL REQUESTS\n10\nAGENT TIME\n57 s\nMODEL COST\nUS$0.134\nTASKS\nEvery task, on every version of the site\n\nBasis. The customer’s own words, given to the agent unchanged. Each cell is one recorded browser agent; open a task to replay both side by side.\n\nTask\t\nBefore\t\nAfter\t\nReplay\n\nTASK 1\nI need a course that costs $250 or less and still has at least 5 seats left. What qualifies?\n\t\n✕ Not correct\n✕ Not an exact match\nnamed 5 of 5 + 9 other · 13 requests · 105 s\n\t\n✓ Correct\n✕ Not an exact match\nnamed 5 of 5 · 4 requests · 23 s\n\tReplay\n→\n\nTASK 2\nI work full-time on weekdays, so I can only do Saturday or Sunday. List Beginner courses that meet on Saturday or Sunday.\n\t\n✕ Not correct\n✕ Not an exact match\nnamed 1 of 4 · 13 requests · 111 s\n\t\n✓ Correct\n✓ Exact match\nnamed 4 of 4 · 3 requests · 18 s\n\tReplay\n→\n\nTASK 3\nI just graduated and need a cheap, quick skill for my CV. Find courses costing $180 or less that last 6 weeks or less.\n\t\n✕ Not correct\n✕ Not an exact match\nnamed 2 of 3 · 13 requests · 110 s\n\t\n✓ Correct\n✕ Not an exact match\nnamed 3 of 3 · 3 requests · 16 s\n\tReplay\n→\nRECOMMENDATIONS\nWhat slowed the agents down, and what to change\n\nBasis. Observations are measured page properties and recorded agent behaviour, each with its e",
+   "redact": [
+    {
+     "x": 1003.578125,
+     "y": 468.625,
+     "width": 102,
+     "height": 18,
+     "reason": "internal budget identifier"
+    },
+    {
+     "x": 1498.921875,
+     "y": 8139.453125,
+     "width": 88,
+     "height": 16,
+     "reason": "internal budget identifier"
+    },
+    {
+     "x": 1500.921875,
+     "y": 8187.375,
+     "width": 88,
+     "height": 16,
+     "reason": "internal budget identifier"
+    },
+    {
+     "x": 1499.921875,
+     "y": 8235.296875,
+     "width": 88,
+     "height": 16,
+     "reason": "internal budget identifier"
+    }
+   ]
+  }
+ }
+}

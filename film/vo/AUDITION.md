@@ -1,5 +1,15 @@
 # Voiceover: audition and generation guide (ElevenLabs)
 
+## The simplest workflow (about 30 minutes for you, plus about 20 minutes for me to re-time and re-render)
+1. **Audition (free, today):** create a free ElevenLabs account. Generate the three audition lines below with **Dan**, then with **Haseeb** (section 1). Choose one voice.
+2. **Approve the spend:** the Starter plan costs US$1 for the first month. It is needed for the commercial licence.
+3. **Generate (Starter):** Text to Speech, chosen voice, fixed settings. Paste each act from `vo/SCRIPT.md` as its own generation, five generations in all. Download `act1.mp3` … `act5.mp3`.
+4. **Hand over:** put the five files in `film/public/audio/vo/`.
+5. **I then:**
+   - mark each line's start on the waveform and update `src/narration.ts`, with each act set to `status: 'recorded'`;
+   - re-render with voice, music and SFX on separate tracks, with the music ducked under the voice.
+   If an act's voice runs longer than its picture, I lengthen that act; I never speed up the voice.
+
 **Narrator:** Dan ("warm & engaging British male") is first choice; Haseeb (British documentary, softer) is the alternative. One narrator for all five acts.
 
 **Spending:** none until approved. Auditions use the free plan's monthly credits. The final, licensed generation needs the Starter plan (US$1 for the first month, then US$6/month; it can be cancelled after delivery) and **must be approved first**.

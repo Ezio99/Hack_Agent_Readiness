@@ -4,8 +4,8 @@ Source of truth: `src/narration.ts`; this file mirrors it for pasting into Eleve
 
 **Status:**
 - Act 1: approved
-- Acts 2–3: proposed
-- Acts 4–5: to be written after the canonical-evaluation decision
+- Acts 2–3: approved
+- Acts 4–5: proposed (adapted from the director's lines)
 
 ## Act 1: the opening (curious, unhurried)
 This is Larkspur Community College.
@@ -53,3 +53,27 @@ It also fixed a dead end, where an agent’s guessed address led nowhere.
 And it described every course in structured data that agents can read directly.
 
 Then the same agent got the same task, on the improved website.
+
+## Act 4: the proof (confident; let the numbers land)
+We ran the same tasks again, this time with both versions side by side, in a new evaluation.
+
+Before, the agent found just one of four matching courses.
+
+After, it found all four, in three requests, without opening a single course page.
+
+Across the three tasks, correct answers went from zero to three.
+
+Seventy-four percent fewer requests. Eighty-three percent less time. Seventy-seven percent lower cost.
+
+Same agent. Same tasks. A website that finally works for it.
+
+## Act 5: the product and the vision (optimistic, unhurried)
+Today, Agent Readiness helps websites understand how AI agents experience them.
+
+Tomorrow, it could help agents discover which websites they can actually use.
+
+Which ones support their task. Which ones are reliable. And where they can succeed.
+
+Agent Readiness.
+
+Building the discovery layer for the agentic web.

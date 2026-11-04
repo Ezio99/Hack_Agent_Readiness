@@ -1,6 +1,8 @@
-# Narration, voiceover pipeline and approvals (Acts 1–3)
+# Narration, voiceover pipeline and approvals (the complete film, 0:00–3:00)
 
-**Status:** the narration text below is approved for Act 1 and Act 2 (the Act 2 budget wording was corrected as directed); Act 3 is proposed. No voice is recorded yet. All timings are placeholders, estimated at about 140 words per minute.
+**Status:**
+- Act 1, Act 2 (with the corrected budget wording) and Act 3: approved.
+- Act 4 and Act 5: adapted from the director's suggested lines; please confirm. No voice is recorded yet. All timings are placeholders, estimated at about 140 words per minute.
 
 The cue sheet in `src/narration.ts` is the single source of truth. Scenes anchor their beats to cue ids, never to fixed frames. Once a real voice is recorded, only the cue times change and the animation follows the voice.
 
@@ -45,6 +47,31 @@ The cue sheet in `src/narration.ts` is the single source of truth. Scenes anchor
 - Every catalogue image is the frozen Before or After snapshot.
 - The dead end is the recorded screenshot from the diagnostic run (the run whose report produced these recommendations).
 - The JSON-LD lines are a verbatim excerpt of the After page's own data.
+
+## Act 4: the proof (1:55–2:35) · about 75 words · evidence: ONLY the paired run `eval-1cf64d5e`
+| Cue | Film time | Line | Picture |
+|---|---|---|---|
+| a4.again | 1:55.4 | We ran the same tasks again, this time with both versions side by side, in a new evaluation. | "A new live evaluation · 4 Nov 2026, 3:18 pm" · "Before and After, side by side." · Same 3 customer tasks / Same Meta Muse Spark agent / Same 14-step limit |
+| a4.before | 2:00.5 | Before, the agent found just one of four matching courses. | Before: its 13 recorded steps stack fast (a tick each), the budget drains to 1 left; *"Remaining 10 unchecked due to step budget…"*; found 1 of 4 |
+| a4.after | 2:09.8 | After, it found all four, in three requests, without opening a single course page. | After, beside it: one clean window, 3 steps; *"Found 4 candidates … all Beginner."*; 4 of 4 · 3 of 14 requests · 18 s · no course pages |
+| a4.correct | 2:19.0 | Across the three tasks, correct answers went from zero to three. | **0/3 → 3/3**, "Correct answers · checked against the college's records"; Task 1–3 ✕ → ✓ |
+| a4.metrics | 2:24.2 | Seventy-four percent fewer requests. Eighty-three percent less time. Seventy-seven percent lower cost. | 74% (39 → 10) · 83% (326 s → 57 s) · 77% (US$0.57 → US$0.13), each with to-scale bars |
+| a4.works | 2:30.7 | Same agent. Same tasks. A website that finally works for it. | The product's Live report for this run: the Before/After summary cards highlighted |
+
+**Act 4 evidence:**
+- **Single source:** every number and frame comes from `eval-1cf64d5e`, captured by `scripts/capture_paired.py` into `data/paired.json`.
+- **Build-time check:** the build fails if the record disagrees with the spoken figures (74/83/77, 0/3 → 3/3, 13 and 3 requests).
+- **Terminology:** "Correct answers" is the product's correctness metric. The Live report footage also shows "Exact match 1/3" for After, honestly and separately; the narration never claims exact match.
+- **Nothing from the 4 Nov diagnostic run or the After-alone run** appears in this act. The title card establishes it as a new evaluation.
+
+## Act 5: the product and the vision (2:35–3:00) · about 48 words
+| Cue | Film time | Line | Picture |
+|---|---|---|---|
+| a5.today | 2:35.5 | Today, Agent Readiness helps websites understand how AI agents experience them. | The real Workspace and Live report, floating. The internal budget ID in the Workspace header is covered. |
+| a5.tomorrow | 2:40.5 | Tomorrow, it could help agents discover which websites they can actually use. | A dashed frame labelled **"CONCEPT · TOMORROW · NOT YET BUILT"** and "Illustrative sites and values". An agent with a task asks: which websites can I actually use? |
+| a5.which | 2:46.0 | Which ones support their task. Which ones are reliable. And where they can succeed. | Four fictional `.example` sites, scored on: Supports the task / Usable by agents / Reliable / Effort to succeed. The agent goes where it can succeed. |
+| a5.brand | 2:53.7 | Agent Readiness. | The real mark draws; the wordmark |
+| a5.tagline | 2:55.5 | Building the discovery layer for the agentic web. | The tagline; hold to 3:00 |
 
 ## Evidence notes
 - **Truthful framing of the budget:** the agent did **not** hit the 14-step cap. It used 11 of 14 (`limit_stop: false`), and its own note at step 11 says *"Out of steps"*.

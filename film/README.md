@@ -2,7 +2,7 @@
 
 The hackathon film, built programmatically with [Remotion](https://www.remotion.dev) 4 (React). It lives on the isolated `film` branch only. It is never deployed, and nothing in `dashboard/` or `src/` imports it. The product is not modified to make the film.
 
-**Status:** Act 1, the opening (0:00–0:25), and Act 2, the investigation (0:25–1:15), are built. Acts 3–5 are not built yet. No voice is recorded; timings are placeholders (see `NARRATION.md`).
+**Status:** the complete 3:00 cut is built. Act 1, the opening (0:00–0:25) · Act 2, the investigation (–1:15) · Act 3, the transformation (–1:55) · Act 4, the proof (–2:35; ONLY the paired run, see `CANONICAL.md`) · Act 5, the product and the vision (–3:00; the vision is drawn as a labelled concept). No voice is recorded yet; timings are placeholders (see `NARRATION.md`, `vo/`).
 
 ## What is real and what is drawn
 | On screen | Source |
@@ -37,7 +37,7 @@ cd film && node scripts/score.mjs                                               
 npx remotion studio src/index.ts                                   # scrub and preview
 npx remotion render src/index.ts Opening out/opening.mp4           # 1920×1080, 30 fps, H.264 (CRF 16)
 npx remotion render src/index.ts Act2 out/act2.mp4
-npx remotion render src/index.ts Preview out/preview-0-75.mp4      # Acts 1-2 back to back, one continuous score
+npx remotion render src/index.ts Preview out/film-0-180.mp4        # the whole film, one continuous score (Act3/Act4/Act5 render alone too)
 ```
 Every composition has a `…Captions` variant that shows the narration lines at their cue times.
 
@@ -46,11 +46,11 @@ Every composition has a `…Captions` variant that shows the narration lines at 
 src/Root.tsx            one composition per act + the running preview; music / SFX / voiceover tracks
 src/narration.ts        the narration cue sheet (text + timing per act); scenes anchor to its cue ids
 src/scenes/Opening.tsx  Act 1
-src/scenes/Act2.tsx     Act 2
+src/scenes/Act2.tsx … Act5.tsx  Acts 2–5
 src/components/         BrowserWindow, PageImage, ActionHighlight, Typed, StepBudget, Mark
 src/theme/              product colours (dark theme) and OFL fonts (Newsreader, Geist, Geist Mono)
 src/evidence.ts         typed access to data/evidence.json
-scripts/                capture.py, capture_product.py, agent-fonts.sh, score.mjs
+scripts/                capture.py, capture_product.py, capture_transform.py, capture_paired.py, agent-fonts.sh, score.mjs
 NARRATION.md            narration with timings, voiceover plan, approvals
 vo/AUDITION.md          the voice-audition lines
 ```
