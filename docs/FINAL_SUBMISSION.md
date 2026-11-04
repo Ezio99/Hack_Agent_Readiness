@@ -48,7 +48,8 @@ Meta Muse Spark via the Meta Model API, Browser Use, Playwright/Chromium, Python
   - Earlier evaluations (historical Showcase): `#/showcase`
 - Historical reports (separate runs, one per website): `#/reports/eval-ea13944e8ba5c08e8893426b2f8b1c8f`, `#/reports/eval-5cf934b372942da74f5157c5fca39fd6`
 - Repository: https://github.com/Ezio99/Hack_Agent_Readiness/tree/final-showcase (or link the exact commit).
-- Video: storyboard in [FINAL_VIDEO_SCRIPT.md](FINAL_VIDEO_SCRIPT.md); add the hosted film URL once it is published.
+- **Demo video (official hackathon demo, 2:59, YouTube):** https://www.youtube.com/watch?v=jWPLlQgWeS0
+  It is built from the product's real footage and recorded agent runs, narrated. Its results are the canonical paired evaluation above (0/3 → 3/3, 39 → 10 requests, 326 → 57 s, US$0.571 → US$0.134); the earlier diagnostic run it shows first is labelled as separate. Storyboard: [FINAL_VIDEO_SCRIPT.md](FINAL_VIDEO_SCRIPT.md).
 
 ## Honesty notes
 - Larkspur is fictional. The tasks are frozen and owner-approved.
@@ -57,4 +58,4 @@ Meta Muse Spark via the Meta Model API, Browser Use, Playwright/Chromium, Python
 - AI coding assistants helped build the project under the owner's direction.
 
 ## Owner to confirm on the form
-Track and theme, team roster, licence field, video host and privacy setting, and whether a branch or commit URL is accepted.
+Track and theme, team roster, licence field, and whether a branch or commit URL is accepted. The video is published on YouTube (link above); confirm it plays while signed out and that its visibility (public or unlisted) meets the form's rules.
