@@ -20,7 +20,7 @@ export function LatestReportPage() {
   const pick = evs.data ? latestPaired(evs.data) : null;
   if (pick) return <ReportPage id={pick.id} />;
   const card = (r: typeof BEFORE, v: string, label: string) => { const t = r.totals[v];
-    return <a className={`lc-side ${label === 'Before' ? 'o' : 'i'} lc-latest-card`} href={`#/reports/${r.id}`}>
+    return <a className={`lc-side ${v === BEFORE_V ? 'o' : 'i'} lc-latest-card`} href={`#/reports/${r.id}`}>
       <span className="eyebrow">{label} · run {r.id.slice(5, 13)}</span>
       <strong>{r.correct[v]}/{r.tasks.length} correct</strong><span>{t.requests} model requests · {t.seconds} s · US${t.cost_usd.toFixed(2)}</span>
       <span className="link">Open the {label} report →</span></a>; };
@@ -31,11 +31,11 @@ export function LatestReportPage() {
       {evs.error && <Failed error={evs.error} what="The evaluations" />}
       {evs.data && <section className="lc-latest" aria-labelledby="lc-latest-h">
         <p className="eyebrow">Live report · Larkspur Community College</p>
-        <h1 id="lc-latest-h" className="lc-title">Before and After: two separate live runs</h1>
+        <h1 id="lc-latest-h" className="lc-title">Original and Agent-ready website: two separate live runs</h1>
         <p className="lede sm">No side-by-side evaluation of both versions has been run yet. The current evidence is two separate live evaluations of 4 Nov 2026, one per
           version, with the same three frozen tasks, agent and limits. Each has its own report and agent traces. Run both versions together in the <a className="link" href="#/run">Workspace</a>;
           its report will appear here.</p>
-        <div className="lc-sbs">{card(BEFORE, BEFORE_V, 'Before')}{card(AFTER, AFTER_V, 'After')}</div>
+        <div className="lc-sbs">{card(BEFORE, BEFORE_V, VARIANT_LABEL(BEFORE_V))}{card(AFTER, AFTER_V, VARIANT_LABEL(AFTER_V))}</div>
       </section>}
     </main>
     <SiteFooter />
@@ -56,7 +56,7 @@ export function ReportPage({ id, task }: { id: string; task?: number }) {
       {ev.data && !isPublicEvaluation(ev.data) && !audit && <div className="lc-archived" role="note">
         <p className="eyebrow">Not part of this experiment</p>
         <h1 className="lc-title sm">This evaluation is not part of the current Larkspur Community College experiment.</h1>
-        <p className="lede sm">The public reports are the <a className="link" href={`#/reports/${BEFORE.id}`}>Before</a> and <a className="link" href={`#/reports/${AFTER.id}`}>After</a> evaluations.
+        <p className="lede sm">The public reports are the <a className="link" href={`#/reports/${CANONICAL.id}`}>reference paired evaluation</a> and the separate <a className="link" href={`#/reports/${BEFORE.id}`}>{VARIANT_LABEL(BEFORE_V)}</a> and <a className="link" href={`#/reports/${AFTER.id}`}>{VARIANT_LABEL(AFTER_V)}</a> evaluations.
           Earlier records are kept unchanged for audit.</p>
         <p><button type="button" className="btn btn-ghost btn-sm" onClick={() => setAudit(true)}>Show the archived record (audit)</button></p></div>}
       {ev.data && (isPublicEvaluation(ev.data) || audit) && <>
@@ -70,10 +70,10 @@ export function ReportPage({ id, task }: { id: string; task?: number }) {
 
 /** Which evidence this report is: the canonical paired evaluation (the headline results), or another live run whose figures differ from it. */
 export function EvidenceNote({ id }: { id: string }) {
-  if (id === CANONICAL.id) return <p className="lc-evidence canonical" role="note"><strong>Canonical evaluation.</strong> Before and After run together in one live
-    evaluation ({CANONICAL.date}), with the same three tasks, agent and limits. The headline results for Agent Readiness come from this run.</p>;
+  if (id === CANONICAL.id) return <p className="lc-evidence canonical" role="note"><strong>Canonical evaluation.</strong> The {VARIANT_LABEL(BEFORE_V)} and the {VARIANT_LABEL(AFTER_V)}, evaluated together in
+    one live evaluation ({CANONICAL.date}) with the same three tasks, agent and limits. The headline results for Agent Readiness come from this run.</p>;
   const separate = id === BEFORE.id || id === AFTER.id;
-  return <p className="lc-evidence" role="note">{separate ? <>One of the two separate live runs of 4 Nov 2026 (each version evaluated on its own). </> : <>Another live
+  return <p className="lc-evidence" role="note">{separate ? <>One of the two separate historical live runs of 4 Nov 2026 (the {id === BEFORE.id ? VARIANT_LABEL(BEFORE_V) : VARIANT_LABEL(AFTER_V)}, evaluated on its own). </> : <>Another live
     evaluation of the same tasks. </>}Its figures differ from the <a className="link" href={`#/reports/${CANONICAL.id}`}>canonical paired evaluation</a>, which the headline results come from.</p>;
 }
 

@@ -5,7 +5,7 @@ import data from './showcase/larkspur.json';
 
 // Only the final experiment's frames ship with the public app (Before = ea13…/polishedoriginal, After = 5cf9…/modifiedpolished); earlier experiments'
 // frames stay in the repository as recorded exports but are not bundled.
-const frameUrls = import.meta.glob(['./showcase/frames/ea13-*.webp', './showcase/frames/5cf9-*.webp', './showcase/frames/site-polishedoriginal-*.webp',
+const frameUrls = import.meta.glob(['./showcase/frames/ea13-*.webp', './showcase/frames/5cf9-*.webp', './showcase/frames/1cf6-*.webp', './showcase/frames/site-polishedoriginal-*.webp',
   './showcase/frames/site-modifiedpolished-*.webp'], { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 export const showcaseFrame = (name: string | null | undefined): string | undefined => name ? frameUrls[`./showcase/frames/${name}.webp`] : undefined;
 
@@ -31,6 +31,9 @@ export const FIRST_LIVE = data.first_live as unknown as LiveRecord;
 export const BEFORE = data.before as unknown as LiveRecord;
 export const AFTER = data.after as unknown as LiveRecord;
 export const BEFORE_V = 'polishedoriginal', AFTER_V = 'modifiedpolished';
+/** The canonical paired evaluation (CANONICAL below), recorded: Before and After in ONE live job. The homepage's fixed reference results come from this
+ *  record only, never from the API, so new evaluations cannot change them. BEFORE and AFTER above are the separate historical runs the Showcase tells. */
+export const PAIRED = data.paired as unknown as LiveRecord;
 /** The three changes the Before evaluation recommended, as applied to the After website (sites/larkspur/modified_polished.py). */
 export const AFTER_CHANGES: { id: string; title: string; change: string }[] = [
   { id: 'facts', title: 'Every fact on every course card', change: 'Fee, duration, level, class day, campus, seats left and materials on each card, so a comparison needs no course page.' },

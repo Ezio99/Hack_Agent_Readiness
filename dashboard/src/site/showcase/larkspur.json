@@ -1954,5 +1954,300 @@
     ]
    }
   }
+ },
+ "paired": {
+  "id": "eval-1cf64d5eae90bcaeab531b4886140c14",
+  "title": "Live evaluation · Larkspur Community College · Before vs After",
+  "started_at": "2026-11-04T04:18:05.206347+00:00",
+  "finished_at": "2026-11-04T04:24:35.047013+00:00",
+  "agent": {
+   "model": "muse-spark-1.3",
+   "reasoning_effort": "low",
+   "max_completion_tokens": 4096,
+   "profile": "suite-v2-compat2"
+  },
+  "cost_usd": 0.704994,
+  "tasks": [
+   {
+    "n": 1,
+    "task_id": "gen-23f1802ee0-n",
+    "wording": "I need a course that costs $250 or less and still has at least 5 seats left. What qualifies?",
+    "capability": "multi_condition_filter"
+   },
+   {
+    "n": 2,
+    "task_id": "gen-8334922e62-n",
+    "wording": "I work full-time on weekdays, so I can only do Saturday or Sunday. List Beginner courses that meet on Saturday or Sunday.",
+    "capability": "either_of"
+   },
+   {
+    "n": 3,
+    "task_id": "gen-f302fa8fe2-n",
+    "wording": "I just graduated and need a cheap, quick skill for my CV. Find courses costing $180 or less that last 6 weeks or less.",
+    "capability": "multi_condition_filter"
+   }
+  ],
+  "totals": {
+   "polishedoriginal": {
+    "requests": 39,
+    "seconds": 326,
+    "cost_usd": 0.571451
+   },
+   "modifiedpolished": {
+    "requests": 10,
+    "seconds": 57,
+    "cost_usd": 0.133545
+   }
+  },
+  "passed": {
+   "polishedoriginal": 0,
+   "modifiedpolished": 1
+  },
+  "correct": {
+   "polishedoriginal": 0,
+   "modifiedpolished": 3
+  },
+  "trials": [
+   {
+    "task": 1,
+    "variant": "polishedoriginal",
+    "passed": false,
+    "correct": false,
+    "requests": 13,
+    "limit": 14,
+    "seconds": 104.8,
+    "cost_usd": 0.18404,
+    "dead_end": false,
+    "path": [
+     "/",
+     "/courses",
+     "/courses/watercolour-foundations",
+     "/courses",
+     "/courses/life-drawing-studio",
+     "/courses",
+     "/courses/wheel-thrown-pottery",
+     "/courses"
+    ]
+   },
+   {
+    "task": 1,
+    "variant": "modifiedpolished",
+    "passed": false,
+    "correct": true,
+    "requests": 4,
+    "limit": 14,
+    "seconds": 23.0,
+    "cost_usd": 0.055333,
+    "dead_end": false,
+    "path": [
+     "/",
+     "/courses"
+    ]
+   },
+   {
+    "task": 2,
+    "variant": "polishedoriginal",
+    "passed": false,
+    "correct": false,
+    "requests": 13,
+    "limit": 14,
+    "seconds": 111.3,
+    "cost_usd": 0.19351,
+    "dead_end": false,
+    "path": [
+     "/",
+     "/courses",
+     "/courses/watercolour-foundations",
+     "/courses",
+     "/courses/life-drawing-studio",
+     "/courses",
+     "/courses/beginners-yoga",
+     "/courses",
+     "/courses/conversational-italian-1",
+     "/courses/beginners-yoga"
+    ]
+   },
+   {
+    "task": 2,
+    "variant": "modifiedpolished",
+    "passed": true,
+    "correct": true,
+    "requests": 3,
+    "limit": 14,
+    "seconds": 17.9,
+    "cost_usd": 0.039239,
+    "dead_end": false,
+    "path": [
+     "/",
+     "/courses"
+    ]
+   },
+   {
+    "task": 3,
+    "variant": "polishedoriginal",
+    "passed": false,
+    "correct": false,
+    "requests": 13,
+    "limit": 14,
+    "seconds": 110.0,
+    "cost_usd": 0.193901,
+    "dead_end": false,
+    "path": [
+     "/",
+     "/courses",
+     "/courses/watercolour-foundations",
+     "/courses",
+     "/courses/mindful-meditation",
+     "/courses",
+     "/courses/beginners-yoga"
+    ]
+   },
+   {
+    "task": 3,
+    "variant": "modifiedpolished",
+    "passed": false,
+    "correct": true,
+    "requests": 3,
+    "limit": 14,
+    "seconds": 15.7,
+    "cost_usd": 0.038973,
+    "dead_end": false,
+    "path": [
+     "/",
+     "/courses"
+    ]
+   }
+  ],
+  "journeys": {
+   "polishedoriginal-2": {
+    "answer": [
+     "Beginners yoga"
+    ],
+    "steps": [
+     {
+      "step": 1,
+      "path": "/",
+      "memory": "Homepage shows 14 courses. Need to browse all courses and filter Beginner + Sat/Sun.",
+      "goal": "Click Browse all courses to view course list",
+      "frame": "1cf6-polishedoriginal-t2-s1"
+     },
+     {
+      "step": 2,
+      "path": "/courses",
+      "memory": "On /courses page listing 14 courses. Need to check each course's level and meeting days for Beginner + Sat/Sun.",
+      "goal": "Get course URLs to visit each detail page",
+      "frame": "1cf6-polishedoriginal-t2-s2"
+     },
+     {
+      "step": 3,
+      "path": "/courses",
+      "memory": "Have 14 course URLs. Starting detailed check for Beginner level + Sat/Sun meeting days. Checking course 1/14.",
+      "goal": "Visit first course detail page to check level and schedule",
+      "frame": "1cf6-polishedoriginal-t2-s3"
+     },
+     {
+      "step": 4,
+      "path": "/courses/watercolour-foundations",
+      "memory": "Checked 1/14: watercolour-foundations excluded (Tue). Need to systematically check remaining 13.",
+      "goal": "Return to courses list to get all course URLs",
+      "frame": "1cf6-polishedoriginal-t2-s4"
+     },
+     {
+      "step": 5,
+      "path": "/courses",
+      "memory": "1/14 checked: watercolour excluded. Need URLs for remaining.",
+      "goal": "Get hrefs of all course links",
+      "frame": "1cf6-polishedoriginal-t2-s5"
+     },
+     {
+      "step": 6,
+      "path": "/courses",
+      "memory": "1/14 checked (watercolour excluded Tue). Have full URL list. Need to check remaining 13 for Beginner+Sat/Sun with only ~8 steps left, so must visit one per step prioritizing likely matches.",
+      "goal": "Visit life-drawing-studio detail page to check level and meeting days.",
+      "frame": "1cf6-polishedoriginal-t2-s6"
+     },
+     {
+      "step": 7,
+      "path": "/courses/life-drawing-studio",
+      "memory": "Checked 2/14: watercolour-foundations (Beg Tue excl), life-drawing-studio (Inter Thu excl). Need faster batch screening for Beginner+Sat/Sun.",
+      "goal": "Return to courses list to batch-screen all courses",
+      "frame": "1cf6-polishedoriginal-t2-s7"
+     },
+     {
+      "step": 8,
+      "path": "/courses",
+      "memory": "Checked 2/14 excluded. Opening batch tabs for likely Beginner weekend candidates: yoga, Italian 1, Japanese.",
+      "goal": "Open three likely Beginner course pages in new tabs",
+      "frame": "1cf6-polishedoriginal-t2-s8"
+     },
+     {
+      "step": 9,
+      "path": "/courses/beginners-yoga",
+      "memory": "Matches so far: Beginners yoga (Beginner Sat). Excluded: watercolour Tue, life-drawing Thu. Need to screen remaining 11 quickly.",
+      "goal": "Switch to courses list tab to batch-screen remaining courses",
+      "frame": "1cf6-polishedoriginal-t2-s9"
+     },
+     {
+      "step": 10,
+      "path": "/courses",
+      "memory": "Confirmed MATCH: Beginners yoga (Beginner Saturday). Excluded 2. Need to check remaining 11 courses for Beginner+Sat/Sun.",
+      "goal": "Get all course link URLs to visit remaining courses quickly",
+      "frame": "1cf6-polishedoriginal-t2-s10"
+     },
+     {
+      "step": 11,
+      "path": "/courses",
+      "memory": "Confirmed MATCH: Beginners yoga Beginner Sat. Excluded watercolour Tue, life-drawing Thu. Checking Italian 1 next.",
+      "goal": "Visit conversational-italian-1 detail page to check level and days",
+      "frame": "1cf6-polishedoriginal-t2-s11"
+     },
+     {
+      "step": 12,
+      "path": "/courses/conversational-italian-1",
+      "memory": "Matches: Beginners yoga (Beginner Sat). Excluded: watercolour Tue, life-drawing Thu, Italian1 Mon. Need to confirm exact yoga title before done due to step budget.",
+      "goal": "Switch to yoga tab to confirm exact course name",
+      "frame": "1cf6-polishedoriginal-t2-s12"
+     },
+     {
+      "step": 13,
+      "path": "/courses/beginners-yoga",
+      "memory": "Verified MATCH: Beginners yoga (Beginner Saturday). Excluded 3 courses. Remaining 10 unchecked due to step budget, returning partial verified result.",
+      "goal": "Return verified Beginner weekend course before budget exhausts.",
+      "frame": "1cf6-polishedoriginal-t2-s13"
+     }
+    ]
+   },
+   "modifiedpolished-2": {
+    "answer": [
+     "Wheel-thrown pottery",
+     "Beginners yoga",
+     "Mindful meditation",
+     "Home electrical basics"
+    ],
+    "steps": [
+     {
+      "step": 1,
+      "path": "/",
+      "memory": "Homepage shows 14 courses. Need to browse all courses and filter Beginner + weekend.",
+      "goal": "Click Browse all courses to see course list",
+      "frame": "1cf6-modifiedpolished-t2-s1"
+     },
+     {
+      "step": 2,
+      "path": "/courses",
+      "memory": "Found 4 candidates: Wheel-thrown pottery (Sat), Beginners yoga (Sat), Mindful meditation (Sun), Home electrical basics (Sat) - all Beginner. Need to scroll to verify remaining 2 courses.",
+      "goal": "Scroll down to see remaining courses to complete the list.",
+      "frame": "1cf6-modifiedpolished-t2-s2"
+     },
+     {
+      "step": 3,
+      "path": "/courses",
+      "memory": "Verified all 14 courses. Only 4 are Level Beginner AND Class day Saturday or Sunday: Wheel-thrown pottery (Sat), Beginners yoga (Sat), Mindful meditation (Sun), Home electrical basics (Sat). Furniture restoration is Sunday but Intermediate, so excluded.",
+      "goal": "Return final answer with the 4 matching courses.",
+      "frame": "1cf6-modifiedpolished-t2-s3"
+     }
+    ]
+   }
+  }
  }
 }

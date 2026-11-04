@@ -8,7 +8,7 @@ import { Lifecycle } from './Lifecycle';
 import { ReportPage } from './Report';
 import { useLoad } from './parts';
 import { parse } from '../router';
-import { AFTER, BEFORE, LIVE } from '../showcase';
+import { AFTER, BEFORE, CANONICAL, LIVE } from '../showcase';
 import { PUBLIC_SCOPE } from '../../lib/lifecycleApi';
 // These tests exercise the mechanics with fixtures of earlier evaluations: the public scope (final Larkspur experiment only) is lifted here and
 // tested on its own in public-scope.test.tsx.
@@ -92,7 +92,9 @@ it('the journey is one page with all eight steps on the final Before -> After ex
   expect(host.textContent).toContain('Every fact on every course card');                                       // the After changes are static and always shown
   expect(host.querySelectorAll('.lc-versions img')).toHaveLength(2);                                          // Before and After only
   const main = host.querySelector('main')!.textContent!;
-  for (const old of ['Ironbark', 'Original', 'Improved', 'Modified', 'first experiment', 'Earlier']) expect(main).not.toContain(old);
+  for (const old of ['Ironbark', 'Improved', 'Modified', 'first experiment', 'Earlier']) expect(main).not.toContain(old);
+  expect(main).not.toMatch(/Original(?! website)/);                                                         // 'Original website' is the audience label; no other 'Original'
+  expect(main).not.toMatch(/\b(Before|After) (·|report|website|catalogue)/);                                 // the old version labels are gone
   expect(host.querySelector('[role=radiogroup]')).toBeNull();                                                 // no site selector
   document.body.innerHTML = '';
   window.location.hash = '#/demo';
@@ -113,7 +115,7 @@ it('shows the frozen task set as approved and frozen, with no approval control o
   const first = [...suite.tasks].sort((a: any, b: any) => a.task_id.localeCompare(b.task_id))[0];
   expect(t).toContain(`Task 1${first.customer_wording}`);                                                  // numbered as in every report
   expect(t).toContain('fixed as an exact set before any evaluation');
-  expect(t).toContain('Both the Before and the After evaluation');
+  expect(t).toContain('The Original website and the Agent-ready website evaluations');
   expect([...host.querySelectorAll('button')].some(b => /approve/i.test(b.textContent ?? ''))).toBe(false);
   expect(f.mock.calls.some(c => (c[1] as RequestInit | undefined)?.method === 'POST')).toBe(false);
 });
@@ -166,7 +168,7 @@ it('maps every recommendation of the Before report to the After change that appl
   expect(items.length).toBeGreaterThan(3);
   expect(items.filter(li => li.textContent!.includes('Applied:')).length).toBeGreaterThanOrEqual(items.length - 1);
   expect(sec.textContent).toContain('State campus on each card');
-  expect(sec.textContent).toContain('What the agents ran into (Before)');
+  expect(sec.textContent).toContain('What the agents ran into (Original website)');
 });
 
 it('compares only the final Before and After evaluations (never earlier experiments or rehearsals), with the recorded result featured', async () => {
@@ -182,7 +184,8 @@ it('compares only the final Before and After evaluations (never earlier experime
     expect(sec.querySelector(`a[href="#/reports/${BEFORE.id}"]`)).not.toBeNull(); expect(sec.querySelector(`a[href="#/reports/${AFTER.id}"]`)).not.toBeNull();
     expect(sec.querySelector(`a[href="#/reports/${LIVE.id}"]`)).toBeNull();
     const f = sec.querySelector('.lc-featured')!;
-    expect(f.textContent).toContain('0/3'); expect(f.textContent).toContain('3/3'); expect(f.textContent).toContain('Before'); expect(f.textContent).toContain('After');
+    expect(f.textContent).toContain('0/3'); expect(f.textContent).toContain('3/3'); expect(f.textContent).toContain('Original website'); expect(f.textContent).toContain('Agent-ready website');
+    expect(f.textContent).toContain('Two separate historical live evaluations'); expect(f.querySelector(`a[href="#/reports/${CANONICAL.id}"]`)).not.toBeNull();   // labelled historical, pointing to the reference run
     expect(f.querySelectorAll('img')).toHaveLength(2);
   } finally { PUBLIC_SCOPE.versions = null; }
 });

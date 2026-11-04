@@ -1,25 +1,31 @@
 import { useEffect, useRef } from 'react';
 import { SiteFooter, SiteHeader } from './Shell';
-import { AFTER, AFTER_CHANGES, AFTER_V, BEFORE, BEFORE_V, FEATURED, FEATURED_TASK, JOURNEY, fewerPct, journeyOf, showcaseFrame, trialOf, type LiveStep } from './showcase';
+import { AFTER_CHANGES, AFTER_V, BEFORE_V, CANONICAL, FEATURED, FEATURED_TASK, JOURNEY, PAIRED, fewerPct, journeyOf, showcaseFrame, trialOf, type LiveStep } from './showcase';
 import { LatestLive } from './LatestLive';
+import { VARIANT_LABEL } from '../lib/lifecycleApi';
 import './home.css';
 
-/** The product homepage. It tells the featured story with the recorded evidence of the two live evaluations of 4 Nov 2026: "Before" (the college's
- *  redesigned website) and "After" (the same design with Agent Readiness's recommendations applied), each evaluated alone with the same frozen tasks
- *  and agent (showcase.ts). It calls no API. */
+/** The product homepage. Its fixed reference results are the recorded canonical paired evaluation (PAIRED in showcase.ts): "Before" (the college's
+ *  redesigned website) and "After" (the same design with Agent Readiness's recommendations applied), run together in one live job with the same frozen
+ *  tasks and agent. It calls no API, so later evaluations never change these figures. */
 
 const T = FEATURED_TASK;                                     // the weekend-courses question
-const lost = journeyOf(BEFORE_V, T, BEFORE);
-const found = journeyOf(AFTER_V, T, AFTER);
+const R = PAIRED;                                            // the reference results: one paired evaluation, both versions
+const lost = journeyOf(BEFORE_V, T, R);
+const found = journeyOf(AFTER_V, T, R);
 const lastLost = lost.steps[lost.steps.length - 1];
+const shotLost = [...lost.steps].reverse().find(s => s.path === '/courses' && s.frame) ?? lastLost;   // the hero screenshot: the catalogue, as the agent last saw it
 const midLost = lost.steps.find(s => s.step === 9) ?? lastLost;
-const t1o = trialOf(BEFORE_V, T, BEFORE)!, t1m = trialOf(AFTER_V, T, AFTER)!;
-const O = BEFORE.totals[BEFORE_V], M = AFTER.totals[AFTER_V];
-const C0 = BEFORE.correct[BEFORE_V], C1 = AFTER.correct[AFTER_V], N = BEFORE.tasks.length;
+const t1o = trialOf(BEFORE_V, T, R)!, t1m = trialOf(AFTER_V, T, R)!;
+const O = R.totals[BEFORE_V], M = R.totals[AFTER_V];
+const C0 = R.correct[BEFORE_V], C1 = R.correct[AFTER_V], N = R.tasks.length;
+const trialsOf = (v: string) => R.trials.filter(t => t.variant === v);
+export const QUALIFIER = 'Results from our reference paired evaluation. Individual live runs may vary.';
 const isCourse = (p: string | null) => !!p && /^\/courses\/(?!compare$)[^/?]+$/.test(p);
 const answerCount = Array.isArray(found.answer) ? found.answer.length : 1;
 const lostCount = Array.isArray(lost.answer) ? lost.answer.length : 1;
-const usd = (n: number) => `$${n.toFixed(2)}`;
+const ORIG = VARIANT_LABEL(BEFORE_V), READY = VARIANT_LABEL(AFTER_V);      // 'Original website', 'Agent-ready website'
+const usd = (n: number) => `$${n.toFixed(3)}`;
 const cents = (n: number) => `${Math.round(n * 100)}¢`;
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
 
@@ -40,13 +46,13 @@ function StepTicks({ steps, label }: { steps: LiveStep[]; label: string }) {
 
 function HeroNote() {
   return <aside className="plate-note" aria-label="Recorded agent memory">
-    <p className="eyebrow">Muse Spark · Before · step {lastLost.step} of {lost.steps.length}</p>
+    <p className="eyebrow">Muse Spark · {ORIG} · step {lastLost.step} of {lost.steps.length}</p>
     <blockquote>“{lastLost.memory}”</blockquote>
-    <StepTicks steps={lost.steps} label="Before: catalogue, course pages and answer" />
+    <StepTicks steps={lost.steps} label={`${ORIG}: catalogue, course pages and answer`} />
     <p className="plate-legend"><span><i className="t-list" />Catalogue</span><span><i className="t-item" />Course page</span><span><i className="t-done" />Answer</span></p>
     <div className="plate-verdicts">
-      <div><span className="tag tag-fail">✕ {lostCount} of {answerCount} courses found</span><small><span className="swatch o" aria-hidden="true" />Before · {t1o.requests} requests · {Math.round(t1o.seconds)} s</small></div>
-      <div><span className="tag tag-pass">✓ All {answerCount} courses found</span><small><span className="swatch i" aria-hidden="true" />After · {t1m.requests} requests · {Math.round(t1m.seconds)} s</small></div>
+      <div><span className="tag tag-fail">✕ {lostCount} of {answerCount} courses found</span><small><span className="swatch o" aria-hidden="true" />{ORIG} · {t1o.requests} requests · {Math.round(t1o.seconds)} s</small></div>
+      <div><span className="tag tag-pass">✓ All {answerCount} courses found</span><small><span className="swatch i" aria-hidden="true" />{READY} · {t1m.requests} requests · {Math.round(t1m.seconds)} s</small></div>
     </div>
   </aside>;
 }
@@ -54,18 +60,18 @@ function HeroNote() {
 function HeroFigure() {
   return <figure className="hero-fig">
     <div className="frame">
-      <div className="frame-bar"><span className="frame-dots"><i /><i /><i /></span><span className="frame-url">{FEATURED.host}{lastLost.path}</span><span className="hero-fig-arm">Before · step {lastLost.step}</span></div>
-      <div className="frame-shot"><img src={showcaseFrame(lastLost.frame)} alt="Recorded screenshot: the redesigned Larkspur course catalogue (Before), where cards show a name and a summary but no level or class day." fetchPriority="high" /></div>
+      <div className="frame-bar"><span className="frame-dots"><i /><i /><i /></span><span className="frame-url">{FEATURED.host}{shotLost.path}</span><span className="hero-fig-arm">{ORIG} · step {shotLost.step}</span></div>
+      <div className="frame-shot"><img src={showcaseFrame(shotLost.frame)} alt="Recorded screenshot: the redesigned Larkspur course catalogue (the Original website), where cards show a name and a summary but no level or class day." fetchPriority="high" /></div>
     </div>
-    <figcaption className="figcap"><b>Fig. 1</b><span>Live evaluation, 4 Nov 2026. Task: “{BEFORE.tasks[T - 1].wording}” The redesigned catalogue keeps every class day and level one click deep, so the agent opened course pages one at a time and answered after {t1o.requests} requests with {lostCount} of the {answerCount} courses. After the change, the agent read all {answerCount} from the course cards in {t1m.requests}. Screenshot and memory are unedited.</span></figcaption>
+    <figcaption className="figcap"><b>Fig. 1</b><span>Reference paired evaluation, {CANONICAL.date}. Task: “{R.tasks[T - 1].wording}” The redesigned catalogue keeps every class day and level one click deep, so the agent opened course pages one at a time and answered after {t1o.requests} requests with {lostCount} of the {answerCount} courses. After the change, the agent read all {answerCount} from the course cards in {t1m.requests}. Screenshot and memory are unedited.</span></figcaption>
   </figure>;
 }
 
 function TaskBars() {
-  const max = Math.max(...[...BEFORE.trials, ...AFTER.trials].map(t => t.requests));
+  const max = Math.max(...R.trials.map(t => t.requests));
   return <figure className="task-bars" aria-label="Model requests per task, before and after">
-    <p className="tb-legend"><span><i className="o" />Before</span><span><i className="i" />After</span><span className="tb-limit">limit {t1o.limit} per task</span></p>
-    <ol>{BEFORE.tasks.map(t => { const o = trialOf(BEFORE_V, t.n, BEFORE), m = trialOf(AFTER_V, t.n, AFTER);
+    <p className="tb-legend"><span><i className="o" />{ORIG}</span><span><i className="i" />{READY}</span><span className="tb-limit">limit {t1o.limit} per task</span></p>
+    <ol>{R.tasks.map(t => { const o = trialOf(BEFORE_V, t.n, R), m = trialOf(AFTER_V, t.n, R);
       return <li key={t.n}><span className="tb-q"><b>Task {t.n}</b> {t.wording}</span>
         <span className="tb-rows">{[['o', o], ['i', m]].map(([c, x]) => { const tr = x as typeof o; return <span key={c as string} className="tb-row">
           <span className={`tb-bar ${c}`} style={{ width: `${100 * (tr?.requests ?? 0) / max}%` }} /><span className="tb-v">{tr?.requests ?? '–'}</span></span>; })}</span></li>; })}</ol>
@@ -104,18 +110,19 @@ export function Home({ section }: { section?: string }) {
       <section className="polished-band ar-night" aria-labelledby="polished-h">
         <div className="wrap polished-grid">
           <div data-reveal>
-            <p className="eyebrow">{FEATURED.name} · live, 4 Nov 2026</p>
+            <p className="eyebrow">{FEATURED.name} · reference paired evaluation, {CANONICAL.date}</p>
             <h2 id="polished-h" className="h2">Looks great to people.<br /><em>But can AI agents navigate it?</em></h2>
             <p>{FEATURED.name} had a visually appealing website built around familiar browsing patterns. Course fees, schedules and availability were
               accessible on individual course pages—a natural design choice for human visitors, but one that created unexpected friction for AI agents.</p>
-            <p>In our live evaluation, agents answered {BEFORE.correct[BEFORE_V]} of {BEFORE.tasks.length} questions correctly. Agent Readiness identified the obstacles and
-              recommended targeted improvements. After implementing those changes, agents answered {AFTER.correct[AFTER_V]} of {AFTER.tasks.length} correctly, using {fewerPct(BEFORE.totals[BEFORE_V].requests, AFTER.totals[AFTER_V].requests)}% fewer model requests.</p>
+            <p>On the original catalogue, agents answered {C0} of {N} questions correctly. Agent Readiness identified the obstacles and
+              recommended targeted improvements. After implementing those changes, agents answered {C1} of {N} correctly, using {fewerPct(O.requests, M.requests)}% fewer model requests.</p>
+            <p className="qualifier">{QUALIFIER}</p>
             <p className="polished-cta"><a className="btn btn-signal" href="#/showcase">Watch before and after <span className="arr" aria-hidden="true">→</span></a>
               <a className="btn btn-ghost" href="#/run">Run it live</a></p>
           </div>
           <dl className="polished-nums" data-reveal>
-            {([['Before', BEFORE, BEFORE_V], ['After', AFTER, AFTER_V]] as const).map(([l, r, v]) => <a key={v} href={`#/reports/${r.id}`}>
-              <dt>{l}</dt><dd><b>{r.correct[v]}/{r.tasks.length}</b> correct · {r.totals[v].requests} requests · {r.totals[v].seconds} s · US${r.totals[v].cost_usd.toFixed(2)}</dd></a>)}
+            {([[ORIG, BEFORE_V], [READY, AFTER_V]] as const).map(([l, v]) => <a key={v} href={`#/reports/${CANONICAL.id}`}>
+              <dt>{l}</dt><dd><b>{R.correct[v]}/{N}</b> correct · {R.totals[v].requests} requests · {R.totals[v].seconds} s · US${R.totals[v].cost_usd.toFixed(3)}</dd></a>)}
           </dl>
         </div>
       </section>
@@ -129,7 +136,7 @@ export function Home({ section }: { section?: string }) {
         </div>
         <figure className="quote" data-reveal>
           <blockquote>“{midLost.memory}”</blockquote>
-          <figcaption className="figcap"><b>Muse Spark, working memory</b><span>Before · the weekend-courses task · step {midLost.step} of {lost.steps.length}, after checking 3 of 14 course pages. It answered {lost.steps.length - midLost.step} steps later with {lostCount} of the {answerCount} courses.</span></figcaption>
+          <figcaption className="figcap"><b>Muse Spark, working memory</b><span>{ORIG} · the weekend-courses task · step {midLost.step} of {lost.steps.length}, after checking 3 of 14 course pages. It answered {lost.steps.length - midLost.step} steps later with {lostCount} of the {answerCount} courses.</span></figcaption>
         </figure>
       </section>
 
@@ -146,11 +153,11 @@ export function Home({ section }: { section?: string }) {
                 website: `${FEATURED.name} · 14 courses · 2 campuses`,
                 tasks: '24 customer questions proposed by Muse Spark · each checked against the course records',
                 review: `${N} customer tasks, fixed before the evaluation`,
-                evaluate: `${BEFORE.trials.length} live browser agents · isolated Chromium · ${t1o.limit} requests per task`,
+                evaluate: `${R.trials.length} live browser agents · isolated Chromium · ${t1o.limit} requests per task`,
                 recommendations: 'every fact on the course cards · fix the dead end · structured course data',
                 improve: `${AFTER_CHANGES.length} changes · same design, same pages`,
                 reevaluate: 'the same tasks on both versions · anyone with an access code can run it',
-                compare: `live: correct ${C0}/${N} → ${C1}/${N} · ${O.requests} → ${M.requests} requests`,
+                compare: `reference run: correct ${C0}/${N} → ${C1}/${N} · ${O.requests} → ${M.requests} requests`,
               } as Record<string, string>)[s.id]}</p>
             </li>)}
           </ol>
@@ -161,16 +168,18 @@ export function Home({ section }: { section?: string }) {
         <div className="wrap">
           <div className="sec-head" data-reveal><p className="eyebrow"><b>03</b> — Results</p>
             <h2 id="evidence-h" className="h2">The recommendations applied. <em>Measured live.</em></h2>
-            <p className="lede">The same {N} customer tasks before and after the change: fee and seats, weekend class day, fee and duration. Same model, fresh agents, each version evaluated on its own, 4 Nov 2026.</p></div>
+            <p className="lede">The same {N} customer tasks before and after the change: fee and seats, weekend class day, fee and duration. Same model, fresh agents, both versions in one paired evaluation, {CANONICAL.date}.</p>
+            <p className="qualifier">{QUALIFIER}</p></div>
+          <p className="tb-legend numbers-legend" data-reveal><span><i className="o" />{ORIG} (before)</span><span><i className="i" />{READY} (after)</span></p>
           <dl className="numbers" data-reveal>
-            <div><dt>Correct answers</dt><dd><span className="n-o">{C0}/{N}</span><span className="n-arrow" aria-hidden="true">→</span><span className="n-i">{C1}/{N}</span></dd><p>Checked against the course records</p></div>
+            <div><dt>Correct answers</dt><dd><span className="n-o">{C0}/{N}</span><span className="n-arrow" aria-hidden="true">→</span><span className="n-i">{C1}/{N}</span></dd><p>Checked against the course records · weekend task: {lostCount}/{answerCount} → {found.answer.length === answerCount ? answerCount : '–'}/{answerCount} courses found</p></div>
             <div><dt>Model requests, all tasks</dt><dd><span className="n-o">{O.requests}</span><span className="n-arrow" aria-hidden="true">→</span><span className="n-i">{M.requests}</span></dd><p>{fewerPct(O.requests, M.requests)}% fewer after the change</p></div>
-            <div><dt>Agent time, all tasks</dt><dd><span className="n-o">{mmss(O.seconds)}</span><span className="n-arrow" aria-hidden="true">→</span><span className="n-i">{mmss(M.seconds)}</span></dd><p>Minutes of browsing: {O.seconds} s → {M.seconds} s</p></div>
-            <div><dt>Model cost</dt><dd><span className="n-o">{cents(O.cost_usd)}</span><span className="n-arrow" aria-hidden="true">→</span><span className="n-i">{cents(M.cost_usd)}</span></dd><p>US cents ({usd(O.cost_usd)} → {usd(M.cost_usd)}), calculated from the provider’s token counts</p></div>
+            <div><dt>Agent time, all tasks</dt><dd><span className="n-o">{mmss(O.seconds)}</span><span className="n-arrow" aria-hidden="true">→</span><span className="n-i">{mmss(M.seconds)}</span></dd><p>Minutes of browsing: {O.seconds} s → {M.seconds} s, {fewerPct(O.seconds, M.seconds)}% less</p></div>
+            <div><dt>Model cost</dt><dd><span className="n-o">{cents(O.cost_usd)}</span><span className="n-arrow" aria-hidden="true">→</span><span className="n-i">{cents(M.cost_usd)}</span></dd><p>US cents (US{usd(O.cost_usd)} → US{usd(M.cost_usd)}, {fewerPct(O.cost_usd, M.cost_usd)}% less), calculated from the provider’s token counts</p></div>
           </dl>
           <div data-reveal><TaskBars /></div>
-          <p className="honest" data-reveal>After the change every agent read the fourteen course cards on one page and answered without opening a single course page, in {AFTER.trials.map(t => t.requests).sort((a, b) => a - b).join(', ')} requests. Before it, every agent opened course pages one at a time; one guessed a course address and hit a dead end, and none answered correctly. One agent per question on each version: a measured result for these tasks, not a statistical guarantee.</p>
-          <div className="hero-cta" data-reveal><a className="btn" href={`#/reports/${BEFORE.id}`}>Before: the report <span className="arr" aria-hidden="true">→</span></a><a className="btn" href={`#/reports/${AFTER.id}`}>After: the report <span className="arr" aria-hidden="true">→</span></a></div>
+          <p className="honest" data-reveal>After the change every agent read the fourteen course cards on one page and answered without opening a single course page, in {trialsOf(AFTER_V).map(t => t.requests).sort((a, b) => a - b).join(', ')} requests. Before it, every agent opened course pages one at a time and none answered correctly.{trialsOf(BEFORE_V).some(t => t.dead_end) ? ' One guessed a course address and hit a dead end.' : ''} One agent per question on each version: a measured result for these tasks, not a statistical guarantee.</p>
+          <div className="hero-cta" data-reveal><a className="btn" href={`#/reports/${CANONICAL.id}`}>View full paired evaluation report <span className="arr" aria-hidden="true">→</span></a></div>
         </div>
       </section>
 
@@ -181,11 +190,11 @@ export function Home({ section }: { section?: string }) {
           <p className="lede">The improved {FEATURED.short} site keeps every page and the whole design. It changes only what the report recommended: every course card states all seven deciding facts, the dead end leads to the course, and each course describes itself in structured data.</p>
           <div className="hero-cta"><a className="btn btn-signal" href="#/run">Run it live <span className="arr" aria-hidden="true">→</span></a><a className="btn btn-ghost" href="#/showcase">Watch before and after</a></div>
           <table className="facts-table"><caption className="sr-only">Facts shown on the course cards, before and after</caption>
-            <thead><tr><th scope="col">On the course cards</th><th scope="col">Before</th><th scope="col">After</th></tr></thead>
+            <thead><tr><th scope="col">On the course cards</th><th scope="col">{ORIG}</th><th scope="col">{READY}</th></tr></thead>
             <tbody>{['Course fee', 'Duration', 'Level', 'Class day', 'Campus', 'Seats left', 'Materials'].map(f => <tr key={f}><th scope="row">{f}</th><td className="no">–</td><td className="yes">✓</td></tr>)}</tbody></table>
         </div>
         <article className="sheet" data-reveal aria-label="Changes on the improved website">
-          <header><span className="mono">After · {AFTER_CHANGES.length} changes</span><span className="mono muted">from the report’s recommendations</span></header>
+          <header><span className="mono">{READY} · {AFTER_CHANGES.length} changes</span><span className="mono muted">from the report’s recommendations</span></header>
           <figure className="improve-shot"><img src={showcaseFrame(`site-${AFTER_V}-courses`)} alt="The improved Larkspur catalogue: course cards that each state fee, duration, level, class day, campus, seats left and materials." loading="lazy" /></figure>
           <ul className="findings">{AFTER_CHANGES.map((x, i) => <li key={x.id}>
             <span className="sev sev-low">{String(i + 1).padStart(2, '0')}</span>

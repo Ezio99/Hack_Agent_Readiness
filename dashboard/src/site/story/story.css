@@ -151,3 +151,6 @@
 
 .st-spec{font:500 11.5px/1.6 var(--mono);letter-spacing:0;color:var(--dim-2);text-align:center;width:100%;margin:0 auto 22px;text-wrap:balance}
 @media (max-width:900px){.st-spec{font-size:11px}}
+
+/* the Verdict's note that its figures are the separate historical runs, not the reference paired evaluation */
+.st-historical a{color:inherit;text-decoration:underline;text-underline-offset:3px}

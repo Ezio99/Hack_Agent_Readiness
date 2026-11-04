@@ -4,12 +4,12 @@ import { Analytics } from './Analytics';
 import { Insights } from './Insights';
 import { History, type HistoryItem } from './History';
 import { Report } from '../lifecycle/Report';
-import { PUBLIC_SCOPE, VARIANT_LABEL, inPublicScope, type Evaluation } from '../../lib/lifecycleApi';
+import { PUBLIC_SCOPE, SERVER_ARM, VARIANT_LABEL, armNames, inPublicScope, type Evaluation } from '../../lib/lifecycleApi';
 import { AFTER, AFTER_V, BEFORE, BEFORE_V, showcaseFrame } from '../showcase';
 
 /** The public Workspace shows ONLY the final Larkspur experiment (Before and After). Earlier evaluations stay in the records but are never listed,
  *  selected or rendered here; an old job URL shows a notice instead of its data, so current configuration and historical jobs never mix. */
-const PUBLIC_LABELS = [VARIANT_LABEL(BEFORE_V), VARIANT_LABEL(AFTER_V)];
+const PUBLIC_LABELS: string[] = [SERVER_ARM.before, SERVER_ARM.after];   // the server's arm_display strings (API contract), not the audience labels
 export const isPublicItem = (i: HistoryItem) => !PUBLIC_SCOPE.versions || (i.engine === 'stage-b' && !!i.arm_display && PUBLIC_LABELS.includes(i.arm_display.Original)
   && (!i.arm_display.Modified || PUBLIC_LABELS.includes(i.arm_display.Modified)));
 /** A paired evaluation: Before and After run together in ONE job (never two separate runs combined). */
@@ -108,7 +108,7 @@ export function ProvenanceNote({ p }: { p: Provenance }) {
 export type ArmNames = { Original: string; Modified?: string };
 export function ProgressGrid({ rep, questions, onSelect, selected, names = { Original: 'Original', Modified: 'Modified' } }: { rep: Rep; questions: Record<number, string>; onSelect?: (s: Selection) => void; selected?: Selection | null; names?: ArmNames }) {
   const arms = (names.Modified ? ['Original', 'Modified'] : ['Original']) as ('Original' | 'Modified')[];   // a single-version evaluation has one arm
-  const swatch = (n: string | undefined, arm: string) => arm === 'Original' && arms.length === 2 ? 'o' : n === 'Before' ? 'o' : n === 'After' || n === 'Improved' ? 'i' : n?.startsWith('Earlier') ? 'p' : 'm';
+  const swatch = (n: string | undefined, arm: string) => arm === 'Original' && arms.length === 2 ? 'o' : n === 'Before' || n === VARIANT_LABEL(BEFORE_V) ? 'o' : n === 'After' || n === VARIANT_LABEL(AFTER_V) || n === 'Improved' ? 'i' : n?.startsWith('Earlier') ? 'p' : 'm';
   const numbers = [...new Set([...rep.tasks.map(t => t.task), ...Object.keys(questions).map(Number)])].sort((a, b) => a - b);
   const find = (arm: string, task: number) => rep.tasks.find(t => t.arm === arm && t.task === task);
   const v2 = (arm: string, task: number) => rep.grading_v2?.faithful ? rep.grading_v2.tasks.find(t => t.arm === arm && t.task === task) : undefined;
@@ -310,13 +310,13 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
   const armedVariants = config?.evaluation?.variants ?? [];
   const single = armedVariants.length === 1;                                     // one website version evaluated on its own
   const armedNames: ArmNames = single ? { Original: cap(armedVariants[0], 'Original') } : { Original: cap(armedVariants[0], 'Original'), Modified: cap(armedVariants[1], 'Modified') };
-  const names: ArmNames = job?.arm_display ?? (job ? { Original: 'Original', Modified: 'Modified' } : armedNames);
+  const names: ArmNames = job?.arm_display ? armNames(job.arm_display) : (job ? { Original: 'Original', Modified: 'Modified' } : armedNames);
   const lowerNames = { original: names.Original, modified: names.Modified ?? names.Original };
-  const siteWords = single ? (armedNames.Original === 'After'
-      ? <>the improved website (<strong>After</strong>: the college’s redesigned site with Agent Readiness’s recommendations applied; <a className="ws-link" href="#/showcase">see before and after</a>)</>
+  const siteWords = single ? (armedVariants[0] === AFTER_V
+      ? <>the <strong>{VARIANT_LABEL(AFTER_V)}</strong> (the college’s redesigned site with Agent Readiness’s recommendations applied; <a className="ws-link" href="#/showcase">see before and after</a>)</>
       : <>the <strong>{armedNames.Original}</strong> version of the website</>)
-    : armedNames.Original === 'Before' && armedNames.Modified === 'After'
-      ? <>both versions of the college’s website: <strong>Before</strong> (the redesigned site) and <strong>After</strong> (the same site with Agent Readiness’s recommendations applied), three agents on each</>
+    : armedVariants[0] === BEFORE_V && armedVariants[1] === AFTER_V
+      ? <>both versions of the college’s website: the <strong>{VARIANT_LABEL(BEFORE_V)}</strong> (the redesigned site) and the <strong>{VARIANT_LABEL(AFTER_V)}</strong> (the same site with Agent Readiness’s recommendations applied), three agents on each</>
       : <>the <strong>{armedNames.Original}</strong> and the <strong>{armedNames.Modified}</strong> site</>;
   const SITE_HOST: Record<string, string> = { larkspur: 'larkspur-college', ironbark: 'ironbark-hire' };
   const operatorOnly = config?.access === 'operator';
@@ -381,7 +381,7 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
             {stageB ? <div className="ws-target" aria-label="Selected website">{ev ? <><strong>{ev.site === 'larkspur' ? 'Larkspur Community College' : ev.site === 'ironbark' ? 'Ironbark Hire Co.' : ev.site}</strong>
                 {armedVariants.map(v => showcaseFrame(`site-${v}-courses`) ? <figure key={v} className={`ws-site-preview${armedVariants.length > 1 ? ' half' : ''}`}><img src={showcaseFrame(`site-${v}-courses`)} alt={`The ${VARIANT_LABEL(v)} Larkspur course catalogue (frozen snapshot the agents use)`} loading="lazy" />
                   <figcaption>{VARIANT_LABEL(v)} · <code>/courses</code> · the copy the agents browse</figcaption></figure> : null)}
-                <small>{nTasks} customer task{nTasks === 1 ? '' : 's'} · {single ? `${armedNames.Original} version` : `${armedNames.Original} vs ${armedNames.Modified} site`} · {ev.launches ? `${ev.launches.left} of ${ev.launches.max} live run${ev.launches.max === 1 ? '' : 's'} left` : 'runs while the budget lasts'}</small></>
+                <small>{nTasks} customer task{nTasks === 1 ? '' : 's'} · {single ? `${armedNames.Original} version` : `${armedNames.Original} vs ${armedNames.Modified}${armedNames.Modified?.endsWith('website') ? '' : ' site'}`} · {ev.launches ? `${ev.launches.left} of ${ev.launches.max} live run${ev.launches.max === 1 ? '' : 's'} left` : 'runs while the budget lasts'}</small></>
                 : <><strong>No evaluation armed</strong><small>The owner selects and authorises the frozen suite at the server terminal.</small></>}</div>
               : <div className="ws-target" aria-label="Selected website"><strong>No evaluation available</strong><small>New evaluations are not available on this server right now; recorded evaluations remain available.</small></div>}</li>
           {stageB && (config?.repetitions?.length ?? 0) <= 1
@@ -438,9 +438,9 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
         </div>}
         {!job && !archived && <div className="ws-empty">
           <p className="eyebrow">No evaluation open</p>
-          <h2>{PUBLIC_SCOPE.versions && !latest ? 'Run the first side-by-side evaluation of Before and After.' : 'Start an evaluation, or open one from the history below.'}</h2>
+          <h2>{PUBLIC_SCOPE.versions && !latest ? `Run the first side-by-side evaluation of the ${VARIANT_LABEL(BEFORE_V)} and the ${VARIANT_LABEL(AFTER_V)}.` : 'Start an evaluation, or open one from the history below.'}</h2>
           {PUBLIC_SCOPE.versions && !latest && <p className="ws-empty-note">Recorded evidence so far, each version evaluated live on its own: <a className="ws-link" href="#/showcase">before and after</a> ·{' '}
-            <a className="ws-link" href={`#/reports/${BEFORE.id}`}>Before report</a> · <a className="ws-link" href={`#/reports/${AFTER.id}`}>After report</a>.</p>}
+            <a className="ws-link" href={`#/reports/${BEFORE.id}`}>{VARIANT_LABEL(BEFORE_V)} report (separate run)</a> · <a className="ws-link" href={`#/reports/${AFTER.id}`}>{VARIANT_LABEL(AFTER_V)} report (separate run)</a>.</p>}
           {latest && <button className="btn btn-ghost" onClick={() => select(latest.id)}>Open the latest evaluation · {when(latest.created_at)} <span className="arr" aria-hidden="true">→</span></button>}
         </div>}
 

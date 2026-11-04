@@ -152,3 +152,8 @@
 @media (max-width:860px){.polished-grid{grid-template-columns:1fr}}
 
 .polished-band .h2{font-size:clamp(30px,3.3vw,46px);text-wrap:balance}
+
+/* The fixed reference results: the qualifier beside the metrics, and the version key above the numbers */
+.qualifier{font:400 12.5px/1.5 var(--mono);color:#B9B5AC;margin-top:12px}
+.numbers-legend{margin:48px 0 0;flex-wrap:wrap}
+.numbers-legend + .numbers{margin-top:16px}

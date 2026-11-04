@@ -69,10 +69,10 @@ describe('public scope', () => {
     expect(fetched.some(u => u.endsWith(`/jobs/${PAIR}`))).toBe(true);
     expect(fetched.some(u => u.endsWith(`/jobs/${OLD}`))).toBe(false);
     expect(host.querySelector('.ws-job')?.getAttribute('aria-label')).toBe(`Evaluation ${PAIR.slice(0, 13)}`);
-    expect(host.querySelector('.ws-version')?.textContent).toContain('Before vs After');
+    expect(host.querySelector('.ws-version')?.textContent).toContain('Original website vs Agent-ready website');   // the server's 'Before'/'After', shown in audience labels
     const rows = [...host.querySelectorAll('.history-table tbody tr')].map(r => r.textContent ?? '');
     expect(rows).toHaveLength(3);
-    expect(rows.join(' ')).not.toMatch(/Original|Improved|Earlier|eval-c04f|eval-9aaa|eval-abc5/);
+    expect(rows.join(' ')).not.toMatch(/Original(?! website)|Improved|Earlier|eval-c04f|eval-9aaa|eval-abc5/);
     expect(f.mock.calls.some(c => (c[1] as RequestInit | undefined)?.method === 'POST')).toBe(false);
   });
 
@@ -80,7 +80,7 @@ describe('public scope', () => {
     workspaceServer(SINGLES, { [AFTER.id]: job(AFTER.id, ['modifiedpolished'], 'After') });
     const host = await mount(<HostedEvaluation onOpen={() => {}} />);
     expect(host.querySelector('.ws-job')).toBeNull();
-    expect(host.textContent).toContain('Run the first side-by-side evaluation of Before and After');
+    expect(host.textContent).toContain('Run the first side-by-side evaluation of the Original website and the Agent-ready website');
     for (const id of [BEFORE.id, AFTER.id]) expect(host.querySelector(`a[href="#/reports/${id}"]`)).not.toBeNull();
   });
 
@@ -151,7 +151,7 @@ describe('public scope', () => {
     for (const id of [BEFORE.id, AFTER.id, 'eval-' + '7'.repeat(32)]) {
       document.body.innerHTML = ''; host = await mount(<EvidenceNote id={id} />);
       expect(host.textContent).not.toContain('Canonical evaluation.');
-      expect(host.textContent).toContain(id === 'eval-' + '7'.repeat(32) ? 'Another live evaluation' : 'two separate live runs');
+      expect(host.textContent).toContain(id === 'eval-' + '7'.repeat(32) ? 'Another live evaluation' : 'two separate historical live runs');
       expect(host.querySelector(`a[href="#/reports/${CANONICAL.id}"]`)).not.toBeNull();
     }
   });
@@ -161,7 +161,8 @@ describe('public scope', () => {
     vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('no network'); }));
     const host = await mount(<Story />);
     const main = host.querySelector('main')!.textContent!;
-    expect(main).not.toMatch(/Original|Improved|Earlier|Ironbark|trial/);
+    expect(main).not.toMatch(/Original(?! website)|Improved|Earlier|Ironbark|trial/);
+    expect(main).toContain('two separate historical runs'); expect(host.querySelector(`.st-historical a[href="#/reports/${CANONICAL.id}"]`)).not.toBeNull();   // the 36 -> 15 runs are labelled historical
     expect(host.querySelector(`a[href="#/reports/${LIVE.id}"]`)).toBeNull();
   });
 });

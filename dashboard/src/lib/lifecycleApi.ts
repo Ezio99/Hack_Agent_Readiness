@@ -123,11 +123,17 @@ export const api = {
 
 export const short = (sha: string | undefined | null, n = 12) => (sha ?? '').slice(0, n);
 /** Audience-facing version names. Internal snapshot names (polishedoriginal, modifiedpolished, polished, polished2) never reach the audience. */
-const VARIANT_DISPLAY: Record<string, string> = { polishedoriginal: 'Before', modifiedpolished: 'After', polished: 'Earlier trial A', polished2: 'Earlier trial B' };
+const VARIANT_DISPLAY: Record<string, string> = { polishedoriginal: 'Original website', modifiedpolished: 'Agent-ready website', polished: 'Earlier trial A', polished2: 'Earlier trial B' };
 export const VARIANT_LABEL = (v: string) => VARIANT_DISPLAY[v] ?? v.charAt(0).toUpperCase() + v.slice(1);
+/** The server names the featured versions "Before" and "After" in job records (`arm_display`, hosted/stageb.DISPLAY). Those strings stay the API
+ *  contract (the Workspace's public-scope checks compare them); this maps them to the audience labels for display only. */
+export const SERVER_ARM = { before: 'Before', after: 'After' } as const;
+const ARM_DISPLAY: Record<string, string> = { [SERVER_ARM.before]: VARIANT_DISPLAY.polishedoriginal, [SERVER_ARM.after]: VARIANT_DISPLAY.modifiedpolished };
+export const armName = (n: string) => ARM_DISPLAY[n] ?? n;
+export const armNames = <T extends { Original: string; Modified?: string }>(a: T): T => ({ ...a, Original: armName(a.Original), ...(a.Modified ? { Modified: armName(a.Modified) } : {}) });
 /** Presentation-layer wording for recorded server text (job titles, finding details): internal snapshot names become the audience's names. The
  *  recorded data is unchanged; longest names first so "polishedoriginal" is never read as "polished". */
-const AUDIENCE: [RegExp, string][] = [[/\bpolishedoriginal\b/gi, 'Before'], [/\bmodifiedpolished\b/gi, 'After'], [/\bPolished v2\b/g, 'Earlier trial B'],
+const AUDIENCE: [RegExp, string][] = [[/\bpolishedoriginal\b/gi, 'Original website'], [/\bmodifiedpolished\b/gi, 'Agent-ready website'], [/\bPolished v2\b/g, 'Earlier trial B'],
   [/\bPolished v1\b/g, 'Earlier trial A'], [/\bpolished2\b/gi, 'Earlier trial B'], [/\bpolished\b/gi, 'Earlier trial A']];
 export const audienceText = (s: string) => AUDIENCE.reduce((t, [re, to]) => t.replace(re, to), s);
 /** The evaluation's audience title: launched runs are named from their site and versions (stored job labels may carry internal names). */

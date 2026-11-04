@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { armNames } from '../../lib/lifecycleApi';
 
 interface ArmSummary { completed: number; evidence_supported_passes: number; requests_mean: number | null; requests_total: number; steps_mean: number | null; page_views_mean: number | null }
 export interface HistoryItem { id: string; engine?: string; runs_per_repetition?: number | null; state: string; execution_state?: string; report_state?: string; repetitions: number; mode: string; created_at: number; finished_at?: number | null; completed_repetitions?: number; summary: { Original: ArmSummary; Modified?: ArmSummary } | null; arm_display?: { Original: string; Modified?: string } | null; cost_usd?: number | null; reserved_usd?: number | null; budget?: string | null }
@@ -6,7 +7,7 @@ export interface HistoryItem { id: string; engine?: string; runs_per_repetition?
 /** Agent runs per repetition: from the server for Stage B evaluations (tasks x 2 sites); the retired Ironbark engine ran 8. */
 const perRep = (i: HistoryItem) => i.runs_per_repetition ?? 8;
 const rate = (a?: ArmSummary) => a && a.completed ? `${Math.round(100 * a.evidence_supported_passes / a.completed)}%` : '—';
-const names = (i: HistoryItem) => i.arm_display ?? { Original: 'Original', Modified: 'Modified' };
+const names = (i: HistoryItem) => i.arm_display ? armNames(i.arm_display) : { Original: 'Original', Modified: 'Modified' };   // audience labels for the server's names
 const pair = <T,>(i: HistoryItem, a: T, b: T | undefined) => names(i).Modified ? `${a} → ${b}` : `${a}`;   // one version alone shows one value
 const armsOf = (i: HistoryItem) => (names(i).Modified ? ['Original', 'Modified'] : ['Original']) as ('Original' | 'Modified')[];
 const when = (t: number) => new Date(t * 1000).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });

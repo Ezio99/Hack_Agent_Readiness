@@ -8,9 +8,9 @@ import App from '../App';
 import { parse } from './router';
 import { evidence, headline, trial, isItemPage, replication } from './evidence';
 import { LATEST_LIVE } from './LatestLive';
-import { AFTER, AFTER_CHANGES, BEFORE, CANONICAL, FIRST_LIVE, IMPROVEMENTS, LIVE } from './showcase';
+import { AFTER, AFTER_CHANGES, BEFORE, CANONICAL, FIRST_LIVE, IMPROVEMENTS, LIVE, PAIRED } from './showcase';
 import { REPO_URL } from './Shell';
-import { Home } from './Home';
+import { Home, QUALIFIER } from './Home';
 import { Demo } from './demo/Demo';
 import { Workspace } from './workspace/Workspace';
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
@@ -85,30 +85,34 @@ describe('site navigation (judge-facing)', () => {
     expect([...foot.querySelectorAll('h4')].map(h => h.textContent)).toEqual(['Product', 'Evidence', 'About']);
     const links = Object.fromEntries([...foot.querySelectorAll('ul a')].map(a => [a.textContent, a.getAttribute('href')]));
     expect(links).toEqual({ 'The Larkspur journey': '#/lifecycle', 'Run an evaluation': '#/run', 'Before and after': '#/showcase',
-      'Canonical evaluation results': `#/reports/${CANONICAL.id}`, 'Latest live report': '#/reports/latest',
+      'Canonical evaluation results': `#/reports/${CANONICAL.id}`,
       'How it works': '#/how', 'Isolation & limitations': '#/trust', 'GitHub repository': REPO_URL });
-    for (const id of [BEFORE.id, AFTER.id]) expect(foot.innerHTML).not.toContain(id);       // dated runs are linked from the evidence pages, not the footer
+    expect(REPO_URL).toBe('https://github.com/Ezio99/Hack_Agent_Readiness/tree/final-showcase');
+    for (const id of [BEFORE.id, AFTER.id]) expect(foot.innerHTML).not.toContain(id);
+    expect(host.querySelector('.site-head a[href="#/reports/latest"], .site-foot a[href="#/reports/latest"]')).toBeNull();   // no global link to the changing latest report       // dated runs are linked from the evidence pages, not the footer
     for (const r of ['#/showcase', '#/lifecycle', '#/reports/latest']) expect(parse(r).name).not.toBe('home');   // deep links still resolve
   });
 });
 
 describe('homepage (the featured Larkspur story)', () => {
-  it('tells the before-and-after story from the recorded live evaluations, links the showcase, workspace and reports, and calls no API', () => {
+  it('features ONLY the canonical paired evaluation as fixed reference results, in the audience labels, and calls no API', () => {
     const f = noNetwork();
     act(() => root.render(<Home />));
     expect(host.querySelector('h1')?.textContent).toBe('See your website the way an agent does.');
     const hrefs = [...host.querySelectorAll('a')].map(a => a.getAttribute('href'));
-    for (const h of ['#/run', '#/lifecycle', '#/showcase', `#/reports/${BEFORE.id}`, `#/reports/${AFTER.id}`]) expect(hrefs).toContain(h);
+    for (const h of ['#/run', '#/lifecycle', '#/showcase', `#/reports/${CANONICAL.id}`]) expect(hrefs).toContain(h);
     for (const h of hrefs) expect(h ?? '').not.toMatch(/#\/(studio|demo\/|investigation|overview|replay|scopes|evidence$|scanner)/);   // no archive links anywhere (footer included)
-    expect(hrefs.filter(h => h?.startsWith('#/reports/'))).toEqual(expect.arrayContaining([]));
-    for (const h of hrefs.filter(h => h?.startsWith('#/reports/'))) expect([`#/reports/${BEFORE.id}`, `#/reports/${AFTER.id}`, `#/reports/${CANONICAL.id}`, '#/reports/latest']).toContain(h!.split('#diagnostics')[0].replace(/\/tasks\/\d+$/, ''));
+    for (const h of hrefs.filter(h => h?.startsWith('#/reports/'))) expect(h).toBe(`#/reports/${CANONICAL.id}`);   // one evaluation: no separate-run or latest links
     const text = host.textContent!;
+    for (const s of ['39', '10', '74% fewer after the change', '0/3', '3/3', '326 s → 57 s, 83% less', 'US$0.571 → US$0.134, 77% less', 'weekend task: 1/4 → 4/4 courses found',
+                     '1 of 4 courses found', 'All 4 courses found', QUALIFIER, 'Larkspur Community College', 'Measured live', 'Original website', 'Agent-ready website',
+                     'View full paired evaluation report', ...AFTER_CHANGES.map(i => i.title)]) expect(text).toContain(s);
     const O = BEFORE.totals.polishedoriginal, M = AFTER.totals.modifiedpolished;
-    for (const s of [`${O.requests}`, `${M.requests}`, `${Math.round(100 * (O.requests - M.requests) / O.requests)}% fewer after the change`, '0/3', '3/3',
-                     'Larkspur Community College', 'Measured live', 'Before', 'After', ...AFTER_CHANGES.map(i => i.title)]) expect(text).toContain(s);
-    expect(text).toContain(BEFORE.journeys['polishedoriginal-2'].steps.at(-1)!.memory!);         // the agent's own words, unedited
-    expect(text).not.toMatch(/[Pp]olished|Original|Improved|Modified|Ironbark|Earlier|earlier experiment|Archive/);   // only the final experiment, in audience words
-    for (const s of ['post-hoc', 'inconclusive', 'p =', 'xploratory', 'verified', 'pre-registered']) expect(text).not.toContain(s);
+    for (const s of [`${O.requests} → ${M.requests}`, `${O.seconds} s → ${M.seconds} s`, '58%', 'latest']) expect(text).not.toContain(s);   // never the separate historical runs
+    expect(text).toContain(PAIRED.journeys['polishedoriginal-2'].steps.at(-1)!.memory!);          // the agent's own words, unedited
+    expect(text).not.toMatch(/[Pp]olished|Original(?! website)|Improved|Modified|Ironbark|Earlier|earlier experiment|Archive|\bBefore ·|\bAfter ·/);   // audience labels only
+    const prose = PAIRED.journeys['polishedoriginal-2'].steps.reduce((t, s) => t.replaceAll(s.memory ?? '\u0000', ''), text);   // minus the agent's own quoted words
+    for (const s of ['post-hoc', 'inconclusive', 'p =', 'xploratory', 'verified', 'pre-registered']) expect(prose).not.toContain(s);
     expect(host.querySelector('main')!.textContent).not.toContain('Ironbark');
     expect(f).not.toHaveBeenCalled();
   });
@@ -124,7 +128,14 @@ describe('homepage (the featured Larkspur story)', () => {
     expect([LIVE.correct.original, LIVE.correct.improved, LIVE.totals.original.requests, LIVE.totals.improved.requests]).toEqual([0, 3, 39, 6]);
     expect([BEFORE.correct.polishedoriginal, AFTER.correct.modifiedpolished, BEFORE.totals.polishedoriginal.requests, AFTER.totals.modifiedpolished.requests]).toEqual([0, 3, 36, 15]);
     expect(LIVE.cost_usd).toBeCloseTo(LIVE.totals.original.cost_usd + LIVE.totals.improved.cost_usd, 4);
-    expect([LATEST_LIVE.before, LATEST_LIVE.after]).toEqual([BEFORE.id, AFTER.id]);
+    // the canonical paired evaluation: ONE job with both versions; the figures quoted for the submission
+    expect(PAIRED.id).toBe(CANONICAL.id); expect(LATEST_LIVE.id).toBe(CANONICAL.id);
+    for (const v of ['polishedoriginal', 'modifiedpolished']) { const ts = PAIRED.trials.filter(t => t.variant === v);
+      expect(ts).toHaveLength(3); expect(ts.reduce((a, t) => a + t.requests, 0)).toBe(PAIRED.totals[v].requests); expect(ts.filter(t => t.correct).length).toBe(PAIRED.correct[v]); }
+    const [o, m] = [PAIRED.totals.polishedoriginal, PAIRED.totals.modifiedpolished];
+    expect([PAIRED.correct.polishedoriginal, PAIRED.correct.modifiedpolished, o.requests, m.requests, o.seconds, m.seconds]).toEqual([0, 3, 39, 10, 326, 57]);
+    expect([o.cost_usd.toFixed(3), m.cost_usd.toFixed(3)]).toEqual(['0.571', '0.134']);
+    expect([PAIRED.journeys['polishedoriginal-2'].answer.length, PAIRED.journeys['modifiedpolished-2'].answer.length]).toEqual([1, 4]);   // weekend courses: 1/4 -> 4/4
     for (const x of IMPROVEMENTS) if (x.preview) expect(existsSync(join(__dirname, 'showcase', 'frames', `${x.preview}.webp`))).toBe(true);
     for (const v of ['polishedoriginal', 'modifiedpolished']) expect(existsSync(join(__dirname, 'showcase', 'frames', `site-${v}-courses.webp`))).toBe(true);
   });

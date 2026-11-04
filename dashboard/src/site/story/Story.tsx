@@ -2,12 +2,16 @@ import { useEffect, useRef, useState } from 'react';
 import { SiteFooter, SiteHeader } from '../Shell';
 import { Track, easeInOut, easeOut, seg } from '../demo/engine';
 import { reducedMotion } from '../router';
-import { AFTER, AFTER_V, BEFORE, BEFORE_V, showcaseFrame, type LiveRecord, type LiveStep } from '../showcase';
+import { AFTER, AFTER_V, BEFORE, BEFORE_V, CANONICAL, showcaseFrame, type LiveRecord, type LiveStep } from '../showcase';
+import { VARIANT_LABEL } from '../../lib/lifecycleApi';
 import './story.css';
 
+const ORIG = VARIANT_LABEL(BEFORE_V), READY = VARIANT_LABEL(AFTER_V);      // 'Original website', 'Agent-ready website'
+
 /** The cinematic showcase: a website that looks great to people → AI agents struggle → Agent Readiness finds why → the website is improved → agents
- *  are evaluated again → measured results. "Before" and "After" are the two live evaluations of 4 Nov 2026 (each version alone, same frozen tasks,
- *  same agent). Every number, frame and quote comes from those recorded runs (showcase/larkspur.json, exported from the product's own reports);
+ *  are evaluated again → measured results. The Original and the Agent-ready website are the two SEPARATE historical live evaluations of 4 Nov 2026
+ *  (each version alone, same frozen tasks, labelled as such on the page; the homepage's reference results are the paired evaluation instead),
+ *  same agent. Every number, frame and quote comes from those recorded runs (showcase/larkspur.json, exported from the product's own reports);
  *  the page calls no API. */
 
 const B = BEFORE.totals[BEFORE_V], A = AFTER.totals[AFTER_V];
@@ -61,7 +65,7 @@ function Hero({ reduce }: { reduce: boolean }) {
       <p className="st-kicker">Agent Readiness · Larkspur Community College</p>
       <h1 className="st-mega">Looks great to people.<br /><span>Can agents use it?</span></h1>
     </div>
-    <div className="st-hero-device"><Browser src={showcaseFrame(`site-${BEFORE_V}-home`)} url="/" alt="The Larkspur Community College home page, redesigned for people (the Before website)." /></div>
+    <div className="st-hero-device"><Browser src={showcaseFrame(`site-${BEFORE_V}-home`)} url="/" alt="The Larkspur Community College home page, redesigned for people (the Original website)." /></div>
     <p className="st-hero-cap">A college website, freshly redesigned for people. Then live AI agents tried to use it.</p>
   </Track>;
 }
@@ -108,12 +112,12 @@ function Numbers({ r, v, label }: { r: LiveRecord; v: string; label: string }) {
 }
 
 function BeforeResult() {
-  return <section className="st-section st-result" aria-label="Before: measured">
+  return <section className="st-section st-result" aria-label={`${ORIG}: measured`}>
     <div className="st-wrap">
-      <p className="st-spec" data-reveal>{BEFORE.tasks.length} customer tasks · 1 agent each · max {LIMIT} requests/steps per agent · US${RUN_CAP_USD.toFixed(2)} (A${(RUN_CAP_USD * 1.5).toFixed(2)}) cap per evaluation, within the A$20 budget · same limits Before & After</p>
-      <p className="st-kicker" data-reveal>Before · measured</p>
+      <p className="st-spec" data-reveal>{BEFORE.tasks.length} customer tasks · 1 agent each · max {LIMIT} requests/steps per agent · US${RUN_CAP_USD.toFixed(2)} (A${(RUN_CAP_USD * 1.5).toFixed(2)}) cap per evaluation, within the A$20 budget · same limits on both websites</p>
+      <p className="st-kicker" data-reveal>{ORIG} · measured · historical run, evaluated on its own</p>
       <h2 className="st-h2 center" data-reveal>{BEFORE.correct[BEFORE_V] === 0 ? <>Not one right answer. <em>Every agent ran out of road.</em></> : <>The agents struggled.</>}</h2>
-      <Numbers r={BEFORE} v={BEFORE_V} label="Before: live evaluation" />
+      <Numbers r={BEFORE} v={BEFORE_V} label={`${ORIG}: historical live evaluation`} />
       <p className="st-body center" data-reveal>The agents opened {opened(BEFORE, BEFORE_V)} course pages one at a time, kept going back to the catalogue, and answered from what they had
         managed to check. One guessed a course address and hit a dead end.</p>
     </div>
@@ -164,9 +168,9 @@ function Change({ reduce }: { reduce: boolean }) {
       <p className="st-kicker">Chapter 5 · The website, improved</p>
       <h2 className="st-h2">Same design. <em>Scroll to see the change.</em></h2>
       <div className="st-compare" aria-label="All courses page, before and after">
-        <Browser className="base" src={showcaseFrame(`site-${BEFORE_V}-courses`)} url="/courses" alt="Before: course cards with a name, subject and summary only." />
-        <Browser className="top" src={showcaseFrame(`site-${AFTER_V}-courses`)} url="/courses" alt="After: the same cards also state fee, duration, level, class day, campus, seats left and materials." />
-        <span className="st-compare-l">Before</span><span className="st-compare-r">After</span>
+        <Browser className="base" src={showcaseFrame(`site-${BEFORE_V}-courses`)} url="/courses" alt={`${ORIG}: course cards with a name, subject and summary only.`} />
+        <Browser className="top" src={showcaseFrame(`site-${AFTER_V}-courses`)} url="/courses" alt={`${READY}: the same cards also state fee, duration, level, class day, campus, seats left and materials.`} />
+        <span className="st-compare-l">{ORIG}</span><span className="st-compare-r">{READY}</span>
       </div>
     </div>
   </Track>;
@@ -183,14 +187,16 @@ function Verdict() {
   ];
   return <section className="st-section st-verdict" aria-label="Measured result">
     <div className="st-wrap">
-      <p className="st-kicker" data-reveal>Chapter 7 · Measured</p>
+      <p className="st-kicker" data-reveal>Chapter 7 · Measured · two separate historical runs</p>
       <h2 className="st-mega sm" data-reveal>{BEFORE.correct[BEFORE_V]}/3 → {AFTER.correct[AFTER_V]}/3</h2>
       <p className="st-body center" data-reveal>The same three questions, the same agent, the same rules. After the change, agents answered from the catalogue alone with {fewer(B.requests, A.requests)}% fewer
         model requests, in {fewer(B.seconds, A.seconds)}% less time, at {fewer(B.cost_usd, A.cost_usd)}% lower cost.</p>
-      <table className="st-table" data-reveal><thead><tr><th scope="col">Live evaluation</th><th scope="col">Before</th><th scope="col">After</th></tr></thead>
+      <table className="st-table" data-reveal><thead><tr><th scope="col">Separate historical runs, 4 Nov 2026</th><th scope="col">{ORIG}</th><th scope="col">{READY}</th></tr></thead>
         <tbody>{rows.map(([k, a, b]) => <tr key={k}><th scope="row">{k}</th><td>{a}</td><td>{b}</td></tr>)}</tbody></table>
       <p className="st-fine center" data-reveal>Correct: the answer names exactly the right courses (extra detail such as fees is allowed). Exact match: nothing but the course names. One agent per
         question on each version: a measured result for these tasks, not a statistical guarantee.</p>
+      <p className="st-fine center st-historical" data-reveal>These figures come from two separate historical evaluations, one per website, and are not the reference results.
+        The homepage features the <a href={`#/reports/${CANONICAL.id}`}>reference paired evaluation</a>, which evaluated both websites together.</p>
     </div>
   </section>;
 }
@@ -201,7 +207,7 @@ function Finale() {
       <h2 className="st-mega sm" data-reveal>Your turn.</h2>
       <p className="st-body center" data-reveal>Run live agents on the improved Larkspur Community College website, watch them browse, and read the report.</p>
       <p className="st-actions" data-reveal><a className="st-btn" href="#/run">Open the Workspace →</a>
-        <a className="st-btn ghost" href={`#/reports/${BEFORE.id}`}>Before: the report</a><a className="st-btn ghost" href={`#/reports/${AFTER.id}`}>After: the report</a></p>
+        <a className="st-btn ghost" href={`#/reports/${BEFORE.id}`}>{ORIG} report (historical run)</a><a className="st-btn ghost" href={`#/reports/${AFTER.id}`}>{READY} report (historical run)</a></p>
     </div>
   </section>;
 }
@@ -217,11 +223,11 @@ export function Story() {
       <Website reduce={reduce} />
       <Tasks />
       <BeforeResult />
-      <Trace id="st-friction" reduce={reduce} kicker="Chapter 3 · Where the agents struggled" version="Before" list={sB} highlight={sB[sB.length - 1].step}
+      <Trace id="st-friction" reduce={reduce} kicker="Chapter 3 · Where the agents struggled" version={ORIG} list={sB} highlight={sB[sB.length - 1].step}
         title={<>One course page <em>at a time.</em></>} />
       <Recommendation />
       <Change reduce={reduce} />
-      <Trace id="st-retest" reduce={reduce} kicker="Chapter 6 · Agents, again" version="After" list={sA} highlight={sA[sA.length - 1].step}
+      <Trace id="st-retest" reduce={reduce} kicker="Chapter 6 · Agents, again" version={READY} list={sA} highlight={sA[sA.length - 1].step}
         title={<>Every answer <em>on one page.</em></>} />
       <Verdict />
       <Finale />
