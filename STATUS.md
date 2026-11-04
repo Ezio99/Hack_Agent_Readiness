@@ -19,7 +19,9 @@ Authoritative current handoff. Check it against the repository and production be
 > - **Deadline:** **2026-11-05 13:00 AEDT**.
 > - **Owner approval:** deploys, paid runs, `budget evaluation-add/use`, settlements and ledger appends need explicit owner approval.
 
-> **PRODUCTION = `final-showcase` @ `3c2b5ce`** (image `04c130ab…`, rollback `rollback-before-paired`). Selected evaluation **`ar-a20-pair`** (Before + After, 6 agents, US$3.74 per run); Live report = `#/reports/latest`. First live paired run `eval-1cf64d5e…` (owner-launched): Before 0/3, 39 requests → After 3/3, 10 requests; US$0.70 settled; budget A$2.49 spent of A$20. See the checklist, §8.
+> **PRODUCTION = `final-showcase` @ `4dae086`** (judge-facing copy cleanup; image `f493c7ce…`, rollback `rollback-before-copyclean` = `04c130ab…`).
+>
+> Previous: `3c2b5ce` (image `04c130ab…`, rollback `rollback-before-paired`). Selected evaluation **`ar-a20-pair`** (Before + After, 6 agents, US$3.74 per run); Live report = `#/reports/latest`. First live paired run `eval-1cf64d5e…` (owner-launched): Before 0/3, 39 requests → After 3/3, 10 requests; US$0.70 settled; budget A$2.49 spent of A$20. See the checklist, §8.
 >
 > Previous: `f3d1abf` (2026-11-04 ~13:20 AEDT, owner-approved targeted frontend release; image `dd4685cc…`; rollback `rollback-before-public` = `dd3d6ba1…`). The public app shows only the final Before → After experiment (see the checklist, §7). Frozen again unless a submission-blocking defect is found.
 >
