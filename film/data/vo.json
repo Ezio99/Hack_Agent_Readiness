@@ -1,1 +1,202 @@
-{}
+{
+ "act1": {
+  "file": "audio/vo/mix/act1.wav",
+  "lines": {
+   "a1.college": {
+    "from": 2,
+    "to": 73,
+    "gap": 2
+   },
+   "a1.designed": {
+    "from": 86,
+    "to": 175,
+    "gap": 14
+   },
+   "a1.question": {
+    "from": 192,
+    "to": 264,
+    "gap": 18
+   },
+   "a1.task": {
+    "from": 282,
+    "to": 458,
+    "gap": 20
+   },
+   "a1.browsing": {
+    "from": 473,
+    "to": 508,
+    "gap": 15
+   },
+   "a1.watching": {
+    "from": 523,
+    "to": 582,
+    "gap": 17
+   }
+  },
+  "seconds": 19.6,
+  "source": "recorded"
+ },
+ "act2": {
+  "file": "audio/vo/mix/act2.wav",
+  "lines": {
+   "a2.facts": {
+    "from": 2,
+    "to": 156,
+    "gap": 3
+   },
+   "a2.pages": {
+    "from": 169,
+    "to": 299,
+    "gap": 14
+   },
+   "a2.opens": {
+    "from": 312,
+    "to": 382,
+    "gap": 14
+   },
+   "a2.cost": {
+    "from": 397,
+    "to": 537,
+    "gap": 16
+   },
+   "a2.low": {
+    "from": 551,
+    "to": 705,
+    "gap": 15
+   },
+   "a2.stops": {
+    "from": 720,
+    "to": 887,
+    "gap": 16
+   },
+   "a2.recorded": {
+    "from": 906,
+    "to": 1057,
+    "gap": 20
+   },
+   "a2.cause": {
+    "from": 1071,
+    "to": 1199,
+    "gap": 15
+   }
+  },
+  "seconds": 40.16,
+  "source": "recorded"
+ },
+ "act3": {
+  "file": "audio/vo/mix/act3.wav",
+  "lines": {
+   "a3.diagnosis": {
+    "from": 1,
+    "to": 132,
+    "gap": 1
+   },
+   "a3.three": {
+    "from": 147,
+    "to": 258,
+    "gap": 16
+   },
+   "a3.cards": {
+    "from": 271,
+    "to": 399,
+    "gap": 14
+   },
+   "a3.same": {
+    "from": 411,
+    "to": 573,
+    "gap": 12
+   },
+   "a3.visible": {
+    "from": 583,
+    "to": 693,
+    "gap": 11
+   },
+   "a3.deadend": {
+    "from": 707,
+    "to": 826,
+    "gap": 15
+   },
+   "a3.data": {
+    "from": 837,
+    "to": 975,
+    "gap": 13
+   },
+   "a3.again": {
+    "from": 992,
+    "to": 1095,
+    "gap": 18
+   }
+  },
+  "seconds": 36.64,
+  "source": "recorded"
+ },
+ "act4": {
+  "file": "audio/vo/mix/act4.wav",
+  "lines": {
+   "a4.again": {
+    "from": 2,
+    "to": 150,
+    "gap": 2
+   },
+   "a4.before": {
+    "from": 165,
+    "to": 276,
+    "gap": 16
+   },
+   "a4.after": {
+    "from": 289,
+    "to": 460,
+    "gap": 14
+   },
+   "a4.correct": {
+    "from": 475,
+    "to": 593,
+    "gap": 16
+   },
+   "a4.metrics": {
+    "from": 607,
+    "to": 822,
+    "gap": 15
+   },
+   "a4.works": {
+    "from": 836,
+    "to": 939,
+    "gap": 15
+   }
+  },
+  "seconds": 31.44,
+  "source": "recorded"
+ },
+ "act5": {
+  "file": "audio/vo/mix/act5.wav",
+  "lines": {
+   "a5.today": {
+    "from": 1,
+    "to": 155,
+    "gap": 1
+   },
+   "a5.tomorrow": {
+    "from": 174,
+    "to": 306,
+    "gap": 20
+   },
+   "a5.which": {
+    "from": 320,
+    "to": 466,
+    "gap": 14
+   },
+   "a5.brand": {
+    "from": 485,
+    "to": 516,
+    "gap": 20
+   },
+   "a5.tagline": {
+    "from": 528,
+    "to": 606,
+    "gap": 13
+   }
+  },
+  "seconds": 20.32,
+  "source": "recorded"
+ }
+}

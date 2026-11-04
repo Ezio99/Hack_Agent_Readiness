@@ -2,7 +2,7 @@
 
 The hackathon film, built programmatically with [Remotion](https://www.remotion.dev) 4 (React). It lives on the isolated `film` branch only. It is never deployed, and nothing in `dashboard/` or `src/` imports it. The product is not modified to make the film.
 
-**Status:** the complete 3:00 cut is built. Act 1, the opening (0:00–0:25) · Act 2, the investigation (–1:15) · Act 3, the transformation (–1:55) · Act 4, the proof (–2:35; ONLY the paired run, see `CANONICAL.md`) · Act 5, the product and the vision (–3:00; the vision is drawn as a labelled concept). The picture cut is approved. The voiceover pipeline is built and tested end to end, and awaits the recorded voice; until then, timings are placeholders (see `vo/AUDITION.md`).
+**Status:** final candidate. 2:59.05 (5,371 frames), narrated by Frederick Surrey (ElevenLabs Eleven v4), mastered to -18.3 LUFS integrated, -1.0 dBTP. Voice files are not in Git (public/audio/vo/ is ignored); `data/vo.json` records where every line sits in them (see `vo/AUDITION.md`, `NARRATION.md`).
 
 ## What is real and what is drawn
 | On screen | Source |

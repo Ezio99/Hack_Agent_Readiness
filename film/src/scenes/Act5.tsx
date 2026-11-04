@@ -104,7 +104,7 @@ function Concept({ f }: { f: number }) {
 
 /** The close: the real mark, the name, the tagline. */
 function End({ f }: { f: number }) {
-  const o = k(f, [B.brand, B.brand + 20], [0, 1]);
+  const o = k(f, [B.brand, B.brand + 20], [0, 1]) * (1 - k(f, [ACT5.frames - 24, ACT5.frames - 1], [0, 1]));   // the hold, then a gentle fade out
   const tag = k(f, [cue('a5.tagline'), cue('a5.tagline') + 30], [0, 1]);
   return <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center', opacity: o }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: 34, transform: `translateY(${-40 * tag}px)` }}>

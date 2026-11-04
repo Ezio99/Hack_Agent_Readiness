@@ -20,7 +20,7 @@ const MODEL = opt('--model') ?? 'eleven_v4';   // the film's model since 2026-11
  *  ("Natural" = 0.5) and, like v4, has no style or speaker-boost controls. */
 const SETTINGS = MODEL === 'eleven_multilingual_v2' ? { stability: 0.45, similarity_boost: 0.8, style: 0, use_speaker_boost: true, speed: 1.0 }
   : MODEL === 'eleven_v3' ? { stability: 0.5, similarity_boost: 0.8 }
-  : { stability: 0.5, similarity_boost: 0.75, speed: 1.0 };   // v4 (and others): the documented controls only; no audio tags, so the read stays understated
+  : { stability: 0.5, similarity_boost: 0.75, speed: Number(opt('--speed') ?? 1.0) };   // v4 (and others): the documented controls only; no audio tags, so the read stays understated
 const KEY = process.env.ELEVENLABS_API_KEY ?? process.env.ELEVEN_LABS_KEY ?? (existsSync(join(FILM, '.env'))
   ? readFileSync(join(FILM, '.env'), 'utf8').match(/^\s*(?:export\s+)?(?:ELEVENLABS_API_KEY|ELEVEN_LABS_KEY)\s*=\s*["']?([^"'\s]+)/m)?.[1] : undefined);
 

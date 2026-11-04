@@ -2,6 +2,7 @@
 // the voice; the voice is never stretched, sped up or re-ordered).
 //
 //   node scripts/vo.mjs align              the five act files in public/audio/vo/ (act1..act5 .wav/.mp3/.m4a/.flac)
+//   node scripts/vo.mjs align --pick act1=2,act2=1,...   the chosen take of each act (actN-takeK.mp3)
 //   node scripts/vo.mjs align --src DIR --source scratch     the same from another folder (e.g. a scratch voice for timing tests only)
 //   node scripts/vo.mjs audition           every clip in public/audio/vo/audition/ (dan-1.mp3, haseeb-2.wav, ...) -> data/audition.json
 //   node scripts/vo.mjs clear              back to placeholder timing (no voice)
@@ -153,7 +154,9 @@ async function main() {
     writeFileSync(join(FILM, 'data/vo.json'), '{}\n');                // measure against the DESIGNED cue sheet, never a previous placement
     const { ACTS } = await loadNarration(), src = opt('--src') ?? VO, source = opt('--source') ?? 'recorded', ov = overrides(), out = {};
     for (const a of ACTS) {
-      const file = find(src, a.id);
+      // --take N: every act from take N; --pick act1=2,act3=1: per act (the chosen takes, saved as actN-takeK.mp3); default: actN.mp3
+      const pick = Object.fromEntries((opt('--pick') ?? '').split(',').filter(Boolean).map(x => x.split('='))), take = pick[a.id] ?? opt('--take');
+      const file = find(src, take ? `${a.id}-take${take}` : a.id);
       if (!file) { console.log(`${a.id}: no file, stays placeholder`); continue; }
       console.log(`${a.id}: ${file.replace(FILM + '/', '')}`);
       out[a.id] = { ...measure(file, a.id, a.lines, ov), source };

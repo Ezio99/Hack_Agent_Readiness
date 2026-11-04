@@ -127,9 +127,11 @@ export function Opening({ captions = false }: { captions?: boolean }) {
   </AbsoluteFill>;
 }
 
+/** Lines whose picture carries its own large text along the bottom edge: their caption sits in the clear band just above it. */
+const RAISED = new Set(['a2.recorded', 'a2.cause', 'a3.same', 'a3.visible', 'a4.works']);
 export function Captions({ act, f }: { act: typeof ACT1; f: number }) {
   const line = act.lines.find(l => f >= l.at - 2 && f <= l.end + 12);   // subtitles: on with the first word, off just after the last
-  return <div style={{ position: 'absolute', left: 0, right: 0, bottom: 30, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+  return <div style={{ position: 'absolute', left: 0, right: 0, bottom: line && RAISED.has(line.id) ? 112 : 30, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
     {act.status !== 'recorded' && <span style={{ fontFamily: F.mono, fontSize: 12, letterSpacing: '.16em', color: '#F2C14E' }}>NARRATION · PLACEHOLDER TIMING, NOT RECORDED</span>}
     {line && <span style={{ fontFamily: F.sans, fontSize: 30, color: '#fff', background: 'rgba(0,0,0,.72)', padding: '6px 16px', borderRadius: 6, maxWidth: 1500, textAlign: 'center' }}>{line.text}</span>}
   </div>;
