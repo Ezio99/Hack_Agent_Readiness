@@ -27,14 +27,27 @@ export const ACT2: Act = {
     { id: 'a2.pages', at: 150, end: 250, text: 'The catalogue doesn’t show them. They’re on fourteen separate course pages.' },
     { id: 'a2.opens', at: 285, end: 345, text: 'So it opens them. One at a time.' },
     { id: 'a2.cost', at: 470, end: 580, text: 'Every page costs a step. Every trip back to the catalogue costs another.' },
-    { id: 'a2.low', at: 800, end: 900, text: 'Three courses checked. Eleven to go. And the budget is running low.' },
-    { id: 'a2.stops', at: 1010, end: 1130, text: 'So it stops, and answers with what it has: two of the four right courses.' },
+    { id: 'a2.low', at: 800, end: 900, text: 'Three courses checked. Eleven to go. And its interaction budget is running low.' },
+    { id: 'a2.stops', at: 1010, end: 1130, text: 'So it stops itself, before finding all four matching courses. It names just two.' },
     { id: 'a2.recorded', at: 1180, end: 1320, text: 'Agent Readiness recorded every step, every screenshot, every decision, and traced the failure to its cause.' },
     { id: 'a2.cause', at: 1350, end: 1480, text: 'The facts the agent needed are on every course page, and on none of the catalogue cards.' },
   ],
 };
 
-export const ACTS = [ACT1, ACT2];
+export const ACT3: Act = {
+  id: 'act3', vo: 'audio/vo/act3.wav', status: 'placeholder', frames: 1200, lines: [
+    { id: 'a3.diagnosis', at: 12, end: 120, text: 'The diagnosis was clear. The facts agents need are missing from the catalogue.' },
+    { id: 'a3.three', at: 135, end: 215, text: 'Agent Readiness recommended three changes. The first matters most.' },
+    { id: 'a3.cards', at: 232, end: 350, text: 'Take each course’s facts off its own page, and put them on its catalogue card.' },
+    { id: 'a3.same', at: 440, end: 545, text: 'Same design. Same pages. But now every card shows its level, day, fee and seats.' },
+    { id: 'a3.visible', at: 585, end: 680, text: 'All four weekend beginner courses, visible from one page.' },
+    { id: 'a3.deadend', at: 712, end: 820, text: 'It also fixed a dead end, where an agent’s guessed address led nowhere.' },
+    { id: 'a3.data', at: 892, end: 1010, text: 'And it described every course in structured data that agents can read directly.' },
+    { id: 'a3.again', at: 1068, end: 1150, text: 'Then the same agent got the same task, on the improved website.' },
+  ],
+};
+
+export const ACTS = [ACT1, ACT2, ACT3];
 const ALL = new Map(ACTS.flatMap(a => a.lines.map(l => [l.id, l] as const)));
 /** The frame (act-local) a narration line starts; throws on an unknown id so a renamed line can never silently desync a scene. */
 export const cue = (id: string): number => { const l = ALL.get(id); if (!l) throw new Error(`unknown narration cue ${id}`); return l.at; };

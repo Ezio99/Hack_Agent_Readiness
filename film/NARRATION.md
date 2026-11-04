@@ -1,6 +1,6 @@
-# Narration, voiceover pipeline and approvals (Acts 1–2)
+# Narration, voiceover pipeline and approvals (Acts 1–3)
 
-**Status:** the narration text below is approved for Act 1 and proposed for Act 2. No voice is recorded yet. All timings are placeholders, estimated at about 140 words per minute.
+**Status:** the narration text below is approved for Act 1 and Act 2 (the Act 2 budget wording was corrected as directed); Act 3 is proposed. No voice is recorded yet. All timings are placeholders, estimated at about 140 words per minute.
 
 The cue sheet in `src/narration.ts` is the single source of truth. Scenes anchor their beats to cue ids, never to fixed frames. Once a real voice is recorded, only the cue times change and the animation follows the voice.
 
@@ -21,12 +21,30 @@ The cue sheet in `src/narration.ts` is the single source of truth. Scenes anchor
 | a2.pages | 0:30.0 | The catalogue doesn't show them. They're on fourteen separate course pages. | The 14 real course pages appear |
 | a2.opens | 0:34.5 | So it opens them. One at a time. | The loop begins: each recorded step's screenshot stacks on the last; a tick per step |
 | a2.cost | 0:40.7 | Every page costs a step. Every trip back to the catalogue costs another. | Steps 4–6: catalogue → course page → catalogue |
-| a2.low | 0:51.7 | Three courses checked. Eleven to go. And the budget is running low. | Steps 9–10; the remaining segments turn rust; *"low on steps (step 10/14)"* |
-| a2.stops | 0:58.7 | So it stops, and answers with what it has: two of the four right courses. | *"Out of steps."*; FOUND ×2, MISSED ×2 |
+| a2.low | 0:51.7 | Three courses checked. Eleven to go. And its interaction budget is running low. | Steps 9–10; the remaining segments turn rust; *"low on steps (step 10/14)"* |
+| a2.stops | 0:58.7 | So it stops itself, before finding all four matching courses. It names just two. | *"Out of steps."*, labelled as the agent's own note at step 11, with 3 of 14 steps left; FOUND ×2, MISSED ×2 |
 | a2.recorded | 1:04.3 | Agent Readiness recorded every step, every screenshot, every decision, and traced the failure to its cause. | The product's own report: 2 of 4, 11 of 14 requests, the agent's answer |
 | a2.cause | 1:10.0 | The facts the agent needed are on every course page, and on none of the catalogue cards. | "level / class day: item pages only" → the finding "Listing cards omit 'class day'" and its recommendation |
 
 **Hand-off to Act 3:** the act ends on the report's recommendation, "State class day on each card of /courses", which sets up the improvements.
+
+## Act 3: the transformation (1:15–1:55) · proposed text, about 95 words
+| Cue | Film time | Line | Picture |
+|---|---|---|---|
+| a3.diagnosis | 1:15.4 | The diagnosis was clear. The facts agents need are missing from the catalogue. | The report's finding recedes; the diagnosis, isolated, in large type |
+| a3.three | 1:19.5 | Agent Readiness recommended three changes. The first matters most. | 01 Put the facts on the catalogue cards (dominant) · 02 Fix the dead end · 03 Structured data |
+| a3.cards | 1:22.7 | Take each course’s facts off its own page, and put them on its catalogue card. | Mindful meditation's Before course page: its 7 facts highlight, lift off and fly onto its catalogue card, which resolves into the real After catalogue |
+| a3.same | 1:29.7 | Same design. Same pages. But now every card shows its level, day, fee and seats. | The After catalogue grows to centre: "Facts on catalogue cards: 14 of 14" |
+| a3.visible | 1:34.5 | All four weekend beginner courses, visible from one page. | The camera pulls back: the 4 matching cards with Level and Class day outlined |
+| a3.deadend | 1:38.7 | It also fixed a dead end, where an agent’s guessed address led nowhere. | Recorded Before "Not found" (task 1, step 9) → the same address on After opens the course |
+| a3.data | 1:44.7 | And it described every course in structured data that agents can read directly. | The After course page + its own JSON-LD (verbatim excerpt) |
+| a3.again | 1:50.6 | Then the same agent got the same task, on the improved website. | "Same task. Same agent. Same limits." and a full 14-step budget |
+
+**Act 3 evidence:**
+- Every flying fact is a real row of the Before course page, and it lands on the box where the After card shows the same label and value. The build fails if any pair differs.
+- Every catalogue image is the frozen Before or After snapshot.
+- The dead end is the recorded screenshot from the diagnostic run (the run whose report produced these recommendations).
+- The JSON-LD lines are a verbatim excerpt of the After page's own data.
 
 ## Evidence notes
 - **Truthful framing of the budget:** the agent did **not** hit the 14-step cap. It used 11 of 14 (`limit_stop: false`), and its own note at step 11 says *"Out of steps"*.

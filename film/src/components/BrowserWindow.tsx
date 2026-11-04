@@ -12,7 +12,7 @@ export function BrowserWindow({ width, height, path, badge, children, style, sit
       <div style={{ display: 'flex', gap: 8 }}>{[0, 1, 2].map(i => <span key={i} style={{ width: 11, height: 11, borderRadius: 6, background: 'rgba(237,234,227,.16)' }} />)}</div>
       <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
         <div style={{ minWidth: 360, padding: '6px 18px', borderRadius: 999, background: 'rgba(237,234,227,.06)', color: C.ink2, fontFamily: F.mono, fontSize: 15,
-          textAlign: 'center', letterSpacing: '.01em' }}>{site}<span style={{ color: C.ink3 }}>{'  ·  '}{path}</span></div>
+          textAlign: 'center', letterSpacing: '.01em' }}>{site}<span style={{ color: C.ink3 }}>{site ? '  ·  ' : ''}{path}</span></div>
       </div>
       <div style={{ minWidth: 60, display: 'flex', justifyContent: 'flex-end' }}>{badge}</div>
     </div>

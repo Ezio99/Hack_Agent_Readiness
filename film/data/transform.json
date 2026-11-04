@@ -1,0 +1,1457 @@
+{
+ "before": {
+  "snapshot_sha256": "2ee4a7be2bd0cfb66adef68779317ea40a27b55c7330cf4ca23bdc85ec91169a",
+  "featured": {
+   "path": "/courses/mindful-meditation",
+   "image": "captures/transform/before-featured-page.png",
+   "facts": [
+    {
+     "label": "Course fee",
+     "value": "$120",
+     "box": {
+      "x": 77.5,
+      "y": 588.78125,
+      "width": 718,
+      "height": 25.59375
+     }
+    },
+    {
+     "label": "Duration",
+     "value": "4 weeks",
+     "box": {
+      "x": 77.5,
+      "y": 623.171875,
+      "width": 718,
+      "height": 25.59375
+     }
+    },
+    {
+     "label": "Level",
+     "value": "Beginner",
+     "box": {
+      "x": 77.5,
+      "y": 657.5625,
+      "width": 718,
+      "height": 25.59375
+     }
+    },
+    {
+     "label": "Class day",
+     "value": "Sunday",
+     "box": {
+      "x": 77.5,
+      "y": 691.953125,
+      "width": 718,
+      "height": 25.59375
+     }
+    },
+    {
+     "label": "Seats left",
+     "value": "15",
+     "box": {
+      "x": 77.5,
+      "y": 726.34375,
+      "width": 718,
+      "height": 25.59375
+     }
+    },
+    {
+     "label": "Campus",
+     "value": "Riverside",
+     "box": {
+      "x": 77.5,
+      "y": 760.734375,
+      "width": 718,
+      "height": 25.59375
+     }
+    },
+    {
+     "label": "Materials",
+     "value": "Included",
+     "box": {
+      "x": 77.5,
+      "y": 795.125,
+      "width": 718,
+      "height": 25.59375
+     }
+    }
+   ],
+   "height": 1240
+  },
+  "courses": {
+   "image": "captures/transform/before-courses-full.png",
+   "cards": [
+    {
+     "name": "Watercolour foundations",
+     "box": {
+      "x": 32.5,
+      "y": 311.8125,
+      "width": 285,
+      "height": 277.953125
+     },
+     "facts": []
+    },
+    {
+     "name": "Life drawing studio",
+     "box": {
+      "x": 337.5,
+      "y": 311.8125,
+      "width": 285,
+      "height": 277.953125
+     },
+     "facts": []
+    },
+    {
+     "name": "Wheel-thrown pottery",
+     "box": {
+      "x": 642.5,
+      "y": 311.8125,
+      "width": 285,
+      "height": 277.953125
+     },
+     "facts": []
+    },
+    {
+     "name": "Introduction to Python",
+     "box": {
+      "x": 947.5,
+      "y": 311.8125,
+      "width": 285,
+      "height": 277.953125
+     },
+     "facts": []
+    },
+    {
+     "name": "Spreadsheets for small business",
+     "box": {
+      "x": 32.5,
+      "y": 609.765625,
+      "width": 285,
+      "height": 300.890625
+     },
+     "facts": []
+    },
+    {
+     "name": "Web pages from scratch",
+     "box": {
+      "x": 337.5,
+      "y": 609.765625,
+      "width": 285,
+      "height": 300.890625
+     },
+     "facts": []
+    },
+    {
+     "name": "Conversational Italian 1",
+     "box": {
+      "x": 642.5,
+      "y": 609.765625,
+      "width": 285,
+      "height": 300.890625
+     },
+     "facts": []
+    },
+    {
+     "name": "Japanese for travellers",
+     "box": {
+      "x": 947.5,
+      "y": 609.765625,
+      "width": 285,
+      "height": 300.890625
+     },
+     "facts": []
+    },
+    {
+     "name": "Spanish conversation 2",
+     "box": {
+      "x": 32.5,
+      "y": 930.65625,
+      "width": 285,
+      "height": 302.265625
+     },
+     "facts": []
+    },
+    {
+     "name": "Beginners yoga",
+     "box": {
+      "x": 337.5,
+      "y": 930.65625,
+      "width": 285,
+      "height": 302.265625
+     },
+     "facts": []
+    },
+    {
+     "name": "Mindful meditation",
+     "box": {
+      "x": 642.5,
+      "y": 930.65625,
+      "width": 285,
+      "height": 302.265625
+     },
+     "facts": []
+    },
+    {
+     "name": "Home electrical basics",
+     "box": {
+      "x": 947.5,
+      "y": 930.65625,
+      "width": 285,
+      "height": 302.265625
+     },
+     "facts": []
+    },
+    {
+     "name": "Furniture restoration",
+     "box": {
+      "x": 32.5,
+      "y": 1252.921875,
+      "width": 285,
+      "height": 277.953125
+     },
+     "facts": []
+    },
+    {
+     "name": "Advanced joinery",
+     "box": {
+      "x": 337.5,
+      "y": 1252.921875,
+      "width": 285,
+      "height": 277.953125
+     },
+     "facts": []
+    }
+   ],
+   "height": 1908
+  },
+  "dead_end": {
+   "requested": "/courses/introduction-to-python",
+   "status": 404,
+   "final_path": "/courses/introduction-to-python",
+   "image": "captures/transform/before-dead-end.png"
+  }
+ },
+ "after": {
+  "snapshot_sha256": "2a16c38be474b38f4634307e44a782eddadd1dba48b45d9c85dcb3059530569f",
+  "featured": {
+   "path": "/courses/mindful-meditation",
+   "image": "captures/transform/after-featured-page.png",
+   "facts": null,
+   "height": 1240,
+   "json_ld": [
+    {
+     "@context": "https://schema.org",
+     "@type": "Course",
+     "about": "Wellbeing",
+     "description": "Short guided practices you can continue at home.",
+     "educationalLevel": "Beginner",
+     "hasCourseInstance": {
+      "@type": "CourseInstance",
+      "courseMode": "onsite",
+      "courseSchedule": {
+       "@type": "Schedule",
+       "byDay": "https://schema.org/Sunday",
+       "repeatCount": 4,
+       "repeatFrequency": "P1W"
+      },
+      "location": {
+       "@type": "Place",
+       "name": "Riverside campus"
+      }
+     },
+     "name": "Mindful meditation",
+     "offers": {
+      "@type": "Offer",
+      "availability": "https://schema.org/InStock",
+      "description": "Materials: Included",
+      "inventoryLevel": {
+       "@type": "QuantitativeValue",
+       "unitText": "seats left",
+       "value": 15
+      },
+      "price": 120,
+      "priceCurrency": "AUD"
+     },
+     "provider": {
+      "@type": "EducationalOrganization",
+      "name": "Larkspur Community College"
+     },
+     "timeRequired": "P4W",
+     "url": "/courses/mindful-meditation"
+    }
+   ]
+  },
+  "courses": {
+   "image": "captures/transform/after-courses-full.png",
+   "cards": [
+    {
+     "name": "Watercolour foundations",
+     "box": {
+      "x": 32.5,
+      "y": 337.40625,
+      "width": 285,
+      "height": 486.25
+     },
+     "facts": [
+      {
+       "label": "Course fee",
+       "value": "$260",
+       "box": {
+        "x": 51.09375,
+        "y": 620.953125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Duration",
+       "value": "6 weeks",
+       "box": {
+        "x": 182.1875,
+        "y": 620.953125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Level",
+       "value": "Beginner",
+       "box": {
+        "x": 51.09375,
+        "y": 668.578125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Class day",
+       "value": "Tuesday",
+       "box": {
+        "x": 182.1875,
+        "y": 668.578125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Campus",
+       "value": "Riverside",
+       "box": {
+        "x": 51.09375,
+        "y": 716.203125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Seats left",
+       "value": "7",
+       "box": {
+        "x": 182.1875,
+        "y": 716.203125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Materials",
+       "value": "Included",
+       "box": {
+        "x": 51.09375,
+        "y": 763.828125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      }
+     ]
+    },
+    {
+     "name": "Life drawing studio",
+     "box": {
+      "x": 337.5,
+      "y": 337.40625,
+      "width": 285,
+      "height": 486.25
+     },
+     "facts": [
+      {
+       "label": "Course fee",
+       "value": "$210",
+       "box": {
+        "x": 356.09375,
+        "y": 620.953125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Duration",
+       "value": "8 weeks",
+       "box": {
+        "x": 487.1875,
+        "y": 620.953125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Level",
+       "value": "Intermediate",
+       "box": {
+        "x": 356.09375,
+        "y": 668.578125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Class day",
+       "value": "Thursday",
+       "box": {
+        "x": 487.1875,
+        "y": 668.578125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Campus",
+       "value": "Northside",
+       "box": {
+        "x": 356.09375,
+        "y": 716.203125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Seats left",
+       "value": "3",
+       "box": {
+        "x": 487.1875,
+        "y": 716.203125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Materials",
+       "value": "Bring your own",
+       "box": {
+        "x": 356.09375,
+        "y": 763.828125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      }
+     ]
+    },
+    {
+     "name": "Wheel-thrown pottery",
+     "box": {
+      "x": 642.5,
+      "y": 337.40625,
+      "width": 285,
+      "height": 486.25
+     },
+     "facts": [
+      {
+       "label": "Course fee",
+       "value": "$395",
+       "box": {
+        "x": 661.09375,
+        "y": 620.953125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Duration",
+       "value": "8 weeks",
+       "box": {
+        "x": 792.1875,
+        "y": 620.953125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Level",
+       "value": "Beginner",
+       "box": {
+        "x": 661.09375,
+        "y": 668.578125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Class day",
+       "value": "Saturday",
+       "box": {
+        "x": 792.1875,
+        "y": 668.578125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Campus",
+       "value": "Riverside",
+       "box": {
+        "x": 661.09375,
+        "y": 716.203125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Seats left",
+       "value": "2",
+       "box": {
+        "x": 792.1875,
+        "y": 716.203125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Materials",
+       "value": "Included",
+       "box": {
+        "x": 661.09375,
+        "y": 763.828125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      }
+     ]
+    },
+    {
+     "name": "Introduction to Python",
+     "box": {
+      "x": 947.5,
+      "y": 337.40625,
+      "width": 285,
+      "height": 486.25
+     },
+     "facts": [
+      {
+       "label": "Course fee",
+       "value": "$340",
+       "box": {
+        "x": 966.09375,
+        "y": 620.953125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Duration",
+       "value": "10 weeks",
+       "box": {
+        "x": 1097.1875,
+        "y": 620.953125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Level",
+       "value": "Beginner",
+       "box": {
+        "x": 966.09375,
+        "y": 668.578125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Class day",
+       "value": "Monday",
+       "box": {
+        "x": 1097.1875,
+        "y": 668.578125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Campus",
+       "value": "Northside",
+       "box": {
+        "x": 966.09375,
+        "y": 716.203125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Seats left",
+       "value": "11",
+       "box": {
+        "x": 1097.1875,
+        "y": 716.203125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Materials",
+       "value": "Included",
+       "box": {
+        "x": 966.09375,
+        "y": 763.828125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      }
+     ]
+    },
+    {
+     "name": "Spreadsheets for small business",
+     "box": {
+      "x": 32.5,
+      "y": 843.65625,
+      "width": 285,
+      "height": 509.1875
+     },
+     "facts": [
+      {
+       "label": "Course fee",
+       "value": "$180",
+       "box": {
+        "x": 51.09375,
+        "y": 1150.140625,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Duration",
+       "value": "4 weeks",
+       "box": {
+        "x": 182.1875,
+        "y": 1150.140625,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Level",
+       "value": "Beginner",
+       "box": {
+        "x": 51.09375,
+        "y": 1197.765625,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Class day",
+       "value": "Wednesday",
+       "box": {
+        "x": 182.1875,
+        "y": 1197.765625,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Campus",
+       "value": "Riverside",
+       "box": {
+        "x": 51.09375,
+        "y": 1245.390625,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Seats left",
+       "value": "9",
+       "box": {
+        "x": 182.1875,
+        "y": 1245.390625,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Materials",
+       "value": "Included",
+       "box": {
+        "x": 51.09375,
+        "y": 1293.015625,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      }
+     ]
+    },
+    {
+     "name": "Web pages from scratch",
+     "box": {
+      "x": 337.5,
+      "y": 843.65625,
+      "width": 285,
+      "height": 509.1875
+     },
+     "facts": [
+      {
+       "label": "Course fee",
+       "value": "$290",
+       "box": {
+        "x": 356.09375,
+        "y": 1127.203125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Duration",
+       "value": "6 weeks",
+       "box": {
+        "x": 487.1875,
+        "y": 1127.203125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Level",
+       "value": "Intermediate",
+       "box": {
+        "x": 356.09375,
+        "y": 1174.828125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Class day",
+       "value": "Tuesday",
+       "box": {
+        "x": 487.1875,
+        "y": 1174.828125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Campus",
+       "value": "Northside",
+       "box": {
+        "x": 356.09375,
+        "y": 1222.453125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Seats left",
+       "value": "5",
+       "box": {
+        "x": 487.1875,
+        "y": 1222.453125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Materials",
+       "value": "Bring your own",
+       "box": {
+        "x": 356.09375,
+        "y": 1270.078125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      }
+     ]
+    },
+    {
+     "name": "Conversational Italian 1",
+     "box": {
+      "x": 642.5,
+      "y": 843.65625,
+      "width": 285,
+      "height": 509.1875
+     },
+     "facts": [
+      {
+       "label": "Course fee",
+       "value": "$230",
+       "box": {
+        "x": 661.09375,
+        "y": 1127.203125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Duration",
+       "value": "10 weeks",
+       "box": {
+        "x": 792.1875,
+        "y": 1127.203125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Level",
+       "value": "Beginner",
+       "box": {
+        "x": 661.09375,
+        "y": 1174.828125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Class day",
+       "value": "Monday",
+       "box": {
+        "x": 792.1875,
+        "y": 1174.828125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Campus",
+       "value": "Riverside",
+       "box": {
+        "x": 661.09375,
+        "y": 1222.453125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Seats left",
+       "value": "6",
+       "box": {
+        "x": 792.1875,
+        "y": 1222.453125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Materials",
+       "value": "Included",
+       "box": {
+        "x": 661.09375,
+        "y": 1270.078125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      }
+     ]
+    },
+    {
+     "name": "Japanese for travellers",
+     "box": {
+      "x": 947.5,
+      "y": 843.65625,
+      "width": 285,
+      "height": 509.1875
+     },
+     "facts": [
+      {
+       "label": "Course fee",
+       "value": "$245",
+       "box": {
+        "x": 966.09375,
+        "y": 1127.203125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Duration",
+       "value": "8 weeks",
+       "box": {
+        "x": 1097.1875,
+        "y": 1127.203125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Level",
+       "value": "Beginner",
+       "box": {
+        "x": 966.09375,
+        "y": 1174.828125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Class day",
+       "value": "Wednesday",
+       "box": {
+        "x": 1097.1875,
+        "y": 1174.828125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Campus",
+       "value": "Northside",
+       "box": {
+        "x": 966.09375,
+        "y": 1222.453125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Seats left",
+       "value": "0",
+       "box": {
+        "x": 1097.1875,
+        "y": 1222.453125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Materials",
+       "value": "Included",
+       "box": {
+        "x": 966.09375,
+        "y": 1270.078125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      }
+     ]
+    },
+    {
+     "name": "Spanish conversation 2",
+     "box": {
+      "x": 32.5,
+      "y": 1372.84375,
+      "width": 285,
+      "height": 510.5625
+     },
+     "facts": [
+      {
+       "label": "Course fee",
+       "value": "$230",
+       "box": {
+        "x": 51.09375,
+        "y": 1656.390625,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Duration",
+       "value": "10 weeks",
+       "box": {
+        "x": 182.1875,
+        "y": 1656.390625,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Level",
+       "value": "Intermediate",
+       "box": {
+        "x": 51.09375,
+        "y": 1704.015625,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Class day",
+       "value": "Thursday",
+       "box": {
+        "x": 182.1875,
+        "y": 1704.015625,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Campus",
+       "value": "Riverside",
+       "box": {
+        "x": 51.09375,
+        "y": 1751.640625,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Seats left",
+       "value": "8",
+       "box": {
+        "x": 182.1875,
+        "y": 1751.640625,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Materials",
+       "value": "Bring your own",
+       "box": {
+        "x": 51.09375,
+        "y": 1799.265625,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      }
+     ]
+    },
+    {
+     "name": "Beginners yoga",
+     "box": {
+      "x": 337.5,
+      "y": 1372.84375,
+      "width": 285,
+      "height": 510.5625
+     },
+     "facts": [
+      {
+       "label": "Course fee",
+       "value": "$150",
+       "box": {
+        "x": 356.09375,
+        "y": 1656.390625,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Duration",
+       "value": "6 weeks",
+       "box": {
+        "x": 487.1875,
+        "y": 1656.390625,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Level",
+       "value": "Beginner",
+       "box": {
+        "x": 356.09375,
+        "y": 1704.015625,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Class day",
+       "value": "Saturday",
+       "box": {
+        "x": 487.1875,
+        "y": 1704.015625,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Campus",
+       "value": "Northside",
+       "box": {
+        "x": 356.09375,
+        "y": 1751.640625,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Seats left",
+       "value": "12",
+       "box": {
+        "x": 487.1875,
+        "y": 1751.640625,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Materials",
+       "value": "Bring your own",
+       "box": {
+        "x": 356.09375,
+        "y": 1799.265625,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      }
+     ]
+    },
+    {
+     "name": "Mindful meditation",
+     "box": {
+      "x": 642.5,
+      "y": 1372.84375,
+      "width": 285,
+      "height": 510.5625
+     },
+     "facts": [
+      {
+       "label": "Course fee",
+       "value": "$120",
+       "box": {
+        "x": 661.09375,
+        "y": 1656.390625,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Duration",
+       "value": "4 weeks",
+       "box": {
+        "x": 792.1875,
+        "y": 1656.390625,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Level",
+       "value": "Beginner",
+       "box": {
+        "x": 661.09375,
+        "y": 1704.015625,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Class day",
+       "value": "Sunday",
+       "box": {
+        "x": 792.1875,
+        "y": 1704.015625,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Campus",
+       "value": "Riverside",
+       "box": {
+        "x": 661.09375,
+        "y": 1751.640625,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Seats left",
+       "value": "15",
+       "box": {
+        "x": 792.1875,
+        "y": 1751.640625,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Materials",
+       "value": "Included",
+       "box": {
+        "x": 661.09375,
+        "y": 1799.265625,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      }
+     ]
+    },
+    {
+     "name": "Home electrical basics",
+     "box": {
+      "x": 947.5,
+      "y": 1372.84375,
+      "width": 285,
+      "height": 510.5625
+     },
+     "facts": [
+      {
+       "label": "Course fee",
+       "value": "$310",
+       "box": {
+        "x": 966.09375,
+        "y": 1680.703125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Duration",
+       "value": "5 weeks",
+       "box": {
+        "x": 1097.1875,
+        "y": 1680.703125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Level",
+       "value": "Beginner",
+       "box": {
+        "x": 966.09375,
+        "y": 1728.328125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Class day",
+       "value": "Saturday",
+       "box": {
+        "x": 1097.1875,
+        "y": 1728.328125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Campus",
+       "value": "Northside",
+       "box": {
+        "x": 966.09375,
+        "y": 1775.953125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Seats left",
+       "value": "4",
+       "box": {
+        "x": 1097.1875,
+        "y": 1775.953125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Materials",
+       "value": "Included",
+       "box": {
+        "x": 966.09375,
+        "y": 1823.578125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      }
+     ]
+    },
+    {
+     "name": "Furniture restoration",
+     "box": {
+      "x": 32.5,
+      "y": 1903.40625,
+      "width": 285,
+      "height": 486.25
+     },
+     "facts": [
+      {
+       "label": "Course fee",
+       "value": "$420",
+       "box": {
+        "x": 51.09375,
+        "y": 2186.953125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Duration",
+       "value": "8 weeks",
+       "box": {
+        "x": 182.1875,
+        "y": 2186.953125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Level",
+       "value": "Intermediate",
+       "box": {
+        "x": 51.09375,
+        "y": 2234.578125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Class day",
+       "value": "Sunday",
+       "box": {
+        "x": 182.1875,
+        "y": 2234.578125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Campus",
+       "value": "Riverside",
+       "box": {
+        "x": 51.09375,
+        "y": 2282.203125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Seats left",
+       "value": "1",
+       "box": {
+        "x": 182.1875,
+        "y": 2282.203125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Materials",
+       "value": "Bring your own",
+       "box": {
+        "x": 51.09375,
+        "y": 2329.828125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      }
+     ]
+    },
+    {
+     "name": "Advanced joinery",
+     "box": {
+      "x": 337.5,
+      "y": 1903.40625,
+      "width": 285,
+      "height": 486.25
+     },
+     "facts": [
+      {
+       "label": "Course fee",
+       "value": "$480",
+       "box": {
+        "x": 356.09375,
+        "y": 2186.953125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Duration",
+       "value": "10 weeks",
+       "box": {
+        "x": 487.1875,
+        "y": 2186.953125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Level",
+       "value": "Advanced",
+       "box": {
+        "x": 356.09375,
+        "y": 2234.578125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Class day",
+       "value": "Tuesday",
+       "box": {
+        "x": 487.1875,
+        "y": 2234.578125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Campus",
+       "value": "Northside",
+       "box": {
+        "x": 356.09375,
+        "y": 2282.203125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Seats left",
+       "value": "3",
+       "box": {
+        "x": 487.1875,
+        "y": 2282.203125,
+        "width": 116.71875,
+        "height": 40.4375
+       }
+      },
+      {
+       "label": "Materials",
+       "value": "Bring your own",
+       "box": {
+        "x": 356.09375,
+        "y": 2329.828125,
+        "width": 116.703125,
+        "height": 40.4375
+       }
+      }
+     ]
+    }
+   ],
+   "height": 2766
+  },
+  "dead_end": {
+   "requested": "/courses/introduction-to-python",
+   "status": 200,
+   "final_path": "/courses/intro-to-python",
+   "image": "captures/transform/after-dead-end.png"
+  }
+ },
+ "recorded_dead_end": {
+  "evaluation": "eval-ea13944e8ba5c08e8893426b2f8b1c8f",
+  "task": 1,
+  "step": 9,
+  "path": "/courses/introduction-to-python",
+  "memory": "2 courses checked, python slug guess failed. Need to return to /courses to get correct slugs.",
+  "previous_action": [
+   "Navigate /courses/introduction-to-python"
+  ],
+  "image": "captures/transform/recorded-dead-end.png"
+ },
+ "hero_matches": [
+  "Wheel-thrown pottery",
+  "Beginners yoga",
+  "Mindful meditation",
+  "Home electrical basics"
+ ],
+ "files": {
+  "before-featured-page.png": "7e3a469386f0b4c21209287c3c29a2e0707106ba3dfa99ca52922b96247ec5e7",
+  "before-courses-full.png": "daf8cd2859b4124ae68ebc3a0ff8cdd39470d9275f1361005bbbac87e28b5806",
+  "before-dead-end.png": "ff3c71e99bb9dc5367c5d529d23ac8818aff0f3a93f717df85b10d3013a67574",
+  "after-featured-page.png": "7e3a469386f0b4c21209287c3c29a2e0707106ba3dfa99ca52922b96247ec5e7",
+  "after-courses-full.png": "72f7e7bb3aa2c518899191649318fa05046969c48ffa5fd94f7ab303ac084010",
+  "after-dead-end.png": "390aa47fad3826c09dfd6ffbcdd6fc728e1d3fc17231a21c5e2bf3ee0da01347",
+  "recorded-dead-end.png": "d9a00f2f3e08a2d8d3248024761e3c9317c9e87b4e859f960bb16185dd7b9963"
+ }
+}

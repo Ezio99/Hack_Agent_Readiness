@@ -2,11 +2,11 @@
 // electronic ambient bed and soft UI sounds. Deterministic. Writes public/audio/music/score.wav (the music track, film time 0:00 onwards) and
 // public/audio/sfx/*.wav. Music and SFX are separate tracks; voiceover goes in public/audio/vo/<act>.wav. Replaceable by a licensed score later.
 //   node scripts/score.mjs
-// Section times (seconds, film time) mirror the narration cue sheet (src/narration.ts): Act 1 = 0-25 s, Act 2 = 25-75 s.
+// Section times (seconds, film time) mirror the narration cue sheet (src/narration.ts): Act 1 = 0-25 s, Act 2 = 25-75 s, Act 3 = 75-115 s.
 import { mkdirSync, writeFileSync } from 'node:fs';
 
 const SR = 48000;
-const DUR = 75;
+const DUR = 115;
 const N = SR * DUR;
 const midi = m => 440 * 2 ** ((m - 69) / 12);
 let seed = 7; const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
@@ -21,6 +21,13 @@ const SECTIONS = [
   [47.0, [45, 52, 55, 60, 62], 1.7, 0.66],   // A m(add9)/: tension rising
   [58.6, [38, 45, 50],         0.9, 0.45],   // "out of steps": everything drops to a low drone
   [64.0, [50, 57, 62, 64, 69], 2.6, 0.62],   // diagnosis: clarity, D(add9) bright
+  [75.0, [45, 52, 57, 59, 64], 1.7, 0.55],   // Act 3 bridge: the diagnosis isolated, A sus2, still
+  [81.0, [50, 57, 61, 64, 66], 2.6, 0.70],   // the transformation: warm D maj9 returns (the human website, now for agents too)
+  [88.0, [43, 50, 54, 59, 66], 2.8, 0.74],   // G maj9: facts land, the catalogue resolves
+  [94.5, [47, 54, 59, 62, 66], 2.8, 0.72],   // B m11: all four courses, visible
+  [98.6, [45, 52, 57, 61, 64], 2.2, 0.60],   // A: the dead end, fixed
+  [104.6, [42, 50, 54, 57, 62], 2.2, 0.60],  // D/F#: structured data
+  [110.3, [47, 54, 57, 62, 66], 1.9, 0.62],  // B m(add9): same task again, anticipation
 ];
 const secAt = t => { let i = 0; for (let j = 0; j < SECTIONS.length; j++) if (t >= SECTIONS[j][0]) i = j; return i; };
 
@@ -58,6 +65,8 @@ const bell = (t, m, g) => { const f = midi(m), i0 = Math.floor(t * SR), len = Ma
     L[i0 + i] += v * (1 - pan * 0.5); R[i0 + i] += v * (0.5 + pan * 0.5); } };
 [[1.2, 74], [2.9, 78], [4.4, 81], [5.9, 76], [7.2, 83], [8.6, 78]].forEach(([t, m]) => bell(t, m, 0.035));
 [[65.0, 74], [66.6, 78], [68.1, 81], [69.8, 86], [71.4, 83], [73.0, 81]].forEach(([t, m]) => bell(t, m, 0.03));
+// Act 3: a rising cascade as the facts land on the card (~86.7 s), and when the whole catalogue resolves (~91 s)
+[[86.2, 74], [86.4, 76], [86.6, 78], [86.8, 81], [87.0, 83], [87.2, 85], [87.4, 86], [91.2, 86], [91.9, 90], [92.6, 93]].forEach(([t, m]) => bell(t, m, 0.03));
 
 // ---- pulse: a soft low heartbeat from the recorded agent onwards; in Act 2 it speeds up as the budget drains, and stops at "out of steps" ----
 const kick = (t, g) => { const i0 = Math.floor(t * SR), len = Math.floor(0.35 * SR);
@@ -66,12 +75,13 @@ const kick = (t, g) => { const i0 = Math.floor(t * SR), len = Math.floor(0.35 * 
 const tick = (t, g) => { const i0 = Math.floor(t * SR), len = Math.floor(0.05 * SR); let lp = 0;
   for (let i = 0; i < len && i0 + i < N; i++) { const x = i / SR, n = rnd() * 2 - 1; const hp = n - lp; lp += 0.35 * (n - lp);
     const v = g * hp * Math.exp(-x * 120); L[i0 + i] += v * 0.8; R[i0 + i] += v; } };
-const bpmAt = t => t < 25 ? 72 : t < 37 ? 76 : t < 58.6 ? 76 + (t - 37) / 21.6 * 44 : 0;   // 72 -> 120 bpm across the loop
-{ let t = 10.6; while (t < 58.6) {
+const bpmAt = t => t < 25 ? 72 : t < 37 ? 76 : t < 58.6 ? 76 + (t - 37) / 21.6 * 44 : 72;   // 72 -> 120 bpm across the loop; 72 for the Act 3 set-up
+{ let t = 10.6; while (t < 115) {
+  if (t >= 58.6 && t < 111.5) { t = 111.5; continue; }   // silence after 'out of steps'; the heartbeat returns only for the re-run set-up
   if (!(t > 19.4 && t < 25.0)) {                       // rest under the brand reveal
     const g = t < 25 ? 0.10 : 0.12 + 0.08 * Math.min(1, (t - 25) / 33);
     kick(t, g);
-    if (t > 37) tick(t + 30 / bpmAt(t), 0.012 + 0.02 * (t - 37) / 21.6);
+    if (t > 37 && t < 58.6) tick(t + 30 / bpmAt(t), 0.012 + 0.02 * (t - 37) / 21.6);
   }
   t += 60 / bpmAt(t); } }
 

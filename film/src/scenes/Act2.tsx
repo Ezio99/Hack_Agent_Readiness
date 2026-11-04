@@ -114,7 +114,7 @@ export function Act2({ captions = false }: { captions?: boolean }) {
       <div style={{ textAlign: 'center', transform: `translateY(${-90 * k(f, [ANSWER, ANSWER + 24], [0, 1], camera)}px)` }}>
         <p style={{ margin: 0, fontFamily: F.serif, fontSize: 150, letterSpacing: '-.025em', color: C.ink, opacity: k(f, [STOP + 6, STOP + 22], [0, 1]) }}>“Out of steps.”</p>
         <p style={{ margin: '6px 0 0', fontFamily: F.mono, fontSize: 18, letterSpacing: '.12em', color: C.ink3, textTransform: 'uppercase', opacity: k(f, [STOP + 22, STOP + 36], [0, 1]) }}>
-          The agent’s note at step 11 of {MAX} · it stopped and answered</p>
+          The agent’s own note, step 11 · it stopped itself with {MAX - 11} of {MAX} steps left</p>
       </div>
       <div style={{ position: 'absolute', top: 640, display: 'flex', gap: 18, opacity: k(f, [ANSWER, ANSWER + 20], [0, 1]) }}>
         {RIGHT.map((name, i) => { const ok = FOUND.has(name), o = k(f, [ANSWER + 10 + i * 8, ANSWER + 26 + i * 8], [0, 1]);

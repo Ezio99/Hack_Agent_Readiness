@@ -4,8 +4,8 @@ import { Box } from '../evidence';
 import { C, F, ease } from '../theme/tokens';
 
 /** A page image placed in CSS-pixel space: `scale` = on-screen px per CSS px; `cssWidth` = the image's width in CSS px. */
-export function PageImage({ src, cssWidth, scale, scrollY = 0, opacity = 1 }: { src: string; cssWidth: number; scale: number; scrollY?: number; opacity?: number }) {
-  return <Img src={staticFile(src)} style={{ position: 'absolute', left: 0, top: -scrollY * scale, width: cssWidth * scale, opacity }} />;
+export function PageImage({ src, cssWidth, scale, scrollY = 0, scrollX = 0, opacity = 1 }: { src: string; cssWidth: number; scale: number; scrollY?: number; scrollX?: number; opacity?: number }) {
+  return <Img src={staticFile(src)} style={{ position: 'absolute', left: -scrollX * scale, top: -scrollY * scale, width: cssWidth * scale, opacity }} />;
 }
 
 /** Highlight of a RECORDED action's target (the box comes from the frozen page, the action from the agent's step record): an outline that
