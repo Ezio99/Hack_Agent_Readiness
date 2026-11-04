@@ -17,7 +17,7 @@ export function TraceCompare({ ev, n }: { ev: Evaluation; n: number }) {
     <header className="lc-trace-head">
       <p className="eyebrow">Task {n} · {words(task.capability)} · {task.kind}{task.persona ? ` · persona: ${words(task.persona)}` : ''}</p>
       <h1 className="lc-title sm"><q>{task.customer_wording}</q></h1>
-      <p className="lc-note">The customer's own wording, executed unchanged {vs.length === 1 ? 'on this website version' : 'on both website variants'} by the same agent, under the same frozen manifest.
+      <p className="lc-note">The customer's own wording, executed unchanged {vs.length === 1 ? 'on this website version' : `on both versions (${vs.map(VARIANT_LABEL).join(' and ')})`} by the same agent, under the same frozen manifest.
         {ev.mode !== 'paid' && ' Rehearsal: the replies come from a scripted stand-in, not a model.'}</p>
       {access && <p className="lc-places">Facts this question depends on: {access.facts.map(f => <span key={f} className="lc-inline"><b>{f}</b> — {vs.map(v => <span key={v} className={`lc-place ${access.placement[v]?.[f] === 'listing cards' ? 'ok' : 'deep'}`}>{VARIANT_LABEL(v)}: {access.placement[v]?.[f]}</span>)}</span>)}</p>}
       <nav className="lc-task-nav" aria-label="Other tasks">{executed.map(x => <a key={x} href={`#/reports/${ev.id}/tasks/${x}`} aria-current={x === n ? 'page' : undefined}>Task {x}</a>)}</nav>

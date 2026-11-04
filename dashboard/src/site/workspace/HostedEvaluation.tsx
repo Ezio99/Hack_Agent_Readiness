@@ -5,17 +5,21 @@ import { Insights } from './Insights';
 import { History, type HistoryItem } from './History';
 import { Report } from '../lifecycle/Report';
 import { PUBLIC_SCOPE, VARIANT_LABEL, inPublicScope, type Evaluation } from '../../lib/lifecycleApi';
-import { AFTER_V, BEFORE_V, showcaseFrame } from '../showcase';
+import { AFTER, AFTER_V, BEFORE, BEFORE_V, showcaseFrame } from '../showcase';
 
 /** The public Workspace shows ONLY the final Larkspur experiment (Before and After). Earlier evaluations stay in the records but are never listed,
  *  selected or rendered here; an old job URL shows a notice instead of its data, so current configuration and historical jobs never mix. */
 const PUBLIC_LABELS = [VARIANT_LABEL(BEFORE_V), VARIANT_LABEL(AFTER_V)];
-export const isPublicItem = (i: HistoryItem) => !PUBLIC_SCOPE.versions || (i.engine === 'stage-b' && !!i.arm_display && !i.arm_display.Modified && PUBLIC_LABELS.includes(i.arm_display.Original));
+export const isPublicItem = (i: HistoryItem) => !PUBLIC_SCOPE.versions || (i.engine === 'stage-b' && !!i.arm_display && PUBLIC_LABELS.includes(i.arm_display.Original)
+  && (!i.arm_display.Modified || PUBLIC_LABELS.includes(i.arm_display.Modified)));
+/** A paired evaluation: Before and After run together in ONE job (never two separate runs combined). */
+export const isPaired = (i: { arm_display?: { Original?: string; Modified?: string } | null }) => i.arm_display?.Original === PUBLIC_LABELS[0] && i.arm_display?.Modified === PUBLIC_LABELS[1];
 export const isPublicJob = (j: { evaluation?: { variants?: string[] | null } | null }) => inPublicScope(j.evaluation?.variants);
-/** The run the Workspace opens by default: a running public evaluation, else the newest completed After run, else the newest public run. */
+/** The run the Workspace opens by default: a running public evaluation, else the newest completed PAIRED (Before vs After) evaluation; if there is
+ *  none, nothing is opened (the empty state points to the recorded Before and After evidence) so a single-version run is never shown as "the" result. */
 export const defaultRun = (items: HistoryItem[], active?: string | null) => {
   const byNew = [...items].sort((a, b) => b.created_at - a.created_at);
-  return byNew.find(i => i.id === active) ?? byNew.find(i => i.arm_display?.Original === 'After' && (i.execution_state ?? i.state) === 'completed') ?? byNew[0] ?? null;
+  return byNew.find(i => i.id === active) ?? byNew.find(i => isPaired(i) && (i.execution_state ?? i.state) === 'completed') ?? null;
 };
 
 /** Hosted evaluation workspace: compose (website, repetitions, run) → live progress → results → history.
@@ -311,7 +315,9 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
   const siteWords = single ? (armedNames.Original === 'After'
       ? <>the improved website (<strong>After</strong>: the college’s redesigned site with Agent Readiness’s recommendations applied; <a className="ws-link" href="#/showcase">see before and after</a>)</>
       : <>the <strong>{armedNames.Original}</strong> version of the website</>)
-    : <>the <strong>{armedNames.Original}</strong> and the <strong>{armedNames.Modified}</strong> site</>;
+    : armedNames.Original === 'Before' && armedNames.Modified === 'After'
+      ? <>both versions of the college’s website: <strong>Before</strong> (the redesigned site) and <strong>After</strong> (the same site with Agent Readiness’s recommendations applied), three agents on each</>
+      : <>the <strong>{armedNames.Original}</strong> and the <strong>{armedNames.Modified}</strong> site</>;
   const SITE_HOST: Record<string, string> = { larkspur: 'larkspur-college', ironbark: 'ironbark-hire' };
   const operatorOnly = config?.access === 'operator';
   const running = !!job && ACTIVE.includes(job.state);
@@ -353,7 +359,7 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
         <p className="eyebrow">Evaluation workspace</p>
         <h1 className="ws-title">Run real agents on a website.</h1>
         <p className="ws-lede">Fresh Muse Spark browser agents do real customer tasks on {single ? 'a website' : 'two versions of a website'}. Every answer is checked against the site’s own records, and the report shows where agents got stuck and what to change.</p>
-        <p className="ws-lede-note">{stageB && ev ? <>This live evaluation gives {nTasks} customer task{nTasks === 1 ? '' : 's'} from the <a className="ws-link" href="#/lifecycle/review">{ev.site === 'larkspur' ? 'Larkspur' : ev.site} task set</a> to browser agents on {siteWords}.{armedNames.Modified === 'Improved' ? <> The Improved site applies every recommendation from the <a className="ws-link" href="#/lifecycle/improve">first evaluation</a>.</> : null}{single ? <> No baseline runs beside it: the agents measure how well this version works on its own.</> : null} </> : null}{single ? 'The website is a frozen copy of the fictional Larkspur Community College.' : 'The websites are frozen copies of the fictional Larkspur Community College; the improvements were made by hand from the report.'}</p>
+        <p className="ws-lede-note">{stageB && ev ? <>This live evaluation gives {nTasks} customer task{nTasks === 1 ? '' : 's'} from the <a className="ws-link" href="#/lifecycle/review">{ev.site === 'larkspur' ? 'Larkspur' : ev.site} task set</a> to browser agents on {siteWords}.{armedNames.Modified === 'Improved' ? <> The Improved site applies every recommendation from the <a className="ws-link" href="#/lifecycle/improve">first evaluation</a>.</> : null}{single ? <> No baseline runs beside it: the agents measure how well this version works on its own.</> : null} </> : null}{single ? 'The website is a frozen copy of the fictional Larkspur Community College.' : 'Both websites are frozen copies of the fictional Larkspur Community College, run with the same tasks, agent and limits.'}</p>
       </div>
       {config && <div className={`ws-worker ${worker?.state === 'idle' && stageB && config.launch && !config.launch.authorized ? 'blocked' : worker?.state ?? 'unavailable'}`} role="status">
         <span className="ws-dot" aria-hidden="true" />
@@ -373,7 +379,7 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
         <ol className="ws-steps">
           <li><span className="ws-step">01 · Website</span>
             {stageB ? <div className="ws-target" aria-label="Selected website">{ev ? <><strong>{ev.site === 'larkspur' ? 'Larkspur Community College' : ev.site === 'ironbark' ? 'Ironbark Hire Co.' : ev.site}</strong>
-                {armedVariants.map(v => showcaseFrame(`site-${v}-courses`) ? <figure key={v} className="ws-site-preview"><img src={showcaseFrame(`site-${v}-courses`)} alt={`The ${VARIANT_LABEL(v)} Larkspur course catalogue (frozen snapshot the agents use)`} loading="lazy" />
+                {armedVariants.map(v => showcaseFrame(`site-${v}-courses`) ? <figure key={v} className={`ws-site-preview${armedVariants.length > 1 ? ' half' : ''}`}><img src={showcaseFrame(`site-${v}-courses`)} alt={`The ${VARIANT_LABEL(v)} Larkspur course catalogue (frozen snapshot the agents use)`} loading="lazy" />
                   <figcaption>{VARIANT_LABEL(v)} · <code>/courses</code> · the frozen copy the agents browse</figcaption></figure> : null)}
                 <small>{nTasks} customer task{nTasks === 1 ? '' : 's'} · {single ? `${armedNames.Original} version` : `${armedNames.Original} vs ${armedNames.Modified} site`} · {ev.launches ? `${ev.launches.left} of ${ev.launches.max} live run${ev.launches.max === 1 ? '' : 's'} left` : 'runs while the budget lasts'}</small></>
                 : <><strong>No evaluation armed</strong><small>The owner selects and authorises the frozen suite at the server terminal.</small></>}</div>
@@ -432,7 +438,9 @@ export function HostedEvaluation({ onOpen, initialJob }: { onOpen: (report: unkn
         </div>}
         {!job && !archived && <div className="ws-empty">
           <p className="eyebrow">No evaluation open</p>
-          <h2>Start an evaluation, or open one from the history below.</h2>
+          <h2>{PUBLIC_SCOPE.versions && !latest ? 'Run the first side-by-side evaluation of Before and After.' : 'Start an evaluation, or open one from the history below.'}</h2>
+          {PUBLIC_SCOPE.versions && !latest && <p className="ws-empty-note">Recorded evidence so far, each version evaluated live on its own: <a className="ws-link" href="#/showcase">before and after</a> ·{' '}
+            <a className="ws-link" href={`#/reports/${BEFORE.id}`}>Before report</a> · <a className="ws-link" href={`#/reports/${AFTER.id}`}>After report</a>.</p>}
           {latest && <button className="btn btn-ghost" onClick={() => select(latest.id)}>Open the latest evaluation · {when(latest.created_at)} <span className="arr" aria-hidden="true">→</span></button>}
         </div>}
 

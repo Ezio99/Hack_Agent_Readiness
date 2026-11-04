@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { SiteFooter, SiteHeader } from '../Shell';
-import { PUBLIC_SCOPE, api, displayTitle, inPublicScope, fmtSec, fmtUsd, variantClass, words, type Evaluation, type Finding, type Trial } from '../../lib/lifecycleApi';
+import { PUBLIC_SCOPE, api, displayTitle, inPublicScope, latestPaired, fmtSec, fmtUsd, variantClass, words, type Evaluation, type Finding, type Trial } from '../../lib/lifecycleApi';
 import { Failed, GradeTag, Hash, Loading, ModeBadge, PairBars, plain, Section, useLoad, VariantName } from './parts';
 import { TraceCompare } from './Trace';
-import { AFTER, BEFORE } from '../showcase';
+import { AFTER, AFTER_V, BEFORE, BEFORE_V } from '../showcase';
 import './lifecycle.css';
 
 /** `#/reports/<id>` and `#/reports/<id>/tasks/<n>`: one readiness report for any evaluation (the recorded first evaluation and evaluations launched in
@@ -12,6 +12,35 @@ import './lifecycle.css';
 /** The public experience is the final Larkspur experiment only (Before and After, and later runs of those versions). Any other evaluation is an
  *  archived record: it stays reachable by its exact URL for audit, behind a notice, and is never linked from the public pages. */
 export const isPublicEvaluation = (ev: Evaluation) => !PUBLIC_SCOPE.versions || (ev.site.id === 'larkspur' && inPublicScope(ev.manifest.variants.map(v => v.name)));
+
+/** `#/reports/latest` (the "Live report" link): the newest genuine paired Before vs After evaluation, the same run the Workspace opens by default.
+ *  Before one exists, it shows the two separate live runs of 4 Nov 2026 as what they are: two runs, never presented as one paired execution. */
+export function LatestReportPage() {
+  const evs = useLoad(() => api.evaluations(), 'evaluations');
+  const pick = evs.data ? latestPaired(evs.data) : null;
+  if (pick) return <ReportPage id={pick.id} />;
+  const card = (r: typeof BEFORE, v: string, label: string) => { const t = r.totals[v];
+    return <a className={`lc-side ${label === 'Before' ? 'o' : 'i'} lc-latest-card`} href={`#/reports/${r.id}`}>
+      <span className="eyebrow">{label} · run {r.id.slice(5, 13)}</span>
+      <strong>{r.correct[v]}/{r.tasks.length} correct</strong><span>{t.requests} model requests · {t.seconds} s · US${t.cost_usd.toFixed(2)}</span>
+      <span className="link">Open the {label} report →</span></a>; };
+  return <div className="ar lc">
+    <SiteHeader active="report" cta={false} />
+    <main id="lc-main" tabIndex={-1} className="wrap lc-wrap">
+      {evs.loading && <Loading what="the latest evaluation" />}
+      {evs.error && <Failed error={evs.error} what="The evaluations" />}
+      {evs.data && <section className="lc-latest" aria-labelledby="lc-latest-h">
+        <p className="eyebrow">Live report · Larkspur Community College</p>
+        <h1 id="lc-latest-h" className="lc-title">Before and After: two separate live runs</h1>
+        <p className="lede sm">No side-by-side evaluation of both versions has been run yet. The current evidence is two separate live evaluations of 4 Nov 2026, one per
+          version, with the same three frozen tasks, agent and limits. Each has its own report and agent traces. Run both versions together in the <a className="link" href="#/run">Workspace</a>;
+          its report will appear here.</p>
+        <div className="lc-sbs">{card(BEFORE, BEFORE_V, 'Before')}{card(AFTER, AFTER_V, 'After')}</div>
+      </section>}
+    </main>
+    <SiteFooter />
+  </div>;
+}
 
 export function ReportPage({ id, task }: { id: string; task?: number }) {
   const ev = useLoad(() => api.evaluation(id), id);

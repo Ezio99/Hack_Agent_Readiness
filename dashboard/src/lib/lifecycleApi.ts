@@ -141,6 +141,10 @@ export const displayTitle = (ev: { title: string; mode?: string; site?: { label:
 export const PUBLIC_SCOPE: { versions: Set<string> | null } = { versions: new Set(['polishedoriginal', 'modifiedpolished']) };
 export const inPublicScope = (variants: readonly string[] | null | undefined) =>
   !PUBLIC_SCOPE.versions || (!!variants && variants.length > 0 && variants.every(v => PUBLIC_SCOPE.versions!.has(v)));
+/** The latest genuine paired Before vs After evaluation (one job that ran both versions), or null. The Workspace opens the same run by default. */
+export const latestPaired = (list: EvaluationSummary[]) => [...list]
+  .filter(e => e.mode === 'paid' && e.state === 'completed' && (e.site_id ?? e.site) === 'larkspur' && (e.variants ?? []).join(',') === 'polishedoriginal,modifiedpolished')
+  .sort((a, b) => String(b.started_at ?? '').localeCompare(String(a.started_at ?? '')))[0] ?? null;
 export const variantClass = (v: string) => v === 'original' ? 'o' : v === 'modified' ? 'm' : v === 'improved' ? 'i' : v === 'polishedoriginal' ? 'o' : v === 'modifiedpolished' ? 'i' : v.startsWith('polished') ? 'p' : 'x';
 export const fmtUsd = (n: number | null | undefined, d = 3) => n == null ? '–' : `US$${n.toFixed(d)}`;
 export const fmtSec = (n: number | null | undefined) => n == null ? '–' : `${Math.round(n)} s`;

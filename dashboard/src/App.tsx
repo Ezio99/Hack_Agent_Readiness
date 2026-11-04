@@ -3,7 +3,7 @@ import { useRoute } from './site/router';
 import { Home } from './site/Home';
 import { Workspace } from './site/workspace/Workspace';
 import { Lifecycle } from './site/lifecycle/Lifecycle';
-import { ReportPage } from './site/lifecycle/Report';
+import { LatestReportPage, ReportPage } from './site/lifecycle/Report';
 
 /** `#/demo` is the Larkspur journey (the same page as `#/lifecycle`). Earlier case studies and archives are not part of the public app. */
 const Story = lazy(() => import('./site/story/Story').then(m => ({ default: m.Story })));
@@ -30,7 +30,7 @@ export default function App() {
     case 'home': return <Home section={route.section} />;
     case 'run': return <Workspace job={route.job} />;
     case 'lifecycle': return <Lifecycle step={route.step} suite={route.suite} />;
-    case 'report': return <ReportPage id={route.id} task={route.task} />;
+    case 'report': return route.id === 'latest' ? <LatestReportPage /> : <ReportPage id={route.id} task={route.task} />;
     case 'showcase': return <Suspense fallback={<div className="ar ar-night route-loading" aria-busy="true"><p className="sr-only">Loading the showcase…</p></div>}><Story /></Suspense>;
     case 'demo': return <Lifecycle />;
     default: return <Home />;

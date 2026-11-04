@@ -22,7 +22,7 @@ const NAV: { id: Active | 'how'; href: string; label: string }[] = [
   { id: 'how', href: '#/how', label: 'How it works' },
   { id: 'showcase', href: '#/showcase', label: 'Showcase' },
   { id: 'lifecycle', href: '#/lifecycle', label: `The ${FEATURED.short} journey` },
-  { id: 'report', href: `#/reports/${AFTER.id}`, label: 'Live report' },
+  { id: 'report', href: '#/reports/latest', label: 'Live report' },   // the latest paired Before vs After evaluation (see LatestReportPage)
   { id: 'run', href: '#/run', label: 'Workspace' },
 ];
 
@@ -52,7 +52,7 @@ export function SiteFooter() {
     <div className="wrap">
       <div><Brand /><p className="about">Agent Readiness measures whether AI agents can complete real tasks on a website, where they struggle, and whether a change helps.</p></div>
       <div><h4>Product</h4><ul><li><a href="#/lifecycle">The {FEATURED.short} journey</a></li><li><a href="#/run">Run a live evaluation</a></li><li><a href="#/showcase">Before and after</a></li></ul></div>
-      <div><h4>Evidence</h4><ul><li><a href="#/showcase">Before and after: the showcase</a></li><li><a href={`#/reports/${BEFORE.id}`}>Before: live report</a></li><li><a href={`#/reports/${AFTER.id}`}>After: live report</a></li></ul></div>
+      <div><h4>Evidence</h4><ul><li><a href="#/showcase">Before and after: the showcase</a></li><li><a href="#/reports/latest">Live report (latest)</a></li><li><a href={`#/reports/${BEFORE.id}`}>Before run, 4 Nov</a></li><li><a href={`#/reports/${AFTER.id}`}>After run, 4 Nov</a></li></ul></div>
       <div><h4>Method</h4><ul><li><a href="#/how">How it works</a></li><li><a href="#/trust">Isolation &amp; limits</a></li></ul></div>
       <div className="fine"><span>Built for the Meta Global AI Hackathon, 2026. Model costs shown are calculated estimates, not bills.</span>
         <span>Type: <a href={fontLicense}>Newsreader</a>, <a href={sansLicense}>Geist</a>, <a href={monoLicense}>Geist Mono</a> (SIL OFL)</span></div>

@@ -303,3 +303,5 @@ button.ws-cell-button:hover{background:var(--paper)}
 .ws-status>span,.ws-cost{overflow-wrap:anywhere}
 @media (max-width:600px){.ws-status{gap:6px 12px}.ws-job-meta{flex-wrap:wrap}}
 .ws-layout>*,.ws-main,.ws-panel,.ws-report,.ws-report>*{min-width:0}
+
+.ws-target:has(.ws-site-preview.half){display:grid;grid-template-columns:1fr 1fr;gap:0 10px}.ws-target:has(.ws-site-preview.half)>strong,.ws-target:has(.ws-site-preview.half)>small{grid-column:1/-1}

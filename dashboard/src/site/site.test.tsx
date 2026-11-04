@@ -80,7 +80,7 @@ describe('homepage (the featured Larkspur story)', () => {
     for (const h of ['#/run', '#/lifecycle', '#/showcase', `#/reports/${BEFORE.id}`, `#/reports/${AFTER.id}`]) expect(hrefs).toContain(h);
     for (const h of hrefs) expect(h ?? '').not.toMatch(/#\/(studio|demo\/|investigation|overview|replay|scopes|evidence$|scanner)/);   // no archive links anywhere (footer included)
     expect(hrefs.filter(h => h?.startsWith('#/reports/'))).toEqual(expect.arrayContaining([]));
-    for (const h of hrefs.filter(h => h?.startsWith('#/reports/'))) expect([`#/reports/${BEFORE.id}`, `#/reports/${AFTER.id}`]).toContain(h!.split('#diagnostics')[0].replace(/\/tasks\/\d+$/, ''));
+    for (const h of hrefs.filter(h => h?.startsWith('#/reports/'))) expect([`#/reports/${BEFORE.id}`, `#/reports/${AFTER.id}`, '#/reports/latest']).toContain(h!.split('#diagnostics')[0].replace(/\/tasks\/\d+$/, ''));
     const text = host.textContent!;
     const O = BEFORE.totals.polishedoriginal, M = AFTER.totals.modifiedpolished;
     for (const s of [`${O.requests}`, `${M.requests}`, `${Math.round(100 * (O.requests - M.requests) / O.requests)}% fewer after the change`, '0/3', '3/3',

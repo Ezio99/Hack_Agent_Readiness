@@ -129,14 +129,14 @@ it('says "Worker available" only when a launch is authorised', async () => {
   expect(host.querySelector('.ws-worker')!.textContent).toContain('Worker available');
 });
 
-it('describes the product plainly and says the improved websites were changed by hand from the report', async () => {
+it('describes the product plainly and says both websites run with the same tasks, agent and limits', async () => {
   server(url => url.endsWith('/config') ? config({ evaluation: null, available: false, repetitions: [], tasks: [], reason: 'not_armed',
     launch: { authorized: false, ready: false, reason: 'not_armed', detail: 'No evaluation is authorised. The owner authorises one at the server terminal.', launches_left: null } }) : []);
   const host = await mount();
   const intro = host.querySelector('.ws-intro')!.textContent ?? '';
   expect(intro).toContain('Fresh Muse Spark browser agents do real customer tasks on two versions of a website');
   expect(intro).toContain('what to change');
-  expect(intro).toContain('the improvements were made by hand from the report');
+  expect(intro).toContain('run with the same tasks, agent and limits');
   for (const old of ['Ironbark', 'four frozen tasks', 'eight new agent runs', '4 owner-approved']) expect(intro).not.toContain(old);
   expect(host.textContent).not.toContain('Ironbark Hire');
 });
