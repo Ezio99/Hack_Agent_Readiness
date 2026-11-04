@@ -16,8 +16,8 @@ const API = 'https://api.elevenlabs.io/v1';
 const MODEL = 'eleven_multilingual_v2';
 const SETTINGS = { stability: 0.5, similarity_boost: 0.75, style: 0.05, use_speaker_boost: true, speed: 1.0 };
 const args = process.argv.slice(2), cmd = args[0], opt = k => { const i = args.indexOf(k); return i > 0 ? args[i + 1] : undefined; };
-const KEY = process.env.ELEVENLABS_API_KEY ?? (existsSync(join(FILM, '.env'))
-  ? readFileSync(join(FILM, '.env'), 'utf8').match(/^ELEVENLABS_API_KEY=(.+)$/m)?.[1]?.trim() : undefined);
+const KEY = process.env.ELEVENLABS_API_KEY ?? process.env.ELEVEN_LABS_KEY ?? (existsSync(join(FILM, '.env'))
+  ? readFileSync(join(FILM, '.env'), 'utf8').match(/^\s*(?:export\s+)?(?:ELEVENLABS_API_KEY|ELEVEN_LABS_KEY)\s*=\s*["']?([^"'\s]+)/m)?.[1] : undefined);
 
 async function api(path, init = {}) {
   if (!KEY) throw new Error('no ELEVENLABS_API_KEY (environment or film/.env)');
@@ -25,15 +25,18 @@ async function api(path, init = {}) {
   if (!r.ok) throw new Error(`${path.split('?')[0]}: HTTP ${r.status} ${(await r.text()).slice(0, 400)}`);
   return r.json();
 }
+/** The two candidates in the Voice Library (looked up 2026-11-04): usable by id even when not added to My voices. */
+const LIBRARY = { dan: { id: '58SnLsdWOv994RNKXLhV', name: 'Dan - Warm, Engaging and Storytelling' }, haseeb: { id: 'bvB801cu7ca8Klk5nO4O', name: 'Haseeb - British Documentary' } };
 async function voiceId(name) {
   if (!name) throw new Error('--voice <name or id> is required');
+  if (LIBRARY[name.toLowerCase()]) return LIBRARY[name.toLowerCase()];
   const { voices } = await api('/voices');
   const v = voices.find(v => v.voice_id === name) ?? voices.find(v => v.name.toLowerCase().startsWith(name.toLowerCase()));
   if (!v) throw new Error(`"${name}" is not in My voices: add it from the Voice Library first (voices: ${voices.map(v => v.name).join(', ')})`);
   return { id: v.voice_id, name: v.name };
 }
 async function speak(voice, text, out) {
-  const j = await api(`/text-to-speech/${voice.id}/with-timestamps?output_format=mp3_44100_192`, { method: 'POST',
+  const j = await api(`/text-to-speech/${voice.id}/with-timestamps?output_format=mp3_44100_128`, { method: 'POST',
     body: JSON.stringify({ text, model_id: MODEL, voice_settings: SETTINGS }) });
   writeFileSync(out, Buffer.from(j.audio_base64, 'base64'));
   writeFileSync(out.replace(/\.mp3$/, '.alignment.json'), JSON.stringify(j.alignment) + '\n');

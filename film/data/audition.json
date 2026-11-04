@@ -1,1 +1,112 @@
-{}
+{
+ "dan": {
+  "1": {
+   "file": "audio/vo/mix/audition-dan-1.wav",
+   "lines": {
+    "a1.college": {
+     "from": 1,
+     "to": 66,
+     "gap": 2
+    },
+    "a1.designed": {
+     "from": 88,
+     "to": 213,
+     "gap": 23
+    },
+    "a1.question": {
+     "from": 240,
+     "to": 354,
+     "gap": 28
+    }
+   },
+   "seconds": 12.1208125
+  },
+  "2": {
+   "file": "audio/vo/mix/audition-dan-2.wav",
+   "lines": {
+    "a2.low": {
+     "from": 2,
+     "to": 212,
+     "gap": 2
+    },
+    "a2.stops": {
+     "from": 250,
+     "to": 414,
+     "gap": 39
+    }
+   },
+   "seconds": 13.932
+  },
+  "3": {
+   "file": "audio/vo/mix/audition-dan-3.wav",
+   "lines": {
+    "a5.brand": {
+     "from": 0,
+     "to": 34,
+     "gap": 0
+    },
+    "a5.tagline": {
+     "from": 54,
+     "to": 142,
+     "gap": 22
+    }
+   },
+   "seconds": 5.0619375
+  }
+ },
+ "haseeb": {
+  "1": {
+   "file": "audio/vo/mix/audition-haseeb-1.wav",
+   "lines": {
+    "a1.college": {
+     "from": 3,
+     "to": 62,
+     "gap": 3
+    },
+    "a1.designed": {
+     "from": 71,
+     "to": 153,
+     "gap": 10
+    },
+    "a1.question": {
+     "from": 164,
+     "to": 232,
+     "gap": 12
+    }
+   },
+   "seconds": 8.034125
+  },
+  "2": {
+   "file": "audio/vo/mix/audition-haseeb-2.wav",
+   "lines": {
+    "a2.low": {
+     "from": 3,
+     "to": 163,
+     "gap": 3
+    },
+    "a2.stops": {
+     "from": 175,
+     "to": 299,
+     "gap": 13
+    }
+   },
+   "seconds": 10.3096875
+  },
+  "3": {
+   "file": "audio/vo/mix/audition-haseeb-3.wav",
+   "lines": {
+    "a5.brand": {
+     "from": 1,
+     "to": 31,
+     "gap": 1
+    },
+    "a5.tagline": {
+     "from": 42,
+     "to": 123,
+     "gap": 11
+    }
+   },
+   "seconds": 4.4118125
+  }
+ }
+}

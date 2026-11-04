@@ -110,7 +110,8 @@ function fromTimestamps(al, texts) {
   const s = al.characters.join(''), norm = c => c.replace(/[’']/g, "'");
   const S = norm(s); let p = 0;
   return texts.map(t => { const i = S.indexOf(norm(t), p); if (i < 0) throw new Error(`line not found in timestamps: ${t}`); p = i + t.length;
-    return [al.character_start_times_seconds[i], al.character_end_times_seconds[i + t.length - 1]]; });
+    let e = i + t.length - 1; while (e > i && /[^\p{L}\p{N}]/u.test(S[e])) e--;          // the last spoken character, not the full stop
+    return [al.character_start_times_seconds[i], al.character_end_times_seconds[e]]; });
 }
 
 /** Measure one file against its lines; write the levelled copy; return per-line spans in frames of the file. */
@@ -124,7 +125,11 @@ function measure(file, outName, lines, overrides = {}) {
   writeWav(mixed, limited.x, 48000);
   const audio = pcm(mixed), texts = lines.map(l => l.text);
   const alignFile = file.replace(/\.[a-z0-9]+$/i, '.alignment.json');
-  const spans = existsSync(alignFile) ? fromTimestamps(JSON.parse(readFileSync(alignFile, 'utf8')), texts) : group(speech(audio), texts);
+  const runs = speech(audio);
+  // timestamps say which words belong to which line; the waveform says exactly where the sound starts and stops (character times are loose at the
+  // edges): each span is snapped to the speech runs it overlaps
+  const snap = ([a, b]) => { const o = runs.filter(([x, y]) => y > a + 0.02 && x < b - 0.02); return o.length ? [Math.max(a - 0.15, o[0][0]), Math.min(b + 0.25, o[o.length - 1][1])] : [a, b]; };
+  const spans = existsSync(alignFile) ? fromTimestamps(JSON.parse(readFileSync(alignFile, 'utf8')), texts).map(snap) : group(runs, texts);
   lines.forEach((l, i) => { if (overrides[l.id]) spans[i] = [overrides[l.id].from, overrides[l.id].to]; });
   const rates = spans.map(([a, b], i) => texts[i].replace(/[^\p{L}\p{N}]/gu, '').length / (b - a));
   const med = [...rates].sort((a, b) => a - b)[Math.floor(rates.length / 2)];
