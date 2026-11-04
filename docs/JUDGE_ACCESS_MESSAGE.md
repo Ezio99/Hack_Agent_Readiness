@@ -1,4 +1,8 @@
-# Judge access message (copy-ready)
+# Judge access message: NOT USED
+
+> **Superseded (2026-11-05).** The organizers confirmed that there is no private channel for sharing credentials, and that the operator token must not appear in the submission, the public repository, the README or the video description. No access code is given to judges. Judges use the public evidence (canonical report, agent replays, raw traces and outputs) and the optional reproducibility paths in the [README's "Evaluate it" section](../README.md#evaluate-it), with their own Meta Model API key if they choose. The earlier draft below is kept only as a record; do not send it.
+
+## Superseded draft
 
 Paste it into a **private** submission field or a private message to the organisers, never a public page, README or video. Replace `<ACCESS CODE>` with the value of `deploy/secrets/judge_token` on the VM; the owner copies it at a terminal and never commits it.
 

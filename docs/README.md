@@ -8,7 +8,7 @@ Start with the [repository README](../README.md). It describes the product as su
 |---|---|
 | [FINAL_SUBMISSION.md](FINAL_SUBMISSION.md) | Submission text: description, canonical results, links |
 | [FINAL_SUBMISSION_CHECKLIST.md](FINAL_SUBMISSION_CHECKLIST.md) | Submission requirements and owner actions |
-| [JUDGE_ACCESS_MESSAGE.md](JUDGE_ACCESS_MESSAGE.md) | Copy-ready message for judges (the access code is never stored here) |
+| [JUDGE_ACCESS_MESSAGE.md](JUDGE_ACCESS_MESSAGE.md) | **Not used:** no access code is given to judges (see the README's "Evaluate it" section) |
 | [FINAL_VIDEO_SCRIPT.md](FINAL_VIDEO_SCRIPT.md) | Storyboard of the three-minute demonstration film |
 | [FUTURE_ARCHITECTURE.md](FUTURE_ARCHITECTURE.md) | Future concepts (public benchmark, capability registry); **not implemented** |
 | [META-INTEGRATION.md](META-INTEGRATION.md) | Meta Model API integration validation |

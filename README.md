@@ -53,11 +53,44 @@ These come from the **canonical paired evaluation** [`eval-1cf64d5eae90bcaeab531
 
 These are the results of **one reference paired evaluation**, with one agent per task on each website. They are a measured result for these tasks, not a statistical guarantee, and individual live runs vary. Earlier separate runs of each website (one evaluation per version, 4 Nov 2026) are kept as historical records; their figures differ and are labelled as such in the application. Costs are calculated from provider-reported token usage. They are not invoices.
 
-## Try it
+## Evaluate it
 
-- **No access code needed to explore.** Open https://209-38-84-72.sslip.io. **See the results** opens the canonical report, **How it works** walks through the Larkspur journey, and the reports and agent replays of completed Larkspur evaluations are public.
-- **Run a live evaluation.** Open the [Workspace](https://209-38-84-72.sslip.io/#/run) (**Run an evaluation**), enter the judge access code and press **Run live evaluation**. Six Muse Spark agents run the three frozen tasks on both websites (about 8 minutes); you can watch each one live, then open the **Readiness report** tab.
-- **About the access code.** Judges receive it privately; it is never published in this repository. It is held only in the browser tab's memory, so re-enter it after a reload. One evaluation runs at a time, and runs are paid from a fixed evaluation budget, so please start one run per judge.
+### The published evaluation (no login, no credentials)
+
+The primary evidence is the recorded Muse Spark evaluation itself, published with its full provenance:
+
+- **Canonical report:** [https://209-38-84-72.sslip.io/#/reports/eval-1cf64d5eae90bcaeab531b4886140c14](https://209-38-84-72.sslip.io/#/reports/eval-1cf64d5eae90bcaeab531b4886140c14). It covers results per agent and per task, recommendations with their evidence, navigation, reliability, cost, and the agent and model settings.
+- **Agent replays:** [task 1](https://209-38-84-72.sslip.io/#/reports/eval-1cf64d5eae90bcaeab531b4886140c14/tasks/1) · [task 2](https://209-38-84-72.sslip.io/#/reports/eval-1cf64d5eae90bcaeab531b4886140c14/tasks/2) · [task 3](https://209-38-84-72.sslip.io/#/reports/eval-1cf64d5eae90bcaeab531b4886140c14/tasks/3). Each step's screenshot, action and the agent's own working notes, and its final answer, are shown for both websites side by side.
+- **Raw traces and outputs (public JSON):**
+  - `GET https://209-38-84-72.sslip.io/api/lifecycle/evaluations/eval-1cf64d5eae90bcaeab531b4886140c14`: the full report, with tasks, answers, grades, metrics and provenance.
+  - `GET https://209-38-84-72.sslip.io/api/lifecycle/evaluations/eval-1cf64d5eae90bcaeab531b4886140c14/trials/<trial id>`: one agent's step-by-step trace (actions, goals, working memory, pages, screenshots). The trial ids are listed in the report, for example `polishedoriginal-gen-23f1802ee0-n-r1`.
+- **In this repository:** [`dashboard/src/site/showcase/larkspur.json`](dashboard/src/site/showcase/larkspur.json) (key `paired`) is an exported copy of the canonical run's per-agent results and its weekend-task traces, with screenshots in `dashboard/src/site/showcase/frames/1cf6-*`.
+- **Context:** the three-minute demonstration video, the [Larkspur journey](https://209-38-84-72.sslip.io/#/lifecycle) (the workflow step by step) and the Showcase of earlier recorded evaluations (labelled as historical).
+
+The hosted Workspace shows running and completed evaluations to everyone. Starting a new live run there needs an operator access code, which is not distributed.
+
+### Reproduce it yourself (optional)
+
+Both paths run this repository's code on your machine after the [Development](#development) setup. **Neither reproduces the exact published Larkspur evaluation.** That run used the hosted service, a frozen task set approved and stored in the production data, and the redesigned Original and Agent-ready snapshots; rerunning it locally is not packaged in this version.
+
+**1. The Larkspur pipeline at zero API cost (no key).**
+
+```bash
+.venv/bin/python -m agent_readiness.framework.evaluate larkspur --root runs/larkspur-dev --provider dev
+```
+
+It generates tasks from the frozen Larkspur snapshot, validates them independently and freezes them. It then runs every task in real Chromium on the site's two base versions (`original`, the earlier unstyled catalogue, and `modified`, its first fix), grades every answer against the course records and prints per-version totals. The trial records are written under `runs/larkspur-dev/<run id>/`. The agent is the scripted development provider, a loopback stand-in that is **not a model**, so this proves the pipeline rather than agent or website performance. In a clean checkout it ran 14 trials (7 generated tasks on each version) in about 4 minutes, with no key and no network request.
+
+**2. A real Muse Spark agent with your own Meta Model API key (cost-capped).** Copy `.env.example` to `.env` and set `META_MODEL_API_KEY`, or export it in your shell; a shell variable takes precedence. Never commit `.env`. Then:
+
+```bash
+.venv/bin/readiness smoke --output runs           # credential-free preflight: a scripted navigator on the local demo storefront
+.venv/bin/readiness probe --stage a --allow-model-calls      # one bounded request: checks your key, the endpoint and muse-spark-1.3
+.venv/bin/readiness run --allow-model-calls --kind discovery --output runs \
+  --max-model-requests 10 --max-estimated-cost-usd 0.05 --max-cumulative-estimated-cost-usd 0.50
+```
+
+`run` sends one fresh Muse Spark Browser Use agent to the **local demo storefront**: an offline electronics shop served on loopback, not Larkspur. The agent gets one shopping task, and its answer is graded independently against the shop's catalogue. Each request is checked before it is sent, and one whose worst-case estimated cost reaches the per-request cap, or would take the run's estimated total past the cumulative cap, is blocked. Each request's worst-case estimate is about US$0.03, so 10 requests stay under about US$0.31. The run also stops at 10 model requests, 10 steps or 120 seconds. Its record, trace and screenshots are written under `runs/`. These calls are charged to your key, and the costs shown are calculated estimates, not bills.
 
 ## Technical overview
 
