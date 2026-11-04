@@ -1,5 +1,7 @@
 # Architecture, execution paths, frozen artifacts and consolidation audit (Task 015f)
 
+> **Historical (2026-10-29).** This audit predates the hosted product, so it covers the electronics environments, the scanner and the Task 012–015 experiments. For the submitted product (hosted service, lifecycle, Larkspur), see the [README's technical overview](../README.md#technical-overview). The text below is unchanged.
+
 Baseline: the tip of the Task 015 PR stack (#26, commit `1f75277`) — the only tree that contains all current code. Companion: [Report 015f](../collaboration/reports/015f-consolidation.md) (what changed, metrics, test results). Historical snapshots are in [archive/](archive/).
 
 ## 1. Integration baseline

@@ -8,12 +8,13 @@ Paste it into a **private** submission field or a private message to the organis
 
 - **Product:** https://209-38-84-72.sslip.io
 - **No code needed to explore:**
-  - Before-and-after showcase: https://209-38-84-72.sslip.io/#/showcase
-  - Recorded live reports, with every agent's screenshots: open **Live report** in the top menu.
+  - The results (canonical paired evaluation, Original website vs Agent-ready website): open **See the results** in the top menu, or https://209-38-84-72.sslip.io/#/reports/eval-1cf64d5eae90bcaeab531b4886140c14
+  - How it works, on the real example: open **How it works** (the Larkspur journey).
+  - Every report includes each agent's recorded screenshots and working notes.
 - **To run a live evaluation yourself:**
-  1. Open https://209-38-84-72.sslip.io/#/run (Workspace).
+  1. Open **Run an evaluation** (the Workspace): https://209-38-84-72.sslip.io/#/run
   2. Paste this access code into the **Access code** box: `<ACCESS CODE>`
-  3. Press **Run live evaluation**. Three Meta Muse Spark browser agents work on the Larkspur Community College website (about 3–8 minutes); you can watch each one live.
+  3. Press **Run live evaluation**. Six Meta Muse Spark browser agents run the same three tasks on both versions of the Larkspur Community College website, the Original website and the Agent-ready website (about 8 minutes); you can watch each one live.
   4. When they finish, open the **Readiness report** tab.
 
 **About the code:**

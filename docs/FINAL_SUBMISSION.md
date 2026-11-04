@@ -1,6 +1,6 @@
-# Final submission materials (2026-11-04, prepared; submitting is the owner's action)
+# Final submission materials (2026-11-04, prepared; submitting is the owner's action; results updated to the canonical paired evaluation)
 
-**Deadline:** official "Nov 4, 9:00 PM ET" = 2026-11-05 13:00 AEDT. Submit by 12:00 AEDT to be safe. See [FINAL_SUBMISSION_CHECKLIST.md](FINAL_SUBMISSION_CHECKLIST.md) for which requirements are confirmed and which are assumed. Paste into the form, then check each field's length limit. Use audience wording only (Larkspur Community College, Before, After, Agent Readiness).
+**Deadline:** official "Nov 4, 9:00 PM ET" = 2026-11-05 13:00 AEDT. Submit by 12:00 AEDT to be safe. See [FINAL_SUBMISSION_CHECKLIST.md](FINAL_SUBMISSION_CHECKLIST.md) for which requirements are confirmed and which are assumed. Paste into the form, then check each field's length limit. Use audience wording only: Larkspur Community College, **Original website**, **Agent-ready website**, Agent Readiness.
 
 ## Project name
 Agent Readiness
@@ -17,36 +17,38 @@ A website can look great to people and still be unusable for the AI agents that 
 4. **Read the report.** Correctness, evidence (did the agent see the pages that hold the answer), navigation, reliability and cost per agent. Every run replays with its recorded screenshots and the agent's own working notes.
 5. **Fix and measure again.** The report's recommendations are tied to evidence. The changed site is re-evaluated with the same frozen tasks and agent.
 
-**Showcase: Larkspur Community College** (a fictional college), live on 4 Nov 2026, each version evaluated on its own with the same three frozen questions and the same agent.
+**Showcase: Larkspur Community College** (a fictional college). Reference results from the **canonical paired evaluation** `eval-1cf64d5eae90bcaeab531b4886140c14` (4 Nov 2026): both websites in one live evaluation, with the same three frozen questions, agent and limits.
 
-| | Before | After |
+| | Original website | Agent-ready website |
 |---|---|---|
 | What it is | The college's freshly redesigned website: cards show a name and summary, facts one click deep | Same design and pages, with the three recommendations applied |
 | Correct answers | **0/3** | **3/3** |
-| Model requests | 36 | 15 |
-| Agent time | 311 s | 121 s |
-| Model cost | US$0.52 | US$0.20 |
+| Model requests | 39 | 10 (74% fewer) |
+| Agent time | 326 s | 57 s (83% less) |
+| Model cost | US$0.571 | US$0.134 (77% less) |
+| Beginner weekend courses found | 1/4 | 4/4 |
 
-**Why Before failed:** the agents opened course pages one at a time and ran out of steps, and one hit a dead end.
+**Why the Original website failed:** the agents opened course pages one at a time and ran out of requests before checking them all.
 
-**The three recommendations applied in After:** every fact on the course cards, the dead end fixed, structured course data.
+**The three recommendations applied in the Agent-ready website:** every fact on the course cards, a fix for a dead end (an agent in an earlier evaluation guessed a course address and got "not found"), structured course data.
 
-One agent per question: a measured result for these tasks, not a statistical guarantee.
+One reference paired evaluation, one agent per question on each website: a measured result for these tasks, not a statistical guarantee. Individual live runs vary.
+
+*Historical:* two earlier separate runs of 4 Nov 2026, one per website (`eval-ea13944e…`: 0/3, 36 requests; `eval-5cf934b3…`: 3/3, 15 requests), are kept as records. They are not the reference results.
 
 ## Built with
 Meta Muse Spark via the Meta Model API, Browser Use, Playwright/Chromium, Python/FastAPI, React 19 + TypeScript + Vite, SQLite, Docker, Caddy, DigitalOcean.
 
 ## Links
 - Live product: https://209-38-84-72.sslip.io
-  - Showcase: `#/showcase`
-  - Workspace (every run evaluates Before and After side by side, 6 agents): `#/run`
-  - Live report (the latest paired run; until one exists, the two separate 4 Nov runs, labelled as such): `#/reports/latest`
-  - Journey (the evaluation and improvement process, step by step): `#/lifecycle`
-- Reports:
-  - Before: `#/reports/eval-ea13944e8ba5c08e8893426b2f8b1c8f`
-  - After: `#/reports/eval-5cf934b372942da74f5157c5fca39fd6`
-- Repository: https://github.com/Ezio99/Hack_Agent_Readiness, branch `final-showcase` (link the exact commit).
-- Video: [FINAL_VIDEO_SCRIPT.md](FINAL_VIDEO_SCRIPT.md).
+  - Canonical results ("See the results"): https://209-38-84-72.sslip.io/#/reports/eval-1cf64d5eae90bcaeab531b4886140c14
+  - The Larkspur journey ("How it works"): `#/lifecycle`
+  - Workspace ("Run an evaluation"; every run evaluates both websites side by side, 6 agents; access code needed): `#/run`
+  - Technical methodology: `#/how`
+  - Earlier evaluations (historical Showcase): `#/showcase`
+- Historical reports (separate runs, one per website): `#/reports/eval-ea13944e8ba5c08e8893426b2f8b1c8f`, `#/reports/eval-5cf934b372942da74f5157c5fca39fd6`
+- Repository: https://github.com/Ezio99/Hack_Agent_Readiness/tree/final-showcase (or link the exact commit).
+- Video: storyboard in [FINAL_VIDEO_SCRIPT.md](FINAL_VIDEO_SCRIPT.md); add the hosted film URL once it is published.
 
 ## Honesty notes
 - Larkspur is fictional. The tasks are frozen and owner-approved.

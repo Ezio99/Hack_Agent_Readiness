@@ -1,51 +1,147 @@
-# Agent Readiness — Meta Global Hackathon
+# Agent Readiness
 
-Live (operator-only starts; history and demo are public): https://209-38-84-72.sslip.io
+**Usability testing for AI agents.** Agent Readiness sends real Meta Muse Spark browser agents to do customers' tasks on a website. It checks every answer against the site's own records, shows where the agents struggled and what to change, and then measures whether the change helped.
 
-A diagnostic platform for **how well AI agents can use a website**: *scan → find friction → recommend a change → modify the site → rescan → measure whether it helped.* Outcomes are always graded by an independent oracle, not by the agent's own claim, and evidence stays separated into **observed website properties**, **agent execution**, **proposed interventions** and **measured effects**.
+Built for the Meta Global AI Developer Hackathon 2026.
 
-Current state, budget and what is (not) authorized: [STATUS.md](STATUS.md). Architecture, execution paths, frozen artifacts and technical debt: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Orientation for contributors/agents: [COLD_START.md](COLD_START.md), [AGENTS.md](AGENTS.md).
+- **Live application:** https://209-38-84-72.sslip.io
+- **Reference results (canonical paired evaluation):** [`#/reports/eval-1cf64d5e…`](https://209-38-84-72.sslip.io/#/reports/eval-1cf64d5eae90bcaeab531b4886140c14)
+- **The workflow on a real example:** [the Larkspur journey](https://209-38-84-72.sslip.io/#/lifecycle)
 
-## What is here
-| area | where | what it does |
-|---|---|---|
-| Site audit + recommendations | `src/agent_readiness/remediation/` | black-box HTTP probe → findings → rule-based recommendation library → re-audit lifecycle → measured effects (derived view only) |
-| Reference agent | `agent.py`, `capture.py`, `compat.py`, `profiles/` | Browser Use agent with frozen profiles, pre-send fidelity guard and sanitised model-response capture (Meta Muse Spark via an OpenAI-compatible endpoint) |
-| Controlled environments + tasks | `environments/electronics/`, `suite/` | synthetic electronics store (48 products, controlled website factors) with catalogue-only oracles |
-| Protected scanner service | `scanner/` | invitation-gated FastAPI/SQLite service: scans, comparisons and site audits of *registered* targets; live inference off by default |
-| Experiments | `experiments/` (Task 012), `remediation/experiment.py` (Task 015), `webarena/` (Task 014) | frozen, hash-approved, budget-gated drivers (see ARCHITECTURE) |
-| Safety primitives | `ledger.py`, `spend_gate.py`, `budget.py` | durable reserve-before-send ledger, per-request spend gate, A$ programme budget |
-| **Hosted evaluation (production)** | `hosted/`, `sites/ironbark/`, `deploy/` | operator-gated FastAPI service: durable SQLite admission/budget, jailed Chromium (loopback-only network namespace), paired Original-vs-Modified Ironbark runs with Muse Spark, independent grading, live progress, history, sanitized export — see [deploy/DEPLOY.md](deploy/DEPLOY.md) |
-| Dashboard | `dashboard/` | React app: product homepage `#/`, recorded-evidence demo `#/demo`, evaluation workspace `#/run` (plus archived Replay Studio and classic pages) — see [dashboard/PRODUCT_REDESIGN.md](dashboard/PRODUCT_REDESIGN.md) |
-| Historical single-site experiment (Tasks 003–007) | `storefront.py`, `runner.py`, `pilot.py`, … | byte-pinned for reproducibility — documented in [docs/archive/README-legacy-runner-through-2026-10-29.md](docs/archive/README-legacy-runner-through-2026-10-29.md) |
+## Why it matters
 
-## Install
-Python 3.12 on Linux and [uv](https://docs.astral.sh/uv/). The exact dependency set is pinned in `requirements.lock`.
+Websites are designed for people, but AI agents increasingly visit them on people's behalf. A site can be easy for a person and still be slow, costly or error-prone for an agent: a person glances at a page, while an agent pays a model request for every decision it makes. Analytics don't show this. The pages load, nothing throws an error, and the agent leaves with a partial answer or a guess. Agent Readiness makes the problem measurable and testable.
+
+## What it does
+
+- **Real agents, real tasks.** Fresh Muse Spark agents (Browser Use in Chromium) attempt customer questions written in customers' own words.
+- **Independent grading.** Answers are checked against the site's own records, which the agent never sees. The agent's opinion of its own answer is ignored.
+- **A readiness report.** For every agent it shows correctness, whether the agent saw the pages that hold the answer, navigation, reliability and cost. Each run can be replayed step by step with its screenshots and the agent's own working notes.
+- **Evidence-linked recommendations.** Findings are measured page properties and recorded agent behaviour, each tied to the evidence behind it.
+- **Before-and-after measurement.** The original and the changed website are evaluated with the same frozen tasks, agent and limits.
+- **Safe to run in public.** Browsers are network-isolated, every model request is reserved against a spend cap before it is sent, and each run is settled at its actual cost.
+
+## How it works
+
+1. **Freeze the website.** A content-hashed snapshot of each website version is served to the agents from a read-only mirror.
+2. **Generate and approve tasks.** Muse Spark proposes customer questions from the site and its business context. A code-only checker (no model) keeps a question only if the site really answers it, the answer is unique and can be graded, and the wording states everything the agent needs. The accepted set is reviewed, approved and frozen before any run.
+3. **Evaluate live.** Each task goes to a fresh Muse Spark browser agent in a Chromium instance that can reach nothing but the frozen snapshot. Every page, screenshot, action and working note is recorded.
+4. **Grade and diagnose.** Answers are graded against the records. Rule-based diagnostics (no model) combine page properties, such as which facts appear on listing pages, with the recorded agent behaviour, and turn them into specific recommendations.
+5. **Improve and re-evaluate.** The website is changed according to the recommendations and evaluated again on the same frozen tasks. Both versions can run side by side in one paired evaluation.
+
+## Demonstration: Larkspur Community College
+
+Larkspur Community College is a fictional college with a freshly redesigned short-course catalogue. It looks good to people, but each course card shows only a name, a subject and a summary. The fee, duration, level, class day, campus, seats left and materials are one click deep, on each course's own page.
+
+To answer *"List Beginner courses that meet on Saturday or Sunday"*, an agent on the **Original website** had to open course pages one at a time and ran out of requests before checking them all. Agent Readiness's report on the Original website recommended three changes: every fact on every course card, a fix for a "not found" dead end that an agent in an earlier evaluation hit by guessing a course address, and structured course data (schema.org JSON-LD). The **Agent-ready website** keeps the same design and pages with those changes applied. Its agents answered from the catalogue alone, without opening a single course page.
+
+| Original website | Agent-ready website |
+|---|---|
+| ![Original website: course cards with a name, subject and summary only](dashboard/src/site/showcase/frames/site-polishedoriginal-courses.webp) | ![Agent-ready website: the same cards also show fee, duration, level, class day, campus, seats left and materials](dashboard/src/site/showcase/frames/site-modifiedpolished-courses.webp) |
+
+## Results
+
+These come from the **canonical paired evaluation** [`eval-1cf64d5eae90bcaeab531b4886140c14`](https://209-38-84-72.sslip.io/#/reports/eval-1cf64d5eae90bcaeab531b4886140c14) (4 Nov 2026). Both websites were run in one live evaluation with the same three frozen tasks, model (`muse-spark-1.3`) and limits (14 model requests per agent).
+
+| | Original website | Agent-ready website | Change |
+|---|---|---|---|
+| Correct answers | 0/3 | 3/3 | |
+| Model requests, all tasks | 39 | 10 | 74% fewer |
+| Agent time, all tasks | 326 s | 57 s | 83% less |
+| Model cost | US$0.571 | US$0.134 | 77% less |
+| Beginner weekend courses found (task 2) | 1/4 | 4/4 | |
+
+These are the results of **one reference paired evaluation**, with one agent per task on each website. They are a measured result for these tasks, not a statistical guarantee, and individual live runs vary. Earlier separate runs of each website (one evaluation per version, 4 Nov 2026) are kept as historical records; their figures differ and are labelled as such in the application. Costs are calculated from provider-reported token usage. They are not invoices.
+
+## Try it
+
+- **No access code needed to explore.** Open https://209-38-84-72.sslip.io. **See the results** opens the canonical report, **How it works** walks through the Larkspur journey, and the reports and agent replays of completed Larkspur evaluations are public.
+- **Run a live evaluation.** Open the [Workspace](https://209-38-84-72.sslip.io/#/run) (**Run an evaluation**), enter the judge access code and press **Run live evaluation**. Six Muse Spark agents run the three frozen tasks on both websites (about 8 minutes); you can watch each one live, then open the **Readiness report** tab.
+- **About the access code.** Judges receive it privately; it is never published in this repository. It is held only in the browser tab's memory, so re-enter it after a reload. One evaluation runs at a time, and runs are paid from a fixed evaluation budget, so please start one run per judge.
+
+## Technical overview
+
+```
+Browser ──HTTPS──▶ Caddy ──▶ FastAPI service (hosted/, lifecycle/) ──▶ SQLite: admission, budget, settlement
+                                 │  serves the React dashboard (dashboard/)
+                                 ▼
+                         evaluation worker (hosted/stageb.py)
+                                 │  per agent: reserve spend ──▶ Meta Model API (Muse Spark)
+                                 ▼
+          network-isolated Chromium (hosted/jail.py) ──▶ read-only mirror of a frozen site snapshot (sites/larkspur/)
+                                 │
+                                 ▼
+          recorded trace ──▶ graders (grading/) + diagnostics (diagnostics/) ──▶ readiness report (lifecycle/projection.py)
+```
+
+**Stack:** Meta Muse Spark via the Meta Model API (OpenAI-compatible), Browser Use, Playwright/Chromium, Python 3.12, FastAPI, SQLite, React 19 + TypeScript + Vite, Docker, Caddy, on a DigitalOcean VM.
+
+| Component | Where |
+|---|---|
+| Hosted service: API, admission, budget and settlement, network-isolated browser, evaluation worker | [`src/agent_readiness/hosted/`](src/agent_readiness/hosted/) |
+| Evaluation lifecycle: evaluations, reports, task-set review and freeze | [`src/agent_readiness/lifecycle/`](src/agent_readiness/lifecycle/) |
+| Browser Use agent adapter (receives public task text only) | [`src/agent_readiness/agent.py`](src/agent_readiness/agent.py) |
+| Task proposals and acceptance gate | [`src/agent_readiness/investigate/taskgen/`](src/agent_readiness/investigate/taskgen/), [`src/agent_readiness/taskeval/`](src/agent_readiness/taskeval/) |
+| Answer graders (no model) | [`src/agent_readiness/grading/`](src/agent_readiness/grading/) |
+| Diagnostics and recommendations (no model) | [`src/agent_readiness/diagnostics/`](src/agent_readiness/diagnostics/) |
+| Larkspur website versions (frozen, hash-pinned snapshots) | [`src/agent_readiness/sites/larkspur/`](src/agent_readiness/sites/larkspur/): `polished_original.py` (Original website), `modified_polished.py` (Agent-ready website) |
+| Spend safety: reserve-before-send ledger and per-request gate | [`src/agent_readiness/ledger.py`](src/agent_readiness/ledger.py), [`src/agent_readiness/spend_gate.py`](src/agent_readiness/spend_gate.py) |
+| Web application (Home, journey, Workspace, reports, Showcase) | [`dashboard/src/site/`](dashboard/src/site/) |
+| Container, reverse proxy, browser jail policy, deploy script | [`deploy/`](deploy/) |
+
+## Repository structure
+
+```
+src/agent_readiness/   Python package: hosted service, lifecycle, agent, graders, diagnostics, site snapshots,
+                       plus earlier research and experiment code (see docs/ARCHITECTURE.md)
+dashboard/             React + TypeScript web application (dashboard/src/site/ is the public product)
+tests/                 Python test suite (credential-free; loopback only)
+datasets/              the recorded first Larkspur evaluation (datasets/lifecycle/m7-larkspur-browser-1), served by the product
+deploy/                Dockerfile, compose, Caddyfile, jail and browser policies, deploy scripts
+scripts/               test runners (dev-tests.sh, critical-tests.sh), showcase export and checks
+docs/                  design, decision and submission documents (docs/README.md is the index)
+collaboration/         task specifications, reports and handoffs: the project's dated engineering record
+STATUS.md              current production state and history
+```
+
+## Development
+
+Python 3.12 on Linux with [uv](https://docs.astral.sh/uv/), and Node 22 for the dashboard. The Python dependency set is pinned in `requirements.lock` (`uv.lock` is deliberately untracked).
+
 ```bash
 uv venv --python 3.12
 uv pip sync requirements.lock
 uv pip install --no-deps --no-build-isolation -e .
-uv pip check
 .venv/bin/python -m playwright install --with-deps chromium
 ```
-`pydantic-settings` is declared although this repository never imports it: the pinned `browser-use` imports it without declaring it. Browser Use uses local Chromium; cloud sync, telemetry and extension downloads are off. `uv.lock` is deliberately untracked.
 
-## Credential-free quick start (no model call, no cost)
+**Tests.** Every test is credential-free and loopback-only, and no test calls a model.
+
 ```bash
-readiness suite list                                   # environments, variants, tasks
-readiness suite smoke --all-variants                   # scripted navigator + independent oracle (NOT a model run)
-readiness serve-env --variant availability=detail,specs=structured --port 8001   # in another shell
-readiness audit http://127.0.0.1:8001 --allow-private --objective "every in-stock ANC headphone under A\$250"
-readiness scanner invite --label me && readiness scanner serve --demo-target     # API + managed demo target
-uv run python scripts/remediation_loop_demo.py         # audit -> recommend -> operator change -> independent re-audit, over the API
-readiness remediation-experiment run --manifest collaboration/experiments/task015/pilot/manifest.json \
-  --audit collaboration/experiments/task015/pilot/audit-baseline.json --root runs/dry --mode mock   # mock dry run only
-scripts/dev-tests.sh            # fast development loop (~35 s, 531 tests; excludes `browser` and `slow`)
-python -m pytest -q             # the complete suite (what CI runs: `-m "not browser"` then `-m browser`; ~14 min)
+scripts/critical-tests.sh        # ~40 s: grants, ledger and spend gate, credentials, network isolation, cancellation, reports
+scripts/dev-tests.sh             # ~2.5 min: all logic-level tests
+cd dashboard && npm ci && npx tsc --noEmit -p . && npx vitest run && npm run build   # build ends with "CHECK PASSED"
 ```
 
-## Live (paid) runs
-Never without the owner's explicit approval of the exact plan/manifest hash. Credentials come from `META_MODEL_API_KEY` in the environment or an untracked repository-root `.env` (`.env.example`; `chmod 600`); process variables win; the value is never printed, logged or committed, and is hidden from browser child processes. Every live path is gated by `--allow-model-calls`, a durable per-request reservation (`spend_gate.py`), per-run and per-stage caps, and the A$ programme ceiling. Calculated costs use verified published prices and are **not** bills. Raw traces and screenshots can contain model/page text: keep them local and inspect before any publication.
+CI ([`.github/workflows/`](.github/workflows/)) runs the complete Python suite, sharded, and the dashboard build and tests. See [docs/CI.md](docs/CI.md).
+
+**Run the application locally (view-only).** After building the dashboard:
+
+```bash
+AR_HOSTED_MODE=disabled AR_HOSTED_DATA=/tmp/ar-data AR_STATIC_DIR=dashboard/dist AR_PORT=8765 \
+  .venv/bin/python -m agent_readiness.hosted.serve
+```
+
+Then open http://127.0.0.1:8765. Home, the Showcase and the journey's recorded content render from data in the repository, and so does the recorded first Larkspur evaluation. The live evaluations, including the canonical paired run, are stored only in the production data volume and are not in the repository. New evaluations are disabled in this mode. Live mode needs a Meta Model API key (`META_MODEL_API_KEY`, see `.env.example`; never commit it), the Linux browser jail and owner authorisation, as described in [deploy/DEPLOY.md](deploy/DEPLOY.md).
+
+## Limitations
+
+- **Sample size.** One agent per task per website: the results are measured for these three tasks, not a statistical guarantee. Live runs of the same evaluation vary.
+- **Browser agents.** Behaviour depends on the model, the Browser Use version and the request limit (14 per agent). A different agent configuration can struggle differently.
+- **Controlled site.** Larkspur is a fictional site evaluated as a frozen snapshot in an isolated browser, not a live third-party website.
+- **Recommendations** come from rule-based diagnostics over measured page properties and recorded behaviour. A person applies them; the product does not edit websites.
+- **Not implemented.** A public benchmark and a discovery or capability registry for agent-ready websites are future concepts ([docs/FUTURE_ARCHITECTURE.md](docs/FUTURE_ARCHITECTURE.md)), not part of this product.
 
 ## Provenance
-Hackathon implementation starts 2026-10-27. The earlier repository `Ezio99/Agent_Readiness` is a pre-event prototype; no executable source, tests, configuration or generated artifacts were copied from it. Historical pre-event task specs (`collaboration/tasks/001`, `002`) are labelled as such. Meta integration evidence: [docs/META-INTEGRATION.md](docs/META-INTEGRATION.md).
+
+Hackathon implementation started on 2026-10-27 (Australia/Sydney). The earlier repository `Ezio99/Agent_Readiness` is a disclosed pre-event prototype; no executable source, tests, configuration or generated artifacts were copied from it. AI coding assistants helped build the project under the owner's direction. Meta integration evidence: [docs/META-INTEGRATION.md](docs/META-INTEGRATION.md). Contributor orientation: [COLD_START.md](COLD_START.md), [AGENTS.md](AGENTS.md).
