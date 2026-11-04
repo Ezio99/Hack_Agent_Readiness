@@ -19,7 +19,9 @@ Authoritative current handoff. Check it against the repository and production be
 > - **Deadline:** **2026-11-05 13:00 AEDT**.
 > - **Owner approval:** deploys, paid runs, `budget evaluation-add/use`, settlements and ledger appends need explicit owner approval.
 
-> **CURRENT (2026-11-04 ~11:15 AEDT): PRODUCTION = `final-showcase`** (see `deploy/DEPLOYED.txt` on the VM for the exact commit and rollback tag). Featured experiment: **Before → After** (Larkspur Community College); record: [collaboration/reports/polished-larkspur-evaluations.md](collaboration/reports/polished-larkspur-evaluations.md) §6.
+> **FROZEN (2026-11-04 11:45 AEDT, owner instruction): PRODUCTION = `final-showcase` @ `02ed375`** (image `dd3d6ba1…`; rollback `rollback-before-readiness` = `8149882b…`). No further changes unless a submission-blocking defect is found. Judge access text: [docs/JUDGE_ACCESS_MESSAGE.md](docs/JUDGE_ACCESS_MESSAGE.md).
+>
+> **PREVIOUS (2026-11-04 ~11:15 AEDT): PRODUCTION = `final-showcase`** (see `deploy/DEPLOYED.txt` on the VM for the exact commit and rollback tag). Featured experiment: **Before → After** (Larkspur Community College); record: [collaboration/reports/polished-larkspur-evaluations.md](collaboration/reports/polished-larkspur-evaluations.md) §6.
 > - **Before** = `larkspur@polishedoriginal` (`2ee4a7be…`): Original redesigned only. Live `eval-ea13944e…`: 0/3 correct, 36 requests, 311 s, US$0.52.
 > - **After** = `larkspur@modifiedpolished` (`2a16c38b…`): Before + its report's recommendations. Live `eval-5cf934b3…`: 3/3, 15 requests, 121 s, US$0.20.
 > - **Superseded:** the earlier `polished` / `polished2` trial was built on Improved (lineage check, report header). Kept as "Earlier trial A/B".

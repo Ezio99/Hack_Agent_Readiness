@@ -53,7 +53,7 @@ Both re-read 2026-11-04.
 | Workspace job page: agent-run cells open the viewer with a real screenshot; Run disabled without a code | ✅ |
 | Browser end-to-end suites (judge experience, showcase) | ✅ 2/2 |
 
-## 5. Judge-simulation fixes: committed locally, NOT deployed
+## 5. Judge-simulation fixes: DEPLOYED `02ed375` (owner-approved, 2026-11-04 00:44 UTC; verified)
 | Fix | Why |
 |---|---|
 | Home: the result card (0/3 → 3/3) and "Watch before and after" moved above the fold | A first-time visitor saw the purpose but not the measured impact in the first desktop screen |
@@ -61,11 +61,17 @@ Both re-read 2026-11-04.
 | Journey: one line saying it follows the 3 Nov first experiment, with a link to the showcase | Avoids mixing it up with Before/After |
 | Grammar fix in the Workspace worker status; one Showcase sentence softened | Accuracy and polish |
 
-👤 **Deploy these?** They are copy and order changes only: vitest 226 passed and the build check passed. Deploying uses the same A0–A5 procedure (about 6 minutes). Production is correct without them.
+✅ **Deployed and verified:**
+- The 0/3 → 3/3 card sits in the desktop first viewport (y = 694–890 px of 900).
+- The Workspace history column reads "Exact match"; grid cells show "Correct" alongside "Exact match: yes/no".
+- 22 routes × desktop and mobile: 0 failures.
+- Evidence identical (3 184 files); budget unchanged.
+
+The application is frozen.
 
 ## 6. Owner actions, in order
 1. 👤 Open the participant portal: read the Official Rules and the submission form; choose track and theme.
-2. 👤 Approve (or skip) deploying the §5 fixes.
+2. ✅ §5 fixes deployed. 👤 Paste [JUDGE_ACCESS_MESSAGE.md](JUDGE_ACCESS_MESSAGE.md) privately, with the code filled in.
 3. 👤 Record the video from the storyboard; upload; check it plays while signed out.
 4. 👤 Fill in the form from `FINAL_SUBMISSION.md`: demo URL, video, repo (branch or commit), judge access code delivered privately, team.
 5. 👤 Submit **before 12:00 AEDT Thu 5 Nov** and keep the confirmation.
