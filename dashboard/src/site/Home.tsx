@@ -105,9 +105,11 @@ export function Home({ section }: { section?: string }) {
         <div className="wrap polished-grid">
           <div data-reveal>
             <p className="eyebrow">{FEATURED.name} · live, 4 Nov 2026</p>
-            <h2 id="polished-h" className="h2">Looks great to people. <em>Agents couldn’t use it.</em></h2>
-            <p>The college’s redesigned website hid every fee, class day and seat count one click deep. Live agents got {BEFORE.correct[BEFORE_V]} of 3 questions right.
-              Agent Readiness showed why; the site was changed exactly as recommended, and the same agents were sent back: {AFTER.correct[AFTER_V]} of 3, with {fewerPct(BEFORE.totals[BEFORE_V].requests, AFTER.totals[AFTER_V].requests)}% fewer model requests.</p>
+            <h2 id="polished-h" className="h2">Looks great to people.<br /><em>But can AI agents navigate it?</em></h2>
+            <p>{FEATURED.name} had a visually appealing website built around familiar browsing patterns. Course fees, schedules and availability were
+              accessible on individual course pages—a natural design choice for human visitors, but one that created unexpected friction for AI agents.</p>
+            <p>In our live evaluation, agents answered {BEFORE.correct[BEFORE_V]} of {BEFORE.tasks.length} questions correctly. Agent Readiness identified the obstacles and
+              recommended targeted improvements. After implementing those changes, agents answered {AFTER.correct[AFTER_V]} of {AFTER.tasks.length} correctly, using {fewerPct(BEFORE.totals[BEFORE_V].requests, AFTER.totals[AFTER_V].requests)}% fewer model requests.</p>
             <p className="polished-cta"><a className="btn btn-signal" href="#/showcase">Watch before and after <span className="arr" aria-hidden="true">→</span></a>
               <a className="btn btn-ghost" href="#/run">Run it live</a></p>
           </div>

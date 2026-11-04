@@ -150,3 +150,5 @@
 .polished-nums dt{font:600 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--polished)}
 .polished-nums dd{margin-top:8px;font:400 15px/1.4 var(--sans);color:#f3f1ff}.polished-nums b{font-size:22px}
 @media (max-width:860px){.polished-grid{grid-template-columns:1fr}}
+
+.polished-band .h2{font-size:clamp(30px,3.3vw,46px);text-wrap:balance}
