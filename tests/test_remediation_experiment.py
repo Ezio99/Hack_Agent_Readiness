@@ -13,6 +13,9 @@ from agent_readiness.remediation.engine import attach_measured_effects, report_s
 from agent_readiness.remediation.targets import DEFAULT_INITIAL
 from agent_readiness.scanner.live import Halt, Ledger
 
+# The authoritative programme ledger (collaboration/budget/programme-ledger.json) after its last owner-approved append, the M9 reconciliation
+# (commit 98d5ec6): US$18.786306 = A$28.1795 at 1.50 A$/US$, A$21.8205 left of A$50. Pinned on purpose: an unexpected ledger change must fail these tests.
+PROGRAMME_SPENT_USD, PROGRAMME_SPENT_AUD, PROGRAMME_REMAINING_AUD = 18.786306, 28.1795, 21.8205
 REPORT = None
 
 
@@ -75,7 +78,7 @@ def test_manifest_freezes_everything_before_execution_and_references_the_product
     assert m["stopping_rules"]["retries"] == "never" and m["stopping_rules"]["replacements"] == "never" and m["pilot_gate"] and m["seed"] == 7
     assert [(e["task_code"]) for e in m["schedule"]] == ["T1", "T1"] and {e["state"] for e in m["schedule"]} == {"unmodified", "modified"}
     assert m["manifest_sha256"] == ex.manifest_hash(m) and set(m["code"]["files_sha256"]) == set(ex.FROZEN_FILES) and m["cost_envelope"]["worst_case_aud"] == 1.5
-    assert m["budget_check"]["remaining_before_aud"] == pytest.approx(32.2273, abs=1e-2) and m["budget_check"]["remaining_after_stage_cap_aud"] == pytest.approx(30.7273, abs=1e-2)
+    assert m["budget_check"]["remaining_before_aud"] == pytest.approx(PROGRAMME_REMAINING_AUD, abs=1e-2) and m["budget_check"]["remaining_after_stage_cap_aud"] == pytest.approx(PROGRAMME_REMAINING_AUD - 1.5, abs=1e-2)
 
 
 @pytest.mark.slow
@@ -160,11 +163,11 @@ def test_every_stage_ledger_counts_toward_the_programme_ceiling(tmp_path):
     pilot.ledger.reserve("pilot-x", 0.40)
     assert main.others_committed_usd() == pytest.approx(0.40) and pilot.others_committed_usd() == 0.0
     s = main.summary()
-    assert s["programme_spent_aud"] == pytest.approx(17.7727 + 0.60, abs=1e-2) and s["stage_cap_aud"] == 6.0
+    assert s["programme_spent_aud"] == pytest.approx(PROGRAMME_SPENT_AUD + 0.60, abs=1e-2) and s["stage_cap_aud"] == 6.0
     pilot.ledger.reserve("pilot-y", 0.30)
-    assert main.summary()["programme_spent_aud"] == pytest.approx(17.7727 + 1.05, abs=1e-2)
+    assert main.summary()["programme_spent_aud"] == pytest.approx(PROGRAMME_SPENT_AUD + 1.05, abs=1e-2)
     recorded = ex.StageLedger(tmp_path, "main", mm)                            # the real programme ledger already contains the executed pilot: never counted twice
-    assert recorded.others_committed_usd() == 0.0 and recorded.summary()["programme_spent_aud"] == pytest.approx(17.7727, abs=1e-2)
+    assert recorded.others_committed_usd() == 0.0 and recorded.summary()["programme_spent_aud"] == pytest.approx(PROGRAMME_SPENT_AUD, abs=1e-2)
 
 
 @pytest.mark.slow
