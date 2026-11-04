@@ -2,12 +2,12 @@
 
 Authoritative current handoff. Check it against the repository and production before you rely on it. The full dated history up to 2026-11-02 is preserved verbatim in [docs/archive/STATUS-2026-10-29-to-2026-11-02.md](docs/archive/STATUS-2026-10-29-to-2026-11-02.md); earlier history is in [docs/archive/STATUS-through-2026-10-29.md](docs/archive/STATUS-through-2026-10-29.md).
 
-## START HERE (2026-11-04 21:55 AEDT): next agent
+## START HERE (2026-11-04 22:20 AEDT): next agent
 
 **Handoff:** [collaboration/handoffs/final-submission-handoff.md](collaboration/handoffs/final-submission-handoff.md). It covers production, the featured experiment, the public product, backend changes, operations, open points and what never to modify. Owner actions: [docs/FINAL_SUBMISSION_CHECKLIST.md](docs/FINAL_SUBMISSION_CHECKLIST.md).
 
-> **PRODUCTION = `final-showcase` @ `3307e53`** (owner-approved deploy 2026-11-04 10:48 UTC), FROZEN except for submission-blocking defects. Image `64cef193…` (`canonical-3307e53` = `latest`); rollback `rollback-before-canonical` = `f493c7ce…` (`4dae086`). Backup `predeploy-canonical-20261104T104811Z` (3 649 files, verified; evidence identical after deploy). Public sweep on production `FAILS []`.
-> - **Homepage = fixed reference results** of the canonical paired run `eval-1cf64d5e` (recorded, no API). Header: How it works · See the results (= `#/reports/eval-1cf64d5e…`) · Workspace · Run an evaluation. Audience labels **Original website / Agent-ready website**.
+> **PRODUCTION = `final-showcase` @ `e18ba36`** (owner-approved deploy 2026-11-04 11:12 UTC: homepage hero overlap fixed; header "How it works" → `#/lifecycle`, footer "Technical methodology" → `#/how`), FROZEN except for submission-blocking defects. Image `2cd98f9a…` (`herofix-e18ba36` = `latest`); rollback `rollback-before-herofix` = `64cef193…` (`3307e53`). Backup `predeploy-herofix-20261104T111116Z` (3 649 files, verified; evidence identical after deploy). Verified on production: hero at 1440/1280/1024/768/390 px with 0 overlaps or spills; public sweep `FAILS []`.
+> - **Homepage = fixed reference results** of the canonical paired run `eval-1cf64d5e` (recorded, no API). Header: How it works (= the journey `#/lifecycle`) · See the results (= `#/reports/eval-1cf64d5e…`) · Workspace · Run an evaluation. Audience labels **Original website / Agent-ready website**.
 > - **Featured:** Larkspur Community College (internal: Before → After).
 >   - Before `polishedoriginal` `2ee4a7be…`: `eval-ea13944e` 0/3, 36 requests.
 >   - After `modifiedpolished` `2a16c38b…`: `eval-5cf934b3` 3/3, 15 requests.
