@@ -54,6 +54,61 @@
    "seconds": 5.0619375
   }
  },
+ "frederick": {
+  "1": {
+   "file": "audio/vo/mix/audition-frederick-1.wav",
+   "lines": {
+    "a1.college": {
+     "from": 1,
+     "to": 72,
+     "gap": 2
+    },
+    "a1.designed": {
+     "from": 84,
+     "to": 175,
+     "gap": 13
+    },
+    "a1.question": {
+     "from": 194,
+     "to": 267,
+     "gap": 20
+    }
+   },
+   "seconds": 9.04
+  },
+  "2": {
+   "file": "audio/vo/mix/audition-frederick-2.wav",
+   "lines": {
+    "a2.low": {
+     "from": 1,
+     "to": 160,
+     "gap": 2
+    },
+    "a2.stops": {
+     "from": 173,
+     "to": 293,
+     "gap": 14
+    }
+   },
+   "seconds": 9.92
+  },
+  "3": {
+   "file": "audio/vo/mix/audition-frederick-3.wav",
+   "lines": {
+    "a5.brand": {
+     "from": 0,
+     "to": 38,
+     "gap": 1
+    },
+    "a5.tagline": {
+     "from": 48,
+     "to": 131,
+     "gap": 12
+    }
+   },
+   "seconds": 4.56
+  }
+ },
  "haseeb": {
   "1": {
    "file": "audio/vo/mix/audition-haseeb-1.wav",

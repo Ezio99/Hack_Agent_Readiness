@@ -135,8 +135,8 @@ write('public/audio/music/score.wav', master([Lw, Rw]));
 const sfx = (dur, fn) => { const n = Math.floor(dur * SR), x = new Float32Array(n); for (let i = 0; i < n; i++) x[i] = fn(i / SR); return x; };
 let lp2 = 0;
 write('public/audio/sfx/click.wav', master([sfx(0.08, x => { const n = rnd() * 2 - 1; lp2 += 0.2 * (n - lp2);
-  return 0.6 * lp2 * Math.exp(-x * 400) + 0.5 * Math.sin(2 * Math.PI * 1750 * x) * Math.exp(-x * 90); })], -3));
-write('public/audio/sfx/tick.wav', master([sfx(0.12, x => Math.sin(2 * Math.PI * 1180 * x) * Math.exp(-x * 45) + 0.4 * Math.sin(2 * Math.PI * 2360 * x) * Math.exp(-x * 80))], -5));
+  return 0.6 * lp2 * Math.exp(-x * 400) + 0.5 * Math.sin(2 * Math.PI * 1750 * x) * Math.exp(-x * 90); })], -6));
+write('public/audio/sfx/tick.wav', master([sfx(0.12, x => Math.sin(2 * Math.PI * 1180 * x) * Math.exp(-x * 45) + 0.4 * Math.sin(2 * Math.PI * 2360 * x) * Math.exp(-x * 80))], -9));
 write('public/audio/sfx/chime.wav', master([sfx(2.4, x => [62, 69, 74].reduce((v, m, j) => v + Math.sin(2 * Math.PI * midi(m) * x) * Math.exp(-(x - j * 0.09) * 2.4) * (x > j * 0.09 ? 1 : 0), 0))], -6));
 write('public/audio/sfx/stop.wav', master([sfx(1.2, x => Math.sin(2 * Math.PI * (300 * Math.exp(-x * 1.2)) * x) * Math.exp(-x * 3.2) * Math.min(1, x / 0.01)
   + 0.6 * Math.sin(2 * Math.PI * (55) * x) * Math.exp(-x * 4))], -3));

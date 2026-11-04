@@ -20,7 +20,7 @@ import { join } from 'node:path';
 import { AUDITION, FILM, loadNarration } from './lib/narration.mjs';
 
 const FF = join(FILM, 'node_modules/@remotion/compositor-linux-x64-gnu/ffmpeg');
-const FPS = 30, TARGET_LUFS = -16, CEILING_DB = -2, MAX_LIMIT = 3;
+const FPS = 30, TARGET_LUFS = -16, CEILING_DB = -1.5, MAX_LIMIT = 1;
 const VO = join(FILM, 'public/audio/vo'), MIX = join(VO, 'mix'), TMP = join(FILM, 'out/vo-tmp');
 const args = process.argv.slice(2), cmd = args[0], opt = k => { const i = args.indexOf(k); return i > 0 ? args[i + 1] : undefined; };
 
@@ -117,7 +117,7 @@ function fromTimestamps(al, texts) {
 /** Measure one file against its lines; write the levelled copy; return per-line spans in frames of the file. */
 function measure(file, outName, lines, overrides = {}) {
   const { lufs, tp } = loudness(file);
-  const gain = Math.min(12, TARGET_LUFS - lufs, CEILING_DB - tp + MAX_LIMIT);   // never more than 3 dB of peak limiting
+  const gain = Math.min(12, TARGET_LUFS - lufs, CEILING_DB - tp + MAX_LIMIT);   // at most 1 dB of peak limiting (the master gain does the rest)
   mkdirSync(MIX, { recursive: true }); mkdirSync(TMP, { recursive: true });
   const mixed = join(MIX, outName + '.wav'), raw = join(TMP, 'raw48.wav');
   ff('-i', file, '-ac', '1', '-ar', '48000', '-c:a', 'pcm_s16le', raw);
@@ -171,7 +171,7 @@ async function main() {
   if (cmd === 'audition') {
     const { ACTS } = await loadNarration(), byId = new Map(ACTS.flatMap(a => a.lines.map(l => [l.id, l]))), dir = join(VO, 'audition'), out = {};
     for (const f of existsSync(dir) ? readdirSync(dir).sort() : []) {
-      const m = f.match(/^([a-z]+)-([123])\.(wav|mp3|m4a|flac|ogg)$/i); if (!m) continue;
+      const m = f.match(/^([a-z0-9_]+)-([123])\.(wav|mp3|m4a|flac|ogg)$/i); if (!m) continue;
       const lines = AUDITION[Number(m[2]) - 1].map(x => typeof x === 'string' ? byId.get(x) : { ...byId.get(x.id), text: x.text });
       console.log(`${f}:`);
       (out[m[1].toLowerCase()] ??= {})[m[2]] = measure(join(dir, f), `audition-${m[1].toLowerCase()}-${m[2]}`, lines);

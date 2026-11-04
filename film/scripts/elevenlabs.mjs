@@ -12,10 +12,15 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { AUDITION, FILM, loadNarration } from './lib/narration.mjs';
 
-const API = 'https://api.elevenlabs.io/v1';
-const MODEL = 'eleven_multilingual_v2';
-const SETTINGS = { stability: 0.5, similarity_boost: 0.75, style: 0.05, use_speaker_boost: true, speed: 1.0 };
 const args = process.argv.slice(2), cmd = args[0], opt = k => { const i = args.indexOf(k); return i > 0 ? args[i + 1] : undefined; };
+
+const API = 'https://api.elevenlabs.io/v1';
+const MODEL = opt('--model') ?? 'eleven_v4';   // the film's model since 2026-11-04 (v4: fine-tuned for the chosen voice; no style / speaker boost)
+/** Conversational, not dramatic: no style exaggeration, mid stability (natural variation without drifting). v3 only accepts stability 0 / 0.5 / 1
+ *  ("Natural" = 0.5) and, like v4, has no style or speaker-boost controls. */
+const SETTINGS = MODEL === 'eleven_multilingual_v2' ? { stability: 0.45, similarity_boost: 0.8, style: 0, use_speaker_boost: true, speed: 1.0 }
+  : MODEL === 'eleven_v3' ? { stability: 0.5, similarity_boost: 0.8 }
+  : { stability: 0.5, similarity_boost: 0.75, speed: 1.0 };   // v4 (and others): the documented controls only; no audio tags, so the read stays understated
 const KEY = process.env.ELEVENLABS_API_KEY ?? process.env.ELEVEN_LABS_KEY ?? (existsSync(join(FILM, '.env'))
   ? readFileSync(join(FILM, '.env'), 'utf8').match(/^\s*(?:export\s+)?(?:ELEVENLABS_API_KEY|ELEVEN_LABS_KEY)\s*=\s*["']?([^"'\s]+)/m)?.[1] : undefined);
 
@@ -35,12 +40,18 @@ async function voiceId(name) {
   if (!v) throw new Error(`"${name}" is not in My voices: add it from the Voice Library first (voices: ${voices.map(v => v.name).join(', ')})`);
   return { id: v.voice_id, name: v.name };
 }
+let spent = 0;
 async function speak(voice, text, out) {
-  const j = await api(`/text-to-speech/${voice.id}/with-timestamps?output_format=mp3_44100_128`, { method: 'POST',
-    body: JSON.stringify({ text, model_id: MODEL, voice_settings: SETTINGS }) });
+  const body = JSON.stringify({ text, model_id: MODEL, voice_settings: SETTINGS });
+  const r = await fetch(`${API}/text-to-speech/${voice.id}/with-timestamps?output_format=mp3_44100_128`, { method: 'POST', body,
+    headers: { 'xi-api-key': KEY, 'content-type': 'application/json' } });
+  if (!r.ok) throw new Error(`text-to-speech: HTTP ${r.status} ${(await r.text()).slice(0, 400)}`);
+  const cost = Number(r.headers.get('character-cost') ?? r.headers.get('x-character-count') ?? NaN);
+  const j = await r.json();
   writeFileSync(out, Buffer.from(j.audio_base64, 'base64'));
-  writeFileSync(out.replace(/\.mp3$/, '.alignment.json'), JSON.stringify(j.alignment) + '\n');
-  console.log('  wrote', out.replace(FILM + '/', ''));
+  if (j.alignment) writeFileSync(out.replace(/\.mp3$/, '.alignment.json'), JSON.stringify(j.alignment) + '\n');
+  spent += Number.isFinite(cost) ? cost : text.length;
+  console.log(`  wrote ${out.replace(FILM + '/', '')} (${Number.isFinite(cost) ? cost + ' credits charged' : text.length + ' characters'}${j.alignment ? ', with timestamps' : ''})`);
 }
 
 async function main() {
@@ -57,11 +68,13 @@ async function main() {
   const chars = jobs.reduce((s, j) => s + j.text.length, 0);
   console.log(`${cmd}: ${jobs.length} generations, ${chars} characters (about ${chars} credits on ${MODEL}); settings ${JSON.stringify(SETTINGS)}`);
   if (!args.includes('--confirm')) { console.log('dry run: nothing sent. Add --confirm to generate.'); return; }
-  const voice = await voiceId(opt('--voice')), tag = voice.name.split(/[\s-]/)[0].toLowerCase(), take = opt('--take');
+  const voice = opt('--voice-id') ? { id: opt('--voice-id'), name: opt('--tag') ?? opt('--voice-id') } : await voiceId(opt('--voice'));
+  const tag = opt('--tag') ?? voice.name.split(/[\s-]/)[0].toLowerCase(), take = opt('--take'), only = opt('--only');
+  if (only) jobs = jobs.filter(j => String(j.n) === only);
   const dir = cmd === 'audition' ? join(FILM, 'public/audio/vo/audition') : join(FILM, 'public/audio/vo');
   mkdirSync(dir, { recursive: true });
   console.log(`voice: ${voice.name}`);
   for (const j of jobs) await speak(voice, j.text, join(dir, cmd === 'audition' ? `${tag}-${j.n}.mp3` : `${j.n}${take ? '-take' + take : ''}.mp3`));
-  console.log(`next: node scripts/vo.mjs ${cmd === 'audition' ? 'audition' : 'align'}`);
+  console.log(`spent: ${spent} credits (model ${MODEL}). next: node scripts/vo.mjs ${cmd === 'audition' ? 'audition' : 'align'}`);
 }
 main().catch(e => { console.error(String(e.message ?? e)); process.exit(1); });

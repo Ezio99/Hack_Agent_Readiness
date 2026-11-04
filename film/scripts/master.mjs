@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { FILM } from './lib/narration.mjs';
 
 const FF = join(FILM, 'node_modules/@remotion/compositor-linux-x64-gnu/ffmpeg');
-const TARGET = -16, MAX_TP = -1;
+const TARGET = Number(process.env.TARGET_LUFS ?? -16), MAX_TP = -1;   // TARGET_LUFS=-18 for loudness-matched comparisons
 const [src, dst] = process.argv.slice(2);
 if (!src || !dst) { console.log('usage: node scripts/master.mjs IN.mp4 OUT.mp4'); process.exit(1); }
 const measure = f => { const o = execFileSync('/bin/sh', ['-c', `"${FF}" -hide_banner -nostats -i "${f}" -vn -af loudnorm=print_format=json -f null - 2>&1`], { maxBuffer: 1 << 26 }).toString();

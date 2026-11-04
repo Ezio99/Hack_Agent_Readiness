@@ -79,7 +79,7 @@ Put each sentence group on its own paragraph, as above, so the voice pauses betw
 - staying believable from curious, to tense, to optimistic.
 
 ## 2. Settings (identical for every clip)
-- **Model:** Eleven Multilingual v2. Use the same model throughout.
+- **Model:** Eleven v4 (`eleven_v4`), chosen 2026-11-04 after Dan and Haseeb on Multilingual v2 sounded robotic. Use the same model throughout.
 - **Stability** 50%
 - **Similarity** 75%
 - **Style exaggeration** 5% (0–10%)
