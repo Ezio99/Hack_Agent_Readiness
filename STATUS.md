@@ -2,22 +2,20 @@
 
 Authoritative current handoff. Check it against the repository and production before you rely on it. The full dated history up to 2026-11-02 is preserved verbatim in [docs/archive/STATUS-2026-10-29-to-2026-11-02.md](docs/archive/STATUS-2026-10-29-to-2026-11-02.md); earlier history is in [docs/archive/STATUS-through-2026-10-29.md](docs/archive/STATUS-through-2026-10-29.md).
 
-## START HERE (2026-11-04 Sydney): next agent
+## START HERE (2026-11-04 16:30 AEDT): next agent
 
-**Handoff:** [collaboration/handoffs/final-visual-showcase-handoff.md](collaboration/handoffs/final-visual-showcase-handoff.md). It covers production state, architecture, immutable evidence, spending and security, the next phase, operations, and risks. Read it, then `AGENTS.md`.
+**Handoff:** [collaboration/handoffs/final-submission-handoff.md](collaboration/handoffs/final-submission-handoff.md). It covers production, the featured experiment, the public product, backend changes, operations, open points and what never to modify. Owner actions: [docs/FINAL_SUBMISSION_CHECKLIST.md](docs/FINAL_SUBMISSION_CHECKLIST.md).
 
-> **PRODUCTION = `final-showcase` @ `fdc3f43`** (journey hotfix on `9ac4485`)
-> - **Image:** `hotfix-fdc3f43` = `sha256:a2a3792a35f3…`; rollbacks `rollback-9ac4485` (has the journey crash) and `rollback-dde7e22` (pre-budget).
-> - **Access:** one access code + Run for everyone (judge code on the VM; never printed).
-> - **Budget:** the fresh **A$20** shared budget `ar-a20-2026-11` is **open**, A$20.00 available. It is a soft cap: launches start while commitments are below A$20, and the last run may finish above it by at most A$5.61. Global cap US$39.029333.
-> - **Selected evaluation:** `larkspur-core@v3` **Original vs Improved**.
-> - **A$50 programme:** A$29.13 spent, unchanged.
-> - **Verification:** 2026-11-03 21:20 UTC (public 19/19, evidence identical, every route in a real browser).
-> - **Records:** [evaluation-launch-final.md §8, §8.1](collaboration/reports/evaluation-launch-final.md).
->
-> **Next agent's starting point:** handoff §5. Build Polished Larkspur as a NEW immutable registered snapshot `larkspur@polished` (`sites/larkspur/polished.py`, `render.VARIANTS`, `SITES["larkspur"].releases`, a hash-pinning test like `tests/test_larkspur_improved.py`), then the cinematic, consistent showcase, the owner-approved Original vs Polished run, the video and the submission.
-> - **Deadline:** **2026-11-05 13:00 AEDT**.
-> - **Owner approval:** deploys, paid runs, `budget evaluation-add/use`, settlements and ledger appends need explicit owner approval.
+> **PRODUCTION = `final-showcase` @ `4dae086`**, FROZEN except for submission-blocking defects. Image `f493c7ce…`; rollback `rollback-before-copyclean` = `04c130ab…`.
+> - **Featured:** Larkspur Community College, **Before → After**.
+>   - Before `polishedoriginal` `2ee4a7be…`: `eval-ea13944e` 0/3, 36 requests.
+>   - After `modifiedpolished` `2a16c38b…`: `eval-5cf934b3` 3/3, 15 requests.
+>   - Paired run `eval-1cf64d5e`: 0/3 → 3/3, 39 → 10 requests, US$0.70.
+> - **Workspace:** selected evaluation **`ar-a20-pair`** (6 agents per run, at most A$5.61). Live report = `#/reports/latest`.
+> - **Budget:** `ar-a20-2026-11` spent A$2.49 of A$20; global cap US$39.03.
+> - **Deadline:** submit by Thu 2026-11-05 12:00 AEDT (official 13:00 AEDT).
+
+### History of this phase (2026-11-04, newest first)
 
 > **PRODUCTION = `final-showcase` @ `4dae086`** (judge-facing copy cleanup; image `f493c7ce…`, rollback `rollback-before-copyclean` = `04c130ab…`).
 >
@@ -34,6 +32,24 @@ Authoritative current handoff. Check it against the repository and production be
 > - **Workspace** runs `ar-a20-after` (After alone, at most A$2.84 per run). Budget A$1.43 spent of A$20.
 > - **Audience names everywhere:** Before / After / Larkspur Community College / Agent Readiness. Internal names appear only in code and docs.
 > - **Submission:** [docs/FINAL_SUBMISSION.md](docs/FINAL_SUBMISSION.md), [docs/FINAL_VIDEO_SCRIPT.md](docs/FINAL_VIDEO_SCRIPT.md). The owner records and submits.
+
+
+
+
+**Earlier handoff:** [collaboration/handoffs/final-visual-showcase-handoff.md](collaboration/handoffs/final-visual-showcase-handoff.md). It covers production state, architecture, immutable evidence, spending and security, the next phase, operations, and risks. Read it, then `AGENTS.md`.
+
+> **PRODUCTION = `final-showcase` @ `fdc3f43`** (journey hotfix on `9ac4485`)
+> - **Image:** `hotfix-fdc3f43` = `sha256:a2a3792a35f3…`; rollbacks `rollback-9ac4485` (has the journey crash) and `rollback-dde7e22` (pre-budget).
+> - **Access:** one access code + Run for everyone (judge code on the VM; never printed).
+> - **Budget:** the fresh **A$20** shared budget `ar-a20-2026-11` is **open**, A$20.00 available. It is a soft cap: launches start while commitments are below A$20, and the last run may finish above it by at most A$5.61. Global cap US$39.029333.
+> - **Selected evaluation:** `larkspur-core@v3` **Original vs Improved**.
+> - **A$50 programme:** A$29.13 spent, unchanged.
+> - **Verification:** 2026-11-03 21:20 UTC (public 19/19, evidence identical, every route in a real browser).
+> - **Records:** [evaluation-launch-final.md §8, §8.1](collaboration/reports/evaluation-launch-final.md).
+>
+> **Next agent's starting point:** handoff §5. Build Polished Larkspur as a NEW immutable registered snapshot `larkspur@polished` (`sites/larkspur/polished.py`, `render.VARIANTS`, `SITES["larkspur"].releases`, a hash-pinning test like `tests/test_larkspur_improved.py`), then the cinematic, consistent showcase, the owner-approved Original vs Polished run, the video and the submission.
+> - **Deadline:** **2026-11-05 13:00 AEDT**.
+> - **Owner approval:** deploys, paid runs, `budget evaluation-add/use`, settlements and ledger appends need explicit owner approval.
 
 Everything below this line is earlier state, kept as history; where it disagrees with the handoff, the handoff and production win.
 

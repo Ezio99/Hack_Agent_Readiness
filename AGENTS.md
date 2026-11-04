@@ -34,6 +34,13 @@ Read `AGENTS.md`, `STATUS.md`, `docs/PROJECT.md`, `docs/DECISIONS.md`, relevant 
 Discuss → propose → approve → task → implement → report → review. Tasks saved as historical references are not automatically approved to execute. Codex can make routine technical choices but must escalate experiment-design changes. Commit work in reviewable units, record checks actually run and limitations, update `STATUS.md`, and link the relevant task/report. No unapproved spending on model calls or external actions.
 
 ## Current state
-See `STATUS.md` (authoritative). Final showcase (2026-11-03): the release candidate is branch `final-showcase` (featured site Larkspur, new website version `larkspur@improved`, judge pool `larkspur-core@v3` on Original vs Improved; not deployed), see `collaboration/reports/final-showcase-release.md`. Summary as of 2026-11-04: production runs `evaluation-v2` @ `140a4e8` operator-only at https://209-38-84-72.sslip.io (US$10 hosted ceiling); the branch stack is unmerged into `main`. The lifecycle (M1–M7) lives on `research/llm-task-planning`; its product integration (M8) is the release candidate on `m8-product-integration`, not deployed. No paid model call, ceiling change or public paid access is authorized without explicit owner approval; the programme ceiling is A$50 (a limit, never an authorization). Historical Task 001/002 specs are pre-event references, and historical Task 005–007 code/config/data, frozen manifests, pilot artifacts, stored evaluation evidence and the budget ledger are never modified.
+See `STATUS.md` (authoritative) and the handoff `collaboration/handoffs/final-submission-handoff.md`.
+
+As of 2026-11-04 16:30 AEDT:
+- **Production:** `final-showcase` @ `4dae086` at https://209-38-84-72.sslip.io. It is frozen for submission (deadline Thu 2026-11-05 13:00 AEDT; submit by 12:00).
+- **Featured experiment:** Larkspur Community College, Before → After. Snapshots `polishedoriginal` and `modifiedpolished`; live runs `eval-ea13944e`, `eval-5cf934b3` and the paired run `eval-1cf64d5e`. Audience names: Before / After only.
+- **Budget:** the Workspace runs evaluation `ar-a20-pair` on the A$20 budget `ar-a20-2026-11` (A$2.49 spent). The A$50 programme ceiling is a limit, never an authorization.
+- **Needs explicit owner approval:** any paid model call, budget or cap change, settlement, ledger append, merge to `main`, or deploy. Owner-typed gates stay owner-typed; the audited `--delegated` path is only for evaluation-add/use under a written owner instruction.
+- **Never modify:** historical snapshots, suites, ledgers, job records and evidence.
 
 Credentials: set `META_MODEL_API_KEY` in the process environment or a repository-root `.env` (ignored by Git; `.env.example` is the template). Process variables take precedence. Never print, log or commit its value. Never use a bare `git add -A` (`uv.lock` is deliberately untracked).

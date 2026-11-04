@@ -1,5 +1,7 @@
 # Handoff: final visual showcase phase (2026-11-04 Sydney)
 
+> **SUPERSEDED (2026-11-04 16:30 AEDT)** by [final-submission-handoff.md](final-submission-handoff.md). Kept as history; its production state, selected evaluation and "next phase" are out of date.
+
 **Start here.** This supersedes [final-showcase-handoff.md](final-showcase-handoff.md) for current state. Verify everything below against the repository and production before you rely on it.
 - **Deadline:** **Thursday 2026-11-05 13:00 AEDT** (Meta Global AI Hackathon). A video **and** a functioning live product are both mandatory.
 - **Branch:** `final-showcase`, unmerged into `main` (merging needs owner approval).
