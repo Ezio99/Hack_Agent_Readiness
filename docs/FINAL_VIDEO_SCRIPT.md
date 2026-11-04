@@ -14,7 +14,10 @@ Every number below is a recorded live result, audited against the production rec
    - **T3** https://209-38-84-72.sslip.io/#/reports/eval-ea13944e8ba5c08e8893426b2f8b1c8f/tasks/1 (Before, task 1: the dead end)
    - **T4** https://209-38-84-72.sslip.io/#/reports/eval-5cf934b372942da74f5157c5fca39fd6/tasks/2 (After, task 2 replay)
    - **T5** https://209-38-84-72.sslip.io/#/run/eval-5cf934b372942da74f5157c5fca39fd6 (the recorded After run in the Workspace)
-3. **Optional live run** (at most A$2.84 from the A$20 budget): instead of T5, open `#/run`, paste the access code off-camera, and press **Run live evaluation** about 8 minutes before the T5 scene; cut to it once it is running. Otherwise use T5, which is a real recorded run.
+3. **Optional live run (paired):** each Workspace run now evaluates Before and After together (6 agents), reserving at most US$3.74 (A$5.61) of the A$20 budget.
+   - Open `#/run`, paste the access code off-camera, and press **Run live evaluation** about 8 minutes before the T5 scene; cut to it once it is running.
+   - Its report becomes the **Live report**.
+   - Otherwise use T5 (a real recorded After run), and say that the Workspace runs both versions side by side.
 4. **Showcase scrolling:** scroll steadily with the trackpad or mouse wheel. Each scene is "sticky" and changes as you scroll. Pause where the table says "hold".
 
 ## Storyboard
@@ -31,7 +34,7 @@ Every number below is a recorded live result, audited against the production rec
 | 8 | 1:50–2:02 | T1, scroll slowly through Chapter 5 (the wipe) | The All courses page wiping from Before to After | "Here's the same catalogue after the change. The design hasn't moved; the facts are now where an agent looks." |
 | 9 | 2:02–2:20 | T4: click step **2**, then **6** | After, task 2: memory at step 2 lists all 4 courses from the cards; answer at step 6 | "Same questions, same agent, evaluated again. It read all fourteen cards on one page and answered, without opening a single course page." |
 | 10 | 2:20–2:38 | T1, scroll to Chapter 7. Hold on "0/3 → 3/3", then the table | **0/3 → 3/3** · requests **36 → 15** · time **311 s → 121 s** · cost **US$0.52 → US$0.20** | "Zero of three became three of three, with 58 percent fewer model requests and 61 percent less time and cost. That's one agent per question: a measured result for these tasks, not a statistical guarantee." |
-| 11 | 2:38–2:55 | T5: show the grid (3 completed), click one cell, then the **Readiness report** tab | The real After run: grid, agent screenshot, report header | "And it's a product, not a slide. With an access code, anyone can run it live: press Run, watch the agents work, and read the report." |
+| 11 | 2:38–2:55 | T5: show the grid (3 completed), click one cell, then the **Readiness report** tab | The real After run: grid, agent screenshot, report header | "And it's a product, not a slide. With an access code, anyone can run both versions side by side: press Run, watch six agents work, and read the comparative report." |
 | 12 | 2:55–3:00 | T1, jump to "Your turn." | The finale buttons | "Agent Readiness. See your website the way an agent does." |
 
 ## Facts to keep exact (audited)

@@ -19,7 +19,9 @@ Authoritative current handoff. Check it against the repository and production be
 > - **Deadline:** **2026-11-05 13:00 AEDT**.
 > - **Owner approval:** deploys, paid runs, `budget evaluation-add/use`, settlements and ledger appends need explicit owner approval.
 
-> **PRODUCTION = `final-showcase` @ `f3d1abf`** (2026-11-04 ~13:20 AEDT, owner-approved targeted frontend release; image `dd4685cc…`; rollback `rollback-before-public` = `dd3d6ba1…`). The public app shows only the final Before → After experiment (see the checklist, §7). Frozen again unless a submission-blocking defect is found.
+> **PRODUCTION = `final-showcase` @ `3c2b5ce`** (image `04c130ab…`, rollback `rollback-before-paired`). Selected evaluation **`ar-a20-pair`** (Before + After, 6 agents, US$3.74 per run); Live report = `#/reports/latest`. See the checklist, §8.
+>
+> Previous: `f3d1abf` (2026-11-04 ~13:20 AEDT, owner-approved targeted frontend release; image `dd4685cc…`; rollback `rollback-before-public` = `dd3d6ba1…`). The public app shows only the final Before → After experiment (see the checklist, §7). Frozen again unless a submission-blocking defect is found.
 >
 > Previous: **FROZEN (2026-11-04 11:45 AEDT, owner instruction): PRODUCTION = `final-showcase` @ `02ed375`** (image `dd3d6ba1…`; rollback `rollback-before-readiness` = `8149882b…`). No further changes unless a submission-blocking defect is found. Judge access text: [docs/JUDGE_ACCESS_MESSAGE.md](docs/JUDGE_ACCESS_MESSAGE.md).
 >

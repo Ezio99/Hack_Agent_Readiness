@@ -86,3 +86,12 @@ The application is frozen.
 - **Workspace:** lists only the Before and After runs. It opens the latest After run by default (or a running one) and follows a new run automatically while the visitor has not chosen one.
 - **Journey:** rebuilt on the Before and After evidence. The chapter bar follows scrolling, and chapter clicks land below the sticky bar.
 - **Showcase:** composition and sticky-scene fixes at 6 viewport sizes, scrolling forward and backward.
+
+## 8. Paired Workspace evaluation (2026-11-04, owner-requested)
+- **Selected evaluation:** `ar-a20-pair`, recorded with `--delegated`, terms sha256 `5791a51f…`. It runs Before (`polishedoriginal` `2ee4a7be…`) and After (`modifiedpolished` `2a16c38b…`) together.
+- **Same conditions:** frozen `larkspur-core@v3`, 3 tasks × 2 versions = 6 agents, the same model and agent profile, 14 requests per agent, US$0.044 per request.
+- **Reservation:** US$3.740 (A$5.61), equal to the one-run allowance.
+- **Budget room:** A$1.43 committed, so one run reaches at most A$7.04 of A$20. Global cap: US$12.32 → 16.06 of 39.03. No cap changed. No paid run was launched.
+- **Workspace:** opens the latest completed paired run. Until one exists it opens nothing and links the two separate recorded runs. Previews and copy show that both websites are tested; the grid and the agent viewer name the version of each agent.
+- **Live report** (`#/reports/latest`): the same latest live paired run. Until one exists, it shows the two separate 4 Nov runs as two runs, with their run ids.
+- **Checks:** vitest 235 passed; paired judge e2e rehearsal passed (6/6, Before and After report); the production sweep and both layouts are clean.

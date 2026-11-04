@@ -39,7 +39,8 @@ Meta Muse Spark via the Meta Model API, Browser Use, Playwright/Chromium, Python
 ## Links
 - Live product: https://209-38-84-72.sslip.io
   - Showcase: `#/showcase`
-  - Workspace (runs the After site): `#/run`
+  - Workspace (every run evaluates Before and After side by side, 6 agents): `#/run`
+  - Live report (the latest paired run; until one exists, the two separate 4 Nov runs, labelled as such): `#/reports/latest`
   - Journey (the evaluation and improvement process, step by step): `#/lifecycle`
 - Reports:
   - Before: `#/reports/eval-ea13944e8ba5c08e8893426b2f8b1c8f`
