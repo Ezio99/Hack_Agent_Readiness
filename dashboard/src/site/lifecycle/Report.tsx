@@ -3,7 +3,7 @@ import { SiteFooter, SiteHeader } from '../Shell';
 import { PUBLIC_SCOPE, VARIANT_LABEL, api, displayTitle, inPublicScope, latestPaired, fmtSec, fmtUsd, variantClass, type Evaluation, type Finding, type Trial } from '../../lib/lifecycleApi';
 import { Failed, GradeTag, Hash, Loading, ModeBadge, PairBars, plain, Section, useLoad, VariantName } from './parts';
 import { TraceCompare } from './Trace';
-import { AFTER, AFTER_V, BEFORE, BEFORE_V } from '../showcase';
+import { AFTER, AFTER_V, BEFORE, BEFORE_V, CANONICAL } from '../showcase';
 import './lifecycle.css';
 
 /** `#/reports/<id>` and `#/reports/<id>/tasks/<n>`: one readiness report for any evaluation (the recorded first evaluation and evaluations launched in
@@ -25,7 +25,7 @@ export function LatestReportPage() {
       <strong>{r.correct[v]}/{r.tasks.length} correct</strong><span>{t.requests} model requests · {t.seconds} s · US${t.cost_usd.toFixed(2)}</span>
       <span className="link">Open the {label} report →</span></a>; };
   return <div className="ar lc">
-    <SiteHeader active="report" cta={false} />
+    <SiteHeader />
     <main id="lc-main" tabIndex={-1} className="wrap lc-wrap">
       {evs.loading && <Loading what="the latest evaluation" />}
       {evs.error && <Failed error={evs.error} what="The evaluations" />}
@@ -47,7 +47,7 @@ export function ReportPage({ id, task }: { id: string; task?: number }) {
   const [audit, setAudit] = useState(false);
   return <div className="ar lc">
     <a className="ar-skip" href="#lc-main" onClick={e => { e.preventDefault(); document.getElementById('lc-main')?.focus(); }}>Skip to content</a>
-    <SiteHeader active="report" cta={false} />
+    <SiteHeader active={id === CANONICAL.id ? 'report' : undefined} />
     <main id="lc-main" tabIndex={-1} className="wrap lc-wrap">
       <nav className="lc-crumbs" aria-label="Breadcrumb"><a href="#/lifecycle">Journey</a><span aria-hidden="true">/</span><a href="#/lifecycle/compare">Before and after</a>
         {task != null && <><span aria-hidden="true">/</span><a href={`#/reports/${id}`}>{ev.data ? displayTitle(ev.data) : id}</a></>}</nav>
@@ -61,10 +61,20 @@ export function ReportPage({ id, task }: { id: string; task?: number }) {
         <p><button type="button" className="btn btn-ghost btn-sm" onClick={() => setAudit(true)}>Show the archived record (audit)</button></p></div>}
       {ev.data && (isPublicEvaluation(ev.data) || audit) && <>
         {!isPublicEvaluation(ev.data) && <p className="lc-notice" role="note">Archived record, shown for audit: not part of the current experiment.</p>}
+        {isPublicEvaluation(ev.data) && <EvidenceNote id={ev.data.id} />}
         {task != null ? <TraceCompare ev={ev.data} n={task} /> : <Report ev={ev.data} />}</>}
     </main>
     <SiteFooter />
   </div>;
+}
+
+/** Which evidence this report is: the canonical paired evaluation (the headline results), or another live run whose figures differ from it. */
+export function EvidenceNote({ id }: { id: string }) {
+  if (id === CANONICAL.id) return <p className="lc-evidence canonical" role="note"><strong>Canonical evaluation.</strong> Before and After run together in one live
+    evaluation ({CANONICAL.date}), with the same three tasks, agent and limits. The headline results for Agent Readiness come from this run.</p>;
+  const separate = id === BEFORE.id || id === AFTER.id;
+  return <p className="lc-evidence" role="note">{separate ? <>One of the two separate live runs of 4 Nov 2026 (each version evaluated on its own). </> : <>Another live
+    evaluation of the same tasks. </>}Its figures differ from the <a className="link" href={`#/reports/${CANONICAL.id}`}>canonical paired evaluation</a>, which the headline results come from.</p>;
 }
 
 const variantsOf = (ev: Evaluation) => ev.manifest.variants.map(v => v.name);

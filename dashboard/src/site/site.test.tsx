@@ -8,7 +8,8 @@ import App from '../App';
 import { parse } from './router';
 import { evidence, headline, trial, isItemPage, replication } from './evidence';
 import { LATEST_LIVE } from './LatestLive';
-import { AFTER, AFTER_CHANGES, BEFORE, FIRST_LIVE, IMPROVEMENTS, LIVE } from './showcase';
+import { AFTER, AFTER_CHANGES, BEFORE, CANONICAL, FIRST_LIVE, IMPROVEMENTS, LIVE } from './showcase';
+import { REPO_URL } from './Shell';
 import { Home } from './Home';
 import { Demo } from './demo/Demo';
 import { Workspace } from './workspace/Workspace';
@@ -71,6 +72,26 @@ describe('recorded evidence (eval-9aaac35c)', () => {
   });
 });
 
+describe('site navigation (judge-facing)', () => {
+  it('header: How it works, See the results (the canonical paired report), Workspace and one Run CTA; footer: Product, Evidence, About without dated run links', () => {
+    act(() => root.render(<Home />));
+    const nav = [...host.querySelectorAll('#site-nav a:not(.nav-cta)')].map(a => [a.textContent, a.getAttribute('href')]);
+    expect(nav).toEqual([['How it works', '#/how'], ['See the results', `#/reports/${CANONICAL.id}`], ['Workspace', '#/run']]);
+    const cta = [...host.querySelectorAll('.site-head a')].filter(a => a.textContent?.startsWith('Run an evaluation'));
+    expect(cta.map(a => a.getAttribute('href'))).toEqual(['#/run', '#/run']);           // the desktop button and the mobile-menu item
+    const head = host.querySelector('.site-head')!.textContent!;
+    for (const s of ['Showcase', 'journey', 'Live report']) expect(head).not.toContain(s);
+    const foot = host.querySelector('.site-foot')!;
+    expect([...foot.querySelectorAll('h4')].map(h => h.textContent)).toEqual(['Product', 'Evidence', 'About']);
+    const links = Object.fromEntries([...foot.querySelectorAll('ul a')].map(a => [a.textContent, a.getAttribute('href')]));
+    expect(links).toEqual({ 'The Larkspur journey': '#/lifecycle', 'Run an evaluation': '#/run', 'Before and after': '#/showcase',
+      'Canonical evaluation results': `#/reports/${CANONICAL.id}`, 'Latest live report': '#/reports/latest',
+      'How it works': '#/how', 'Isolation & limitations': '#/trust', 'GitHub repository': REPO_URL });
+    for (const id of [BEFORE.id, AFTER.id]) expect(foot.innerHTML).not.toContain(id);       // dated runs are linked from the evidence pages, not the footer
+    for (const r of ['#/showcase', '#/lifecycle', '#/reports/latest']) expect(parse(r).name).not.toBe('home');   // deep links still resolve
+  });
+});
+
 describe('homepage (the featured Larkspur story)', () => {
   it('tells the before-and-after story from the recorded live evaluations, links the showcase, workspace and reports, and calls no API', () => {
     const f = noNetwork();
@@ -80,7 +101,7 @@ describe('homepage (the featured Larkspur story)', () => {
     for (const h of ['#/run', '#/lifecycle', '#/showcase', `#/reports/${BEFORE.id}`, `#/reports/${AFTER.id}`]) expect(hrefs).toContain(h);
     for (const h of hrefs) expect(h ?? '').not.toMatch(/#\/(studio|demo\/|investigation|overview|replay|scopes|evidence$|scanner)/);   // no archive links anywhere (footer included)
     expect(hrefs.filter(h => h?.startsWith('#/reports/'))).toEqual(expect.arrayContaining([]));
-    for (const h of hrefs.filter(h => h?.startsWith('#/reports/'))) expect([`#/reports/${BEFORE.id}`, `#/reports/${AFTER.id}`, '#/reports/latest']).toContain(h!.split('#diagnostics')[0].replace(/\/tasks\/\d+$/, ''));
+    for (const h of hrefs.filter(h => h?.startsWith('#/reports/'))) expect([`#/reports/${BEFORE.id}`, `#/reports/${AFTER.id}`, `#/reports/${CANONICAL.id}`, '#/reports/latest']).toContain(h!.split('#diagnostics')[0].replace(/\/tasks\/\d+$/, ''));
     const text = host.textContent!;
     const O = BEFORE.totals.polishedoriginal, M = AFTER.totals.modifiedpolished;
     for (const s of [`${O.requests}`, `${M.requests}`, `${Math.round(100 * (O.requests - M.requests) / O.requests)}% fewer after the change`, '0/3', '3/3',

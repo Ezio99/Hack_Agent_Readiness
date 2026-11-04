@@ -17,6 +17,8 @@ Authoritative current handoff. Check it against the repository and production be
 
 ### History of this phase (2026-11-04, newest first)
 
+> **Committed, NOT deployed (2026-11-04 ~21:30 AEDT): judge-facing navigation pass** (frontend only, `dashboard/src/site/`). Header: How it works · See the results (= the canonical paired report `#/reports/eval-1cf64d5e…`, `CANONICAL` in `showcase.ts`) · Workspace · CTA "Run an evaluation" (`#/run`; also the last item of the mobile menu; now shown on report pages). Footer: Product / Evidence / About; dated Before/After run links removed from the footer (still linked from Home, the journey, the Showcase and the Workspace). Every public report states whether it is the canonical paired evaluation or another run (`EvidenceNote`). `#/showcase`, `#/lifecycle` and `#/reports/latest` routes unchanged. Note: `#/reports/latest` now resolves to the later paired run `eval-076bed89` (38 → 12 requests), not the canonical run. Deploying needs owner approval.
+
 > **PRODUCTION = `final-showcase` @ `4dae086`** (judge-facing copy cleanup; image `f493c7ce…`, rollback `rollback-before-copyclean` = `04c130ab…`).
 >
 > Previous: `3c2b5ce` (image `04c130ab…`, rollback `rollback-before-paired`). Selected evaluation **`ar-a20-pair`** (Before + After, 6 agents, US$3.74 per run); Live report = `#/reports/latest`. First live paired run `eval-1cf64d5e…` (owner-launched): Before 0/3, 39 requests → After 3/3, 10 requests; US$0.70 settled; budget A$2.49 spent of A$20. See the checklist, §8.

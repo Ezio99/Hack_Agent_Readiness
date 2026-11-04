@@ -7,11 +7,11 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { HostedEvaluation, defaultRun, isPublicItem, isPublicJob } from './workspace/HostedEvaluation';
 import type { HistoryItem } from './workspace/History';
-import { LatestReportPage, ReportPage, isPublicEvaluation } from './lifecycle/Report';
+import { EvidenceNote, LatestReportPage, ReportPage, isPublicEvaluation } from './lifecycle/Report';
 import { Lifecycle, activeStep } from './lifecycle/Lifecycle';
 import { Story } from './story/Story';
 import { PUBLIC_SCOPE } from '../lib/lifecycleApi';
-import { AFTER, BEFORE, JOURNEY, LIVE } from './showcase';
+import { AFTER, BEFORE, CANONICAL, JOURNEY, LIVE } from './showcase';
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); localStorage.clear(); document.body.innerHTML = ''; window.location.hash = ''; });
 
@@ -143,6 +143,17 @@ describe('public scope', () => {
     host = await mount(<LatestReportPage />);
     expect(f.mock.calls.some(c => String(c[0]).endsWith(`/api/lifecycle/evaluations/${PAIRED}`))).toBe(true);   // the live paired run, not the rehearsal
     expect(f.mock.calls.some(c => String(c[0]).endsWith(`/api/lifecycle/evaluations/${NEWER_REHEARSAL}`))).toBe(false);
+  });
+
+  it('every public report says which evidence it is: the canonical paired evaluation, or another run that points to it', async () => {
+    let host = await mount(<EvidenceNote id={CANONICAL.id} />);
+    expect(host.textContent).toContain('Canonical evaluation.'); expect(host.querySelector('a')).toBeNull();
+    for (const id of [BEFORE.id, AFTER.id, 'eval-' + '7'.repeat(32)]) {
+      document.body.innerHTML = ''; host = await mount(<EvidenceNote id={id} />);
+      expect(host.textContent).not.toContain('Canonical evaluation.');
+      expect(host.textContent).toContain(id === 'eval-' + '7'.repeat(32) ? 'Another live evaluation' : 'two separate live runs');
+      expect(host.querySelector(`a[href="#/reports/${CANONICAL.id}"]`)).not.toBeNull();
+    }
   });
 
   it('the showcase tells only the Before -> After story (no earlier experiments)', async () => {

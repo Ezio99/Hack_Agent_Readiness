@@ -44,6 +44,10 @@ export const TRIAL_B = data.polished_v2 as unknown as LiveRecord;
 /** The product's own page audit (the readiness report's structural rules) of each version: what is still wrong with the pages themselves. */
 export const PAGE_AUDIT = data.page_audit as Record<'original' | 'modified' | 'improved', string[]>;
 
+/** The canonical paired evaluation: Before and After run together in ONE live job (owner-launched from the Workspace, 4 Nov 2026). The headline
+ *  results quoted for the submission come from this run only; "See the results" opens its report. `#/reports/latest` may show a later paired run. */
+export const CANONICAL = { id: 'eval-1cf64d5eae90bcaeab531b4886140c14', date: '4 Nov 2026' } as const;
+
 export const FEATURED = {
   site: 'larkspur',
   name: 'Larkspur Community College',

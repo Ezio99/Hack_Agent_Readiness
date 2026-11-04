@@ -321,3 +321,6 @@
 .lc-versions.two{grid-template-columns:repeat(2,minmax(0,1fr))}@media (max-width:640px){.lc-versions.two{grid-template-columns:1fr}}
 
 .lc-latest{padding:24px 0 64px}.lc-latest .lc-sbs{margin-top:28px}.lc-latest-card{display:grid;gap:8px;padding:22px 24px;text-decoration:none;color:inherit;border-radius:12px;background:var(--sheet)}.lc-latest-card strong{font:400 34px/1.1 var(--serif)}
+/* which evidence a report is: the canonical paired evaluation, or another live run (see EvidenceNote in Report.tsx) */
+.lc-evidence{padding:10px 14px;border-radius:8px;background:var(--paper-2);color:var(--ink-2);font-size:14px;line-height:1.5;margin:0 0 18px;border-left:3px solid var(--rule-2)}
+.lc-evidence.canonical{background:var(--signal-wash);border-left-color:var(--signal);color:var(--ink)}
