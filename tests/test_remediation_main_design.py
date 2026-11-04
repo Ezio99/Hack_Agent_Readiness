@@ -34,6 +34,9 @@ def audit_factors(factors, previous=None):
     return asyncio.run(go())
 
 
+# The authoritative programme ledger (collaboration/budget/programme-ledger.json) after its last owner-approved append, the M9 reconciliation
+# (commit 98d5ec6): US$18.786306 = A$28.1795 at 1.50 A$/US$, A$21.8205 left of A$50. Pinned on purpose: an unexpected ledger change must fail these tests.
+PROGRAMME_SPENT_USD, PROGRAMME_SPENT_AUD, PROGRAMME_REMAINING_AUD = 18.786306, 28.1795, 21.8205
 U = dict(DEFAULT_INITIAL)
 C = {**U, "availability": "listing", "stockfilter": "off"}
 M = {**U, "availability": "listing"}
@@ -161,7 +164,7 @@ def test_main_manifest_freezes_the_corrected_design_and_carries_the_original_pil
     assert m["limits"]["stage_cap_aud"] == 6.0 and m["limits"]["stage_cap_usd"] == 4.0 and m["limits"]["per_request_usd"] == 0.05 and m["limits"]["per_run_usd"] == 0.50
     ce = m["cost_envelope"]
     assert ce["expected_aud"][0] < ce["expected_aud"][1] < ce["expected_aud"][2] < ce["worst_case_aud"] == 6.0 and 2.0 < ce["expected_aud"][1] < 4.5
-    assert m["budget_check"]["remaining_before_aud"] == pytest.approx(32.2273, abs=1e-2) and m["budget_check"]["remaining_after_stage_cap_aud"] == pytest.approx(26.2273, abs=1e-2)
+    assert m["budget_check"]["remaining_before_aud"] == pytest.approx(PROGRAMME_REMAINING_AUD, abs=1e-2) and m["budget_check"]["remaining_after_stage_cap_aud"] == pytest.approx(PROGRAMME_REMAINING_AUD - 6.0, abs=1e-2)
     assert m["stopping_rules"]["retries"] == "never" and "no_room_to_act_after_block_2" in m["stopping_rules"]["halt_on"]
     states = m["frozen"]["states"]
     assert states["unmodified"]["variant_id"].endswith("availability-detail+specs-structured+sku-listing") and states["labels_only"]["variant_id"].endswith("stockfilter-off") and states["modified"]["variant_id"].endswith("availability-listing+specs-structured+sku-listing")
@@ -182,5 +185,5 @@ def test_programme_ledger_records_the_pilot_and_does_not_count_it_twice():
     led = budget.load()
     s = budget.summary(led)
     assert any(e["id"] == "task015-pilot" and e["usd"] == pytest.approx(0.214509) for e in led["entries"]) and "pilot" in led["recorded_runtime_stages"]
-    assert s["spent_aud"] == pytest.approx(17.7727, abs=1e-3) and s["remaining_aud"] == pytest.approx(32.2273, abs=1e-3)
-    assert budget.check_stage(6.0)["remaining_after_cap_aud"] == pytest.approx(26.2273, abs=1e-3)
+    assert s["spent_aud"] == pytest.approx(PROGRAMME_SPENT_AUD, abs=1e-3) and s["remaining_aud"] == pytest.approx(PROGRAMME_REMAINING_AUD, abs=1e-3)
+    assert budget.check_stage(6.0)["remaining_after_cap_aud"] == pytest.approx(PROGRAMME_REMAINING_AUD - 6.0, abs=1e-3)

@@ -19,6 +19,10 @@ from agent_readiness.scanner.serve import serve_app
 from agent_readiness.suite import core, registry
 
 OBJECTIVE = "List every in-stock ANC headphone at or below A$250.00"
+# The authoritative programme ledger (collaboration/budget/programme-ledger.json) after its last owner-approved append, the M9 reconciliation
+# (commit 98d5ec6): US$18.786306 = A$28.1795 at 1.50 A$/US$, A$21.8205 left of A$50. Pinned on purpose: an unexpected ledger change must fail these tests.
+PROGRAMME_SPENT_USD, PROGRAMME_SPENT_AUD, PROGRAMME_REMAINING_AUD = 18.786306, 28.1795, 21.8205
+
 
 
 def audit_variant(av, sku="hidden", specs="structured", objective=OBJECTIVE, previous=None):
@@ -184,7 +188,7 @@ def test_budget_is_tracked_in_aud_with_original_usd_records_and_a_documented_rat
     assert s["usd_to_aud"] == 1.50 and ledger["assumptions"]["basis"] and ledger["programme_ceiling_aud"] == 50.0 and ledger["ceiling_is_authorization"] is False
     original = [e for e in ledger["entries"] if e["id"].startswith("task")]
     assert sum(e["usd"] for e in original) == pytest.approx(4.13783)
-    assert s["spent_usd"] == pytest.approx(11.848482)
+    assert s["spent_usd"] == pytest.approx(PROGRAMME_SPENT_USD)
     forks = [e for e in ledger["entries"] if e["id"] in ("exp-c", "exp-c-r1", "exp-c-s1")]
     assert len(forks) == 3 and sum(e["usd"] for e in forks) == pytest.approx(3.346443)
     assert all(e["usd"] == pytest.approx(e["run_total_usd"] - e["imported_history_excluded_usd"]) for e in forks)
@@ -192,9 +196,9 @@ def test_budget_is_tracked_in_aud_with_original_usd_records_and_a_documented_rat
     assert [e["usd"] for e in hosted] == [pytest.approx(1.090968), pytest.approx(1.126097)]                                       # hosted run: increment only, reservation hold not spend
     assert all(e["usd"] == pytest.approx(e["run_total_usd"] - e["imported_history_excluded_usd"]) for e in hosted)
     assert ledger["reconciliation"]["complete"] is False
-    assert s["spent_aud"] == pytest.approx(17.7727, abs=1e-4)
-    assert budget.check_stage(8.0)["remaining_after_cap_aud"] == pytest.approx(24.2273, abs=1e-4)
+    assert s["spent_aud"] == pytest.approx(PROGRAMME_SPENT_AUD, abs=1e-4)
+    assert budget.check_stage(8.0)["remaining_after_cap_aud"] == pytest.approx(PROGRAMME_REMAINING_AUD - 8.0, abs=1e-4)
     with pytest.raises(ValueError):
         budget.check_stage(45.0)
     monkeypatch.setenv(budget.RATE_ENV, "1.60")
-    assert budget.summary(ledger)["spent_aud"] == pytest.approx(11.848482 * 1.6, abs=1e-4)
+    assert budget.summary(ledger)["spent_aud"] == pytest.approx(PROGRAMME_SPENT_USD * 1.6, abs=1e-4)

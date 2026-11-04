@@ -7,7 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-SUITES = {"logic": ('not browser', 2), "browser": ("browser", 4)}
+SUITES = {"logic": ('not browser', 2), "browser": ("browser", 5)}
 
 
 def collect(marker: str) -> set[str]:

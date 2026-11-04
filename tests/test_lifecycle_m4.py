@@ -119,10 +119,21 @@ def test_analysis_is_task_level_and_labels_exploratory():
 
 
 # --------------------------------------------------------------------------------------------------------------------------- manifests
+def _frozen_suite(store, s):
+    """The approved, frozen synthetic suite. When the approval test has not run in this process (this test alone, or in another CI shard), it is
+    approved and frozen here with exactly that test's inputs: the store is write-once and content-addressed, so the records are identical and the
+    tests pass in any order."""
+    try:
+        return store.resolve("frozen_suite", "synthetic-larkspur-m4@v1")
+    except FileNotFoundError:
+        ok = AP.decide(store, s, decision="approved", attestation=AP.attestation_text(s, "approved"), at=AT, notes="m4 test")
+        return AP.freeze(store, s, ok, at=AT)
+
+
 def test_manifest_builder_and_regression(tmp_path, proposal):
     site, store, out = proposal
     s = out["suite_sha256"]
-    fz = store.resolve("frozen_suite", "synthetic-larkspur-m4@v1")
+    fz = _frozen_suite(store, s)
     plan = PL.make_plan(n_tasks=12, repetitions=1, allow_exploratory_fallback=True, sims=100)
     variants = [(v, site.snapshot(v).sha256) for v in site.variants]
     m = MF.build(store, fz, variants=variants, oracle=site.oracle().label, plan=plan, repetitions=1, seed=7, created_at=AT)
