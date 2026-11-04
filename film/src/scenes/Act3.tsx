@@ -59,6 +59,10 @@ export function Act3({ captions = false }: { captions?: boolean }) {
     {f >= B.dead - 10 && f < B.data + 20 && <DeadEnd f={f} />}
     {f >= B.data - 10 && f < B.again + 20 && <Data f={f} />}
     {f >= B.again - 10 && <Again f={f} />}
+    {/* who made the changes: shown for as long as the improved website is on screen */}
+    <p style={{ position: 'absolute', right: 90, top: 30, margin: 0, padding: '6px 14px', borderRadius: 999, border: `1px solid ${C.rule}`, background: 'rgba(11,11,10,.85)',
+      fontFamily: F.mono, fontSize: 14, letterSpacing: '.1em', color: C.ink2, textTransform: 'uppercase',
+      opacity: k(f, [B.hero + 10, B.hero + 30], [0, 1]) * (1 - k(f, [B.again - 10, B.again + 6], [0, 1])) }}>Improvements applied by the website owner, as recommended by Agent Readiness</p>
     {facts.map((_, i) => <Sequence key={i} from={B.land + i * 5} durationInFrames={12}><Sfx name="tick" volume={0.22} /></Sequence>)}
     <Sequence from={B.scrollAll + 10} durationInFrames={70}><Sfx name="chime" volume={0.28} /></Sequence>
     {captions && <Captions act={ACT3} f={f} />}

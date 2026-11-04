@@ -1,7 +1,10 @@
 import { AbsoluteFill, interpolate, Sequence, useCurrentFrame } from 'remotion';
 import FINAL from '../../data/final.json';
 import P from '../../data/paired.json';
+import LIVE from '../../data/screen-live.json';
+import REPLAY from '../../data/screen-replay.json';
 import { BrowserWindow } from '../components/BrowserWindow';
+import { EvidenceLabel, Footage, type Recording } from '../components/Footage';
 import { PageImage } from '../components/Evidence';
 import { Sfx } from '../components/Sound';
 import { runDate } from '../evidence';
@@ -55,15 +58,56 @@ export function Act4({ captions = false }: { captions?: boolean }) {
   const f = useCurrentFrame();
   return <AbsoluteFill style={{ background: C.bg, overflow: 'hidden' }}>
     <AbsoluteFill style={{ background: 'radial-gradient(ellipse 60% 55% at 50% 50%, rgba(237,234,227,.05), rgba(0,0,0,0) 70%)' }} />
-    {f < B.before + 20 && <Title f={f} />}
-    {f >= B.before - 10 && f < B.correct + 20 && <Hero f={f} />}
+    {f < B.before + 20 && <LiveStart f={f} />}
+    {f >= B.before - 10 && f < B.correct + 20 && <Replay f={f} />}
     {f >= B.correct - 10 && f < B.metrics + 20 && <Correct f={f} />}
     {f >= B.metrics - 10 && f < B.works + 20 && <Metrics f={f} />}
     {f >= B.works - 10 && <Live f={f} />}
-    {HB.steps.map((_, i) => <Sequence key={i} from={B.bStep0 + i * BSTEP} durationInFrames={10}><Sfx name="tick" volume={0.2} /></Sequence>)}
-    {ASTEP.map((t, i) => <Sequence key={'a' + i} from={t} durationInFrames={20}><Sfx name="click" volume={0.35} /></Sequence>)}
+    {/* the replay's own step clicks, at their recorded times: a tick per Original-website step, a click per Agent-ready step */}
+    {RP.events.filter(e => e.event.includes('next step')).map((e, i) => { const at = B.before + Math.round((e.t - REPLAY_FROM) * 30);
+      return at >= B.before && at < B.correct ? <Sequence key={'r' + i} from={at} durationInFrames={20}>
+        <Sfx name={e.event.startsWith('Original') ? 'tick' : 'click'} volume={e.event.startsWith('Original') ? 0.2 : 0.35} /></Sequence> : null; })}
     <Sequence from={cue('a4.correct') + 6} durationInFrames={70}><Sfx name="chime" volume={0.4} /></Sequence>
     {captions && <Captions act={ACT4} f={f} />}
+  </AbsoluteFill>;
+}
+
+// ---- real application footage (scripts/capture_screen.py) ----
+const LV = LIVE as unknown as Recording, RP = REPLAY as unknown as Recording;
+const SCREEN_W = 1600;                                                       // on-screen width of a recording (16:9, 1600 x 900)
+const PAGE_BG = 'rgb(241,240,235)';
+/** The internal budget identifier at the end of the Workspace's sticky status line (device px of the recording), covered in every frame used. */
+export const LIVE_REDACT = [{ x: 2212, y: 126, w: 212, h: 48, color: PAGE_BG }];
+/** The replay recording, aligned so the Agent-ready website's first step lands just after the narration reaches "Agent-ready" (a4.after). */
+const AR_STEP = RP.events.find(e => e.event.startsWith('Agent-ready website: next step'))!.t;
+const REPLAY_FROM = AR_STEP - (cue('a4.after') + 6 - (cue('a4.before') - 15)) / 30;
+
+export function ScreenShot({ children, label, path }: { children: React.ReactNode; label: React.ReactNode; path: string }) {
+  return <AbsoluteFill>
+    <div style={{ position: 'absolute', left: 0, right: 0, top: 26, display: 'flex', justifyContent: 'center' }}>{label}</div>
+    <BrowserWindow width={SCREEN_W} height={900 + 46} site="Agent Readiness" path={path} style={{ left: (1920 - SCREEN_W) / 2, top: 84 }}>{children}</BrowserWindow>
+  </AbsoluteFill>;
+}
+
+/** The separate live demonstration: a real evaluation started in the production Workspace for this film (5 Nov 2026), just after launch, then
+ *  its live view as the first agent starts. Its results are not shown anywhere in the film. */
+function LiveStart({ f }: { f: number }) {
+  const o = k(f, [0, 10], [0, 1]) * (1 - k(f, [B.before - 10, B.before + 10], [0, 1]));
+  const cutAt = Math.round(B.before * 0.4);                                  // ~2 s of the launch state, then the live view as the first agent starts
+  return <AbsoluteFill style={{ opacity: o }}>
+    <ScreenShot path="/ workspace · live evaluation" label={<EvidenceLabel kind="live" detail="Recorded 5 Nov 2026, 12:19 am · not the canonical evaluation · results not shown" />}>
+      <Footage rec={LV} dir="live" from={5.17} start={0} width={SCREEN_W} cuts={[[25.4, cutAt]]} redact={LIVE_REDACT} />
+    </ScreenShot>
+  </AbsoluteFill>;
+}
+
+/** The canonical paired evaluation, inside the product: its own side-by-side replay of task 2, stepped through with the product's controls. */
+function Replay({ f }: { f: number }) {
+  const o = k(f, [B.before - 10, B.before + 10], [0, 1]) * (1 - k(f, [B.correct - 26, B.correct - 6], [0, 1]));
+  return <AbsoluteFill style={{ opacity: o }}>
+    <ScreenShot path={`/ reports / ${P.evaluation.slice(0, 13)}… / task 2`} label={<EvidenceLabel kind="canonical" detail={`${P.evaluation.slice(0, 13)} · 4 Nov 2026 · the product's replay of task 2`} />}>
+      <Footage rec={RP} dir="replay" from={REPLAY_FROM} start={B.before} width={SCREEN_W} />
+    </ScreenShot>
   </AbsoluteFill>;
 }
 

@@ -8,3 +8,5 @@ public/audio/sfx/
 public/audio/vo/
 .env
 .env.*
+.judge_code
+*.judge_code
