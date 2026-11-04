@@ -4,7 +4,7 @@ import { ActionHighlight, PageImage, StepBudget } from '../components/Evidence';
 import { Mark } from '../components/Mark';
 import { Sfx } from '../components/Sound';
 import { actionLabel, before, boxes, runDate } from '../evidence';
-import { ACT1, cue, cueEnd } from '../narration';
+import { ACT1, cue, cueEnd, warp } from '../narration';
 import { C, F, camera, ease } from '../theme/tokens';
 
 /** Act 1, the opening (25 s). A: the Larkspur website, floating in the dark. B: beautifully designed, easy for people. Q: "But what happens when
@@ -15,7 +15,8 @@ export const OPENING_FRAMES = ACT1.frames;
 
 const T = (() => {
   const q = cue('a1.question'), wipe = cueEnd('a1.question'), click2 = cue('a1.browsing') + 5, watch = cue('a1.watching');
-  return { aIn: 6, bMove: 108, bCourses: 116, bScroll: [150, 236] as const, bText: cue('a1.designed'), q, wipe,
+  const w = (x: number) => warp(ACT1, x);   // beats between narration lines follow the recorded voice
+  return { aIn: 6, bMove: w(108), bCourses: w(116), bScroll: [w(150), w(236)] as const, bText: cue('a1.designed'), q, wipe,
     c1Hi: wipe + 28, c1Click: wipe + 52, c2Cut: wipe + 76, obs: wipe + 96, c2Hi: click2 - 26, c2Click: click2,
     dOut: watch - 22, mark: watch, word: watch + 26, end: ACT1.frames - 34 };
 })();
@@ -127,9 +128,9 @@ export function Opening({ captions = false }: { captions?: boolean }) {
 }
 
 export function Captions({ act, f }: { act: typeof ACT1; f: number }) {
-  const line = act.lines.find(l => f >= l.at && f <= l.end + 12);
+  const line = act.lines.find(l => f >= l.at - 2 && f <= l.end + 12);   // subtitles: on with the first word, off just after the last
   return <div style={{ position: 'absolute', left: 0, right: 0, bottom: 30, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-    <span style={{ fontFamily: F.mono, fontSize: 12, letterSpacing: '.16em', color: '#F2C14E' }}>NARRATION · {act.status === 'recorded' ? 'RECORDED' : 'PLACEHOLDER TIMING, NOT RECORDED'}</span>
+    {act.status !== 'recorded' && <span style={{ fontFamily: F.mono, fontSize: 12, letterSpacing: '.16em', color: '#F2C14E' }}>NARRATION · PLACEHOLDER TIMING, NOT RECORDED</span>}
     {line && <span style={{ fontFamily: F.sans, fontSize: 30, color: '#fff', background: 'rgba(0,0,0,.72)', padding: '6px 16px', borderRadius: 6, maxWidth: 1500, textAlign: 'center' }}>{line.text}</span>}
   </div>;
 }

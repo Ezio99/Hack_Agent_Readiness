@@ -2,7 +2,7 @@
 
 The hackathon film, built programmatically with [Remotion](https://www.remotion.dev) 4 (React). It lives on the isolated `film` branch only. It is never deployed, and nothing in `dashboard/` or `src/` imports it. The product is not modified to make the film.
 
-**Status:** the complete 3:00 cut is built. Act 1, the opening (0:00–0:25) · Act 2, the investigation (–1:15) · Act 3, the transformation (–1:55) · Act 4, the proof (–2:35; ONLY the paired run, see `CANONICAL.md`) · Act 5, the product and the vision (–3:00; the vision is drawn as a labelled concept). No voice is recorded yet; timings are placeholders (see `NARRATION.md`, `vo/`).
+**Status:** the complete 3:00 cut is built. Act 1, the opening (0:00–0:25) · Act 2, the investigation (–1:15) · Act 3, the transformation (–1:55) · Act 4, the proof (–2:35; ONLY the paired run, see `CANONICAL.md`) · Act 5, the product and the vision (–3:00; the vision is drawn as a labelled concept). The picture cut is approved. The voiceover pipeline is built and tested end to end, and awaits the recorded voice; until then, timings are placeholders (see `vo/AUDITION.md`).
 
 ## What is real and what is drawn
 | On screen | Source |
@@ -41,18 +41,31 @@ npx remotion render src/index.ts Preview out/film-0-180.mp4        # the whole f
 ```
 Every composition has a `…Captions` variant that shows the narration lines at their cue times.
 
+### Voiceover
+```bash
+node scripts/vo.mjs align          # measure public/audio/vo/act1..act5, level to -17 LUFS, place every line -> data/vo.json
+node scripts/score.mjs             # re-time the score to the voice (always after align)
+node scripts/vo.mjs audition       # audition clips in public/audio/vo/audition/ -> data/audition.json
+npx remotion render src/index.ts Audition out/audition-dan.mp4 --props='{"voice":"dan"}'
+node scripts/vo.mjs clear          # back to placeholder timing
+node scripts/elevenlabs.mjs …      # optional API route (dry run unless --confirm), see vo/AUDITION.md
+```
+
 ## Layout
 ```
 src/Root.tsx            one composition per act + the running preview; music / SFX / voiceover tracks
-src/narration.ts        the narration cue sheet (text + timing per act); scenes anchor to its cue ids
+src/narration.ts        the narration cue sheet (text + designed timing per act), voice placement and the timeline warp; scenes anchor to its cue ids
+src/Voice.tsx           the voice track (lines cut at the narrator's pauses), the music ducking, the audition composition
+data/vo.json            measured voice: where each line sits in its act file (written by scripts/vo.mjs)
 src/scenes/Opening.tsx  Act 1
 src/scenes/Act2.tsx … Act5.tsx  Acts 2–5
 src/components/         BrowserWindow, PageImage, ActionHighlight, Typed, StepBudget, Mark
 src/theme/              product colours (dark theme) and OFL fonts (Newsreader, Geist, Geist Mono)
 src/evidence.ts         typed access to data/evidence.json
-scripts/                capture.py, capture_product.py, capture_transform.py, capture_paired.py, agent-fonts.sh, score.mjs
+scripts/                capture.py, capture_product.py, capture_transform.py, capture_paired.py, agent-fonts.sh, score.mjs, vo.mjs, elevenlabs.mjs
 NARRATION.md            narration with timings, voiceover plan, approvals
-vo/AUDITION.md          the voice-audition lines
+vo/AUDITION.md          voice audition, generation and integration
+vo/SCRIPT.md            the narration, one paste per act
 ```
 
 ## Licences

@@ -4,9 +4,14 @@
 //   node scripts/score.mjs
 // Section times (seconds, film time) mirror the narration cue sheet (src/narration.ts): Act 1 = 0-25 s, Act 2 = 25-75 s, Act 3 = 75-115 s, Act 4 = 115-155 s, Act 5 = 155-180 s.
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { loadNarration } from './lib/narration.mjs';
+
+// Every time below is written on the DESIGNED timeline; W() moves it to the actual one, so once the voice is recorded (and an act runs longer or a
+// line lands later) the harmony changes, bells and pulse stay on the picture. Notes themselves are never stretched. Identity without a voice.
+const { filmWarp: W, ACTS } = await loadNarration();
 
 const SR = 48000;
-const DUR = 180;
+const DUR = ACTS.reduce((s, a) => s + a.frames, 0) / 30;
 const N = SR * DUR;
 const midi = m => 440 * 2 ** ((m - 69) / 12);
 let seed = 7; const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
@@ -37,7 +42,7 @@ const SECTIONS = [
   [160.0, [43, 50, 55, 61, 66], 2.6, 0.66],  // tomorrow: G lydian, open, expansive
   [167.0, [40, 47, 54, 59, 62], 2.6, 0.66],  // E m11: which sites, reliable, where to succeed
   [173.0, [50, 57, 62, 64, 66, 69], 2.8, 0.70], // the mark and tagline: D maj9, long tail
-];
+].map(([t, ...r]) => [W(t), ...r]);
 const secAt = t => { let i = 0; for (let j = 0; j < SECTIONS.length; j++) if (t >= SECTIONS[j][0]) i = j; return i; };
 
 const L = new Float32Array(N), R = new Float32Array(N);
@@ -68,7 +73,7 @@ for (let s = 0; s < SECTIONS.length; s++) {
 }
 
 // ---- bells: sparse pentatonic notes in the human-website section and the diagnosis ----
-const bell = (t, m, g) => { const f = midi(m), i0 = Math.floor(t * SR), len = Math.floor(2.2 * SR), pan = rnd();
+const bell = (t, m, g) => { const f = midi(m), i0 = Math.floor(W(t) * SR), len = Math.floor(2.2 * SR), pan = rnd();
   for (let i = 0; i < len && i0 + i < N; i++) { const x = i / SR, e = Math.exp(-x * 2.2) * Math.min(1, x / 0.004);
     const v = g * e * (Math.sin(2 * Math.PI * f * x) + 0.25 * Math.sin(2 * Math.PI * f * 2.76 * x) * Math.exp(-x * 4));
     L[i0 + i] += v * (1 - pan * 0.5); R[i0 + i] += v * (0.5 + pan * 0.5); } };
@@ -79,10 +84,10 @@ const bell = (t, m, g) => { const f = midi(m), i0 = Math.floor(t * SR), len = Ma
 [[86.2, 74], [86.4, 76], [86.6, 78], [86.8, 81], [87.0, 83], [87.2, 85], [87.4, 86], [91.2, 86], [91.9, 90], [92.6, 93]].forEach(([t, m]) => bell(t, m, 0.03));
 
 // ---- pulse: a soft low heartbeat from the recorded agent onwards; in Act 2 it speeds up as the budget drains, and stops at "out of steps" ----
-const kick = (t, g) => { const i0 = Math.floor(t * SR), len = Math.floor(0.35 * SR);
+const kick = (t, g) => { const i0 = Math.floor(W(t) * SR), len = Math.floor(0.35 * SR);
   for (let i = 0; i < len && i0 + i < N; i++) { const x = i / SR, f = 45 + 70 * Math.exp(-x * 30), e = Math.exp(-x * 9) * Math.min(1, x / 0.002);
     const v = g * e * Math.sin(2 * Math.PI * f * x * (1 + 0)); L[i0 + i] += v; R[i0 + i] += v; } };
-const tick = (t, g) => { const i0 = Math.floor(t * SR), len = Math.floor(0.05 * SR); let lp = 0;
+const tick = (t, g) => { const i0 = Math.floor(W(t) * SR), len = Math.floor(0.05 * SR); let lp = 0;
   for (let i = 0; i < len && i0 + i < N; i++) { const x = i / SR, n = rnd() * 2 - 1; const hp = n - lp; lp += 0.35 * (n - lp);
     const v = g * hp * Math.exp(-x * 120); L[i0 + i] += v * 0.8; R[i0 + i] += v; } };
 const bpmAt = t => t < 25 ? 72 : t < 37 ? 76 : t < 58.6 ? 76 + (t - 37) / 21.6 * 44 : t < 120 ? 72 : t < 129.3 ? 112 : t < 143.7 ? 72 : 84;   // Act 2 loop 72 -> 120; Act 4 Before 112; the reductions 84
@@ -130,9 +135,9 @@ write('public/audio/music/score.wav', master([Lw, Rw]));
 const sfx = (dur, fn) => { const n = Math.floor(dur * SR), x = new Float32Array(n); for (let i = 0; i < n; i++) x[i] = fn(i / SR); return x; };
 let lp2 = 0;
 write('public/audio/sfx/click.wav', master([sfx(0.08, x => { const n = rnd() * 2 - 1; lp2 += 0.2 * (n - lp2);
-  return 0.6 * lp2 * Math.exp(-x * 400) + 0.5 * Math.sin(2 * Math.PI * 1750 * x) * Math.exp(-x * 90); })], -6));
-write('public/audio/sfx/tick.wav', master([sfx(0.12, x => Math.sin(2 * Math.PI * 1180 * x) * Math.exp(-x * 45) + 0.4 * Math.sin(2 * Math.PI * 2360 * x) * Math.exp(-x * 80))], -8));
-write('public/audio/sfx/chime.wav', master([sfx(2.4, x => [62, 69, 74].reduce((v, m, j) => v + Math.sin(2 * Math.PI * midi(m) * x) * Math.exp(-(x - j * 0.09) * 2.4) * (x > j * 0.09 ? 1 : 0), 0))], -9));
+  return 0.6 * lp2 * Math.exp(-x * 400) + 0.5 * Math.sin(2 * Math.PI * 1750 * x) * Math.exp(-x * 90); })], -3));
+write('public/audio/sfx/tick.wav', master([sfx(0.12, x => Math.sin(2 * Math.PI * 1180 * x) * Math.exp(-x * 45) + 0.4 * Math.sin(2 * Math.PI * 2360 * x) * Math.exp(-x * 80))], -5));
+write('public/audio/sfx/chime.wav', master([sfx(2.4, x => [62, 69, 74].reduce((v, m, j) => v + Math.sin(2 * Math.PI * midi(m) * x) * Math.exp(-(x - j * 0.09) * 2.4) * (x > j * 0.09 ? 1 : 0), 0))], -6));
 write('public/audio/sfx/stop.wav', master([sfx(1.2, x => Math.sin(2 * Math.PI * (300 * Math.exp(-x * 1.2)) * x) * Math.exp(-x * 3.2) * Math.min(1, x / 0.01)
-  + 0.6 * Math.sin(2 * Math.PI * (55) * x) * Math.exp(-x * 4))], -6));
+  + 0.6 * Math.sin(2 * Math.PI * (55) * x) * Math.exp(-x * 4))], -3));
 console.log('score.wav', DUR, 's; sfx: click tick chime stop');

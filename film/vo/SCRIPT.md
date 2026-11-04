@@ -1,11 +1,11 @@
 # Voiceover script, one generation per act
 
-Source of truth: `src/narration.ts`; this file mirrors it for pasting into ElevenLabs. Blank lines mark the longer pauses the picture expects.
+Source of truth: `src/narration.ts`; this file mirrors it for pasting into ElevenLabs (`scripts/elevenlabs.mjs` sends exactly the same text). Each narration line is its own paragraph: paste one act per generation, keeping the blank lines, so the narrator pauses between lines. Pick the best whole take of each act and save it as `public/audio/vo/actN.mp3`. The pipeline places each line on the picture (`vo/AUDITION.md`).
 
 **Status:**
 - Act 1: approved
 - Acts 2–3: approved
-- Acts 4–5: proposed (adapted from the director's lines)
+- Acts 4–5: used in the approved picture cut; confirm the wording before the final generation
 
 ## Act 1: the opening (curious, unhurried)
 This is Larkspur Community College.

@@ -105,18 +105,23 @@ The cue sheet in `src/narration.ts` is the single source of truth. Scenes anchor
 - The whole film's narration is about 430 words, roughly 2.6k characters, so even several takes per act fit well within Starter's 30k credits.
 - No subscription has been purchased and no audio has been generated.
 
-**Timing pipeline once a voice is chosen:**
-1. Generate each act separately and save it as `public/audio/vo/act1.wav`, `act2.wav`, and so on.
-2. Set that act's `status: 'recorded'` in `src/narration.ts`.
-3. Measure each line's start: ElevenLabs can return character-level timestamps with the audio, which a small script can turn into cue frames; otherwise mark them by ear on the waveform in Remotion Studio.
-4. Write those frames into the cue sheet. Scene beats move with them; the voice is never time-stretched to fit the animation.
+**Timing pipeline (built and tested end to end with a local stand-in voice; full detail in `vo/AUDITION.md`):**
+1. Save the chosen take of each act as `public/audio/vo/act1.mp3` … `act5.mp3`.
+2. `node scripts/vo.mjs align`:
+   - levels each file to −16 LUFS;
+   - finds every line, from ElevenLabs timestamps if generated through the API or from the waveform otherwise;
+   - writes `data/vo.json`.
+
+   `src/narration.ts` then places each line at its designed frame, or later if the voice needs the room. Beats tied to a line move with it, and beats between lines are re-timed proportionally. An act grows only if its voice is longer than its picture. The voice is never stretched or sped up.
+3. `node scripts/score.mjs` re-times the score to the same timeline.
+4. Render, then `node scripts/master.mjs`: one gain to about −16 LUFS integrated, with true peak at or below −1 dBTP.
 
 ## Tracks
 | Track | File | Notes |
 |---|---|---|
 | Music | `public/audio/music/score.wav` | Original temp score, synthesised by `scripts/score.mjs`: no samples, no licence, no cost. It is a restrained ambient bed: warm D major for the website; a tonal shift and a soft heartbeat pulse when the recorded agent appears; the pulse speeds up (72 → 120 bpm) as the budget drains and stops dead at "out of steps"; then clarity for the diagnosis. It can be replaced by a licensed track (needs approval if paid). |
 | Sound effects | `public/audio/sfx/{click,tick,chime,stop}.wav` | Also synthesised. Soft clicks on the agent's two recorded clicks, a tick on every recorded step, a low stop, and a chime under the mark. |
-| Voiceover | `public/audio/vo/<act>.wav` | One file per act; played only when that act's status is `recorded`. |
+| Voiceover | `public/audio/vo/<act>.mp3` (levelled copies in `vo/mix/`) | One file per act, cut at the narrator's own pauses and placed line by line. Music dips to about 13 dB below the voice under each line. |
 
 ## Needs approval
 1. **Act 2 narration text** (above).

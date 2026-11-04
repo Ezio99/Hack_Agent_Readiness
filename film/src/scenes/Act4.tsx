@@ -47,7 +47,7 @@ const when = new Date(P.started_at).toLocaleString('en-AU', { timeZone: 'Austral
 
 const B = { title: 0, before: cue('a4.before') - 15, bStep0: cue('a4.before') + 5, after: cue('a4.after') - 15, correct: cue('a4.correct') - 20,
   metrics: cue('a4.metrics') - 10, works: cue('a4.works') - 15 };
-const BSTEP = 16;                                              // Before: one recorded step every 16 frames (fast, busy)
+const BSTEP = Math.min(16, Math.floor((B.after - 26 - B.bStep0) / HB.steps.length));   // Before: one recorded step every ~16 frames (fast, busy), done before After starts
 const ASTEP = [B.after + 10, B.after + 50, B.after + 110];     // After: three steps, unhurried
 
 export function Act4({ captions = false }: { captions?: boolean }) {

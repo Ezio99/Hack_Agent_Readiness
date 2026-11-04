@@ -5,7 +5,7 @@ import { BrowserWindow } from '../components/BrowserWindow';
 import { PageImage } from '../components/Evidence';
 import { Sfx } from '../components/Sound';
 import { actionLabel, after, before, courses, excerpt, runDate, type Step } from '../evidence';
-import { ACT2, cue } from '../narration';
+import { ACT2, cue, warp } from '../narration';
 import { C, F, camera, ease } from '../theme/tokens';
 import { Captions } from './Opening';
 
@@ -20,7 +20,8 @@ const MAX = before.task.max_model_requests;                       // 14
 const steps = before.steps;                                        // 11 recorded steps
 const st = (n: number) => steps[n - 1];
 /** When each recorded step takes the screen (act-local frames). The tempo rises as the budget drains. */
-const AT: Record<number, number> = { 2: 0, 3: 300, 4: 410, 5: 500, 6: 585, 7: 665, 8: 735, 9: 795, 10: 850, 11: 905 };
+const AT: Record<number, number> = Object.fromEntries(Object.entries({ 2: 0, 3: 300, 4: 410, 5: 500, 6: 585, 7: 665, 8: 735, 9: 795, 10: 850, 11: 905 })
+  .map(([n, t]) => [n, warp(ACT2, t)]));   // designed frames, moved with the recorded voice
 const STOP = cue('a2.stops') - 10, ANSWER = STOP + 62, DIAG = cue('a2.recorded') - 10, CAUSE = cue('a2.cause');
 /** The headline excerpt of each step's note (verbatim). */
 const NOTE: Record<number, string> = {

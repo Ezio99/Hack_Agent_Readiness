@@ -6,6 +6,7 @@ import { Act4, ACT4_FRAMES } from './scenes/Act4';
 import { Act5, ACT5_FRAMES } from './scenes/Act5';
 import { Opening, OPENING_FRAMES } from './scenes/Opening';
 import { fontsReady } from './theme/fonts';
+import { AuditionLabel, auditionFile, auditionLines, EXCERPTS, excerptFrames, musicVolume, ScratchMark, Voice, VOICES } from './Voice';
 
 const wait = delayRender('fonts');
 fontsReady.then(() => continueRender(wait));
@@ -15,20 +16,32 @@ const OFFSET = { act1: 0, act2: OPENING_FRAMES, act3: OPENING_FRAMES + ACT2_FRAM
   act5: OPENING_FRAMES + ACT2_FRAMES + ACT3_FRAMES + ACT4_FRAMES } as const;
 const TOTAL = OFFSET.act5 + ACT5_FRAMES;
 
-/** Three separate tracks: music (one continuous score), sound effects (placed inside the scenes at recorded events) and voiceover (one file per
- *  act, only once recorded: placeholder acts render without voice; their captions version shows the planned lines). */
+/** Three separate tracks: music (one continuous score, ducked under the voice), sound effects (placed inside the scenes at recorded events) and
+ *  voiceover (one file per act, each line placed by the cue sheet). Placeholder acts render without voice; their captions show the planned lines. */
 function Tracks({ from, acts }: { from: number; acts: Act[] }) {
-  // music ducks under every RECORDED narration line (with a short ramp either side); placeholder lines do not duck
   const spoken: [number, number][] = [];
   { let o = 0; for (const a of acts) { if (a.status === 'recorded') for (const l of a.lines) spoken.push([o + l.at, o + l.end]); o += a.frames; } }
-  const music = (f: number) => { let d = 0; for (const [a, b] of spoken) d = Math.max(d, Math.min(1, (f - a + 10) / 10, (b + 14 - f) / 14)); return 0.55 - 0.3 * Math.max(0, d); };
   let at = 0;
   return <>
-    <Audio src={staticFile('audio/music/score.wav')} startFrom={from} volume={music} />
+    <Audio src={staticFile('audio/music/score.wav')} startFrom={from} volume={musicVolume(spoken)} />
     {acts.map(a => { const start = at; at += a.frames;
-      return a.status === 'recorded' ? <Sequence key={a.id} from={start} durationInFrames={a.frames}><Audio src={staticFile(a.vo)} /></Sequence> : null; })}
+      return a.status === 'recorded' ? <Sequence key={a.id} from={start} durationInFrames={a.frames} layout="none"><Voice lines={a.lines} file={a.vo} /></Sequence> : null; })}
+    {acts.some(a => a.source === 'scratch') && <ScratchMark />}
   </>;
 }
+
+/** A voice audition: the candidate's three clips, each under the picture it belongs to, with the film's music and mix. */
+const Audition = ({ voice }: { voice: string }) => { let at = 0;
+  const scene = { act1: Opening, act2: Act2, act5: Act5 } as Record<string, (p: { captions?: boolean }) => React.ReactNode>;
+  return <AbsoluteFill style={{ background: '#000' }}>{EXCERPTS.map(e => { const start = at, len = excerptFrames(e); at += len;
+    const S = scene[e.act.id], lines = auditionLines(voice, e), file = auditionFile(voice, e.n);
+    return <Sequence key={e.n} from={start} durationInFrames={len}>
+      <Sequence from={-e.start} layout="none"><S captions={false} /></Sequence>
+      <Audio src={staticFile('audio/music/score.wav')} startFrom={OFFSET[e.act.id as keyof typeof OFFSET] + e.start} volume={musicVolume(lines.map(l => [l.at, l.end]))} />
+      {file && <Voice lines={lines} file={file} />}
+      <AuditionLabel voice={voice} label={file ? e.label : e.label + ' · no clip'} />
+    </Sequence>; })}</AbsoluteFill>; };
+const AUDITION_FRAMES = EXCERPTS.reduce((s, e) => s + excerptFrames(e), 0);
 
 const ActOne = ({ captions }: { captions: boolean }) => <AbsoluteFill><Opening captions={captions} /><Tracks from={OFFSET.act1} acts={[ACT1]} /></AbsoluteFill>;
 const ActThree = ({ captions }: { captions: boolean }) => <AbsoluteFill><Act3 captions={captions} /><Tracks from={OFFSET.act3} acts={[ACT3]} /></AbsoluteFill>;
@@ -62,5 +75,6 @@ export function Root() {
     <Composition id="Act5Captions" component={ActFive} durationInFrames={ACT5_FRAMES} {...v} defaultProps={{ captions: true }} />
     <Composition id="Preview" component={Preview} durationInFrames={TOTAL} {...v} defaultProps={{ captions: false }} />
     <Composition id="PreviewCaptions" component={Preview} durationInFrames={TOTAL} {...v} defaultProps={{ captions: true }} />
+    <Composition id="Audition" component={Audition} durationInFrames={AUDITION_FRAMES} {...v} defaultProps={{ voice: VOICES[0] ?? 'dan' }} />
   </>;
 }
