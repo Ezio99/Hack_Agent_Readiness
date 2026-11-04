@@ -2,7 +2,7 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import App from '../App';
 import { parse } from './router';
@@ -76,7 +76,7 @@ describe('site navigation (judge-facing)', () => {
   it('header: How it works, See the results (the canonical paired report), Workspace and one Run CTA; footer: Product, Evidence, About without dated run links', () => {
     act(() => root.render(<Home />));
     const nav = [...host.querySelectorAll('#site-nav a:not(.nav-cta)')].map(a => [a.textContent, a.getAttribute('href')]);
-    expect(nav).toEqual([['How it works', '#/how'], ['See the results', `#/reports/${CANONICAL.id}`], ['Workspace', '#/run']]);
+    expect(nav).toEqual([['How it works', '#/lifecycle'], ['See the results', `#/reports/${CANONICAL.id}`], ['Workspace', '#/run']]);
     const cta = [...host.querySelectorAll('.site-head a')].filter(a => a.textContent?.startsWith('Run an evaluation'));
     expect(cta.map(a => a.getAttribute('href'))).toEqual(['#/run', '#/run']);           // the desktop button and the mobile-menu item
     const head = host.querySelector('.site-head')!.textContent!;
@@ -86,11 +86,22 @@ describe('site navigation (judge-facing)', () => {
     const links = Object.fromEntries([...foot.querySelectorAll('ul a')].map(a => [a.textContent, a.getAttribute('href')]));
     expect(links).toEqual({ 'The Larkspur journey': '#/lifecycle', 'Run an evaluation': '#/run', 'Before and after': '#/showcase',
       'Canonical evaluation results': `#/reports/${CANONICAL.id}`,
-      'How it works': '#/how', 'Isolation & limitations': '#/trust', 'GitHub repository': REPO_URL });
+      'Technical methodology': '#/how', 'Isolation & limitations': '#/trust', 'GitHub repository': REPO_URL });
     expect(REPO_URL).toBe('https://github.com/Ezio99/Hack_Agent_Readiness/tree/final-showcase');
     for (const id of [BEFORE.id, AFTER.id]) expect(foot.innerHTML).not.toContain(id);
     expect(host.querySelector('.site-head a[href="#/reports/latest"], .site-foot a[href="#/reports/latest"]')).toBeNull();   // no global link to the changing latest report       // dated runs are linked from the evidence pages, not the footer
-    for (const r of ['#/showcase', '#/lifecycle', '#/reports/latest']) expect(parse(r).name).not.toBe('home');   // deep links still resolve
+    for (const r of ['#/showcase', '#/lifecycle', '#/reports/latest']) expect(parse(r).name).not.toBe('home');
+    expect(parse('#/how')).toEqual({ name: 'home', section: 'how' });                       // the methodology route is unchanged (no redirect)   // deep links still resolve
+  });
+});
+
+describe('homepage hero layout', () => {
+  it('the trace card stays inside its own column: no negative margins pull it over the figure or its caption (regression: overlap at 1280/768/390 px)', () => {
+    const css = readFileSync(join(__dirname, 'home.css'), 'utf8');
+    const rules = [...css.matchAll(/\.hero-note\{([^}]*)\}/g)].map(m => m[1]);
+    expect(rules.length).toBeGreaterThan(0);
+    for (const r of rules) expect(r).not.toMatch(/margin[^;]*-\s*\d|margin[^;]*calc\(\s*-/);
+    expect(css).not.toMatch(/\.plate-verdicts small\{[^}]*nowrap/);                              // verdict lines wrap inside the card
   });
 });
 

@@ -22,8 +22,8 @@ type Active = 'home' | 'demo' | 'run' | 'lifecycle' | 'report' | 'showcase';
  *  footer. `#/reports/latest` still resolves (compatibility) but is not linked globally: it changes with every run; judges open their own reports in the Workspace. */
 const RESULTS_HREF = `#/reports/${CANONICAL.id}`;   // the canonical paired evaluation (Original vs Agent-ready website) (not #/reports/latest, which may be a later run)
 export const REPO_URL = 'https://github.com/Ezio99/Hack_Agent_Readiness/tree/final-showcase';   // the submitted application's branch (public)
-const NAV: { id: Active | 'how'; href: string; label: string }[] = [
-  { id: 'how', href: '#/how', label: 'How it works' },
+const NAV: { id: Active; href: string; label: string }[] = [
+  { id: 'lifecycle', href: '#/lifecycle', label: 'How it works' },   // the Larkspur journey: the workflow on a real example (#/how, the methodology, is in the footer)
   { id: 'report', href: RESULTS_HREF, label: 'See the results' },   // 'report' is active only on the canonical report (ReportPage)
   { id: 'run', href: '#/run', label: 'Workspace' },
 ];
@@ -56,7 +56,7 @@ export function SiteFooter() {
       <div><Brand /><p className="about">Agent Readiness measures whether AI agents can complete real tasks on a website, where they struggle, and whether a change helps.</p></div>
       <div><h4>Product</h4><ul><li><a href="#/lifecycle">The {FEATURED.short} journey</a></li><li><a href="#/run">Run an evaluation</a></li><li><a href="#/showcase">Before and after</a></li></ul></div>
       <div><h4>Evidence</h4><ul><li><a href={RESULTS_HREF}>Canonical evaluation results</a></li></ul></div>
-      <div><h4>About</h4><ul><li><a href="#/how">How it works</a></li><li><a href="#/trust">Isolation &amp; limitations</a></li><li><a href={REPO_URL} target="_blank" rel="noopener noreferrer">GitHub repository</a></li></ul></div>
+      <div><h4>About</h4><ul><li><a href="#/how">Technical methodology</a></li><li><a href="#/trust">Isolation &amp; limitations</a></li><li><a href={REPO_URL} target="_blank" rel="noopener noreferrer">GitHub repository</a></li></ul></div>
       <div className="fine"><span>Built for the Meta Global AI Hackathon, 2026. Model costs shown are calculated estimates, not bills.</span>
         <span>Type: <a href={fontLicense}>Newsreader</a>, <a href={sansLicense}>Geist</a>, <a href={monoLicense}>Geist Mono</a> (SIL OFL)</span></div>
     </div>
