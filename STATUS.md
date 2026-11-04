@@ -19,7 +19,9 @@ Authoritative current handoff. Check it against the repository and production be
 > - **Deadline:** **2026-11-05 13:00 AEDT**.
 > - **Owner approval:** deploys, paid runs, `budget evaluation-add/use`, settlements and ledger appends need explicit owner approval.
 
-> **FROZEN (2026-11-04 11:45 AEDT, owner instruction): PRODUCTION = `final-showcase` @ `02ed375`** (image `dd3d6ba1…`; rollback `rollback-before-readiness` = `8149882b…`). No further changes unless a submission-blocking defect is found. Judge access text: [docs/JUDGE_ACCESS_MESSAGE.md](docs/JUDGE_ACCESS_MESSAGE.md).
+> **PRODUCTION = `final-showcase` @ `f3d1abf`** (2026-11-04 ~13:20 AEDT, owner-approved targeted frontend release; image `dd4685cc…`; rollback `rollback-before-public` = `dd3d6ba1…`). The public app shows only the final Before → After experiment (see the checklist, §7). Frozen again unless a submission-blocking defect is found.
+>
+> Previous: **FROZEN (2026-11-04 11:45 AEDT, owner instruction): PRODUCTION = `final-showcase` @ `02ed375`** (image `dd3d6ba1…`; rollback `rollback-before-readiness` = `8149882b…`). No further changes unless a submission-blocking defect is found. Judge access text: [docs/JUDGE_ACCESS_MESSAGE.md](docs/JUDGE_ACCESS_MESSAGE.md).
 >
 > **PREVIOUS (2026-11-04 ~11:15 AEDT): PRODUCTION = `final-showcase`** (see `deploy/DEPLOYED.txt` on the VM for the exact commit and rollback tag). Featured experiment: **Before → After** (Larkspur Community College); record: [collaboration/reports/polished-larkspur-evaluations.md](collaboration/reports/polished-larkspur-evaluations.md) §6.
 > - **Before** = `larkspur@polishedoriginal` (`2ee4a7be…`): Original redesigned only. Live `eval-ea13944e…`: 0/3 correct, 36 requests, 311 s, US$0.52.
